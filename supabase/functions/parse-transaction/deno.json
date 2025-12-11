@@ -1,0 +1,6 @@
+{
+  "imports": {
+    "openai": "npm:openai@^4.28.0",
+    "edge-runtime": "jsr:@supabase/functions-js/edge-runtime.d.ts"
+  }
+}

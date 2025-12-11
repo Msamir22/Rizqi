@@ -1,0 +1,40 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: ['./src/**/*.{js,jsx,ts,tsx}', '../../apps/mobile/**/*.{js,jsx,ts,tsx}'],
+  presets: [require('nativewind/preset')],
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          DEFAULT: '#065F46',
+          light: '#047857',
+          dark: '#064E3B',
+        },
+        action: {
+          DEFAULT: '#10B981',
+          light: '#34D399',
+          dark: '#059669',
+        },
+        expense: {
+          DEFAULT: '#EF4444',
+          light: '#F87171',
+          dark: '#DC2626',
+        },
+        gold: {
+          DEFAULT: '#D97706',
+          light: '#F59E0B',
+          dark: '#B45309',
+        },
+        background: {
+          DEFAULT: '#F8FAFC',
+          secondary: '#F1F5F9',
+          tertiary: '#E2E8F0',
+        },
+        'text-primary': '#1E293B',
+        'text-secondary': '#475569',
+        'text-tertiary': '#94A3B8',
+      },
+    },
+  },
+  plugins: [],
+};

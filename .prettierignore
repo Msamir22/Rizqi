@@ -1,0 +1,7 @@
+node_modules
+dist
+build
+.nx
+coverage
+*.min.js
+*.bundle.js

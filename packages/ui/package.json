@@ -1,0 +1,14 @@
+{
+  "name": "@astik/ui",
+  "version": "1.0.0",
+  "description": "Shared UI components and design system for Astik",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

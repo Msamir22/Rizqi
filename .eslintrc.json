@@ -1,0 +1,223 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": 2020,
+    "sourceType": "module",
+    "ecmaFeatures": {
+      "jsx": true
+    }
+  },
+  "env": {
+    "browser": true,
+    "node": true,
+    "es6": true,
+    "react-native/react-native": true
+  },
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:@typescript-eslint/recommended-requiring-type-checking",
+    "plugin:import/recommended",
+    "plugin:import/typescript",
+    "plugin:react/recommended",
+    "plugin:react-hooks/recommended",
+    "plugin:react-native/all",
+    "prettier"
+  ],
+  "plugins": [
+    "@typescript-eslint",
+    "react",
+    "react-hooks",
+    "react-native",
+    "prettier"
+  ],
+  "rules": {
+    // TypeScript
+    "@typescript-eslint/no-non-null-assertion": "warn",
+
+    // React
+    "react/react-in-jsx-scope": "off",
+    "react/prop-types": "off",
+    "react/display-name": "off",
+
+    // React Hooks
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "warn",
+
+    // React Native
+    "react-native/no-unused-styles": "warn",
+    "react-native/no-inline-styles": "warn",
+    "react-native/no-color-literals": "off",
+    "react-native/no-raw-text": "off",
+
+    // General
+    "no-console": [
+      "warn",
+      {
+        "allow": ["warn", "error"]
+      }
+    ],
+    "no-debugger": "warn",
+    "no-var": "error",
+    // Requires the use of `===` and `!==`.
+    "eqeqeq": ["error"],
+    // Requires for in loops to include an if statement.
+    "guard-for-in": ["error"],
+    // Disallows bitwise operators.
+    "no-bitwise": ["error"],
+    // Disallows use of `caller`/`callee`.
+    "no-caller": ["error"],
+    // Disallows duplicate imports.
+    "no-duplicate-imports": ["error"],
+    // Disallows the use of `eval()`.
+    "no-eval": ["error"],
+    // Disallows `new` operators with the `String`, `Number`, and `Boolean`
+    // objects.
+    "no-new-wrappers": ["error"],
+    // Restricts what can be thrown as an exception.
+    "no-throw-literal": ["error"],
+    // Disallow void operators.
+    "no-void": ["error"],
+    // Requires or disallows method and property shorthand syntax for object
+    // literals.
+    "object-shorthand": ["error"],
+    // Enforces variables to be declared either together or separately in
+    // Enforces variables to be declared either together or separately in
+    // functions.
+    "one-var": ["error", "never"],
+    // Requires const declarations for variables that are never reassigned
+    // after declared.
+    "prefer-const": ["error"],
+    // Enforces the consistent use of the radix argument when using
+    // `parseInt()`.
+    "radix": ["error"],
+    // Enforces consistent spacing after the `//` or `/*` in a comment.
+    "spaced-comment": ["error", "always", { "block": { "balanced": true } }],
+
+    // Requires using either T[] or Array<T> for arrays.
+    "@typescript-eslint/array-type": [
+      "warn",
+      {
+        // Use T[] or readonly T[] for simple types.
+        // Use Array<T> or ReadonlyArray<T> for all other types.
+        "default": "array-simple"
+      }
+    ],
+    // Enforces consistent usage of type assertions.
+    "@typescript-eslint/consistent-type-assertions": [
+      "error",
+      { "assertionStyle": "as", "objectLiteralTypeAssertions": "never" }
+    ],
+    // Consistent with type definition either `interface` or `type`.
+    "@typescript-eslint/consistent-type-definitions": "error",
+    // Require explicit return types on functions and class methods.
+    "@typescript-eslint/explicit-function-return-type": [
+      "error",
+      {
+        // Only functions which are part of a declaration will be checked.
+        "allowExpressions": true
+      }
+    ],
+    // Require explicit accessibility modifiers on class properties and methods.
+    "@typescript-eslint/explicit-member-accessibility": [
+      "error",
+      { "accessibility": "explicit" }
+    ],
+    // Require explicit return and argument types on exported functions' and
+    // classes' public class methods.
+    "@typescript-eslint/explicit-module-boundary-types": "error",
+    // Require a consistent member declaration order.
+    "@typescript-eslint/member-ordering": [
+      "error",
+      {
+        "default": [
+          "constructor",
+          "static-field",
+          "instance-field",
+          "static-method",
+          "instance-method"
+        ]
+      }
+    ],
+    // Enforces naming conventions for everything across a codebase.
+    "@typescript-eslint/naming-convention": [
+      "error",
+      {
+        "selector": "classProperty",
+        "format": ["PascalCase", "camelCase"],
+        "modifiers": ["public"]
+      },
+      {
+        "selector": "function",
+        "format": ["camelCase"]
+      },
+      {
+        "selector": "interface",
+        "format": ["PascalCase"],
+        "custom": { "regex": "^I[A-Z]", "match": false }
+      }
+    ],
+
+    // Disallow usage of the any type.
+    "@typescript-eslint/no-explicit-any": "error",
+    // Disallow the use of custom TypeScript modules and namespaces.
+    "@typescript-eslint/no-namespace": ["error", { "allowDeclarations": true }],
+    // Disallow unused expressions.
+    "@typescript-eslint/no-unused-expressions": "error",
+    // Disallow unused variables.
+    "@typescript-eslint/no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "ignoreRestSiblings": true,
+        "varsIgnorePattern": "^_"
+      }
+    ],
+    // Prefer a ‘for-of’ loop over a standard ‘for’ loop if the index is only
+    // used to access the array being iterated.
+    "@typescript-eslint/prefer-for-of": ["warn"],
+    // Use function types instead of interfaces with call signatures.
+    "@typescript-eslint/prefer-function-type": ["warn"],
+    // Requires that private members are marked as readonly if they're never
+    // modified outside of the constructor.
+    "@typescript-eslint/prefer-readonly": "error",
+    // Enforces unbound methods are called with their expected scope.
+    "@typescript-eslint/unbound-method": ["error", { "ignoreStatic": true }],
+    // Warns for any two overloads that could be unified into one by using a
+    // union or an optional/rest parameter.
+    "@typescript-eslint/unified-signatures": "warn",
+
+    // Enforce a convention in the order of require() / import statements.
+    // (Import members handled by `sort-imports`.)
+    "import/order": [
+      "error",
+      {
+        "alphabetize": { "order": "asc", "caseInsensitive": true },
+        "groups": [
+          ["builtin", "external"],
+          "internal",
+          "parent",
+          "sibling",
+          "index"
+        ]
+      }
+    ],
+    // Only used to sort the members, not the declarations. (Declarations
+    // handled by `import/order`.)
+    "sort-imports": [
+      "error",
+      {
+        "ignoreCase": true,
+        "ignoreDeclarationSort": true
+      }
+    ]
+  },
+  "settings": {
+    "import/resolver": { "typescript": { "project": ["tsconfig.json"] } },
+    "react": {
+      "version": "detect"
+    }
+  },
+  "ignorePatterns": ["node_modules", "dist", "build", ".nx", "*.min.js"]
+}

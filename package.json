@@ -1,0 +1,32 @@
+{
+  "name": "astik-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Astik - The Invisible Money Tracker for Egypt",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "api:dev": "npm run dev -w @astik/api",
+    "api:build": "npm run build -w @astik/api",
+    "mobile": "npm run start -w @astik/mobile",
+    "mobile:ios": "npm run ios -w @astik/mobile",
+    "mobile:android": "npm run android -w @astik/mobile",
+    "mobile:android-local-build": "npm run android-local-build -w @astik/mobile",
+    "mobile-prebuild": "npm run prebuild -w @astik/mobile",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "prettier": "^3.2.5"
+  },
+  "dependencies": {
+    "expo": "~52.0.47",
+    "react": "18.3.1",
+    "react-native": "0.76.9"
+  }
+}

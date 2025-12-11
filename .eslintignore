@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+out/
+
+# Nx
+.nx/
+
+# Testing
+coverage/
+
+# Misc
+*.log
+.DS_Store
+*.min.js
+*.bundle.js
