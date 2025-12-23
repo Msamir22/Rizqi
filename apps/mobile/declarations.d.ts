@@ -5,11 +5,6 @@ declare module "*.svg" {
   export default content;
 }
 
-// Add React Native Reanimated types
-declare module "react-native-reanimated" {
-  export * from "react-native-reanimated/lib/types";
-}
-
 // Allow importing .css files
 declare module "*.css" {
   const content: { [className: string]: string };
