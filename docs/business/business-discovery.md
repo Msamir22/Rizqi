@@ -1,7 +1,7 @@
 # Astik - Business Logic & Architecture Discovery
 
 > **Status:** 🟡 In Discussion  
-> **Last Updated:** 2026-01-01  
+> **Last Updated:** 2026-01-02  
 > **Purpose:** Business discovery questions to guide schema design
 >
 > **📋 See Also:** [business-decisions.md](./business-decisions.md) - Finalized
@@ -13,10 +13,10 @@
 
 ### Existing Models (WatermelonDB) - TO BE REPLACED
 
-| Model           | Status            | Reason                                                   |
-| --------------- | ----------------- | -------------------------------------------------------- |
-| **Account**     | ⚠️ Needs redesign | Merging GOLD into Assets domain, separating bank_details |
-| **Transaction** | ⚠️ Needs review   | Confirm fields after Transactions section                |
+| Model           | Status            | Reason                                                        |
+| --------------- | ----------------- | ------------------------------------------------------------- |
+| **Account**     | ⚠️ Needs redesign | Merging GOLD into Assets domain, separating bank_details      |
+| **Transaction** | ⚠️ Needs redesign | New schema finalized in [Section 11](./business-decisions.md) |
 
 ### Existing Supabase Tables
 
@@ -30,251 +30,114 @@
 
 ### ✅ 2.1 User & Authentication (COMPLETE)
 
-See [business-decisions.md](./business-decisions.md#1-user--authentication)
-
-**Summary:**
-
-- Email/Password + Google login
-- Supabase Anonymous Auth for guest mode
-- Sign-up prompt after 5 transactions
-- "Ghost User" pattern - data syncs before sign-up
+See
+[business-decisions.md - Section 1](./business-decisions.md#1-user--authentication)
 
 ---
 
 ### ✅ 2.2 Accounts & Assets (COMPLETE)
 
-See [business-decisions.md](./business-decisions.md#2-database-architecture)
+See
+[business-decisions.md - Section 2](./business-decisions.md#2-database-architecture)
 
-**Summary:**
+---
 
-- Supertype/Subtype pattern
-- **Accounts Domain:** `accounts` + `bank_details` (for SMS parsing)
-- **Assets Domain:** `assets` + `asset_metals` (weight × price valuation)
-- Daily snapshots: `daily_snapshot_balance`, `daily_snapshot_assets`
+### ✅ 2.3 Transaction Categories (COMPLETE)
+
+See
+[business-decisions.md - Section 5](./business-decisions.md#5-transaction-categories)
+
+---
+
+### ✅ 2.4 Debts & Loans (COMPLETE)
+
+See [business-decisions.md - Section 6](./business-decisions.md#6-debts--loans)
+
+---
+
+### ✅ 2.5 Recurring Payments (COMPLETE)
+
+See
+[business-decisions.md - Section 7](./business-decisions.md#7-recurring-payments)
+
+---
+
+### ✅ 2.6 Transfers (COMPLETE)
+
+See [business-decisions.md - Section 8](./business-decisions.md#8-transfers)
+
+**Decision:** Option B - Single `transfers` table with `from_account_id` and
+`to_account_id`
+
+---
+
+### ✅ 2.7 Budgets (COMPLETE)
+
+See [business-decisions.md - Section 9](./business-decisions.md#9-budgets)
+
+**Decisions:**
+
+- Scope: Both category and global budgets
+- Period: Weekly, Monthly, or Custom
+- Alert threshold: User-defined (custom percentage)
+
+---
+
+### ✅ 2.8 Net Worth & Dashboard (COMPLETE)
+
+See
+[business-decisions.md - Section 10](./business-decisions.md#10-net-worth--dashboard)
+
+**Decisions:**
+
+- Storage: Summary table (`user_net_worth_summary`)
+- Monthly change: Compare with 30 days ago
+
+---
+
+### ✅ 2.9 Transaction Schema (COMPLETE)
+
+See
+[business-decisions.md - Section 11](./business-decisions.md#11-transaction-schema-consolidated)
+
+**Please review the consolidated schema and confirm it meets all requirements.**
+Confirmed
 
 ---
 
 ## 3. Remaining Questions
 
-### 3.1 Transactions
+### 3.1 Metals/Gold
 
-**Q1: Transaction Categories** ✅ COMPLETED
+**Q11: Gold Transactions**
 
-> **See:**
-> [business-decisions.md](./business-decisions.md#5-transaction-categories) for
-> the finalized schema
-
-- Should categories be predefined (dropdown) or user-defined (free text)?
-- If predefined, what categories do you want?
-
-  _Suggested list:_
-  - Food & Dining
-  - Transport
-  - Shopping
-  - Utilities & Bills
-  - Entertainment
-  - Health & Medical
-  - Education
-  - Housing & Rent
-  - Salary / Income
-  - Gifts
-  - Other
-
-  Answer: we will have 3 levels of categories, the first level is the main
-  category, the second level is the subcategory and the third level is the
-  sub-subcategory (optional level and won't be predifend, will be
-  user-definable). so, let's go with predefined categories for the first and
-  second level and allow user to add custom categories for all levels. this will
-  give the user more flexibility and control over their categories. here are the
-  predefined categories and subcategories (Please note that first & second
-  levels will not be editable/deletable by the user unless it's a custom
-  category not system predefined category, however the user will be able to hide
-  any category/subcategory/sub-subcategory from the list) :
-  - Food & Drinks
-    - Groceries
-    - Restaurant
-    - Coffee & Tea
-    - Snacks
-    - Drinks
-  - Transportation
-    - public transport
-    - private transport
-  - Vehicle
-    - Fuel
-    - Parking
-    - Rental
-    - License Fees
-    - Tax
-    - Traffic Fine
-    - Buy (if selected in transaction, it needs migration to assets will not be
-      introduced in MVP)
-    - Sell (if selected in transaction, it needs migration to assets will not be
-      introduced in MVP)
-    - Maintenance
-  - Shopping
-    - Clothes
-    - Electronics & Appliances
-    - Accessories
-    - Footwear
-    - Bags
-    - Kids & Baby
-    - Beauty
-    - Home & Garden
-    - Pets
-    - Sports & Fitness
-    - Toys & Games
-    - Travel
-    - Wedding
-    - Detergents
-    - Decorations
-  - Health & Medical
-    - Doctor
-    - Medicine
-    - Surgery
-    - Dental
-  - Utilities & Bills
-    - Electricity
-    - Water
-    - Internet
-    - Phone
-    - Gas
-    - Trash
-    - Online Subscription
-    - Streaming
-    - Taxes
-  - Entertainment
-    - Trips , Holidays
-    - Events
-    - Tickets
-  - Charity
-    - Donations
-    - Fundraising
-    - Gifts
-  - Education
-    - Books
-    - Tuition
-    - Fees
-  - Housing
-    - Rent
-    - Maintenance & Repairs
-    - Tax
-    - Sell (if selected in transaction, it needs migration to assets will not be
-      introduced in MVP)
-    - Buy (if selected in transaction, it needs migration to assets will not be
-      introduced in MVP)
-  - Salary / Income
-    - Salary
-    - Bonus
-    - Commission
-    - Refund
-    - Loan
-    - Gift
-    - Check
-    - Rental Income
-  - Other (fallback for uncategorized)
-    - Other
-
----
-
-**Q2: Transaction Types** Since we now have separate Account and Asset domains:
-
-- Transactions only affect `accounts` (spendable money), correct?
-- When buying gold, should it create a transaction (expense from account) AND
-  create an asset entry? Or is this handled manually?
-
-**Q3: Transfer Between Accounts**
-
-- Is a "transfer" just moving money between your own accounts? (e.g., Bank →
-  Cash)
-- How should it be stored?
-  - **Option A:** Two transactions (expense from source + income to destination)
-  - **Option B:** Single "transfer" record with `from_account_id` and
-    `to_account_id`
-
-**Q4: Loans & Debt** The current Transaction model has `loan` and `borrow` types
-(from voice parsing).
-
-- Should we track WHO you lent money to or borrowed from?
-- Do you want a separate `debts` table to track outstanding balances?
-
-**Q5: Recurring Transactions**
-
-- Do you want recurring transaction support? (e.g., monthly rent, subscriptions)
-- If yes:
-  - Should they auto-create on due date?
-  - Or just send a reminder notification?
-
----
-
-### 3.2 Total Balance & Net Worth
-
-**Q6: Net Worth Calculation** Net Worth = Total Accounts (EGP) + Total Assets
-(EGP)
-
-For the dashboard "Total Net Worth" card:
-
-- Should this be calculated on-the-fly? Or stored in a summary table?
-- The monthly percentage change: Compare with which snapshot?
-  - Yesterday?
-  - 30 days ago?
-  - Same day last month?
-
-**Q7: Emergency Fund Calculation** You mentioned `is_liquid` flag on assets.
-Should we show:
-
-- "Emergency Fund Available" = Liquid accounts + Liquid assets?
-- Is this a future feature or needed now?
-
----
-
-### 3.3 Budgets
-
-**Q8: Budget Scope**
-
-- Category-based budgets only? (e.g., "Food: EGP 5000/month")
-- Global budget? ("Total spending: EGP 20,000/month")
-- Or both?
-
-**Q9: Budget Period**
-
-- Monthly only?
-- Weekly option?
-- Custom date range?
-
-**Q10: Budget Alerts**
-
-- At what percentage should we alert? (80%? 90%? Custom?)
-- How many alerts per budget cycle?
-
----
-
-### 3.4 Metals/Gold
-
-**Q11: Gold Transactions** When a user buys or sells physical gold:
+When a user buys or sells physical gold:
 
 - Do they just add/remove an asset entry manually?
 - Or should buying gold automatically:
   1. Deduct from a selected account (expense transaction)
-  2. Create the asset entry with purchase_price
+  2. Create the asset entry with `purchase_price`
 
-**Q12: Gold Purity Pricing** Different karats have different prices. How to
-handle?
+**Q12: Gold Purity Pricing**
+
+Different karats have different prices. Confirm this formula:
+
+```
+value = weight_grams × (karat / 24) × gold_price_per_gram
+```
 
 - 24K: 100% of market price
 - 21K: ~87.5% of market price
 - 18K: 75% of market price
 
-Should we calculate this automatically using the formula:
-`value = weight_grams × (karat / 24) × gold_price_per_gram`
-
 ---
 
-### 3.5 Notifications
+### 3.2 Notifications
 
 **Q13: Transaction Confirmation**
 
 - Show notification after every saved transaction?
-- Or only voice/auto-detected transactions?
+- Or only for voice/auto-detected transactions?
 
 **Q14: Low Balance Warning**
 
@@ -283,43 +146,54 @@ Should we calculate this automatically using the formula:
 
 ---
 
-### 3.6 Data Sync Details
+### 3.3 Data Sync Details
 
-**Q15: Multi-Device Conflict** If user logs in on two devices and both make
-changes offline:
+**Q15: Multi-Device Conflict**
+
+If user logs in on two devices and both make changes offline:
 
 - **Last write wins?** (simpler, potential data loss)
 - **Merge both changes?** (complex but safer)
 
-**Q16: Sync Tables** Which tables should sync between WatermelonDB and Supabase?
+**Q16: Sync Tables**
+
+Which tables should sync between WatermelonDB and Supabase?
 
 - ✅ accounts
 - ✅ bank_details
 - ✅ transactions
 - ✅ assets
 - ✅ asset_metals
-- ❓ budgets (when implemented)
+- ✅ categories (user-created only)
+- ✅ budgets
+- ✅ debts
+- ✅ recurring_payments
+- ✅ transfers
 - ❌ market_rates (read-only from API)
-- ❌ daily*snapshot*\* (server-generated)
+- ❌ daily_snapshot\_\* (server-generated)
+- ❌ user_net_worth_summary (server-calculated)
 
 ---
 
-## 4. New Questions (From Your Answers)
+### 3.4 Additional Questions
 
-These arose from analyzing your responses:
+**Q17: Digital Wallet Type**
 
-**Q17: Digital Wallet Type** You mentioned `'DIGITAL_WALLET'` as an account
-type.
+You mentioned `'DIGITAL_WALLET'` as an account type.
 
 - Examples: Vodafone Cash, Orange Money, InstaPay, PayPal?
 - Do digital wallets need extra fields like phone number or wallet ID?
 
-**Q18: SMS Sender Name** You mentioned SMS auto-detection feature.
+**Q18: SMS Sender Name**
+
+You mentioned SMS auto-detection feature.
 
 - Should `bank_details` include `sms_sender_name` column?
 - Examples: "AhlyBank", "CIB", "HSBC"
 
-**Q19: User Profile Data** For the greeting "Good Morning, Mohamed":
+**Q19: User Profile Data**
+
+For the greeting "Good Morning, Mohamed":
 
 - Where should the user's name come from?
   - From Google profile during social login?
@@ -328,7 +202,43 @@ type.
 
 ---
 
-## 5. Visual: Complete Data Model (Draft)
+### 3.5 Cross-Currency Transfers
+
+**Q20: Transfer Between Different Currencies**
+
+If transferring from USD account to EGP account:
+
+- Should we store the exchange rate used?
+- Should we store the converted amount in destination currency?
+- Example: Transfer $100 → EGP 5,000 (at rate 50.00)
+
+---
+
+## 4. Schema Review Checklist
+
+Before moving to implementation, please confirm these consolidated schemas:
+
+| Table                    | Section                                             | Status     |
+| ------------------------ | --------------------------------------------------- | ---------- |
+| `accounts`               | [2.2](./business-decisions.md#22-accounts-domain)   | ⏳ Confirm |
+| `bank_details`           | [2.2](./business-decisions.md#22-accounts-domain)   | ⏳ Confirm |
+| `assets`                 | [2.3](./business-decisions.md#23-assets-domain)     | ⏳ Confirm |
+| `asset_metals`           | [2.3](./business-decisions.md#23-assets-domain)     | ⏳ Confirm |
+| `transactions`           | [11](./business-decisions.md#11-transaction-schema) | ⏳ Confirm |
+| `categories`             | [5.3](./business-decisions.md#53-table-categories)  | ⏳ Confirm |
+| `user_category_settings` | [5.4](./business-decisions.md#54-table)             | ⏳ Confirm |
+| `debts`                  | [6.2](./business-decisions.md#62-table-debts)       | ⏳ Confirm |
+| `recurring_payments`     | [7.2](./business-decisions.md#72-table)             | ⏳ Confirm |
+| `transfers`              | [8.2](./business-decisions.md#82-table-transfers)   | ⏳ Confirm |
+| `budgets`                | [9.2](./business-decisions.md#92-table-budgets)     | ⏳ Confirm |
+| `user_net_worth_summary` | [10.2](./business-decisions.md#102-storage)         | ⏳ Confirm |
+| `daily_snapshot_balance` | [2.4](./business-decisions.md#24-historical)        | ⏳ Confirm |
+| `daily_snapshot_assets`  | [2.4](./business-decisions.md#24-historical)        | ⏳ Confirm |
+| `market_rates_history`   | [2.5](./business-decisions.md#25-market-rates)      | ⏳ Confirm |
+
+---
+
+## 5. Visual: Complete Data Model
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -336,34 +246,38 @@ type.
 │                                    │                                        │
 └────────────────────────────────────┼────────────────────────────────────────┘
                                      │
-           ┌─────────────────────────┼─────────────────────────┐
-           │                         │                         │
-           ▼                         ▼                         ▼
-    ┌─────────────┐          ┌─────────────┐          ┌─────────────┐
-    │  accounts   │          │   assets    │          │  profiles?  │
-    │             │          │             │          │  (TBD)      │
-    │ CASH/BANK/  │          │ METAL/CRYPTO│          │             │
-    │ WALLET      │          │ /REAL_ESTATE│          └─────────────┘
-    └──────┬──────┘          └──────┬──────┘
-           │                        │
-           │ type = 'BANK'          │ type = 'METAL'
-           ▼                        ▼
-    ┌─────────────┐          ┌─────────────┐
-    │ bank_details│          │asset_metals │
-    └─────────────┘          └─────────────┘
-           │
-           │ account_id
-           ▼
-    ┌─────────────┐
-    │transactions │
-    └─────────────┘
+     ┌───────────────┬───────────────┼───────────────┬───────────────┐
+     │               │               │               │               │
+     ▼               ▼               ▼               ▼               ▼
+┌─────────┐   ┌─────────┐   ┌──────────────┐   ┌─────────┐   ┌─────────────┐
+│accounts │   │ assets  │   │ transactions │   │ budgets │   │   debts     │
+└────┬────┘   └────┬────┘   └──────────────┘   └─────────┘   └─────────────┘
+     │             │               ▲
+     │             │               │
+     ▼             ▼               │ linked_recurring_id
+┌─────────────┐ ┌─────────────┐   │
+│bank_details │ │asset_metals │   │
+└─────────────┘ └─────────────┘   │
+                                  │
+                          ┌───────────────────┐
+                          │recurring_payments │
+                          └───────────────────┘
+
+     ┌───────────────┐   ┌───────────────────────┐
+     │   transfers   │   │ user_net_worth_summary│
+     └───────────────┘   └───────────────────────┘
+
+     ┌───────────────┐   ┌───────────────────────┐
+     │  categories   │   │ user_category_settings│
+     └───────────────┘   └───────────────────────┘
 ```
 
 ---
 
 ## 6. Next Steps
 
-1. ⏳ Answer remaining questions (3.1 - 3.6, 4.x)
-2. ⏳ Finalize complete schema
-3. ⏳ Review WatermelonDB model updates
-4. ⏳ Proceed to implementation
+1. ⏳ Answer remaining questions (Q11-Q20)
+2. ⏳ Review and confirm schema checklist (Section 4)
+3. ⏳ Finalize complete SQL migration
+4. ⏳ Update WatermelonDB models
+5. ⏳ Proceed to implementation
