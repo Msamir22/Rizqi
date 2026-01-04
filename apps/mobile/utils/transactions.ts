@@ -1,10 +1,12 @@
 /**
  * Transaction helper functions for Astik
+ * Refactored for new schema (v2)
  */
 
-import { database } from "../providers/DatabaseProvider";
-import { Transaction, Account } from "@astik/db";
+import { Account, Currency, Transaction, TransactionType } from "@astik/db";
 import { ParsedVoiceTransaction } from "@astik/logic";
+import { database } from "../providers/DatabaseProvider";
+import { getCurrentUserId } from "../services/supabase";
 
 /**
  * Create a new transaction from voice input
@@ -13,19 +15,27 @@ export async function createTransactionFromVoice(
   parsed: ParsedVoiceTransaction,
   accountId: string
 ): Promise<Transaction> {
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    throw new Error("User not authenticated");
+  }
+
   const transactionsCollection = database.get<Transaction>("transactions");
 
   const newTransaction = await database.write(async () => {
     return await transactionsCollection.create((tx) => {
-      tx.amount = parsed.amount;
-      tx.currency = parsed.currency as "EGP" | "USD" | "XAU";
-      tx.category = parsed.detectedCategory || "Other";
-      tx.merchant = parsed.merchant || parsed.description || "";
+      tx.userId = userId;
       tx.accountId = accountId;
-      tx.note = parsed.description || "";
+      tx.amount = Math.abs(parsed.amount); // Amount is always positive
+      tx.currency = (parsed.currency as Currency) || "EGP";
+      tx.type = parsed.isIncome ? "INCOME" : "EXPENSE";
+      tx.categoryId = parsed.detectedCategory || "other"; // Will need category lookup
+      tx.merchant = parsed.merchant || parsed.description || undefined;
+      tx.note = parsed.description || undefined;
+      tx.date = new Date();
+      tx.source = "VOICE";
       tx.isDraft = false; // Voice transactions are confirmed
-      tx.isExpense = !parsed.isIncome;
-      tx.notificationSource = "voice";
+      tx.deleted = false;
     });
   });
 
@@ -40,30 +50,43 @@ export async function createTransactionFromVoice(
  */
 export async function createTransaction(data: {
   amount: number;
-  currency: "EGP" | "USD" | "XAU";
-  category?: string | null;
+  currency: Currency;
+  categoryId?: string;
   merchant?: string;
   accountId: string;
   note?: string;
-  isExpense: boolean;
+  type: TransactionType;
+  date?: Date;
 }): Promise<Transaction> {
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    throw new Error("User not authenticated");
+  }
+
   const transactionsCollection = database.get<Transaction>("transactions");
 
   const newTransaction = await database.write(async () => {
     return await transactionsCollection.create((tx) => {
-      tx.amount = data.amount;
-      tx.currency = data.currency;
-      tx.category = data.category || "Other";
-      tx.merchant = data.merchant || "";
+      tx.userId = userId;
       tx.accountId = data.accountId;
-      tx.note = data.note || "";
+      tx.amount = Math.abs(data.amount); // Amount is always positive
+      tx.currency = data.currency;
+      tx.type = data.type;
+      tx.categoryId = data.categoryId || "other";
+      tx.merchant = data.merchant || undefined;
+      tx.note = data.note || undefined;
+      tx.date = data.date || new Date();
+      tx.source = "MANUAL";
       tx.isDraft = false;
-      tx.isExpense = data.isExpense;
-      tx.notificationSource = "manual";
+      tx.deleted = false;
     });
   });
 
-  await updateAccountBalance(data.accountId, data.amount, data.isExpense);
+  await updateAccountBalance(
+    data.accountId,
+    data.amount,
+    data.type === "EXPENSE"
+  );
 
   return newTransaction;
 }
@@ -97,31 +120,74 @@ export async function getAccountTransactions(
   accountId: string
 ): Promise<Transaction[]> {
   const transactionsCollection = database.get<Transaction>("transactions");
-  return await transactionsCollection.query().fetch();
+  const { Q } = await import("@nozbe/watermelondb");
+  return await transactionsCollection
+    .query(Q.where("account_id", accountId), Q.where("deleted", false))
+    .fetch();
 }
 
 /**
  * Get default account (first cash account or create one)
  */
 export async function getOrCreateDefaultAccount(): Promise<Account> {
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    throw new Error("User not authenticated");
+  }
+
   const accountsCollection = database.get<Account>("accounts");
+  const { Q } = await import("@nozbe/watermelondb");
 
-  // Try to find existing cash account
-  const accounts = await accountsCollection.query().fetch();
-  const cashAccount = accounts.find((a) => a.type === "CASH");
+  // Try to find existing cash account for this user
+  const cashAccounts = await accountsCollection
+    .query(
+      Q.where("user_id", userId),
+      Q.where("type", "CASH"),
+      Q.where("deleted", false)
+    )
+    .fetch();
 
-  if (cashAccount) {
-    return cashAccount;
+  if (cashAccounts.length > 0) {
+    return cashAccounts[0];
   }
 
   // Create default cash account
   return await database.write(async () => {
     return await accountsCollection.create((acc) => {
+      acc.userId = userId;
       acc.name = "Cash";
       acc.type = "CASH";
       acc.currency = "EGP";
       acc.balance = 0;
-      acc.isLiquid = true;
+      acc.deleted = false;
+    });
+  });
+}
+
+/**
+ * Mark a transaction as deleted (soft delete)
+ */
+export async function deleteTransaction(transactionId: string): Promise<void> {
+  const transactionsCollection = database.get<Transaction>("transactions");
+
+  await database.write(async () => {
+    const transaction = await transactionsCollection.find(transactionId);
+
+    // Reverse the balance change
+    const accountsCollection = database.get<Account>("accounts");
+    const account = await accountsCollection.find(transaction.accountId);
+
+    await account.update((acc) => {
+      if (transaction.type === "EXPENSE") {
+        acc.balance += transaction.amount; // Restore balance
+      } else {
+        acc.balance -= transaction.amount;
+      }
+    });
+
+    // Soft delete
+    await transaction.update((tx) => {
+      tx.deleted = true;
     });
   });
 }

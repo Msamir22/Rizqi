@@ -22,7 +22,11 @@
     "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
     "android": "expo run:android",
     "start:android": "npm run start -w @astik/mobile",
-    "ios": "expo run:ios"
+    "ios": "expo run:ios",
+    "supabase:pull": "npx supabase db pull",
+    "supabase:push": "npx supabase db push",
+    "supabase:reset": "npx supabase db reset",
+    "supabase:migrations": "npx supabase migration list"
   },
   "dependencies": {
     "@nozbe/watermelondb": "^0.28.0"
