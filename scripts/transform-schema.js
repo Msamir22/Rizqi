@@ -1,0 +1,622 @@
+/**
+ * Transform Supabase Types to WatermelonDB Schema & Models
+ *
+ * This script reads the generated supabase-types.ts file and produces:
+ * - schema.ts (WatermelonDB appSchema)
+ * - types.ts (TypeScript type definitions from enums)
+ * - models/base-*.ts (Abstract base model classes - AUTO-GENERATED)
+ * - models/*.ts (Extended model classes - only created if missing)
+ *
+ * Usage: node scripts/transform-schema.js
+ */
+
+const fs = require("fs");
+const path = require("path");
+
+// =============================================================================
+// CONFIGURATION
+// =============================================================================
+
+const SUPABASE_TYPES_PATH = path.join(
+  __dirname,
+  "../packages/db/src/supabase-types.ts"
+);
+const OUTPUT_DIR = path.join(__dirname, "../packages/db/src");
+const MODELS_DIR = path.join(OUTPUT_DIR, "models");
+const BASE_MODELS_DIR = path.join(MODELS_DIR, "base");
+
+// Tables to exclude (cloud-only, computed data, or internal)
+const EXCLUDED_TABLES = [
+  "__InternalSupabase",
+  "daily_snapshot_assets",
+  "daily_snapshot_balance",
+  "market_rates",
+  "market_rates_history",
+  "user_net_worth_summary",
+];
+
+// Mapping from table names to class names (for irregular plurals)
+const TABLE_TO_CLASS = {
+  accounts: "Account",
+  asset_metals: "AssetMetal",
+  assets: "Asset",
+  bank_details: "BankDetails",
+  budgets: "Budget",
+  categories: "Category",
+  debts: "Debt",
+  profiles: "Profile",
+  recurring_payments: "RecurringPayment",
+  transactions: "Transaction",
+  transfers: "Transfer",
+  user_category_settings: "UserCategorySettings",
+};
+
+// Fields that should be indexed
+const INDEXED_FIELDS = ["user_id"];
+
+// Fields that are timestamps (stored as number in WatermelonDB)
+const TIMESTAMP_FIELDS = [
+  "created_at",
+  "updated_at",
+  "date",
+  "due_date",
+  "start_date",
+  "end_date",
+  "next_due_date",
+  "purchase_date",
+  "period_start",
+  "period_end",
+  "snapshot_date",
+];
+
+// Fields that are readonly
+const READONLY_FIELDS = ["created_at"];
+
+// =============================================================================
+// PARSING HELPERS
+// =============================================================================
+
+/**
+ * Parse the supabase-types.ts file and extract table definitions and enums
+ */
+function parseSupabaseTypes(content) {
+  const tables = {};
+  const enums = {};
+  const relationships = {};
+
+  // Extract enums
+  const enumsMatch = content.match(/Enums:\s*\{([^}]+(?:\{[^}]*\}[^}]*)*)\}/s);
+  if (enumsMatch) {
+    const enumsBlock = enumsMatch[1];
+    const enumRegex = /(\w+):\s*([^;]+);/g;
+    let match;
+    while ((match = enumRegex.exec(enumsBlock)) !== null) {
+      const enumName = match[1];
+      const enumValues = match[2]
+        .split("|")
+        .map((v) => v.trim().replace(/"/g, ""))
+        .filter((v) => v);
+      enums[enumName] = enumValues;
+    }
+  }
+
+  // Extract tables from the Tables block
+  const tablesMatch = content.match(/Tables:\s*\{([\s\S]*?)\n\s{4}\};/);
+  if (!tablesMatch) {
+    console.error("Could not find Tables block in supabase-types.ts");
+    return { tables, enums, relationships };
+  }
+
+  // More robust regex that handles empty Relationships: []
+  const tableRegex =
+    /(\w+):\s*\{\s*Row:\s*\{([\s\S]*?)\};\s*Insert:[\s\S]*?Update:[\s\S]*?Relationships:\s*\[([\s\S]*?)\];\s*\};/g;
+  let tableMatch;
+
+  while ((tableMatch = tableRegex.exec(content)) !== null) {
+    const tableName = tableMatch[1];
+
+    if (EXCLUDED_TABLES.includes(tableName)) {
+      continue;
+    }
+
+    const rowBlock = tableMatch[2];
+    const relationshipsBlock = tableMatch[3] || "";
+
+    // Parse columns from Row block
+    const columns = [];
+    const columnRegex = /(\w+):\s*([^;]+);/g;
+    let colMatch;
+
+    while ((colMatch = columnRegex.exec(rowBlock)) !== null) {
+      const colName = colMatch[1];
+      const colType = colMatch[2].trim();
+
+      // Skip the 'id' column (WatermelonDB handles this)
+      if (colName === "id") continue;
+
+      columns.push({
+        name: colName,
+        rawType: colType,
+        ...parseColumnType(colType, colName, enums),
+      });
+    }
+
+    tables[tableName] = { columns };
+
+    // Parse relationships (only if not empty)
+    if (relationshipsBlock.trim()) {
+      const relRegex =
+        /foreignKeyName:\s*"([^"]+)"[\s\S]*?columns:\s*\["([^"]+)"\][\s\S]*?referencedRelation:\s*"([^"]+)"/g;
+      let relMatch;
+      relationships[tableName] = relationships[tableName] || [];
+
+      while ((relMatch = relRegex.exec(relationshipsBlock)) !== null) {
+        relationships[tableName].push({
+          foreignKey: relMatch[2],
+          referencedTable: relMatch[3],
+        });
+      }
+    }
+  }
+
+  return { tables, enums, relationships };
+}
+
+/**
+ * Parse a column type from Supabase types to WatermelonDB type
+ */
+function parseColumnType(rawType, columnName, enums) {
+  const isOptional = rawType.includes("| null");
+  const cleanType = rawType.replace(/\s*\|\s*null/g, "").trim();
+
+  // Check if it's an enum reference
+  const enumMatch = cleanType.match(
+    /Database\["public"\]\["Enums"\]\["(\w+)"\]/
+  );
+  if (enumMatch) {
+    return {
+      wmType: "string",
+      isOptional,
+      isEnum: true,
+      enumName: enumMatch[1],
+    };
+  }
+
+  // Determine WatermelonDB type
+  let wmType = "string";
+  if (cleanType === "number") {
+    wmType = "number";
+  } else if (cleanType === "boolean") {
+    wmType = "boolean";
+  } else if (cleanType === "string") {
+    wmType = "string";
+  } else if (cleanType === "Json") {
+    wmType = "string"; // JSON stored as string
+  }
+
+  // Check if it should be indexed
+  const isIndexed =
+    INDEXED_FIELDS.includes(columnName) || columnName.endsWith("_id");
+
+  // Check if it's a timestamp
+  const isTimestamp = TIMESTAMP_FIELDS.includes(columnName);
+  if (isTimestamp) {
+    wmType = "number";
+  }
+
+  return {
+    wmType,
+    isOptional,
+    isIndexed,
+    isTimestamp,
+    isReadonly: READONLY_FIELDS.includes(columnName),
+  };
+}
+
+// =============================================================================
+// GENERATORS
+// =============================================================================
+
+/**
+ * Generate schema.ts content
+ */
+function generateSchema(tables) {
+  const tableSchemas = Object.entries(tables)
+    .map(([tableName, { columns }]) => {
+      const columnDefs = columns
+        .map((col) => {
+          const parts = [`{ name: "${col.name}", type: "${col.wmType}"`];
+          if (col.isOptional) parts.push("isOptional: true");
+          if (col.isIndexed) parts.push("isIndexed: true");
+          return `        ${parts.join(", ")} }`;
+        })
+        .join(",\n");
+
+      return `    tableSchema({
+      name: "${tableName}",
+      columns: [
+${columnDefs},
+      ],
+    })`;
+    })
+    .join(",\n\n");
+
+  return `/**
+ * WatermelonDB Schema for Astik
+ * AUTO-GENERATED - DO NOT EDIT MANUALLY
+ * Run 'npm run db:sync' to regenerate
+ */
+
+import { appSchema, tableSchema } from "@nozbe/watermelondb";
+
+export const schema = appSchema({
+  version: 3,
+  tables: [
+${tableSchemas},
+  ],
+});
+`;
+}
+
+/**
+ * Generate types.ts content
+ */
+function generateTypes(enums) {
+  const typeExports = Object.entries(enums)
+    .map(([enumName, values]) => {
+      const pascalName = snakeToPascal(enumName);
+      const valueUnion = values.map((v) => `"${v}"`).join(" | ");
+      return `export type ${pascalName} = ${valueUnion};`;
+    })
+    .join("\n");
+
+  // Add common interfaces
+  return `/**
+ * Shared Types for WatermelonDB Models
+ * AUTO-GENERATED - DO NOT EDIT MANUALLY
+ * Run 'npm run db:sync' to regenerate
+ */
+
+// =============================================================================
+// ENUM TYPES (from Supabase)
+// =============================================================================
+
+${typeExports}
+
+// =============================================================================
+// COMMON TYPES
+// =============================================================================
+
+export type Currency = "EGP" | "USD" | "EUR";
+
+// =============================================================================
+// COMPLEX TYPES
+// =============================================================================
+
+export interface NotificationSettings {
+  sms_transaction_confirmation: boolean;
+  recurring_reminders: boolean;
+  budget_alerts: boolean;
+  low_balance_warnings: boolean;
+}
+`;
+}
+
+/**
+ * Generate a base model file (abstract class)
+ */
+function generateBaseModel(tableName, columns, relationships, allTables) {
+  const className = tableToClassName(tableName);
+  const baseClassName = `Base${className}`;
+  const rels = relationships[tableName] || [];
+
+  // Find reverse relationships (has_many)
+  const hasMany = [];
+  for (const [otherTable, otherRels] of Object.entries(relationships)) {
+    if (otherTable === tableName) continue;
+    for (const rel of otherRels || []) {
+      if (rel.referencedTable === tableName) {
+        hasMany.push({
+          table: otherTable,
+          foreignKey: rel.foreignKey,
+        });
+      }
+    }
+  }
+
+  // Build associations
+  const associations = [];
+  const seenTables = new Set();
+  for (const rel of rels) {
+    associations.push(
+      `    ${rel.referencedTable}: { type: "belongs_to", key: "${rel.foreignKey}" }`
+    );
+  }
+  for (const rel of hasMany) {
+    // Use unique key when same table has multiple foreign keys
+    const assocKey = seenTables.has(rel.table)
+      ? `${rel.table}_${rel.foreignKey.replace(/_id$/, "")}`
+      : rel.table;
+    seenTables.add(rel.table);
+    associations.push(
+      `    ${assocKey}: { type: "has_many", foreignKey: "${rel.foreignKey}" }`
+    );
+  }
+
+  // Build imports
+  const imports = ['import { Model, Query } from "@nozbe/watermelondb";'];
+  const decorators = new Set(["field"]);
+
+  for (const col of columns) {
+    if (col.isTimestamp) decorators.add("date");
+    if (col.isReadonly) decorators.add("readonly");
+  }
+
+  if (rels.length > 0) decorators.add("relation");
+  if (hasMany.length > 0) decorators.add("children");
+
+  imports.push(
+    `import { ${Array.from(decorators).join(", ")} } from "@nozbe/watermelondb/decorators";`
+  );
+  imports.push(
+    'import type { Associations } from "@nozbe/watermelondb/Model";'
+  );
+
+  if (rels.length > 0) {
+    imports.push('import type { Relation } from "@nozbe/watermelondb";');
+  }
+
+  // Add type imports
+  const typeImports = [];
+  for (const col of columns) {
+    if (col.isEnum && col.enumName) {
+      typeImports.push(snakeToPascal(col.enumName));
+    }
+  }
+  if (typeImports.length > 0) {
+    imports.push(
+      `import type { ${[...new Set(typeImports)].join(", ")} } from "../../types";`
+    );
+  }
+
+  // Build field declarations
+  const fieldDeclarations = columns
+    .map((col) => {
+      const propName = snakeToCamel(col.name);
+      const decorator = col.isTimestamp ? "date" : "field";
+      const readonly = col.isReadonly ? "@readonly " : "";
+      const optional = col.isOptional ? "?" : "!";
+      let tsType = "string";
+
+      if (col.wmType === "number") tsType = col.isTimestamp ? "Date" : "number";
+      else if (col.wmType === "boolean") tsType = "boolean";
+      else if (col.isEnum && col.enumName) tsType = snakeToPascal(col.enumName);
+
+      return `  ${readonly}@${decorator}("${col.name}") ${propName}${optional}: ${tsType};`;
+    })
+    .join("\n");
+
+  // Build relation declarations - use Base prefix for types
+  const relationDeclarations = rels
+    .map((rel) => {
+      const propName = snakeToCamel(rel.foreignKey.replace(/_id$/, ""));
+      const relClassName = tableToClassName(rel.referencedTable);
+      return `  @relation("${rel.referencedTable}", "${rel.foreignKey}") ${propName}!: Relation<Base${relClassName}>;`;
+    })
+    .join("\n");
+
+  // Build children declarations
+  const seenChildTables = new Set();
+  const childrenDeclarations = hasMany
+    .map((rel) => {
+      const propName = seenChildTables.has(rel.table)
+        ? snakeToCamel(`${rel.table}_${rel.foreignKey.replace(/_id$/, "")}`)
+        : snakeToCamel(rel.table);
+      seenChildTables.add(rel.table);
+      return `  @children("${rel.table}") ${propName}!: Query<Model>;`;
+    })
+    .join("\n");
+
+  // Add related model imports - use base- prefix for imports
+  for (const rel of rels) {
+    const relClassName = tableToClassName(rel.referencedTable);
+    if (relClassName !== className) {
+      imports.push(
+        `import type { Base${relClassName} } from "./base-${pascalToKebab(relClassName)}";`
+      );
+    }
+  }
+
+  const associationsStr =
+    associations.length > 0
+      ? `  static associations: Associations = {\n${associations.join(",\n")},\n  };`
+      : "";
+
+  return `/**
+ * Base${className} - Abstract Base Model for WatermelonDB
+ * AUTO-GENERATED - DO NOT EDIT MANUALLY
+ * Run 'npm run db:sync' to regenerate
+ * 
+ * Extend this class in ../${className}.ts to add custom methods
+ */
+
+${imports.join("\n")}
+
+export abstract class ${baseClassName} extends Model {
+  static table = "${tableName}";
+${associationsStr}
+
+${fieldDeclarations}
+${relationDeclarations ? "\n" + relationDeclarations : ""}${childrenDeclarations ? "\n" + childrenDeclarations : ""}
+}
+`;
+}
+
+/**
+ * Generate an extended model file (only if it doesn't exist)
+ */
+function generateExtendedModel(tableName) {
+  const className = tableToClassName(tableName);
+  const baseClassName = `Base${className}`;
+  const baseFileName = `base-${pascalToKebab(className)}`;
+
+  return `/**
+ * ${className} Model
+ * MANUALLY MAINTAINED - Add custom getters, setters, and methods here
+ * This class extends the auto-generated Base${className}
+ */
+
+import { ${baseClassName} } from "./base/${baseFileName}";
+
+export class ${className} extends ${baseClassName} {
+  // ===========================================
+  // CUSTOM GETTERS
+  // ===========================================
+
+  // Add custom getters here
+
+  // ===========================================
+  // CUSTOM METHODS
+  // ===========================================
+
+  // Add custom methods here
+}
+`;
+}
+
+/**
+ * Generate index.ts content
+ */
+function generateIndex(tables) {
+  const modelExports = Object.keys(tables)
+    .map((tableName) => {
+      const className = tableToClassName(tableName);
+      return `export { ${className} } from "./models/${className}";`;
+    })
+    .join("\n");
+
+  return `/**
+ * WatermelonDB exports for Astik
+ * AUTO-GENERATED - DO NOT EDIT MANUALLY
+ * Run 'npm run db:sync' to regenerate
+ */
+
+// Schema
+export { schema } from "./schema";
+
+// Types (exported from central location)
+export * from "./types";
+
+// Models (extended classes with custom logic)
+${modelExports}
+
+// Database
+export { database } from "./database";
+`;
+}
+
+// =============================================================================
+// UTILITIES
+// =============================================================================
+
+function snakeToPascal(str) {
+  return str
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join("");
+}
+
+function snakeToCamel(str) {
+  const pascal = snakeToPascal(str);
+  return pascal.charAt(0).toLowerCase() + pascal.slice(1);
+}
+
+function pascalToKebab(str) {
+  return str.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
+}
+
+function tableToClassName(tableName) {
+  return (
+    TABLE_TO_CLASS[tableName] || snakeToPascal(tableName.replace(/s$/, ""))
+  );
+}
+
+// =============================================================================
+// MAIN
+// =============================================================================
+
+function main() {
+  console.log("🔄 Reading supabase-types.ts...");
+  const content = fs.readFileSync(SUPABASE_TYPES_PATH, "utf-8");
+
+  console.log("📊 Parsing types and tables...");
+  const { tables, enums, relationships } = parseSupabaseTypes(content);
+
+  console.log(`   Found ${Object.keys(tables).length} tables`);
+  console.log(`   Found ${Object.keys(enums).length} enums`);
+  console.log(`   Excluded: ${EXCLUDED_TABLES.join(", ")}`);
+
+  // Ensure models directory exists
+  if (!fs.existsSync(MODELS_DIR)) {
+    fs.mkdirSync(MODELS_DIR, { recursive: true });
+  }
+  // Ensure base models directory exists
+  if (!fs.existsSync(BASE_MODELS_DIR)) {
+    fs.mkdirSync(BASE_MODELS_DIR, { recursive: true });
+  }
+
+  // Generate schema.ts
+  console.log("📝 Generating schema.ts...");
+  const schemaContent = generateSchema(tables);
+  fs.writeFileSync(path.join(OUTPUT_DIR, "schema.ts"), schemaContent);
+
+  // Generate types.ts
+  console.log("📝 Generating types.ts...");
+  const typesContent = generateTypes(enums);
+  fs.writeFileSync(path.join(OUTPUT_DIR, "types.ts"), typesContent);
+
+  // Generate base model files (always overwritten)
+  console.log("📝 Generating base model files...");
+  for (const [tableName, { columns }] of Object.entries(tables)) {
+    const className = tableToClassName(tableName);
+    const baseFileName = `base-${pascalToKebab(className)}.ts`;
+    const baseModelContent = generateBaseModel(
+      tableName,
+      columns,
+      relationships,
+      tables
+    );
+    fs.writeFileSync(
+      path.join(BASE_MODELS_DIR, baseFileName),
+      baseModelContent
+    );
+    console.log(`   ✅ base/${baseFileName}`);
+  }
+
+  // Generate extended model files (only if missing)
+  console.log("📝 Checking extended model files...");
+  for (const tableName of Object.keys(tables)) {
+    const className = tableToClassName(tableName);
+    const extendedFileName = `${className}.ts`;
+    const extendedFilePath = path.join(MODELS_DIR, extendedFileName);
+
+    if (!fs.existsSync(extendedFilePath)) {
+      const extendedModelContent = generateExtendedModel(tableName);
+      fs.writeFileSync(extendedFilePath, extendedModelContent);
+      console.log(`   ✅ ${extendedFileName} (created)`);
+    } else {
+      console.log(`   ⏭️  ${extendedFileName} (exists, skipped)`);
+    }
+  }
+
+  // Generate index.ts
+  console.log("📝 Generating index.ts...");
+  const indexContent = generateIndex(tables);
+  fs.writeFileSync(path.join(OUTPUT_DIR, "index.ts"), indexContent);
+
+  console.log("\n✨ Schema sync complete!");
+  console.log("   Base models (base-*.ts) are regenerated each time.");
+  console.log("   Extended models (*.ts) are only created if missing.");
+}
+
+main();
