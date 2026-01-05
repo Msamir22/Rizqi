@@ -72,6 +72,10 @@ const TIMESTAMP_FIELDS = [
 // Fields that are readonly
 const READONLY_FIELDS = ["created_at"];
 
+// JSON fields - these get a "Raw" suffix and require manual getters in extended models
+// The getter should parse the JSON string into the proper TypeScript interface
+const JSON_FIELDS = ["notification_settings"];
+
 // =============================================================================
 // PARSING HELPERS
 // =============================================================================
@@ -191,8 +195,11 @@ function parseColumnType(rawType, columnName, enums) {
   } else if (cleanType === "string") {
     wmType = "string";
   } else if (cleanType === "Json") {
-    wmType = "string"; // JSON stored as string
+    wmType = "string"; // JSON stored as string in SQLite
   }
+
+  // Check if it's a known JSON field (needs Raw suffix and manual getter)
+  const isJsonField = cleanType === "Json" && JSON_FIELDS.includes(columnName);
 
   // Check if it should be indexed
   const isIndexed =
@@ -210,6 +217,7 @@ function parseColumnType(rawType, columnName, enums) {
     isIndexed,
     isTimestamp,
     isReadonly: READONLY_FIELDS.includes(columnName),
+    isJsonField,
   };
 }
 
@@ -382,7 +390,10 @@ function generateBaseModel(tableName, columns, relationships, allTables) {
   // Build field declarations
   const fieldDeclarations = columns
     .map((col) => {
-      const propName = snakeToCamel(col.name);
+      // JSON fields get a "Raw" suffix to indicate they need parsing
+      const propName = col.isJsonField
+        ? snakeToCamel(col.name) + "Raw"
+        : snakeToCamel(col.name);
       const decorator = col.isTimestamp ? "date" : "field";
       const readonly = col.isReadonly ? "@readonly " : "";
       const optional = col.isOptional ? "?" : "!";
@@ -391,6 +402,7 @@ function generateBaseModel(tableName, columns, relationships, allTables) {
       if (col.wmType === "number") tsType = col.isTimestamp ? "Date" : "number";
       else if (col.wmType === "boolean") tsType = "boolean";
       else if (col.isEnum && col.enumName) tsType = snakeToPascal(col.enumName);
+      // JSON fields stay as string - they need manual getters to parse
 
       return `  ${readonly}@${decorator}("${col.name}") ${propName}${optional}: ${tsType};`;
     })
