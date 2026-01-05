@@ -3,72 +3,17 @@
  * Provides WatermelonDB context to the app and handles initialization
  */
 
-import React, {
+import { Account, Category, database, Transaction } from "@astik/db";
+import { Database } from "@nozbe/watermelondb";
+import {
   createContext,
+  ReactNode,
   useContext,
   useEffect,
   useState,
-  ReactNode,
 } from "react";
-import { Database } from "@nozbe/watermelondb";
-import SQLiteAdapter from "@nozbe/watermelondb/adapters/sqlite";
-import {
-  schema,
-  Account,
-  Transaction,
-  Profile,
-  BankDetails,
-  Asset,
-  AssetMetal,
-  Category,
-  UserCategorySettings,
-  Debt,
-  RecurringPayment,
-  Transfer,
-  Budget,
-} from "@astik/db";
 import { seedCategories } from "../utils/seed-categories";
 
-// All model classes for the database
-const modelClasses = [
-  Profile,
-  Account,
-  BankDetails,
-  Asset,
-  AssetMetal,
-  Category,
-  UserCategorySettings,
-  Debt,
-  RecurringPayment,
-  Transaction,
-  Transfer,
-  Budget,
-];
-
-// Create the adapter with error handling
-let adapter: SQLiteAdapter;
-try {
-  adapter = new SQLiteAdapter({
-    schema,
-    jsi: false,
-    onSetUpError: (error) => console.error("Database setup error:", error),
-  });
-} catch (error) {
-  console.error("Failed to create SQLite adapter:", error);
-  adapter = new SQLiteAdapter({
-    schema,
-    jsi: false,
-    onSetUpError: (error) => console.error("Database setup error:", error),
-  });
-}
-
-// Create the database instance
-export const database = new Database({
-  adapter,
-  modelClasses,
-});
-
-// Create Context
 interface DatabaseContextValue {
   database: Database;
   isReady: boolean;
@@ -76,7 +21,6 @@ interface DatabaseContextValue {
 
 const DatabaseContext = createContext<DatabaseContextValue | null>(null);
 
-// Provider Component
 interface DatabaseProviderProps {
   children: ReactNode;
 }
