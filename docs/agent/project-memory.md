@@ -228,6 +228,14 @@ for asset transactions)
   `Raw` suffix in base models and manual getters for parsing in extended models.
 - **Outcome:** Fixed TypeScript type mismatch for `notification_settings`.
 
+### Session: 2026-01-05 (21:10)
+
+- **Topic:** Category Schema Updates & Transform Script Fix
+- **Accomplished:** Created migration `004_update_categories.sql` adding Travel
+  as L1 category with subcategories. Updated `seed-categories.ts` with nature
+  field and unique colors. Fixed duplicate associations bug in transform script.
+- **Outcome:** Category structure reorganized with Travel L1, unique colors.
+
 ### Session: 2026-01-05 (15:00)
 
 - **Topic:** Schema Sync Automation

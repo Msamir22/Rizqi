@@ -350,21 +350,22 @@ categories store all settings directly in the `categories` table.
 
 #### Level 1: Main Categories
 
-| system_name       | display_name      | type    | icon |
-| ----------------- | ----------------- | ------- | ---- |
-| `food_drinks`     | Food & Drinks     | EXPENSE | 🍔   |
-| `transportation`  | Transportation    | EXPENSE | 🚌   |
-| `vehicle`         | Vehicle           | EXPENSE | 🚗   |
-| `shopping`        | Shopping          | EXPENSE | 🛒   |
-| `health_medical`  | Health & Medical  | EXPENSE | 🏥   |
-| `utilities_bills` | Utilities & Bills | EXPENSE | 📄   |
-| `entertainment`   | Entertainment     | EXPENSE | 🎉   |
-| `charity`         | Charity           | EXPENSE | ❤️   |
-| `education`       | Education         | EXPENSE | 📚   |
-| `housing`         | Housing           | EXPENSE | 🏠   |
-| `income`          | Salary / Income   | INCOME  | 💰   |
-| `debt_loans`      | Debt / Loans      | NULL    | 🤝   |
-| `other`           | Other             | EXPENSE | ❓   |
+| system_name       | display_name      | type    | nature | color     | icon |
+| ----------------- | ----------------- | ------- | ------ | --------- | ---- |
+| `food_drinks`     | Food & Drinks     | EXPENSE | NEED   | `#F59E0B` | 🍔   |
+| `transportation`  | Transportation    | EXPENSE | NEED   | `#3B82F6` | 🚌   |
+| `vehicle`         | Vehicle           | EXPENSE | WANT   | `#8B5CF6` | 🚗   |
+| `shopping`        | Shopping          | EXPENSE | WANT   | `#EC4899` | 🛒   |
+| `health_medical`  | Health & Medical  | EXPENSE | MUST   | `#EF4444` | 🏥   |
+| `utilities_bills` | Utilities & Bills | EXPENSE | MUST   | `#6366F1` | 📄   |
+| `entertainment`   | Entertainment     | EXPENSE | WANT   | `#14B8A6` | 🎉   |
+| `charity`         | Charity           | EXPENSE | WANT   | `#F472B6` | ❤️   |
+| `education`       | Education         | EXPENSE | NEED   | `#F97316` | 📚   |
+| `housing`         | Housing           | EXPENSE | MUST   | `#A855F7` | 🏠   |
+| `travel`          | Travel            | EXPENSE | WANT   | `#06B6D4` | ✈️   |
+| `income`          | Salary / Income   | INCOME  | —      | `#10B981` | 💰   |
+| `debt_loans`      | Debt / Loans      | —       | —      | `#6B7280` | 🤝   |
+| `other`           | Other             | EXPENSE | —      | `#9CA3AF` | ❓   |
 
 #### Internal Categories (System-Only)
 
@@ -440,10 +441,10 @@ for system-generated transactions.
 | `pets`                   | Pets                     |
 | `sports_fitness`         | Sports & Fitness         |
 | `toys_games`             | Toys & Games             |
-| `travel`                 | Travel                   |
 | `wedding`                | Wedding                  |
 | `detergents`             | Detergents               |
 | `decorations`            | Decorations              |
+| `personal_care`          | Personal Care            |
 | `shopping_other`         | Other                    |
 
 </details>
@@ -530,19 +531,33 @@ for system-generated transactions.
 </details>
 
 <details>
+<summary><b>Travel</b></summary>
+
+| system_name       | display_name    |
+| ----------------- | --------------- |
+| `vacation`        | Vacation        |
+| `business_travel` | Business Travel |
+| `holiday`         | Holiday         |
+| `travel_other`    | Other           |
+
+</details>
+
+<details>
 <summary><b>Salary / Income</b></summary>
 
-| system_name     | display_name  |
-| --------------- | ------------- |
-| `salary`        | Salary        |
-| `bonus`         | Bonus         |
-| `commission`    | Commission    |
-| `refund`        | Refund        |
-| `loan_income`   | Loan          |
-| `gift_income`   | Gift          |
-| `check`         | Check         |
-| `rental_income` | Rental Income |
-| `income_other`  | Other         |
+| system_name       | display_name    |
+| ----------------- | --------------- |
+| `salary`          | Salary          |
+| `bonus`           | Bonus           |
+| `commission`      | Commission      |
+| `refund`          | Refund          |
+| `loan_income`     | Loan            |
+| `gift_income`     | Gift            |
+| `check`           | Check           |
+| `rental_income`   | Rental Income   |
+| `freelance`       | Freelance       |
+| `business_income` | Business Income |
+| `income_other`    | Other           |
 
 </details>
 
