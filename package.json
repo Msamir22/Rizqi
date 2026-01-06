@@ -26,10 +26,10 @@
     "db:types": "npx supabase gen types typescript --project-id yulbcndyssdjicbpmlrk > packages/db/src/supabase-types.ts",
     "db:transform": "node scripts/transform-schema.js",
     "db:sync": "npm run db:types && npm run db:transform",
-    "supabase:pull": "npx supabase db pull",
-    "supabase:push": "npx supabase db push",
-    "supabase:reset": "npx supabase db reset",
-    "supabase:migrations": "npx supabase migration list"
+    "db:pull": "npx supabase db pull",
+    "db:push": "npx supabase db push",
+    "db:reset": "npx supabase db reset",
+    "db:migrations": "npx supabase migration list"
   },
   "dependencies": {
     "@nozbe/watermelondb": "^0.28.0"
