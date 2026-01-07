@@ -30,9 +30,10 @@ const EXCLUDED_TABLES = [
   "__InternalSupabase",
   "daily_snapshot_assets",
   "daily_snapshot_balance",
+  "daily_snapshot_net_worth",
   "market_rates",
   "market_rates_history",
-  "user_net_worth_summary",
+  "v_user_net_worth",
 ];
 
 // Mapping from table names to class names (for irregular plurals)
