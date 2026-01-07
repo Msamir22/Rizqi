@@ -14,7 +14,11 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "noImplicitAny": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "@astik/logic": ["./packages/logic/src/index.ts"],
+      "@astik/db": ["./packages/db/src/index.ts"]
+    }
   },
   "exclude": ["node_modules", "tmp", "dist"]
 }
