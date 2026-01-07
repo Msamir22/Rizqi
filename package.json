@@ -35,8 +35,9 @@
     "@nozbe/watermelondb": "^0.28.0"
   },
   "devDependencies": {
+    "nx": "22.3.3",
     "prettier": "^3.2.5",
-    "typescript": "^5.4.0",
-    "nx": "22.3.3"
+    "supabase": "^2.71.1",
+    "typescript": "^5.4.0"
   }
 }
