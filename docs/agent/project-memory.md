@@ -4,7 +4,7 @@ alwaysApply: true
 
 # 🧠 Astik Project Memory
 
-> **Last Updated:** 2026-01-05 **Purpose:** Persistent context for AI agents
+> **Last Updated:** 2026-01-06 **Purpose:** Persistent context for AI agents
 > across conversations
 
 ---
@@ -158,11 +158,14 @@ for asset transactions)
 - [x] Dashboard real data integration (all components)
 - [x] Quick Action FAB component
 - [x] Schema sync automation (Supabase → WatermelonDB)
+- [x] Net worth API architecture (VIEW, API endpoint, mobile hook)
+- [x] Market rates edge function (metals.dev integration)
+- [x] Daily snapshot functions with pg_cron
 
 ### 🔄 In Progress
 
-- [ ] Test Quick Action FAB layout
-- [ ] Create placeholder screens for Transfer and Budgets routes
+- [ ] Complete migration 006 (column cleanup)
+- [ ] Test net worth API end-to-end
 
 ### ⏳ Pending
 
@@ -172,7 +175,6 @@ for asset transactions)
 - [ ] Supabase sync implementation
 - [ ] Debt/recurring payment forms
 - [ ] Budget tracking UI
-- [ ] Net worth calculation and display
 - [ ] Asset management (gold tracking)
 
 ---
@@ -220,6 +222,14 @@ for asset transactions)
 ## 7. Recent Sessions
 
 > Last 10 sessions for context continuity
+
+### Session: 2026-01-06 (17:13)
+
+- **Topic:** API-First Net Worth Architecture
+- **Accomplished:** Created `v_user_net_worth` VIEW, daily snapshot functions,
+  `fetch-metal-rates` edge function, Express API endpoints with JWT auth, mobile
+  hooks with local fallback.
+- **Outcome:** Net worth now calculated via API with offline support.
 
 ### Session: 2026-01-05 (20:06)
 

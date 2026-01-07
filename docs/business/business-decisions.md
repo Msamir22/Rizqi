@@ -839,11 +839,31 @@ Budgets help users track and limit their spending. Two types supported:
 Net Worth = Total Accounts (EGP) + Total Assets (EGP)
 ```
 
-### 10.2 Storage
+### 10.2 Real-Time Calculation via VIEW
 
-Net Worth is **stored in a summary table** (not calculated on-the-fly).
+Net Worth is **calculated on-the-fly** using a PostgreSQL VIEW for accuracy.
 
-**Table: `user_net_worth_summary`**
+**View: `v_user_net_worth`**
+
+| Column            | Type        | Description                                 |
+| ----------------- | ----------- | ------------------------------------------- |
+| `user_id`         | UUID        | User ID from auth.users                     |
+| `total_accounts`  | DECIMAL     | Sum of all account balances (converted EGP) |
+| `total_assets`    | DECIMAL     | Sum of all asset valuations (in EGP)        |
+| `total_net_worth` | DECIMAL     | `total_accounts + total_assets`             |
+| `calculated_at`   | TIMESTAMPTZ | Current timestamp (always NOW())            |
+
+**Currency Conversion Logic:**
+
+- Accounts in USD: `balance × usd_egp` from `market_rates`
+- Accounts in EUR: `balance × eur_egp` from `market_rates`
+- Accounts in EGP: `balance` directly
+- Gold assets: `weight_grams × (purity_karat/24) × gold_egp_per_gram`
+- Silver assets: `weight_grams × (purity_karat/24) × silver_egp_per_gram`
+
+### 10.3 Daily Snapshots for Historical Data
+
+**Table: `daily_snapshot_net_worth`** (renamed from `user_net_worth_summary`)
 
 | Column            | Type        | Description                              |
 | ----------------- | ----------- | ---------------------------------------- |
@@ -852,15 +872,11 @@ Net Worth is **stored in a summary table** (not calculated on-the-fly).
 | `total_accounts`  | DECIMAL     | Sum of all account balances (in EGP)     |
 | `total_assets`    | DECIMAL     | Sum of all asset current values (in EGP) |
 | `total_net_worth` | DECIMAL     | `total_accounts + total_assets`          |
-| `updated_at`      | TIMESTAMPTZ | When last recalculated                   |
+| `updated_at`      | TIMESTAMPTZ | When snapshot was created                |
 
-**Update Triggers:**
+**Snapshot Trigger:** Daily at 11 PM Cairo time (via pg_cron)
 
-- On any transaction create/update/delete
-- On any account balance change
-- On market rate update (for assets and foreign currency accounts)
-
-### 10.3 Monthly Percentage Change
+### 10.4 Monthly Percentage Change
 
 **Formula:** Compare current net worth with snapshot from **30 days ago**
 
@@ -1023,23 +1039,89 @@ If needed, create `wallet_details` child table:
 
 ### 15.2 Sync Tables
 
-| Table                    | Syncs? | Direction          |
-| ------------------------ | ------ | ------------------ |
-| `accounts`               | ✅     | Bidirectional      |
-| `bank_details`           | ✅     | Bidirectional      |
-| `transactions`           | ✅     | Bidirectional      |
-| `assets`                 | ✅     | Bidirectional      |
-| `asset_metals`           | ✅     | Bidirectional      |
-| `categories`             | ✅     | User-created only  |
-| `budgets`                | ✅     | Bidirectional      |
-| `debts`                  | ✅     | Bidirectional      |
-| `recurring_payments`     | ✅     | Bidirectional      |
-| `transfers`              | ✅     | Bidirectional      |
-| `profiles`               | ✅     | Bidirectional      |
-| `user_category_settings` | ✅     | Bidirectional      |
-| `market_rates`           | ❌     | Read-only from API |
-| `daily_snapshot_*`       | ❌     | Server-generated   |
-| `user_net_worth_summary` | ❌     | Server-calculated  |
+| Table                      | Syncs? | Direction          |
+| -------------------------- | ------ | ------------------ |
+| `accounts`                 | ✅     | Bidirectional      |
+| `bank_details`             | ✅     | Bidirectional      |
+| `transactions`             | ✅     | Bidirectional      |
+| `assets`                   | ✅     | Bidirectional      |
+| `asset_metals`             | ✅     | Bidirectional      |
+| `categories`               | ✅     | User-created only  |
+| `budgets`                  | ✅     | Bidirectional      |
+| `debts`                    | ✅     | Bidirectional      |
+| `recurring_payments`       | ✅     | Bidirectional      |
+| `transfers`                | ✅     | Bidirectional      |
+| `profiles`                 | ✅     | Bidirectional      |
+| `user_category_settings`   | ✅     | Bidirectional      |
+| `market_rates`             | ❌     | Read-only from API |
+| `daily_snapshot_*`         | ❌     | Server-generated   |
+| `daily_snapshot_net_worth` | ❌     | Server-generated   |
+
+### 15.3 API Layer Architecture
+
+Server-computed data is accessed via the Express API layer, not direct Supabase
+queries from the mobile app.
+
+**API Endpoints:**
+
+| Endpoint            | Method | Auth     | Description                     |
+| ------------------- | ------ | -------- | ------------------------------- |
+| `/api/rates`        | GET    | Optional | Get current market rates        |
+| `/api/rates/update` | POST   | Cron     | Update rates (internal only)    |
+| `/api/net-worth`    | GET    | Required | Get user's calculated net worth |
+
+**Data Access Pattern:**
+
+```mermaid
+flowchart TD
+    subgraph Mobile["Mobile App"]
+        WDB["WatermelonDB"]
+        API["API Client"]
+    end
+
+    subgraph Server["Backend"]
+        Express["Express API"]
+        Edge["Edge Function"]
+        VIEW["v_user_net_worth"]
+        CRON["pg_cron"]
+    end
+
+    subgraph External["External"]
+        Metals["metals.dev"]
+    end
+
+    subgraph Supabase["Supabase"]
+        Auth["Auth"]
+        DB["PostgreSQL"]
+    end
+
+    WDB --> |sync| DB
+    API --> |GET /api/net-worth| Express
+    Express --> |SELECT| VIEW
+    VIEW --> DB
+    CRON --> |every 30min| Edge
+    Edge --> Metals
+    Edge --> |UPDATE| DB
+```
+
+**Why API Layer for Server Data:**
+
+- Mobile uses JWT from Supabase Auth for authentication
+- API validates JWT and queries database with service role
+- Keeps third-party API keys (metals.dev) secure on server
+- Provides consistent interface for computed data
+
+### 15.4 Edge Functions
+
+| Function            | Trigger     | Purpose                      |
+| ------------------- | ----------- | ---------------------------- |
+| `fetch-metal-rates` | pg_cron 30m | Fetch rates from metals.dev  |
+| `parse-transaction` | HTTP (app)  | Parse voice input via OpenAI |
+
+**Cron Schedule (via pg_cron + pg_net):**
+
+- `daily-snapshots`: Daily at 11 PM Cairo (9 PM UTC)
+- `fetch-metal-rates`: Every 30 minutes
 
 ---
 
@@ -1094,25 +1176,26 @@ current_value = weight_grams × (purity_karat / 24) × gold_price_per_gram
 
 All tables finalized for implementation:
 
-| Table                    | Section | Status    |
-| ------------------------ | ------- | --------- |
-| `profiles`               | 12      | ✅ Ready  |
-| `accounts`               | 2.2     | ✅ Ready  |
-| `bank_details`           | 2.2     | ✅ Ready  |
-| `assets`                 | 2.3     | ✅ Ready  |
-| `asset_metals`           | 2.3     | ✅ Ready  |
-| `categories`             | 5       | ✅ Ready  |
-| `user_category_settings` | 5.4     | ✅ Ready  |
-| `transactions`           | 11      | ✅ Ready  |
-| `debts`                  | 6       | ✅ Ready  |
-| `recurring_payments`     | 7       | ✅ Ready  |
-| `transfers`              | 8       | ✅ Ready  |
-| `budgets`                | 9       | ✅ Ready  |
-| `user_net_worth_summary` | 10      | ✅ Ready  |
-| `daily_snapshot_balance` | 2.4     | ✅ Ready  |
-| `daily_snapshot_assets`  | 2.4     | ✅ Ready  |
-| `market_rates`           | 2.5     | ✅ Exists |
-| `market_rates_history`   | 2.5     | ✅ Ready  |
+| Table                      | Section | Status    |
+| -------------------------- | ------- | --------- |
+| `profiles`                 | 12      | ✅ Ready  |
+| `accounts`                 | 2.2     | ✅ Ready  |
+| `bank_details`             | 2.2     | ✅ Ready  |
+| `assets`                   | 2.3     | ✅ Ready  |
+| `asset_metals`             | 2.3     | ✅ Ready  |
+| `categories`               | 5       | ✅ Ready  |
+| `user_category_settings`   | 5.4     | ✅ Ready  |
+| `transactions`             | 11      | ✅ Ready  |
+| `debts`                    | 6       | ✅ Ready  |
+| `recurring_payments`       | 7       | ✅ Ready  |
+| `transfers`                | 8       | ✅ Ready  |
+| `budgets`                  | 9       | ✅ Ready  |
+| `daily_snapshot_net_worth` | 10      | ✅ Ready  |
+| `daily_snapshot_balance`   | 2.4     | ✅ Ready  |
+| `daily_snapshot_assets`    | 2.4     | ✅ Ready  |
+| `market_rates`             | 2.5     | ✅ Exists |
+| `market_rates_history`     | 2.5     | ✅ Ready  |
+| `v_user_net_worth` (VIEW)  | 10      | ✅ Ready  |
 
 ---
 
