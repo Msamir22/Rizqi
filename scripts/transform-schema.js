@@ -457,12 +457,14 @@ function generateBaseModel(tableName, columns, relationships, allTables) {
     .join("\n");
 
   // Add related model imports - use base- prefix for imports
+  // Use a Set to avoid duplicate imports when multiple FKs point to same table
+  const addedImports = new Set();
   for (const rel of rels) {
     const relClassName = tableToClassName(rel.referencedTable);
-    if (relClassName !== className) {
-      imports.push(
-        `import type { Base${relClassName} } from "./base-${pascalToKebab(relClassName)}";`
-      );
+    const importStatement = `import type { Base${relClassName} } from "./base-${pascalToKebab(relClassName)}";`;
+    if (relClassName !== className && !addedImports.has(importStatement)) {
+      imports.push(importStatement);
+      addedImports.add(importStatement);
     }
   }
 
