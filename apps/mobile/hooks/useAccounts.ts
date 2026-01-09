@@ -3,9 +3,11 @@
  * Reactive hook for account data from WatermelonDB
  */
 
-import { useState, useEffect } from "react";
-import { database, Account } from "@astik/db";
+import { Account, database } from "@astik/db";
+import { calculateTotalBalance } from "@astik/logic";
 import { Q } from "@nozbe/watermelondb";
+import { useEffect, useState } from "react";
+import { useMarketRates } from "./useMarketRates";
 
 interface UseAccountsResult {
   accounts: Account[];
@@ -23,6 +25,7 @@ export function useAccounts(): UseAccountsResult {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const { rates } = useMarketRates();
 
   const refetch = (): void => {
     setRefreshKey((prev) => prev + 1);
@@ -53,12 +56,7 @@ export function useAccounts(): UseAccountsResult {
     return () => subscription.unsubscribe();
   }, [refreshKey]);
 
-  // Calculate total balance in EGP (requires rates for conversion)
-  // For now, just sum all balances without conversion
-  const totalBalanceEgp = accounts.reduce((sum, account) => {
-    // TODO: Convert to EGP using rates service
-    return sum + account.balance;
-  }, 0);
+  const totalBalanceEgp = calculateTotalBalance(accounts, rates);
 
   return {
     accounts,
