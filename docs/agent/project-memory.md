@@ -161,9 +161,13 @@ for asset transactions)
 - [x] Net worth API architecture (VIEW, API endpoint, mobile hook)
 - [x] Market rates edge function (metals.dev integration)
 - [x] Daily snapshot functions with pg_cron
+- [x] Transaction analytics package (@astik/logic/analytics)
+- [x] Analytics hooks (useMonthlyChartData, useCategoryBreakdown, useComparison)
+- [x] Smart sync (15min/30min adaptive intervals, data-cleared detection)
 
 ### 🔄 In Progress
 
+- [ ] Analytics UI (charts, comparison cards)
 - [ ] Complete migration 006 (column cleanup)
 - [ ] Test net worth API end-to-end
 
@@ -222,6 +226,22 @@ for asset transactions)
 ## 7. Recent Sessions
 
 > Last 10 sessions for context continuity
+
+### Session: 2026-01-09 (00:52)
+
+- **Topic:** Transaction Analytics Architecture
+- **Accomplished:** Created shared analytics package in `@astik/logic`,
+  analytics hooks (`useMonthlyChartData`, `useCategoryBreakdown`,
+  `useComparison`), and smart sync with adaptive intervals and data-cleared
+  detection.
+- **Outcome:** Fully local analytics ready for chart UI implementation.
+
+### Session: 2026-01-07 (19:37)
+
+- **Topic:** Fix WatermelonDB Schema Sync
+- **Accomplished:** Added missing sync fields (`updated_at`, `deleted`) to
+  Supabase tables. Updated local schema and bumped version.
+- **Outcome:** Schema compatibility for sync restored.
 
 ### Session: 2026-01-06 (17:13)
 
