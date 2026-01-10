@@ -79,12 +79,12 @@ export function useCategories(
   }, [topLevelOnly, type, includeHidden, refreshKey]);
 
   // Filter expense and income categories
-  const expenseCategories = categories.filter((c) => c.type === "EXPENSE");
-  const incomeCategories = categories.filter((c) => c.type === "INCOME");
+  const expenseCategories = categories.filter((c) => c.isExpense);
+  const incomeCategories = categories.filter((c) => c.isIncome);
 
   // Lookup function
   const getCategoryById = (id: string): Category | undefined => {
-    return categories.find((c) => c.id === id || c.systemName === id);
+    return categories.find((c) => c.id === id);
   };
 
   return {
