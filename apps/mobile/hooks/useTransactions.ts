@@ -6,6 +6,7 @@
 import { useState, useEffect } from "react";
 import { database, Transaction } from "@astik/db";
 import { Q } from "@nozbe/watermelondb";
+import { calculateMonthlyTotals, getMonthBoundaries } from "@astik/logic";
 
 interface UseTransactionsResult {
   transactions: Transaction[];
@@ -14,18 +15,18 @@ interface UseTransactionsResult {
   refetch: () => void;
 }
 
-interface UseTransactionsOptions {
+type UseTransactionsOptions = Partial<
+  Pick<Transaction, "accountId" | "categoryId">
+> & {
   limit?: number;
-  accountId?: string;
-  categoryId?: string;
-}
+};
 
 /**
  * Hook to get transactions reactively
  * @param options - Filter options (limit, accountId, categoryId)
  */
 export function useTransactions(
-  options: UseTransactionsOptions = {}
+  options: UseTransactionsOptions
 ): UseTransactionsResult {
   const { limit = 20, accountId, categoryId } = options;
 
@@ -98,10 +99,7 @@ export function useRecentTransactions(): UseTransactionsResult {
 export function useMonthlyTransactions(
   year: number,
   month: number
-): UseTransactionsResult & {
-  totalExpenses: number;
-  totalIncome: number;
-} {
+): UseTransactionsResult {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -118,13 +116,12 @@ export function useMonthlyTransactions(
     const transactionsCollection = database.get<Transaction>("transactions");
 
     // Calculate start and end of month
-    const startOfMonth = new Date(year, month - 1, 1).getTime();
-    const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999).getTime();
+    const { startDate, endDate } = getMonthBoundaries(year, month);
 
     const query = transactionsCollection.query(
       Q.where("deleted", false),
-      Q.where("date", Q.gte(startOfMonth)),
-      Q.where("date", Q.lte(endOfMonth)),
+      Q.where("date", Q.gte(startDate)),
+      Q.where("date", Q.lte(endDate)),
       Q.sortBy("date", Q.desc)
     );
 
@@ -143,21 +140,24 @@ export function useMonthlyTransactions(
     return () => subscription.unsubscribe();
   }, [year, month, refreshKey]);
 
-  // Calculate totals
-  const totalExpenses = transactions
-    .filter((t) => t.type === "EXPENSE")
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const totalIncome = transactions
-    .filter((t) => t.type === "INCOME")
-    .reduce((sum, t) => sum + t.amount, 0);
+  // TODO : mvoe this to different function & file.
+  // Use shared analytics for calculations
+  // const totals = calculateMonthlyTotals(
+  //   transactions.map((t) => ({
+  //     type: t.type as "EXPENSE" | "INCOME",
+  //     amount: t.amount,
+  //     date: t.date.getTime(),
+  //     categoryId: t.categoryId,
+  //   }))
+  // );
 
   return {
     transactions,
     isLoading,
     error,
     refetch,
-    totalExpenses,
-    totalIncome,
+    // totalExpenses: totals.totalExpenses,
+    // totalIncome: totals.totalIncome,
+    // netChange: totals.netChange,
   };
 }

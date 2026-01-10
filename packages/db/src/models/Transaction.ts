@@ -13,6 +13,10 @@ export class Transaction extends BaseTransaction {
     return this.source === "VOICE";
   }
 
+  get dateInMs(): number {
+    return this.date.getTime();
+  }
+
   get isFromSMS(): boolean {
     return this.source === "SMS";
   }
