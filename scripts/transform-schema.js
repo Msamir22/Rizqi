@@ -34,8 +34,7 @@ const EXCLUDED_TABLES = [
   "daily_snapshot_balance",
   "daily_snapshot_net_worth",
   "market_rates",
-  "market_rates_history",
-  "v_user_net_worth",
+  "daily_market_rates_snapshot",
 ];
 
 // Mapping from table names to class names (for irregular plurals)
@@ -298,12 +297,6 @@ function generateTypes(enums) {
 // =============================================================================
 
 ${typeExports}
-
-// =============================================================================
-// COMMON TYPES
-// =============================================================================
-
-export type Currency = "EGP" | "USD" | "EUR";
 
 // =============================================================================
 // COMPLEX TYPES
