@@ -2,15 +2,7 @@
  * Core types for Astik application
  */
 
-import { SupabaseDatabase } from "@astik/db";
-
-export enum Currency {
-  EGP = "EGP",
-  USD = "USD",
-  EUR = "EUR",
-}
-
-export type GoldKarat = 24 | 22 | 21 | 18 | 14 | 10;
+import { CurrencyType, SupabaseDatabase, TransactionType } from "@astik/db";
 
 export type MarketRates =
   | SupabaseDatabase["public"]["Tables"]["market_rates"]["Row"]
@@ -18,7 +10,7 @@ export type MarketRates =
 
 export interface ParsedVoiceTransaction {
   amount: number;
-  currency: Currency;
+  currency: CurrencyType;
   merchant?: string;
   description?: string;
   detectedCategory?: string | null;
@@ -28,9 +20,9 @@ export interface ParsedVoiceTransaction {
 }
 
 export interface ParsedNotification {
-  type: "EXPENSE" | "INCOME";
+  type: TransactionType;
   amount: number;
-  currency: Currency;
+  currency: CurrencyType;
   merchant?: string;
   description: string;
 
