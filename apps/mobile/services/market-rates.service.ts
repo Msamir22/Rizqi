@@ -1,5 +1,5 @@
 import { ApiEndpoints, MarketRates } from "@astik/logic";
-import { apiGet } from "./api";
+import { apiGet } from "./requrest.service";
 
 /**
  * Fetch latest market rates from API
