@@ -313,7 +313,61 @@ export type Database = {
           },
         ];
       };
-      daily_market_rates_snapshot: {
+      daily_snapshot_assets: {
+        Row: {
+          breakdown: Json;
+          created_at: string;
+          id: string;
+          snapshot_date: string;
+          total_assets_egp: number;
+          user_id: string;
+        };
+        Insert: {
+          breakdown?: Json;
+          created_at?: string;
+          id?: string;
+          snapshot_date?: string;
+          total_assets_egp: number;
+          user_id: string;
+        };
+        Update: {
+          breakdown?: Json;
+          created_at?: string;
+          id?: string;
+          snapshot_date?: string;
+          total_assets_egp?: number;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      daily_snapshot_balance: {
+        Row: {
+          breakdown: Json;
+          created_at: string;
+          id: string;
+          snapshot_date: string;
+          total_accounts_egp: number;
+          user_id: string;
+        };
+        Insert: {
+          breakdown?: Json;
+          created_at?: string;
+          id?: string;
+          snapshot_date?: string;
+          total_accounts_egp: number;
+          user_id: string;
+        };
+        Update: {
+          breakdown?: Json;
+          created_at?: string;
+          id?: string;
+          snapshot_date?: string;
+          total_accounts_egp?: number;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      daily_snapshot_market_rates: {
         Row: {
           aed_egp: number;
           aud_egp: number;
@@ -353,6 +407,7 @@ export type Database = {
           sek_egp: number;
           sgd_egp: number;
           silver_egp_per_gram: number;
+          snapshot_date: string;
           tnd_egp: number;
           try_egp: number;
           usd_egp: number;
@@ -397,6 +452,7 @@ export type Database = {
           sek_egp: number;
           sgd_egp: number;
           silver_egp_per_gram: number;
+          snapshot_date?: string;
           tnd_egp: number;
           try_egp: number;
           usd_egp: number;
@@ -441,6 +497,7 @@ export type Database = {
           sek_egp?: number;
           sgd_egp?: number;
           silver_egp_per_gram?: number;
+          snapshot_date?: string;
           tnd_egp?: number;
           try_egp?: number;
           usd_egp?: number;
@@ -448,58 +505,11 @@ export type Database = {
         };
         Relationships: [];
       };
-      daily_snapshot_assets: {
-        Row: {
-          breakdown: Json;
-          created_at: string;
-          id: string;
-          total_assets_egp: number;
-          user_id: string;
-        };
-        Insert: {
-          breakdown?: Json;
-          created_at?: string;
-          id?: string;
-          total_assets_egp: number;
-          user_id: string;
-        };
-        Update: {
-          breakdown?: Json;
-          created_at?: string;
-          id?: string;
-          total_assets_egp?: number;
-          user_id?: string;
-        };
-        Relationships: [];
-      };
-      daily_snapshot_balance: {
-        Row: {
-          breakdown: Json;
-          created_at: string;
-          id: string;
-          total_accounts_egp: number;
-          user_id: string;
-        };
-        Insert: {
-          breakdown?: Json;
-          created_at?: string;
-          id?: string;
-          total_accounts_egp: number;
-          user_id: string;
-        };
-        Update: {
-          breakdown?: Json;
-          created_at?: string;
-          id?: string;
-          total_accounts_egp?: number;
-          user_id?: string;
-        };
-        Relationships: [];
-      };
       daily_snapshot_net_worth: {
         Row: {
           created_at: string;
           id: string;
+          snapshot_date: string;
           total_accounts: number;
           total_assets: number;
           total_net_worth: number;
@@ -508,6 +518,7 @@ export type Database = {
         Insert: {
           created_at?: string;
           id?: string;
+          snapshot_date?: string;
           total_accounts?: number;
           total_assets?: number;
           total_net_worth?: number;
@@ -516,6 +527,7 @@ export type Database = {
         Update: {
           created_at?: string;
           id?: string;
+          snapshot_date?: string;
           total_accounts?: number;
           total_assets?: number;
           total_net_worth?: number;
