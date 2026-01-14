@@ -31,6 +31,7 @@ export const palette = {
   red: {
     600: "#DC2626",
     500: "#EF4444",
+    400: "#F87171",
     100: "#FEE2E2",
   },
 
@@ -43,10 +44,20 @@ export const palette = {
 
   // Blue (Bank)
   blue: {
+    900: "#172554",
+    800: "#1E3A8A",
     600: "#2563EB",
     500: "#3B82F6",
     100: "#DBEAFE",
     50: "#EFF6FF",
+  },
+
+  // Violet
+  violet: {
+    800: "#5B21B6",
+    700: "#7C3AED",
+    500: "#8B5CF6",
+    100: "#EDE9FE",
   },
 
   // Neutrals (Slate)
