@@ -5,7 +5,6 @@
 
 import { User } from "@supabase/supabase-js";
 import { NextFunction, Request, Response, RequestHandler } from "express";
-import { asyncHandler, Errors } from "../lib/errors";
 import { getSupabaseClient } from "../lib/supabase";
 
 // Extend Express Request to include user
@@ -26,6 +25,9 @@ export interface AuthenticatedRequest extends Request {
   user: User;
 }
 
+// Paths that don't require authentication
+const PUBLIC_PATHS = ["/", "/health"];
+
 /**
  * Middleware to require authenticated user
  * Extracts and validates JWT from Authorization header
@@ -35,6 +37,12 @@ export async function Auth(
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  // Skip auth for public paths
+  if (PUBLIC_PATHS.includes(req.path)) {
+    next();
+    return;
+  }
+
   try {
     const authHeader = req.headers.authorization;
 
