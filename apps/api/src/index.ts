@@ -40,7 +40,9 @@ import express from "express";
 import { globalErrorHandler } from "./lib/errors";
 import { Auth } from "./middleware/auth";
 import ratesRouter from "./routes/market-rates";
+import ratesSnapshotRouter from "./routes/market-rates-snapshot";
 import mockRouter from "./routes/mock";
+import netWorthRouter from "./routes/net-worth-comparison";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -53,7 +55,9 @@ app.use(Auth);
 
 // Routes
 app.use("/api/market-rates", ratesRouter);
+app.use("/api/market-rates", ratesSnapshotRouter);
 app.use("/api/mock", mockRouter);
+app.use("/api/net-worth", netWorthRouter);
 
 // Health check
 app.get("/", (_req, res) => {
@@ -63,6 +67,7 @@ app.get("/", (_req, res) => {
     endpoints: [
       "GET /api/market-rates - Get cached metal & currency rates",
       "GET /api/mock/rates - Mock data for development",
+      "GET /api/net-worth/comparison - Compare current vs historical net worth",
     ],
   });
 });

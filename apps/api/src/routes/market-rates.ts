@@ -22,7 +22,7 @@ router.get(
     }
 
     if (!data) {
-      res.status(204).json({
+      res.json({
         status: "success",
         data: null,
       });
