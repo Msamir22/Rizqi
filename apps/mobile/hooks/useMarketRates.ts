@@ -1,11 +1,15 @@
-import { MarketRates } from "@astik/logic";
+import { MarketRates, PreviousDayRates } from "@astik/logic";
 import { RealtimeChannel } from "@supabase/supabase-js";
 import { useEffect, useRef, useState } from "react";
-import { getLatestMarketRates } from "../services/market-rates.service";
+import {
+  getLatestMarketRates,
+  getPreviousDayRates,
+} from "../services/market-rates.service";
 import { supabase } from "../services/supabase";
 
 interface UseMarketRatesResult {
   rates: MarketRates | null;
+  previousDayRates: PreviousDayRates | null;
   isLoading: boolean;
   error: Error | null;
   isConnected: boolean;
@@ -13,9 +17,12 @@ interface UseMarketRatesResult {
 
 /**
  * Hook to get latest market rates with realtime updates.
+ * Also fetches previous day rates for trend comparison.
  */
 export function useMarketRates(): UseMarketRatesResult {
   const [rates, setRates] = useState<MarketRates | null>(null);
+  const [previousDayRates, setPreviousDayRates] =
+    useState<PreviousDayRates | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -39,7 +46,13 @@ export function useMarketRates(): UseMarketRatesResult {
       }
     };
 
+    const fetchPreviousDayRates = async (): Promise<void> => {
+      const result = await getPreviousDayRates();
+      setPreviousDayRates(result);
+    };
+
     fetchInitialRates();
+    fetchPreviousDayRates();
 
     const channel = supabase
       .channel("market-rates-realtime")
@@ -79,6 +92,7 @@ export function useMarketRates(): UseMarketRatesResult {
 
   return {
     rates,
+    previousDayRates,
     isLoading,
     error,
     isConnected,
