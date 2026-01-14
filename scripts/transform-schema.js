@@ -33,8 +33,8 @@ const EXCLUDED_TABLES = [
   "daily_snapshot_assets",
   "daily_snapshot_balance",
   "daily_snapshot_net_worth",
+  "daily_snapshot_market_rates",
   "market_rates",
-  "daily_market_rates_snapshot",
 ];
 
 // Mapping from table names to class names (for irregular plurals)
