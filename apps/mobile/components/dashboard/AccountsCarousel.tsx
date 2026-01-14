@@ -1,10 +1,17 @@
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
+import { Account, AccountType } from "@astik/db";
+import {
+  AssetBreakdownPercentage,
+  formatCurrency,
+  MarketRates,
+} from "@astik/logic";
 import { Feather, FontAwesome5 } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Dimensions,
   ScrollView,
   Text,
@@ -16,75 +23,107 @@ import Svg, { Circle, G } from "react-native-svg";
 
 const { width } = Dimensions.get("window");
 
-interface Account {
+// =============================================================================
+// Types
+// =============================================================================
+
+type AccountDisplayType = "bank" | "cash" | "wallet";
+
+interface AccountsCarouselProps {
+  accounts: Account[];
+  assetBreakdown: AssetBreakdownPercentage[];
+  isLoading: boolean;
+}
+
+interface AccountCardData {
   id: string;
   name: string;
   balance: string;
-  type: "bank" | "cash" | "gold";
-  details?: string;
+  type: AccountDisplayType;
   color: string;
-  gradient: [string, string]; // Top-Left to Bottom-Right
+  gradient: [string, string];
 }
 
-const MOCK_ACCOUNTS: Account[] = [
-  {
-    id: "1",
-    name: "CIB Bank",
-    balance: "EGP 85,000",
-    type: "bank",
-    color: palette.blue[500],
-    gradient: ["#1E3A8A", "#172554"],
-  },
-  {
-    id: "2",
-    name: "Cash Wallet",
-    balance: "EGP 12,450",
-    type: "cash",
-    color: palette.nileGreen[500],
-    gradient: [palette.nileGreen[600], palette.nileGreen[800]],
-  },
-  {
-    id: "3",
-    name: "Gold Savings",
-    balance: "EGP 28,000",
-    type: "gold",
-    color: palette.gold[600],
-    gradient: [palette.gold[400], palette.gold[800]],
-  },
-];
+interface AssetBreakdownDisplay {
+  label: string;
+  value: string;
+  percentage: number;
+  color: string;
+}
 
-const ASSET_DATA = [
-  { label: "Bank", value: "EGP 85K", percentage: 68, color: palette.blue[500] },
-  {
-    label: "Cash",
-    value: "EGP 12K",
-    percentage: 10,
-    color: palette.nileGreen[500],
-  },
-  {
-    label: "Metals",
-    value: "EGP 28K",
-    percentage: 22,
-    color: palette.gold[600],
-  },
-];
+interface AccountDisplayInfo {
+  displayType: AccountDisplayType;
+  color: string;
+  gradient: [string, string];
+}
 
 interface AccountCardProps {
-  item: Account;
+  item: AccountCardData;
   isDark: boolean;
 }
 
-function AccountCard({ item, isDark }: AccountCardProps): React.JSX.Element {
-  const handlePress = (): void => {
-    if (item.type === "gold") {
-      router.push("/metals");
-    }
-  };
+interface RingChartProps {
+  data: AssetBreakdownDisplay;
+  isDark: boolean;
+}
 
+// =============================================================================
+// Helper Functions
+// =============================================================================
+
+function getAccountTypeInfo(type: AccountType): AccountDisplayInfo {
+  switch (type) {
+    case "BANK":
+      return {
+        displayType: "bank",
+        color: palette.blue[500],
+        gradient: [palette.blue[800], palette.blue[900]],
+      };
+    case "DIGITAL_WALLET":
+      return {
+        displayType: "wallet",
+        color: palette.violet[500],
+        gradient: [palette.violet[700], palette.violet[800]],
+      };
+    case "CASH":
+    default:
+      return {
+        displayType: "cash",
+        color: palette.nileGreen[500],
+        gradient: [palette.nileGreen[600], palette.nileGreen[800]],
+      };
+  }
+}
+
+function formatBreakdownValue(value: number): string {
+  if (value >= 1000) {
+    return `EGP ${Math.round(value / 1000)}K`;
+  }
+  return `EGP ${Math.round(value)}`;
+}
+
+function getBreakdownColor(label: string): string {
+  switch (label) {
+    case "Bank":
+      return palette.blue[500];
+    case "Cash":
+      return palette.nileGreen[500];
+    case "Metals":
+      return palette.gold[400];
+    default:
+      return palette.slate[500];
+  }
+}
+
+// =============================================================================
+// Sub-Components
+// =============================================================================
+
+function AccountCard({ item, isDark }: AccountCardProps): React.JSX.Element {
   const Content = (): React.JSX.Element => (
     <>
       <View
-        className="h-9 w-9 items-center justify-center rounded-xl mb-2"
+        className="mb-2 h-9 w-9 items-center justify-center rounded-xl"
         style={{
           backgroundColor: isDark
             ? "rgba(255,255,255,0.15)"
@@ -95,9 +134,9 @@ function AccountCard({ item, isDark }: AccountCardProps): React.JSX.Element {
           name={
             item.type === "bank"
               ? "university"
-              : item.type === "cash"
-                ? "wallet"
-                : "coins"
+              : item.type === "wallet"
+                ? "mobile-alt"
+                : "wallet"
           }
           size={20}
           color={isDark ? "#FFF" : item.color}
@@ -115,14 +154,14 @@ function AccountCard({ item, isDark }: AccountCardProps): React.JSX.Element {
   );
 
   return (
-    <TouchableOpacity activeOpacity={0.9} onPress={handlePress}>
+    <TouchableOpacity activeOpacity={0.9}>
       {isDark ? (
         <LinearGradient
           colors={item.gradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{ width: width / 3 - 10 }}
-          className="h-[120px] justify-between rounded-2xl p-3.5 border border-white/10"
+          className="h-[120px] justify-between rounded-2xl border border-white/10 p-3.5"
         >
           <Content />
         </LinearGradient>
@@ -136,11 +175,6 @@ function AccountCard({ item, isDark }: AccountCardProps): React.JSX.Element {
       )}
     </TouchableOpacity>
   );
-}
-
-interface RingChartProps {
-  data: (typeof ASSET_DATA)[0];
-  isDark: boolean;
 }
 
 function RingChart({ data, isDark }: RingChartProps): React.JSX.Element {
@@ -213,28 +247,83 @@ function AddButton(): React.JSX.Element {
   );
 }
 
-export function AccountsCarousel(): React.JSX.Element {
-  const { mode } = useTheme();
-  const isDark = mode === "dark";
+// =============================================================================
+// Main Component
+// =============================================================================
+
+export function AccountsCarousel({
+  accounts,
+  assetBreakdown,
+  isLoading,
+}: AccountsCarouselProps): React.JSX.Element {
+  const { isDark } = useTheme();
   const [activeIndex, setActiveIndex] = useState(0);
+
+  // Dynamic header based on carousel position
+  const headerText = activeIndex === 0 ? "Accounts" : "Asset Breakdown";
+
+  // Transform accounts to card data
+  const accountCards: AccountCardData[] = useMemo(() => {
+    return accounts.map((acc) => {
+      const typeInfo = getAccountTypeInfo(acc.type);
+      return {
+        id: acc.id,
+        name: acc.name,
+        balance: formatCurrency(acc.balance, acc.currency),
+        type: typeInfo.displayType,
+        color: typeInfo.color,
+        gradient: typeInfo.gradient,
+      };
+    });
+  }, [accounts]);
+
+  // Transform asset breakdown for display
+  const breakdownDisplay: AssetBreakdownDisplay[] = useMemo(() => {
+    return assetBreakdown.map((item) => ({
+      label: item.label,
+      value: formatBreakdownValue(item.value),
+      percentage: item.percentage,
+      color: getBreakdownColor(item.label),
+    }));
+  }, [assetBreakdown]);
 
   const renderItem = ({ index }: { index: number }): React.JSX.Element => {
     if (index === 0) {
+      if (isLoading) {
+        return (
+          <View className="flex-1 items-center justify-center">
+            <ActivityIndicator size="small" color={palette.nileGreen[500]} />
+          </View>
+        );
+      }
+
+      if (accountCards.length === 0) {
+        return (
+          <View className="flex-1 items-center justify-center">
+            <Text className="text-sm text-slate-500 dark:text-slate-400">
+              No accounts yet. Tap Add to create one.
+            </Text>
+          </View>
+        );
+      }
+
       return (
         <ScrollView
           horizontal
-          showsHorizontalScrollIndicator={true}
+          showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 3, gap: 5 }}
         >
-          {MOCK_ACCOUNTS.map((acc) => (
+          {accountCards.map((acc) => (
             <AccountCard key={acc.id} item={acc} isDark={isDark} />
           ))}
         </ScrollView>
       );
     }
+
+    // Asset Breakdown view
     return (
       <View className="w-full flex-row justify-around px-4">
-        {ASSET_DATA.map((asset, i) => (
+        {breakdownDisplay.map((asset, i) => (
           <RingChart key={i} data={asset} isDark={isDark} />
         ))}
       </View>
@@ -244,8 +333,8 @@ export function AccountsCarousel(): React.JSX.Element {
   return (
     <View className="my-3">
       <View className="mb-3 ml-1 flex-row items-center justify-between">
-        <Text className="header-text">Accounts & Assets</Text>
-        <AddButton />
+        <Text className="header-text">{headerText}</Text>
+        {activeIndex === 0 && <AddButton />}
       </View>
 
       <Carousel
@@ -261,7 +350,7 @@ export function AccountsCarousel(): React.JSX.Element {
         {[0, 1].map((_, i) => (
           <View
             key={i}
-            className={`h-1 rounded-full ${i === activeIndex ? "bg-action w-5" : "bg-text-secondary/40 w-2"}`}
+            className={`h-1 rounded-full ${i === activeIndex ? "w-5 bg-action" : "w-2 bg-text-secondary/40"}`}
           />
         ))}
       </View>
