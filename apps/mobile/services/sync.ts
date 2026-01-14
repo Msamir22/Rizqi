@@ -21,9 +21,8 @@ export const EXCLUDED_TABLES = [
   "daily_snapshot_assets",
   "daily_snapshot_balance",
   "daily_snapshot_net_worth",
+  "daily_snapshot_market_rates",
   "market_rates",
-  "market_rates_history",
-  "v_user_net_worth",
 ] as const;
 
 type ExcludedTableName = (typeof EXCLUDED_TABLES)[number];
