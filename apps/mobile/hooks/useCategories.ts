@@ -122,15 +122,11 @@ export function useCategory(categoryId: string | null): {
 
     const categoriesCollection = database.get<Category>("categories");
 
-    // Try to find by ID first, then by systemName
-    const query = categoriesCollection.query(
-      Q.or(Q.where("id", categoryId), Q.where("system_name", categoryId)),
-      Q.where("deleted", false)
-    );
+    const query = categoriesCollection.findAndObserve(categoryId);
 
-    const subscription = query.observe().subscribe({
+    const subscription = query.subscribe({
       next: (result) => {
-        setCategory(result[0] || null);
+        setCategory(result);
         setIsLoading(false);
       },
       error: (err) => {

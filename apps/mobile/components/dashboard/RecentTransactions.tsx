@@ -1,107 +1,94 @@
+import { getCategoryColor } from "@/constants/categories";
 import { palette } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
-import { Feather, FontAwesome5 } from "@expo/vector-icons";
+import { useCategory } from "@/hooks/useCategories";
+import { Transaction } from "@astik/db";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 
-interface Transaction {
-  id: string;
-  merchant: string;
-  date: string;
-  amount: number;
-  type: "expense" | "income";
-  icon: string;
-  iconType: "feather" | "fontawesome";
-  iconBgClass: string;
-  iconColor: string;
+interface RecentTransactionsProps {
+  transactions: Transaction[];
+  isLoading: boolean;
 }
 
-const MOCK_TRANSACTIONS: Transaction[] = [
-  {
-    id: "1",
-    merchant: "Supermarket",
-    date: "Today, 10:30 AM",
-    amount: -450.0,
-    type: "expense",
-    icon: "shopping-cart",
-    iconType: "feather",
-    iconBgClass: "bg-red-500/15 dark:bg-red-500/20",
-    iconColor: palette.red[500],
-  },
-  {
-    id: "2",
-    merchant: "Coffee Shop",
-    date: "Yesterday, 3:15 PM",
-    amount: -120.5,
-    type: "expense",
-    icon: "coffee",
-    iconType: "feather",
-    iconBgClass: "bg-orange-500/15 dark:bg-orange-500/20",
-    iconColor: palette.orange[500],
-  },
-  {
-    id: "3",
-    merchant: "Salary Transfer",
-    date: "Yesterday, 9:00 AM",
-    amount: 15000.0,
-    type: "income",
-    icon: "arrow-up",
-    iconType: "feather",
-    iconBgClass: "bg-nileGreen-500/15 dark:bg-nileGreen-500/20",
-    iconColor: palette.nileGreen[500],
-  },
-];
-
 interface TransactionItemProps {
-  tx: Transaction;
+  transaction: Transaction;
   isLast: boolean;
 }
 
+function formatTransactionDate(date: Date): string {
+  const now = new Date();
+  const txDate = new Date(date);
+  const diffDays = Math.floor(
+    (now.getTime() - txDate.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  const timeStr = txDate.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  if (diffDays === 0) {
+    return `Today, ${timeStr}`;
+  } else if (diffDays === 1) {
+    return `Yesterday, ${timeStr}`;
+  } else if (diffDays < 7) {
+    const dayName = txDate.toLocaleDateString("en-US", { weekday: "long" });
+    return `${dayName}, ${timeStr}`;
+  }
+  return txDate.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
 function TransactionItem({
-  tx,
+  transaction,
   isLast,
 }: TransactionItemProps): React.JSX.Element {
-  const renderIcon = (): React.JSX.Element => {
-    if (tx.iconType === "feather") {
-      return (
-        <Feather
-          name={tx.icon as keyof typeof Feather.glyphMap}
-          size={18}
-          color={tx.iconColor}
-        />
-      );
-    }
-    return <FontAwesome5 name={tx.icon} size={14} color={tx.iconColor} />;
-  };
+  const { category } = useCategory(transaction.categoryId);
+  const isExpense = transaction.isExpense;
+  const icon = category?.icon || (isExpense ? "cart" : "wallet");
 
   return (
     <View>
       <TouchableOpacity className="flex-row items-center py-3">
         {/* Icon Circle */}
         <View
-          className={`mr-3 h-10 w-10 items-center justify-center rounded-full ${tx.iconBgClass}`}
+          className="mr-3 h-10 w-10 items-center justify-center rounded-full"
+          style={{
+            backgroundColor: isExpense
+              ? `${palette.red[500]}20`
+              : `${palette.nileGreen[500]}20`,
+          }}
         >
-          {renderIcon()}
+          <Ionicons
+            name={icon as keyof typeof Ionicons.glyphMap}
+            size={18}
+            color={isExpense ? palette.red[500] : palette.nileGreen[500]}
+          />
         </View>
 
         {/* Text Info */}
         <View className="flex-1 gap-0.5">
           <Text className="text-[15px] font-semibold text-slate-800 dark:text-white">
-            {tx.merchant}
+            {transaction.merchant || category?.displayName || "Transaction"}
           </Text>
           <Text className="text-xs text-slate-500 dark:text-slate-400">
-            {tx.date}
+            {formatTransactionDate(transaction.date)}
           </Text>
         </View>
 
         {/* Amount */}
         <Text
           className={`text-[15px] font-semibold ${
-            tx.type === "income" ? "text-nileGreen-500" : "text-red-500"
+            isExpense ? "text-red-500" : "text-nileGreen-500"
           }`}
         >
-          {tx.type === "income" ? "+ " : "- "}EGP{" "}
-          {Math.abs(tx.amount).toLocaleString()}
+          {isExpense ? "- " : "+ "}
+          {transaction.currencySymbol}
+          {Math.abs(transaction.amount).toLocaleString()}
         </Text>
       </TouchableOpacity>
 
@@ -113,7 +100,10 @@ function TransactionItem({
   );
 }
 
-export function RecentTransactions(): React.JSX.Element {
+export function RecentTransactions({
+  transactions,
+  isLoading = false,
+}: RecentTransactionsProps): React.JSX.Element {
   const handleSeeAll = (): void => {
     router.push("/(tabs)/transactions");
   };
@@ -132,13 +122,30 @@ export function RecentTransactions(): React.JSX.Element {
 
       {/* Transactions List */}
       <View className="dark:rounded-2xl dark:bg-slate-800 dark:p-4">
-        {MOCK_TRANSACTIONS.map((tx, index) => (
-          <TransactionItem
-            key={tx.id}
-            tx={tx}
-            isLast={index === MOCK_TRANSACTIONS.length - 1}
-          />
-        ))}
+        {isLoading ? (
+          <View className="items-center py-8">
+            <ActivityIndicator size="small" color={palette.nileGreen[500]} />
+          </View>
+        ) : transactions.length === 0 ? (
+          <View className="items-center py-8">
+            <Ionicons
+              name="receipt-outline"
+              size={48}
+              color={palette.slate[400]}
+            />
+            <Text className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+              No transactions yet
+            </Text>
+          </View>
+        ) : (
+          transactions.map((transaction, index) => (
+            <TransactionItem
+              key={transaction.id}
+              transaction={transaction}
+              isLast={index === transactions.length - 1}
+            />
+          ))
+        )}
       </View>
     </>
   );

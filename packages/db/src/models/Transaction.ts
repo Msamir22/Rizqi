@@ -32,4 +32,8 @@ export class Transaction extends BaseTransaction {
   get hasLinkedAsset(): boolean {
     return this.linkedAssetId !== undefined && this.linkedAssetId !== null;
   }
+
+  get currencySymbol(): string {
+    return this.currency === "USD" ? "$" : "EGP";
+  }
 }
