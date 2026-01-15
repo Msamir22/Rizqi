@@ -1,5 +1,5 @@
 import { getSameDayLastMonth, NetWorthComparison } from "@astik/logic";
-import { get } from "./requrest.service";
+import { get } from "./request";
 
 /**
  * Fetch net worth comparison from API

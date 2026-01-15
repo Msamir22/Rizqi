@@ -13,7 +13,7 @@ import {
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
 import { useMarketRates } from "./useMarketRates";
-import { getNetWorthComparison } from "@/services/net-worth.service";
+import { getNetWorthComparison } from "@/services/net-worth";
 
 interface UseNetWorthSummaryResult {
   summary: NetWorthSummary | null;

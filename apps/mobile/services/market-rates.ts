@@ -1,4 +1,4 @@
-import { get } from "./requrest.service";
+import { get } from "./request";
 import { MarketRates, PreviousDayRates } from "@astik/logic";
 
 /**

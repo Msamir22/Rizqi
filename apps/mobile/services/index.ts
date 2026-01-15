@@ -3,7 +3,7 @@
  * Central export for all service modules
  */
 
-export { getLatestMarketRates } from "./market-rates.service";
+export { getLatestMarketRates } from "./market-rates";
 export {
   getCurrentUserId,
   isAuthenticated,

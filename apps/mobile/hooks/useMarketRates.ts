@@ -1,11 +1,19 @@
 import { MarketRates, PreviousDayRates } from "@astik/logic";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { RealtimeChannel } from "@supabase/supabase-js";
 import { useEffect, useRef, useState } from "react";
 import {
   getLatestMarketRates,
   getPreviousDayRates,
-} from "../services/market-rates.service";
+} from "../services/market-rates";
 import { supabase } from "../services/supabase";
+
+// Query keys for cache management
+export const marketRatesKeys = {
+  all: ["market-rates"] as const,
+  current: () => [...marketRatesKeys.all, "current"] as const,
+  previousDay: () => [...marketRatesKeys.all, "previous-day"] as const,
+};
 
 interface UseMarketRatesResult {
   rates: MarketRates | null;
@@ -17,43 +25,32 @@ interface UseMarketRatesResult {
 
 /**
  * Hook to get latest market rates with realtime updates.
- * Also fetches previous day rates for trend comparison.
+ * Uses React Query for caching
  */
 export function useMarketRates(): UseMarketRatesResult {
-  const [rates, setRates] = useState<MarketRates | null>(null);
-  const [previousDayRates, setPreviousDayRates] =
-    useState<PreviousDayRates | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const queryClient = useQueryClient();
   const [isConnected, setIsConnected] = useState(false);
-
   const channelRef = useRef<RealtimeChannel | null>(null);
 
+  // Fetch current rates with caching
+  const {
+    data: rates = null,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: marketRatesKeys.current(),
+    queryFn: getLatestMarketRates,
+  });
+
+  // Fetch previous day rates with caching
+  const { data: previousDayRates = null } = useQuery({
+    queryKey: marketRatesKeys.previousDay(),
+    queryFn: getPreviousDayRates,
+    staleTime: 30 * 60 * 1000, // 30 minutes (doesn't change often)
+  });
+
+  // Set up realtime subscription for live updates
   useEffect(() => {
-    const fetchInitialRates = async (): Promise<void> => {
-      try {
-        setIsLoading(true);
-        const result = await getLatestMarketRates();
-        setRates(result);
-        setError(null);
-      } catch (err) {
-        console.error("Error fetching initial rates:", err);
-        setError(
-          err instanceof Error ? err : new Error("Failed to fetch rates")
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    const fetchPreviousDayRates = async (): Promise<void> => {
-      const result = await getPreviousDayRates();
-      setPreviousDayRates(result);
-    };
-
-    fetchInitialRates();
-    fetchPreviousDayRates();
-
     const channel = supabase
       .channel("market-rates-realtime")
       .on(
@@ -64,13 +61,14 @@ export function useMarketRates(): UseMarketRatesResult {
           table: "market_rates",
         },
         (payload) => {
-          // New rate inserted - update state
-          console.log("🔄 Market rates updated via realtime:", payload.new);
-          setRates(payload.new as MarketRates);
+          // New rate inserted - update cache directly
+          queryClient.setQueryData(
+            marketRatesKeys.current(),
+            payload.new as MarketRates
+          );
         }
       )
       .subscribe((status) => {
-        // Track connection status
         setIsConnected(status === "SUBSCRIBED");
       });
 
@@ -78,12 +76,11 @@ export function useMarketRates(): UseMarketRatesResult {
 
     return () => {
       if (channelRef.current) {
-        console.log("🔌 Unsubscribing from market rates realtime");
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
     };
-  }, []);
+  }, [queryClient]);
 
   return {
     rates,

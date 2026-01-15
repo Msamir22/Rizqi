@@ -15,12 +15,37 @@ import {
 } from "@astik/logic";
 import { supabase } from "./supabase";
 
-// __DEV__ is a built-in Expo/React Native global
-// true in dev mode (expo start), false in production builds
-const API_BASE_URL =
-  (__DEV__
-    ? process.env.EXPO_PUBLIC_API_URL_DEV
-    : process.env.EXPO_PUBLIC_API_URL_PROD) ?? "http://localhost:3001";
+import Constants from "expo-constants";
+
+/**
+ * Get the API base URL based on environment
+ * - Production: Uses EXPO_PUBLIC_API_URL_PROD
+ * - Development with env var: Uses EXPO_PUBLIC_API_URL_DEV
+ * - Local development: Auto-detects local IP from Expo debugger host
+ */
+function getApiBaseUrl(): string {
+  if (!__DEV__) {
+    // Production build - use production URL
+    return process.env.EXPO_PUBLIC_API_URL_PROD ?? "";
+  }
+
+  // Development - check if env var is set
+  if (process.env.EXPO_PUBLIC_API_URL_DEV) {
+    return process.env.EXPO_PUBLIC_API_URL_DEV;
+  }
+
+  // Auto-detect local IP from Expo's debugger host
+  const debuggerHost = Constants.expoConfig?.hostUri;
+  if (debuggerHost) {
+    const localIp = debuggerHost.split(":")[0];
+    return `http://${localIp}:3001`;
+  }
+
+  // Fallback
+  return "http://localhost:3001";
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 interface ApiResponse<T> {
   data: T | null;

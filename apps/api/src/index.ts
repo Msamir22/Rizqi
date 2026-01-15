@@ -1,9 +1,3 @@
-/**
- * Astik API Server - Express.js
- *
- * Supports both local development and Vercel serverless deployment.
- */
-
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
@@ -13,6 +7,11 @@ import path from "path";
 // Load environment variables in development
 const isProduction = process.env.NODE_ENV === "production";
 const isVercel = process.env.VERCEL === "1";
+const environment = isVercel
+  ? "vercel"
+  : isProduction
+    ? "production"
+    : "development";
 
 if (!isProduction && !isVercel) {
   const envPath = path.resolve(__dirname, "../.env.local");
@@ -42,7 +41,6 @@ if (missingVars.length > 0) {
 import { globalErrorHandler } from "./lib/errors";
 import { Auth } from "./middleware/auth";
 import ratesRouter from "./routes/market-rates";
-import ratesSnapshotRouter from "./routes/market-rates-snapshot";
 import mockRouter from "./routes/mock";
 import netWorthRouter from "./routes/net-worth-comparison";
 
@@ -55,7 +53,6 @@ app.use(Auth);
 
 // Routes
 app.use("/api/market-rates", ratesRouter);
-app.use("/api/market-rates", ratesSnapshotRouter);
 app.use("/api/mock", mockRouter);
 app.use("/api/net-worth", netWorthRouter);
 
@@ -64,11 +61,7 @@ app.get("/", (_req, res) => {
   res.json({
     status: "ok",
     service: "Astik API Server",
-    environment: isVercel
-      ? "vercel"
-      : isProduction
-        ? "production"
-        : "development",
+    environment,
     endpoints: [
       "GET /api/market-rates - Get cached metal & currency rates",
       "GET /api/market-rates/previous-day - Get previous day snapshot",

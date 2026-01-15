@@ -68,7 +68,6 @@ interface MetalsDevApiResponse {
 }
 
 interface MarketRatesRow {
-  id: number;
   // Precious metal prices (EGP per gram)
   gold_egp_per_gram: number;
   silver_egp_per_gram: number;
@@ -148,7 +147,6 @@ Deno.serve(async (req) => {
 
     // Extract values from the API response (precious metals and currencies only)
     const marketRates: MarketRatesRow = {
-      id: 1,
       // Precious metal prices (EGP per gram)
       gold_egp_per_gram: data.metals.gold,
       silver_egp_per_gram: data.metals.silver,
@@ -208,13 +206,13 @@ Deno.serve(async (req) => {
     // Create Supabase client with service role
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Upsert into market_rates table
-    const { error: upsertError } = await supabase
+    // Insert new row into market_rates table
+    const { error: insertError } = await supabase
       .from("market_rates")
-      .upsert(marketRates, { onConflict: "id" });
+      .insert(marketRates);
 
-    if (upsertError) {
-      throw new Error(`Database upsert failed: ${upsertError.message}`);
+    if (insertError) {
+      throw new Error(`Database insert failed: ${insertError.message}`);
     }
 
     // Return success response

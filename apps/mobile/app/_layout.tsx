@@ -16,6 +16,7 @@ import { DatabaseProvider } from "../providers/DatabaseProvider";
 
 import { darkTheme, lightTheme } from "@/constants/colors";
 import { ErrorBoundary } from "../components/ErrorBoundary";
+import { QueryProvider } from "../providers/QueryProvider";
 
 // Prevent splash screen from auto-hiding until fonts are loaded
 SplashScreen.preventAutoHideAsync();
@@ -41,13 +42,15 @@ export default function RootLayout() {
 
   return (
     <ErrorBoundary>
-      <DatabaseProvider>
-        <ThemeProvider>
-          <SafeAreaProvider>
-            <RootLayoutNav />
-          </SafeAreaProvider>
-        </ThemeProvider>
-      </DatabaseProvider>
+      <QueryProvider>
+        <DatabaseProvider>
+          <ThemeProvider>
+            <SafeAreaProvider>
+              <RootLayoutNav />
+            </SafeAreaProvider>
+          </ThemeProvider>
+        </DatabaseProvider>
+      </QueryProvider>
     </ErrorBoundary>
   );
 }

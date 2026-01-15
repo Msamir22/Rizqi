@@ -30,7 +30,8 @@
     "db:pull": "npx supabase db pull",
     "db:push": "npx supabase db push",
     "db:reset": "npx supabase db reset",
-    "db:migrations": "npx supabase migration list"
+    "db:migrations": "npx supabase migration list",
+    "fn:deploy:rates": "npx supabase functions deploy fetch-metal-rates --project-ref yulbcndyssdjicbpmlrk"
   },
   "dependencies": {
     "@nozbe/watermelondb": "^0.28.0"
