@@ -1,6 +1,5 @@
 import {
   ApiBodyType,
-  ApiPathParamsType,
   ApiResponseType,
   ApiSuccessResponse,
   DeleteEndpoint,
@@ -16,8 +15,12 @@ import {
 } from "@astik/logic";
 import { supabase } from "./supabase";
 
+// __DEV__ is a built-in Expo/React Native global
+// true in dev mode (expo start), false in production builds
 const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_BASE_URL || "http://localhost:3001";
+  (__DEV__
+    ? process.env.EXPO_PUBLIC_API_URL_DEV
+    : process.env.EXPO_PUBLIC_API_URL_PROD) ?? "http://localhost:3001";
 
 interface ApiResponse<T> {
   data: T | null;
