@@ -33,6 +33,7 @@ export abstract class BaseCategory extends Model {
   @field("deleted") deleted!: boolean;
   @field("display_name") displayName!: string;
   @field("icon") icon!: string;
+  @field("icon_library") iconLibrary!: string;
   @field("is_hidden") isHidden!: boolean;
   @field("is_internal") isInternal!: boolean;
   @field("is_system") isSystem!: boolean;

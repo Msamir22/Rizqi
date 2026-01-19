@@ -28,10 +28,9 @@ export function TotalNetWorthCard({
   const arrowRotation = isPositive ? "40deg" : "-40deg";
 
   // Format percentage for display
-  const formattedPercentage =
-    monthlyPercentageChange !== null
-      ? `${monthlyPercentageChange >= 0 ? "+" : ""}${monthlyPercentageChange.toFixed(1)}%`
-      : "+0.0%";
+  const monthlyPercentageChangeFormatted = monthlyPercentageChange
+    ? `${monthlyPercentageChange >= 0 ? "+" : ""}${monthlyPercentageChange.toFixed(1)}%`
+    : null;
 
   // Glow dimensions
   const glowWidth = width;
@@ -114,17 +113,19 @@ export function TotalNetWorthCard({
           </Text>
 
           {/* Monthly Percentage Change */}
-          <View className="mt-2 flex-row items-center gap-1 rounded-full bg-white/10 px-3 py-1">
-            <Ionicons
-              name={arrowIcon}
-              style={{ transform: [{ rotate: arrowRotation }] }}
-              size={12}
-              color={arrowColor}
-            />
-            <Text className="text-xs font-bold" style={{ color: arrowColor }}>
-              {formattedPercentage} Month
-            </Text>
-          </View>
+          {monthlyPercentageChangeFormatted && (
+            <View className="mt-2 flex-row items-center gap-1 rounded-full bg-white/10 px-3 py-1">
+              <Ionicons
+                name={arrowIcon}
+                style={{ transform: [{ rotate: arrowRotation }] }}
+                size={12}
+                color={arrowColor}
+              />
+              <Text className="text-xs font-bold" style={{ color: arrowColor }}>
+                {monthlyPercentageChangeFormatted} Month
+              </Text>
+            </View>
+          )}
         </View>
       </LinearGradient>
     </View>

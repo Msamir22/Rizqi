@@ -74,7 +74,7 @@ const resolveColorScheme = (
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   children,
-  defaultMode = "light",
+  defaultMode = "system",
 }) => {
   const [mode, setMode] = useState<ThemeMode>(defaultMode);
   const [systemColorScheme, setSystemColorScheme] = useState<ColorSchemeName>(

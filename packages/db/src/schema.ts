@@ -96,6 +96,7 @@ export const schema = appSchema({
         { name: "deleted", type: "boolean" },
         { name: "display_name", type: "string" },
         { name: "icon", type: "string" },
+        { name: "icon_library", type: "string" },
         { name: "is_hidden", type: "boolean" },
         { name: "is_internal", type: "boolean" },
         { name: "is_system", type: "boolean" },

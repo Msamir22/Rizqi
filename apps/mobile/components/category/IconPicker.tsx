@@ -1,0 +1,214 @@
+/**
+ * IconPicker Component
+ *
+ * A modal component for selecting icons for custom user categories.
+ * Features:
+ * - Curated icons organized by category type
+ * - Search functionality
+ * - Preview with customizable color
+ */
+
+import React, { useState, useMemo, useCallback } from "react";
+import {
+  View,
+  Text,
+  Modal,
+  TouchableOpacity,
+  TextInput,
+  FlatList,
+  ScrollView,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { palette } from "@/constants/colors";
+import { CategoryIcon } from "../common/CategoryIcon";
+import {
+  ICON_GROUPS,
+  ALL_ICONS,
+  type IconOption,
+  type IconLibrary,
+} from "@/constants/category-icons";
+
+interface IconPickerProps {
+  /** Whether the modal is visible */
+  visible: boolean;
+  /** Callback when modal is closed */
+  onClose: () => void;
+  /** Callback when an icon is selected */
+  onSelect: (iconName: string, iconLibrary: IconLibrary) => void;
+  /** Currently selected icon name */
+  selectedIcon?: string;
+  /** Color to preview the icons with */
+  previewColor?: string;
+}
+
+interface IconGridItemProps {
+  icon: IconOption;
+  isSelected: boolean;
+  previewColor: string;
+  onSelect: () => void;
+}
+
+function IconGridItem({
+  icon,
+  isSelected,
+  previewColor,
+  onSelect,
+}: IconGridItemProps): React.ReactElement {
+  return (
+    <TouchableOpacity
+      onPress={onSelect}
+      className="m-1 items-center justify-center rounded-xl p-3"
+      style={{
+        backgroundColor: isSelected
+          ? `${previewColor}30`
+          : "rgba(100, 116, 139, 0.1)",
+        borderWidth: isSelected ? 2 : 0,
+        borderColor: isSelected ? previewColor : "transparent",
+      }}
+    >
+      <CategoryIcon
+        iconName={icon.name}
+        iconLibrary={icon.library}
+        size={24}
+        color={isSelected ? previewColor : palette.slate[500]}
+      />
+    </TouchableOpacity>
+  );
+}
+
+export function IconPicker({
+  visible,
+  onClose,
+  onSelect,
+  selectedIcon,
+  previewColor = palette.nileGreen[500],
+}: IconPickerProps): React.ReactElement {
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Filter icons based on search query
+  const filteredIcons = useMemo(() => {
+    if (!searchQuery.trim()) return null; // Show grouped view when not searching
+
+    const query = searchQuery.toLowerCase();
+    return ALL_ICONS.filter((icon) => icon.name.toLowerCase().includes(query));
+  }, [searchQuery]);
+
+  const handleSelect = useCallback(
+    (icon: IconOption) => {
+      onSelect(icon.name, icon.library);
+      onClose();
+    },
+    [onSelect, onClose]
+  );
+
+  const renderGroupedIcons = (): React.ReactElement => (
+    <ScrollView showsVerticalScrollIndicator={false}>
+      {Object.entries(ICON_GROUPS).map(([groupName, icons]) => (
+        <View key={groupName} className="mb-4">
+          <Text className="mb-2 px-1 text-sm font-medium text-slate-500 dark:text-slate-400">
+            {groupName}
+          </Text>
+          <View className="flex-row flex-wrap">
+            {icons.map((icon) => (
+              <IconGridItem
+                key={`${icon.library}-${icon.name}`}
+                icon={icon}
+                isSelected={selectedIcon === icon.name}
+                previewColor={previewColor}
+                onSelect={() => handleSelect(icon)}
+              />
+            ))}
+          </View>
+        </View>
+      ))}
+    </ScrollView>
+  );
+
+  const renderSearchResults = (): React.ReactElement => (
+    <FlatList
+      data={filteredIcons}
+      numColumns={5}
+      keyExtractor={(item) => `${item.library}-${item.name}`}
+      contentContainerStyle={{ paddingBottom: 20 }}
+      renderItem={({ item }) => (
+        <IconGridItem
+          icon={item}
+          isSelected={selectedIcon === item.name}
+          previewColor={previewColor}
+          onSelect={() => handleSelect(item)}
+        />
+      )}
+      ListEmptyComponent={
+        <View className="items-center py-8">
+          <Ionicons
+            name="search-outline"
+            size={48}
+            color={palette.slate[400]}
+          />
+          <Text className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+            No icons found for "{searchQuery}"
+          </Text>
+        </View>
+      }
+    />
+  );
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+    >
+      <View className="flex-1 bg-white dark:bg-slate-900">
+        {/* Header */}
+        <View className="flex-row items-center justify-between border-b border-slate-200 px-4 pb-3 pt-4 dark:border-slate-700">
+          <Text className="text-lg font-semibold text-slate-800 dark:text-white">
+            Select Icon
+          </Text>
+          <TouchableOpacity
+            onPress={onClose}
+            className="rounded-full p-2"
+            style={{ backgroundColor: `${palette.slate[500]}20` }}
+          >
+            <Ionicons name="close" size={20} color={palette.slate[500]} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Search */}
+        <View className="px-4 py-3">
+          <View className="flex-row items-center rounded-xl bg-slate-100 px-3 py-2 dark:bg-slate-800">
+            <Ionicons
+              name="search-outline"
+              size={20}
+              color={palette.slate[400]}
+            />
+            <TextInput
+              className="ml-2 flex-1 text-base text-slate-800 dark:text-white"
+              placeholder="Search icons..."
+              placeholderTextColor={palette.slate[400]}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery("")}>
+                <Ionicons
+                  name="close-circle"
+                  size={20}
+                  color={palette.slate[400]}
+                />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        {/* Icon Grid */}
+        <View className="flex-1 px-4">
+          {filteredIcons ? renderSearchResults() : renderGroupedIcons()}
+        </View>
+      </View>
+    </Modal>
+  );
+}

@@ -1,10 +1,11 @@
-import { getCategoryColor } from "@/constants/categories";
 import { palette } from "@/constants/colors";
 import { useCategory } from "@/hooks/useCategories";
+import { formatTransactionDate } from "@/utils/transactions";
 import { Transaction } from "@astik/db";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
+import { CategoryIcon } from "../common/CategoryIcon";
 
 interface RecentTransactionsProps {
   transactions: Transaction[];
@@ -16,40 +17,19 @@ interface TransactionItemProps {
   isLast: boolean;
 }
 
-function formatTransactionDate(date: Date): string {
-  const now = new Date();
-  const txDate = new Date(date);
-  const diffDays = Math.floor(
-    (now.getTime() - txDate.getTime()) / (1000 * 60 * 60 * 24)
-  );
-
-  const timeStr = txDate.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-
-  if (diffDays === 0) {
-    return `Today, ${timeStr}`;
-  } else if (diffDays === 1) {
-    return `Yesterday, ${timeStr}`;
-  } else if (diffDays < 7) {
-    const dayName = txDate.toLocaleDateString("en-US", { weekday: "long" });
-    return `${dayName}, ${timeStr}`;
-  }
-  return txDate.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
-
 function TransactionItem({
   transaction,
   isLast,
 }: TransactionItemProps): React.JSX.Element {
   const { category } = useCategory(transaction.categoryId);
   const isExpense = transaction.isExpense;
-  const icon = category?.icon || (isExpense ? "cart" : "wallet");
+
+  // Use category's iconConfig or fallback to default icons
+  const iconConfig = category?.iconConfig ?? {
+    iconName: isExpense ? "cart" : "wallet",
+    iconLibrary: "Ionicons" as const,
+    iconColor: isExpense ? palette.red[500] : palette.nileGreen[500],
+  };
 
   return (
     <View>
@@ -63,8 +43,9 @@ function TransactionItem({
               : `${palette.nileGreen[500]}20`,
           }}
         >
-          <Ionicons
-            name={icon as keyof typeof Ionicons.glyphMap}
+          <CategoryIcon
+            iconName={iconConfig.iconName}
+            iconLibrary={iconConfig.iconLibrary}
             size={18}
             color={isExpense ? palette.red[500] : palette.nileGreen[500]}
           />
