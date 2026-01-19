@@ -1,5 +1,5 @@
 /**
- * useNetWorthSummary Hook
+ * useNetWorth Hook
  * Local-first net worth calculation using WatermelonDB
  */
 
@@ -8,24 +8,24 @@ import {
   calculateNetWorth,
   calculateTotalAssets,
   calculateTotalBalance,
-  NetWorthSummary,
+  NetWorthData,
 } from "@astik/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
 import { useMarketRates } from "./useMarketRates";
 import { getNetWorthComparison } from "@/services/net-worth";
 
-interface UseNetWorthSummaryResult {
-  summary: NetWorthSummary | null;
+interface UseNetWorthResult {
+  netWorthData: NetWorthData | null;
   isLoading: boolean;
   error: Error | null;
   refresh: () => void;
 }
 
 /**
- * Hook to get user's net worth summary
+ * Hook to get user's net worth
  */
-export function useNetWorthSummary(): UseNetWorthSummaryResult {
+export function useNetWorth(): UseNetWorthResult {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [assetMetals, setAssetMetals] = useState<AssetMetal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -71,8 +71,8 @@ export function useNetWorthSummary(): UseNetWorthSummaryResult {
     return () => subscription.unsubscribe();
   }, [refreshKey]);
 
-  // Calculate summary when data changes
-  const summary = useMemo<NetWorthSummary | null>(() => {
+  // Calculate net worth when data changes
+  const netWorthData = useMemo<NetWorthData | null>(() => {
     if (isLoading || isRatesLoading || !rates) {
       return null;
     }
@@ -87,7 +87,7 @@ export function useNetWorthSummary(): UseNetWorthSummaryResult {
   }, [accounts, assetMetals, rates, isLoading, isRatesLoading]);
 
   return {
-    summary,
+    netWorthData,
     isLoading: isLoading || isRatesLoading,
     error,
     refresh,
@@ -99,20 +99,20 @@ export function useNetWorthSummary(): UseNetWorthSummaryResult {
  * Useful for components that only need the total
  * Also fetches monthly percentage change from API via service layer
  */
-export function useNetWorth(): {
-  netWorth: number | null;
+export function useNetWorthWithMonthlyPercentageChange(): {
+  totalNetWorth: number | null;
   monthlyPercentageChange: number | null;
   isLoading: boolean;
 } {
-  const { summary, isLoading } = useNetWorthSummary();
+  const { netWorthData, isLoading } = useNetWorth();
   const [monthlyPercentageChange, setMonthlyPercentageChange] = useState<
     number | null
   >(null);
   const [isComparisonLoading, setIsComparisonLoading] = useState(true);
 
-  const netWorth = useMemo(() => {
-    return summary?.totalNetWorth ?? null;
-  }, [summary]);
+  const totalNetWorth = useMemo(() => {
+    return netWorthData?.totalNetWorth ?? null;
+  }, [netWorthData]);
 
   useEffect(() => {
     async function fetchComparison(): Promise<void> {
@@ -127,7 +127,7 @@ export function useNetWorth(): {
   }, [isLoading]);
 
   return {
-    netWorth,
+    totalNetWorth,
     monthlyPercentageChange,
     isLoading: isLoading || isComparisonLoading,
   };

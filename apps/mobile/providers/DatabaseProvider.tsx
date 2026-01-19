@@ -12,7 +12,6 @@ import {
   useEffect,
   useState,
 } from "react";
-import { seedCategories } from "../utils/seed-categories";
 
 interface DatabaseContextValue {
   database: Database;
@@ -30,16 +29,13 @@ export function DatabaseProvider({
 }: DatabaseProviderProps): JSX.Element {
   const [isReady, setIsReady] = useState(false);
 
-  // Initialize database and seed data on first launch
+  // Initialize database
   useEffect(() => {
     const initializeDatabase = async (): Promise<void> => {
       try {
-        // Seed system categories if needed
-        await seedCategories();
         setIsReady(true);
       } catch (error) {
         console.error("Database initialization error:", error);
-        // Still set ready to avoid app hanging
         setIsReady(true);
       }
     };

@@ -40,12 +40,17 @@ export function convertToEGP(
   }
 }
 
-export const formatCurrency = (amount: number, currency: string): string => {
+export const formatCurrency = (
+  amount: number,
+  currency: string,
+  minimumFractionDigits: number = 0,
+  maximumFractionDigits: number = 0
+): string => {
   return (
     new Intl.NumberFormat("en-US", {
       style: "decimal",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      minimumFractionDigits,
+      maximumFractionDigits,
     }).format(amount) + (currency ? ` ${currency}` : "")
   );
 };

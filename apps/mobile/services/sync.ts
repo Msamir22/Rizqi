@@ -25,6 +25,18 @@ export const EXCLUDED_TABLES = [
   "market_rates",
 ] as const;
 
+// Child tables that don't have user_id - need to sync via parent relationship
+const CHILD_TABLES_MAP: Record<
+  string,
+  {
+    parentTable: keyof SupabaseDatabase["public"]["Tables"];
+    foreignKey: string;
+  }
+> = {
+  asset_metals: { parentTable: "assets", foreignKey: "asset_id" },
+  bank_details: { parentTable: "accounts", foreignKey: "account_id" },
+};
+
 type ExcludedTableName = (typeof EXCLUDED_TABLES)[number];
 type SupabaseTablesNames = Exclude<
   keyof SupabaseDatabase["public"]["Tables"],
@@ -32,7 +44,9 @@ type SupabaseTablesNames = Exclude<
 >;
 
 // Tables that should be synced to Supabase
-const SYNCABLE_TABLES = Object.keys(schema.tables) as SupabaseTablesNames[];
+const SYNCABLE_TABLES = Object.keys(schema.tables).filter(
+  (table) => !EXCLUDED_TABLES.includes(table as ExcludedTableName)
+) as SupabaseTablesNames[];
 
 type SyncableTable = (typeof SYNCABLE_TABLES)[number];
 
@@ -56,8 +70,38 @@ async function pullChanges(
 
   for (const table of SYNCABLE_TABLES) {
     try {
-      // Query for records updated since last sync
-      let query = supabase.from(table).select("*").eq("user_id", userId);
+      // Check if this is a child table (no user_id)
+      const childConfig = CHILD_TABLES_MAP[table];
+
+      let query;
+      if (childConfig) {
+        // For child tables, get records where parent belongs to user
+        // Use a subquery approach - first get parent IDs, then filter child records
+        const { data: parentIds } = await supabase
+          .from(childConfig.parentTable)
+          .select("id")
+          .eq("user_id", userId);
+
+        if (!parentIds || parentIds.length === 0) {
+          changes[table] = { created: [], updated: [], deleted: [] };
+          continue;
+        }
+
+        const ids = parentIds.map((p) => p.id);
+        query = supabase
+          .from(table)
+          .select("*")
+          .in(childConfig.foreignKey, ids);
+      } else if (table === "categories") {
+        // Categories: get both user's categories AND system categories (user_id is null)
+        query = supabase
+          .from(table)
+          .select("*")
+          .or(`user_id.eq.${userId},user_id.is.null`);
+      } else {
+        // Normal tables with user_id
+        query = supabase.from(table).select("*").eq("user_id", userId);
+      }
 
       if (lastSyncDate) {
         query = query.gt("updated_at", lastSyncDate);
@@ -84,11 +128,11 @@ async function pullChanges(
         .filter((record) => record.deleted !== true)
         .map((record) => transformFromSupabase(record));
 
-      // For simplicity, treat all active records as "updated"
-      // WatermelonDB will handle the create vs update logic
+      // With sendCreatedAsUpdated: true, ALL records must go in 'updated' array
+      // WatermelonDB will create them if they don't exist locally
       changes[table] = {
-        created: lastSyncDate ? [] : activeRecords, // First sync = all created
-        updated: lastSyncDate ? activeRecords : [], // Subsequent = all updated
+        created: [], // Never use 'created' when sendCreatedAsUpdated is enabled
+        updated: activeRecords,
         deleted,
       };
     } catch (err) {
@@ -121,11 +165,14 @@ async function pushChanges(
       continue;
     }
 
+    // Check if this is a child table (no user_id column)
+    const isChildTable = table in CHILD_TABLES_MAP;
+
     try {
       // Handle created records
       if (tableChanges.created.length > 0) {
         const records = tableChanges.created.map((record) =>
-          transformToSupabase(record, userId)
+          transformToSupabase(record, userId, isChildTable)
         );
         const { error } = await supabase.from(table).insert(records);
         if (error) {
@@ -136,7 +183,7 @@ async function pushChanges(
       // Handle updated records
       if (tableChanges.updated.length > 0) {
         for (const record of tableChanges.updated) {
-          const transformed = transformToSupabase(record, userId);
+          const transformed = transformToSupabase(record, userId, isChildTable);
           const { error } = await supabase
             .from(table)
             .upsert(transformed, { onConflict: "id" });
@@ -218,13 +265,16 @@ type SupabaseInsert<T extends SyncableTable> =
  */
 function transformToSupabase<T extends SyncableTable>(
   record: unknown,
-  userId: string
+  userId: string,
+  isChildTable: boolean = false
 ): SupabaseInsert<T> {
   const wmRecord = record as Record<string, unknown>;
   const transformed: Record<string, unknown> = { ...wmRecord };
 
-  // Ensure user_id is set
-  transformed.user_id = userId;
+  // Ensure user_id is set (only for tables with user_id column)
+  if (!isChildTable) {
+    transformed.user_id = userId;
+  }
 
   // Convert number timestamps to ISO strings for Supabase
   if (typeof wmRecord.created_at === "number") {
@@ -278,29 +328,69 @@ function transformToSupabase<T extends SyncableTable>(
 /**
  * Synchronize WatermelonDB with Supabase
  * Call this after app start and periodically
+ *
+ * @param database - The WatermelonDB database instance
+ * @param forceFullSync - If true, ignores lastPulledAt and fetches all data (use after data clear)
  */
-export async function syncDatabase(database: Database): Promise<void> {
+export async function syncDatabase(
+  database: Database,
+  forceFullSync = false
+): Promise<void> {
   const userId = await getCurrentUserId();
   if (!userId) {
     console.log("Sync skipped: No authenticated user");
     return;
   }
 
+  if (forceFullSync) {
+    console.log("🔄 Force full sync requested - fetching all data from server");
+  }
+
   try {
     await synchronize({
       database,
       pullChanges: async ({ lastPulledAt }): Promise<SyncPullResult> => {
-        const result = await pullChanges(lastPulledAt ?? null);
+        // If forceFullSync is true, ignore the stored timestamp
+        const effectiveLastPulledAt = forceFullSync ? null : lastPulledAt;
+        const result = await pullChanges(effectiveLastPulledAt ?? null);
         return result as SyncPullResult;
       },
       pushChanges: async ({ changes, lastPulledAt }) => {
         await pushChanges({ changes, lastPulledAt });
       },
-      migrationsEnabledAtVersion: 2,
+      // Server may return records that don't exist locally (e.g., first sync or after local data cleared)
+      // This flag tells WatermelonDB to create them instead of treating it as an error
+      sendCreatedAsUpdated: true,
     });
     console.log("Sync completed successfully");
   } catch (error) {
     console.error("Sync failed:", error);
+    throw error;
+  }
+}
+
+/**
+ * Reset sync state to force a full re-sync
+ * This clears all local data and sync metadata
+ * Use this when local data is missing but sync timestamp is ahead
+ *
+ * WARNING: This will delete all local data! Only use for debugging
+ * or when you need to force a complete re-sync from server.
+ *
+ * @param db - The WatermelonDB database instance
+ */
+export async function resetSyncState(db: Database): Promise<void> {
+  try {
+    // WatermelonDB's unsafeResetDatabase clears all tables AND the sync metadata
+    // This forces the next sync to be a full sync with lastPulledAt = null
+    await db.write(async () => {
+      await db.unsafeResetDatabase();
+    });
+    console.log(
+      "🔄 Database reset complete. Next sync will be a full sync from server."
+    );
+  } catch (error) {
+    console.error("Failed to reset database:", error);
     throw error;
   }
 }

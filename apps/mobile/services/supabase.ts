@@ -1,11 +1,15 @@
 /**
  * Supabase Client for Astik Mobile
  * Initialized with environment variables
+ *
+ * Uses SecureStore for session persistence:
+ * - iOS: Keychain - survives data clear and app reinstalls
+ * - Android: EncryptedSharedPreferences - survives app restarts but NOT manual data clear
  */
 
 import { SupabaseDatabase } from "@astik/db";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient } from "@supabase/supabase-js";
+import * as SecureStore from "expo-secure-store";
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -16,12 +20,45 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
+/**
+ * Custom storage adapter using SecureStore
+ * Provides encrypted storage for auth tokens
+ *
+ * Persistence behavior:
+ * - iOS: Uses Keychain (survives data clear and reinstall)
+ * - Android: Uses EncryptedSharedPreferences (cleared when user manually clears app data)
+ */
+const secureStoreAdapter = {
+  getItem: async (key: string): Promise<string | null> => {
+    try {
+      return await SecureStore.getItemAsync(key);
+    } catch (error) {
+      console.error("SecureStore getItem error:", error);
+      return null;
+    }
+  },
+  setItem: async (key: string, value: string): Promise<void> => {
+    try {
+      await SecureStore.setItemAsync(key, value);
+    } catch (error) {
+      console.error("SecureStore setItem error:", error);
+    }
+  },
+  removeItem: async (key: string): Promise<void> => {
+    try {
+      await SecureStore.deleteItemAsync(key);
+    } catch (error) {
+      console.error("SecureStore removeItem error:", error);
+    }
+  },
+};
+
 export const supabase = createClient<SupabaseDatabase>(
   supabaseUrl,
   supabaseAnonKey,
   {
     auth: {
-      storage: AsyncStorage,
+      storage: secureStoreAdapter,
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: false,
@@ -47,6 +84,8 @@ export async function isAuthenticated(): Promise<boolean> {
   const {
     data: { session },
   } = await supabase.auth.getSession();
+
+  console.log("User ID", session?.user?.id);
   return session !== null;
 }
 

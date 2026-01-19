@@ -3,7 +3,7 @@
  * Combine accounts and assets to calculate total net worth
  */
 
-export interface NetWorthSummary {
+export interface NetWorthData {
   totalAccounts: number;
   totalAssets: number;
   totalNetWorth: number;
@@ -16,7 +16,7 @@ export interface NetWorthSummary {
 export function calculateNetWorth(
   totalAccounts: number,
   totalAssets: number
-): NetWorthSummary {
+): NetWorthData {
   return {
     totalAccounts,
     totalAssets,

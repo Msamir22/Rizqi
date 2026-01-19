@@ -3,10 +3,10 @@
  * Reactive hook for transaction data from WatermelonDB
  */
 
-import { useState, useEffect } from "react";
 import { database, Transaction } from "@astik/db";
+import { getMonthBoundaries } from "@astik/logic";
 import { Q } from "@nozbe/watermelondb";
-import { calculateMonthlyTotals, getMonthBoundaries } from "@astik/logic";
+import { useEffect, useState } from "react";
 
 interface UseTransactionsResult {
   transactions: Transaction[];
@@ -89,8 +89,8 @@ export function useTransactions(
 /**
  * Hook to get recent transactions (last 5)
  */
-export function useRecentTransactions(): UseTransactionsResult {
-  return useTransactions({ limit: 5 });
+export function useRecentTransactions(limit?: number): UseTransactionsResult {
+  return useTransactions({ limit });
 }
 
 /**

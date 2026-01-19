@@ -3,19 +3,19 @@
  * Provides sync status and functions to the app with smart sync intervals
  */
 
-import React, {
+import { database } from "@astik/db";
+import {
   createContext,
-  useContext,
-  useState,
+  ReactNode,
   useCallback,
+  useContext,
   useEffect,
   useRef,
-  ReactNode,
+  useState,
 } from "react";
 import { AppState, AppStateStatus } from "react-native";
-import { database } from "@astik/db";
+import { ensureAuthenticated, isAuthenticated } from "../services/supabase";
 import { syncDatabase } from "../services/sync";
-import { isAuthenticated } from "../services/supabase";
 
 // Sync intervals in milliseconds
 const SYNC_INTERVAL_ACTIVE = 15 * 60 * 1000; // 15 minutes when app is active
@@ -25,7 +25,7 @@ interface SyncContextValue {
   isSyncing: boolean;
   lastSyncedAt: Date | null;
   syncError: Error | null;
-  sync: () => Promise<void>;
+  sync: (forceFullSync?: boolean) => Promise<void>;
 }
 
 const SyncContext = createContext<SyncContextValue | null>(null);
@@ -44,33 +44,36 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
 
   const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const sync = useCallback(async () => {
-    // Check if authenticated before syncing
-    const authenticated = await isAuthenticated();
-    if (!authenticated) {
-      console.log("Sync skipped: Not authenticated");
-      return;
-    }
+  const sync = useCallback(
+    async (forceFullSync = false) => {
+      // Check if authenticated before syncing
+      const authenticated = await isAuthenticated();
+      if (!authenticated) {
+        console.log("Sync skipped: Not authenticated");
+        return;
+      }
 
-    if (isSyncing) {
-      console.log("Sync already in progress");
-      return;
-    }
+      if (isSyncing) {
+        console.log("Sync already in progress");
+        return;
+      }
 
-    setIsSyncing(true);
-    setSyncError(null);
+      setIsSyncing(true);
+      setSyncError(null);
 
-    try {
-      await syncDatabase(database);
-      setLastSyncedAt(new Date());
-      console.log("✅ Sync completed successfully");
-    } catch (error) {
-      console.error("Sync failed:", error);
-      setSyncError(error instanceof Error ? error : new Error("Sync failed"));
-    } finally {
-      setIsSyncing(false);
-    }
-  }, [isSyncing]);
+      try {
+        await syncDatabase(database, forceFullSync);
+        setLastSyncedAt(new Date());
+        console.log("✅ Sync completed successfully");
+      } catch (error) {
+        console.error("Sync failed:", error);
+        setSyncError(error instanceof Error ? error : new Error("Sync failed"));
+      } finally {
+        setIsSyncing(false);
+      }
+    },
+    [isSyncing]
+  );
 
   /**
    * Check if local database is empty (data was cleared)
@@ -86,8 +89,8 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
       const count = await accountsCollection.query().fetchCount();
 
       if (count === 0) {
-        console.log("📱 Local DB empty - triggering immediate sync");
-        await sync();
+        console.log("📱 Local DB empty - triggering full sync from server");
+        await sync(true); // Force full sync to fetch all data
       }
     } catch (error) {
       console.error("Error checking data cleared status:", error);
@@ -157,14 +160,19 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
   // Initial sync on mount + data cleared detection
   useEffect(() => {
     const initialSync = async (): Promise<void> => {
-      // First check if data was cleared
+      // First ensure user is authenticated (creates anonymous user if needed)
+      const isAuthed = await ensureAuthenticated();
+      if (!isAuthed) {
+        console.log("⚠️ Auth failed - sync will not run");
+        setupSyncInterval(true); // Still set up interval for retry
+        return;
+      }
+
+      // Check if data was cleared (empty local DB but authenticated)
       await checkDataClearedAndSync();
 
       // Then do normal initial sync
-      const authenticated = await isAuthenticated();
-      if (authenticated) {
-        await sync();
-      }
+      await sync();
 
       // Set up initial interval (app starts active)
       setupSyncInterval(true);

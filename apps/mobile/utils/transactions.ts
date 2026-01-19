@@ -1,12 +1,39 @@
-/**
- * Transaction helper functions for Astik
- * Refactored for new schema (v2)
- */
-
-import { Account, Currency, Transaction, TransactionType } from "@astik/db";
+import {
+  Account,
+  CurrencyType,
+  database,
+  Transaction,
+  TransactionType,
+} from "@astik/db";
 import { ParsedVoiceTransaction } from "@astik/logic";
-import { database } from "../providers/DatabaseProvider";
 import { getCurrentUserId } from "../services/supabase";
+
+export function formatTransactionDate(date: Date): string {
+  const now = new Date();
+  const txDate = new Date(date);
+  const diffDays = Math.floor(
+    (now.getTime() - txDate.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  const timeStr = txDate.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  if (diffDays === 0) {
+    return `Today, ${timeStr}`;
+  } else if (diffDays === 1) {
+    return `Yesterday, ${timeStr}`;
+  } else if (diffDays < 7) {
+    const dayName = txDate.toLocaleDateString("en-US", { weekday: "long" });
+    return `${dayName}, ${timeStr}`;
+  }
+  return txDate.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
 
 /**
  * Create a new transaction from voice input
@@ -27,7 +54,7 @@ export async function createTransactionFromVoice(
       tx.userId = userId;
       tx.accountId = accountId;
       tx.amount = Math.abs(parsed.amount); // Amount is always positive
-      tx.currency = (parsed.currency as Currency) || "EGP";
+      tx.currency = parsed.currency;
       tx.type = parsed.isIncome ? "INCOME" : "EXPENSE";
       tx.categoryId = parsed.detectedCategory || "other"; // Will need category lookup
       tx.merchant = parsed.merchant || parsed.description || undefined;
@@ -50,7 +77,7 @@ export async function createTransactionFromVoice(
  */
 export async function createTransaction(data: {
   amount: number;
-  currency: Currency;
+  currency: CurrencyType;
   categoryId?: string;
   merchant?: string;
   accountId: string;

@@ -12,6 +12,14 @@ import {
   PeriodFilter,
 } from "./types";
 
+export function getMonthBoundaries(year: number, month: number): PeriodFilter {
+  // Calculate start and end of month
+  const startOfMonth = new Date(year, month - 1, 1).getTime();
+  const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999).getTime();
+
+  return { startDate: startOfMonth, endDate: endOfMonth };
+}
+
 /**
  * Calculate monthly totals from a list of transactions
  */
