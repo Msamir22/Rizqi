@@ -271,6 +271,12 @@ function transformToSupabase<T extends SyncableTable>(
   const wmRecord = record as Record<string, unknown>;
   const transformed: Record<string, unknown> = { ...wmRecord };
 
+  // Remove WatermelonDB internal fields - these don't exist in Supabase schema
+  // _status tracks sync state (synced, created, updated, deleted)
+  // _changed tracks which columns have local changes
+  delete transformed["_status"];
+  delete transformed["_changed"];
+
   // Ensure user_id is set (only for tables with user_id column)
   if (!isChildTable) {
     transformed.user_id = userId;
