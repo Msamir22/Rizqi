@@ -1,20 +1,20 @@
 ---
-trigger: model_decision
+trigger: always_on
 description: when working on mobile app that uses react native
 ---
 
-- Use the latest version of React Native for performance and stability.
 - Leverage native modules for performance-critical tasks.
 - Optimize images and assets for mobile to reduce load times.
-- Use Flexbox for responsive layouts across different screen sizes.
 - Type all `props` and `state` using interfaces.
 - Use `React.FC<Props>` only when you need `children`; otherwise use
   `function Component(props: Props)` for better type inference.
-- Use `StyleSheet.create()` to define styles and type them accordingly.
-- Avoid inline styles unless necessary for dynamic styling.
 - Use `TouchableOpacity`, `Pressable`, or `TouchableWithoutFeedback` instead of
   `Button` for better UI control.
-- Avoid logic in JSX; move calculations outside the return statement.
+- Avoid logic in JSX; move calculations and business logic to the
+  packages/logic. If it's shared or could be used by the mobile & api, if it's
+  not shared and it will only be used in the mobile, then move it to the proper
+  place in the mobile folder that is responsible for writing calculations and
+  business logic.
 - Always use `FlatList` instead of mapping manually over arrays when rendering
   long lists.
 - Use `useMemo` and `useCallback` to avoid unnecessary re-renders in
@@ -39,11 +39,6 @@ description: when working on mobile app that uses react native
   - Use `zod` or similar libraries for runtime validation of API responses.
   - Use `React Query`, `SWR`, or similar libraries for stateful data fetching
     and caching.
-
-## Styling
-
-- Always use tailwind classes instead of the "styles = StyleSheet.create"
-  approach.
 
 ## Testing & Debugging
 

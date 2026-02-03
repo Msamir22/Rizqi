@@ -1,8 +1,13 @@
 ---
-trigger: model_decision
+trigger: always_on
 description: when working on mobile app that uses tailwindcss
 ---
 
+- **CRITICAL: Prefer Tailwind CSS over StyleSheet.create** - Always use Tailwind
+  classes (e.g., `className="flex-1 bg-slate-950"`) instead of
+  `StyleSheet.create()` unless absolutely necessary for dynamic values or
+  complex calculations. The theme colors defined in `tailwind.config.js` should
+  be used as classes.
 - Use Tailwind's JIT mode for faster builds and on-demand styles.
 - Create custom utility classes for frequently used styles.
 - Organize styles in a consistent manner to improve maintainability.
