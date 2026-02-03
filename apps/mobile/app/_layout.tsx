@@ -8,15 +8,20 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { AuthProvider } from "../context/AuthContext";
 import { ThemeProvider, useTheme } from "../context/ThemeContext";
 import "../global.css";
 import { DatabaseProvider } from "../providers/DatabaseProvider";
 
 import { darkTheme, lightTheme } from "@/constants/colors";
 import { ErrorBoundary } from "../components/ErrorBoundary";
+import { ToastProvider } from "../components/ui/Toast";
 import { QueryProvider } from "../providers/QueryProvider";
 import { SyncProvider } from "../providers/SyncProvider";
+import { ServerStatusProvider } from "../context/ServerStatusContext";
+import { ServiceUnavailableBanner } from "../components/common/ServiceUnavailableBanner";
 
 // Prevent splash screen from auto-hiding until fonts are loaded
 SplashScreen.preventAutoHideAsync();
@@ -36,17 +41,26 @@ export default function RootLayout() {
 
   return (
     <ErrorBoundary>
-      <QueryProvider>
-        <DatabaseProvider>
-          <SyncProvider>
-            <ThemeProvider>
-              <SafeAreaProvider>
-                <RootLayoutNav />
-              </SafeAreaProvider>
-            </ThemeProvider>
-          </SyncProvider>
-        </DatabaseProvider>
-      </QueryProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <QueryProvider>
+          <DatabaseProvider>
+            <AuthProvider>
+              <SyncProvider>
+                <ThemeProvider>
+                  <SafeAreaProvider>
+                    <ServerStatusProvider>
+                      <ToastProvider>
+                        <RootLayoutNav />
+                        <ServiceUnavailableBanner />
+                      </ToastProvider>
+                    </ServerStatusProvider>
+                  </SafeAreaProvider>
+                </ThemeProvider>
+              </SyncProvider>
+            </AuthProvider>
+          </DatabaseProvider>
+        </QueryProvider>
+      </GestureHandlerRootView>
     </ErrorBoundary>
   );
 }
@@ -90,6 +104,19 @@ function RootLayoutNav() {
           name="settings"
           options={{
             title: "Settings",
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="recurring-payments"
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="create-recurring-payment"
+          options={{
+            presentation: "modal",
             headerShown: false,
           }}
         />

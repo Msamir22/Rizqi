@@ -13,9 +13,10 @@ import {
   PutEndpoint,
   PutOptions,
 } from "@astik/logic";
-import { supabase } from "./supabase";
-
 import Constants from "expo-constants";
+import { DeviceEventEmitter } from "react-native";
+import { SERVER_STATUS_EVENT } from "../context/ServerStatusContext";
+import { supabase } from "./supabase";
 
 /**
  * Get the API base URL based on environment
@@ -126,6 +127,11 @@ async function request<T>(
       headers,
     });
 
+    // Check for Service Unavailable (503)
+    if (response.status === 503) {
+      DeviceEventEmitter.emit(SERVER_STATUS_EVENT, { isUnavailable: true });
+    }
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       return {
@@ -139,6 +145,16 @@ async function request<T>(
     return { data: result.data, error: null };
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : "Network error";
+
+    // Check for specific network error messages that might indicate server down
+    if (
+      errorMessage.includes("Network request failed") ||
+      errorMessage.includes("Aborted") ||
+      errorMessage.includes("Load failed")
+    ) {
+      DeviceEventEmitter.emit(SERVER_STATUS_EVENT, { isUnavailable: true });
+    }
+
     return { data: null, error: errorMessage };
   }
 }
