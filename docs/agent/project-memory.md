@@ -4,7 +4,7 @@ alwaysApply: true
 
 # 🧠 Astik Project Memory
 
-> **Last Updated:** 2026-01-15 **Purpose:** Persistent context for AI agents
+> **Last Updated:** 2026-01-19 **Purpose:** Persistent context for AI agents
 > across conversations
 
 ---
@@ -227,6 +227,15 @@ for asset transactions)
 ## 7. Recent Sessions
 
 > Last 10 sessions for context continuity
+
+### Session: 2026-01-19 (22:26)
+
+- **Topic:** Sync Fixes & SecureStore Integration
+- **Accomplished:** Fixed WatermelonDB sync error (sendCreatedAsUpdated). Added
+  force full sync when local DB is empty. Integrated expo-secure-store for
+  encrypted auth tokens. Reverted device ID recovery feature per user decision.
+- **Outcome:** App now properly handles data clear: creates new user, detects
+  empty DB, force syncs all data from server.
 
 ### Session: 2026-01-15 (06:33)
 
