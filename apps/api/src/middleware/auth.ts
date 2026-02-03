@@ -69,8 +69,23 @@ export async function Auth(
     req.userId = data.user.id;
 
     next();
-  } catch (err) {
+  } catch (err: any) {
     console.error("Auth middleware error:", err);
+
+    // Check for connection timeout or network errors
+    // UND_ERR_CONNECT_TIMEOUT is the code for Undici (Node's fetch) timeouts
+    if (
+      err.code === "UND_ERR_CONNECT_TIMEOUT" ||
+      err.cause?.code === "UND_ERR_CONNECT_TIMEOUT" ||
+      err.cause?.code === "ENOTFOUND" ||
+      err.message?.includes("fetch failed")
+    ) {
+      res.status(503).json({
+        error: "Service unavailable. Please try again later.",
+      });
+      return;
+    }
+
     res.status(500).json({ error: "Authentication error" });
   }
 }

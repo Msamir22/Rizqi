@@ -37,6 +37,9 @@ export const Errors = {
     console.error("Supabase error:", error);
     return new AppError(error.message ?? "Database error", 500);
   },
+
+  serviceUnavailable: (message = "Service unavailable"): AppError =>
+    new AppError(message, 503),
 };
 
 /**
