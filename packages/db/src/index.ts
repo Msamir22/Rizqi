@@ -12,6 +12,7 @@ export { BankDetails } from "./models/BankDetails";
 export { Budget } from "./models/Budget";
 export { Category } from "./models/Category";
 export { Debt } from "./models/Debt";
+export { MarketRate } from "./models/MarketRate";
 export { Profile } from "./models/Profile";
 export { RecurringPayment } from "./models/RecurringPayment";
 export { Transaction } from "./models/Transaction";

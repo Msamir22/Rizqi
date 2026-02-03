@@ -1,7 +1,8 @@
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
-import { MarketRates, PreviousDayRates } from "@astik/logic";
-import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
+import { formatTimeAgo } from "@/utils/dateHelpers";
+import { MarketRate } from "@astik/db";
+import { FontAwesome5, MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 
 interface Rate {
@@ -13,9 +14,11 @@ interface Rate {
 }
 
 interface LiveRatesProps {
-  rates: MarketRates | null;
-  previousDayRates: PreviousDayRates | null;
+  latestRate: MarketRate | null;
+  previousDayRate: MarketRate | null;
   isLoading: boolean;
+  lastUpdated: Date | null;
+  isStale: boolean;
 }
 
 // Pill style configurations using Tailwind classes
@@ -50,10 +53,10 @@ function calculateTrend(
 }
 
 function buildRatesDisplay(
-  rates: MarketRates | null,
-  previousDayRates: PreviousDayRates | null
+  latestRate: MarketRate | null,
+  previousDayRate: MarketRate | null
 ): Rate[] {
-  if (!rates) {
+  if (!latestRate) {
     return [];
   }
 
@@ -61,27 +64,27 @@ function buildRatesDisplay(
     {
       id: "1",
       label: "USD/EGP",
-      value: rates.usd_egp.toFixed(2),
-      trend: calculateTrend(rates.usd_egp, previousDayRates?.usd_egp),
+      value: latestRate.usdEgp.toFixed(2),
+      trend: calculateTrend(latestRate.usdEgp, previousDayRate?.usdEgp),
       type: "currency",
     },
     {
       id: "2",
       label: "Gold 24K",
-      value: `EGP ${Math.round(rates.gold_egp_per_gram).toLocaleString()}/g`,
+      value: `EGP ${Math.round(latestRate.goldEgpPerGram).toLocaleString()}/g`,
       trend: calculateTrend(
-        rates.gold_egp_per_gram,
-        previousDayRates?.gold_egp_per_gram
+        latestRate.goldEgpPerGram,
+        previousDayRate?.goldEgpPerGram
       ),
       type: "gold",
     },
     {
       id: "3",
       label: "Silver",
-      value: `EGP ${Math.round(rates.silver_egp_per_gram).toLocaleString()}/g`,
+      value: `EGP ${Math.round(latestRate.silverEgpPerGram).toLocaleString()}/g`,
       trend: calculateTrend(
-        rates.silver_egp_per_gram,
-        previousDayRates?.silver_egp_per_gram
+        latestRate.silverEgpPerGram,
+        previousDayRate?.silverEgpPerGram
       ),
       type: "silver",
     },
@@ -89,14 +92,16 @@ function buildRatesDisplay(
 }
 
 export function LiveRates({
-  rates,
-  previousDayRates,
+  latestRate,
+  previousDayRate,
   isLoading = false,
+  lastUpdated,
+  isStale,
 }: LiveRatesProps): React.JSX.Element {
   const { mode } = useTheme();
   const isDark = mode === "dark";
 
-  const ratesDisplay = buildRatesDisplay(rates, previousDayRates);
+  const ratesDisplay = buildRatesDisplay(latestRate, previousDayRate);
 
   const getIconColor = (type: Rate["type"]): string => {
     switch (type) {
@@ -130,6 +135,15 @@ export function LiveRates({
             className="ml-2"
             color={palette.nileGreen[500]}
           />
+        )}
+        {isStale && (
+          <View className="ml-2 flex-row items-center">
+            <Ionicons
+              name="alert-circle-outline"
+              size={16}
+              color={palette.orange[500]}
+            />
+          </View>
         )}
       </View>
       <ScrollView
@@ -172,6 +186,11 @@ export function LiveRates({
           );
         })}
       </ScrollView>
+      {lastUpdated && (
+        <Text className="ml-1 mt-2 text-xs text-slate-500 dark:text-slate-400">
+          Last updated {formatTimeAgo(lastUpdated)}
+        </Text>
+      )}
     </View>
   );
 }

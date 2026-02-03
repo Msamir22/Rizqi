@@ -25,7 +25,7 @@ export function useAccounts(): UseAccountsResult {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const { rates } = useMarketRates();
+  const { latestRate } = useMarketRates();
 
   const refetch = (): void => {
     setRefreshKey((prev) => prev + 1);
@@ -41,22 +41,25 @@ export function useAccounts(): UseAccountsResult {
     const query = accountsCollection.query(Q.where("deleted", false));
 
     // Subscribe to changes
-    const subscription = query.observe().subscribe({
-      next: (result) => {
-        setAccounts(result);
-        setIsLoading(false);
-      },
-      error: (err) => {
-        console.error("Error observing accounts:", err);
-        setError(err);
-        setIsLoading(false);
-      },
-    });
+    // Use observeWithColumns to trigger updates when balance changes
+    const subscription = query
+      .observeWithColumns(["balance", "name", "updated_at"])
+      .subscribe({
+        next: (result) => {
+          setAccounts(result);
+          setIsLoading(false);
+        },
+        error: (err) => {
+          console.error("Error observing accounts:", err);
+          setError(err);
+          setIsLoading(false);
+        },
+      });
 
     return () => subscription.unsubscribe();
   }, [refreshKey]);
 
-  const totalBalanceEgp = calculateTotalBalance(accounts, rates);
+  const totalBalanceEgp = calculateTotalBalance(accounts, latestRate);
 
   return {
     accounts,
@@ -90,7 +93,8 @@ export function useTopAccounts(limit: number = 3): {
       Q.take(limit)
     );
 
-    const subscription = query.observe().subscribe({
+    // Use observeWithColumns to react to balance changes, not just add/remove
+    const subscription = query.observeWithColumns(["balance"]).subscribe({
       next: (result) => {
         setAccounts(result);
         setIsLoading(false);

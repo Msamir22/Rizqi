@@ -1,22 +1,21 @@
-import { MetalType } from "@astik/db";
-import { MarketRates } from "../types";
+import { MarketRate, MetalType } from "@astik/db";
 
 /**
  * Get the current price per gram for a metal type
  */
 export function getMetalPrice(
   metalType: MetalType,
-  marketRates: NonNullable<MarketRates>
+  marketRates: NonNullable<MarketRate>
 ): number {
   switch (metalType) {
     case "GOLD":
-      return marketRates.gold_egp_per_gram;
+      return marketRates.goldEgpPerGram;
     case "SILVER":
-      return marketRates.silver_egp_per_gram;
+      return marketRates.silverEgpPerGram;
     case "PLATINUM":
-      return marketRates.platinum_egp_per_gram;
+      return marketRates.platinumEgpPerGram;
     case "PALLADIUM":
-      return marketRates.palladium_egp_per_gram;
+      return marketRates.palladiumEgpPerGram;
     default:
       return 0;
   }

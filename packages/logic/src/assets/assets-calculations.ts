@@ -1,5 +1,4 @@
-import type { AssetMetal } from "@astik/db";
-import type { MarketRates } from "../types";
+import type { AssetMetal, MarketRate } from "@astik/db";
 
 /**
  * Calculate total assets value in EGP
@@ -12,7 +11,7 @@ import type { MarketRates } from "../types";
  */
 export function calculateTotalAssets(
   assetMetals: AssetMetal[],
-  marketRates: MarketRates
+  marketRates: MarketRate
 ): number {
   if (!marketRates) {
     return 0;
@@ -30,17 +29,17 @@ export function calculateTotalAssets(
  */
 function getMetalPrice(
   metalType: AssetMetal["metalType"],
-  marketRates: NonNullable<MarketRates>
+  marketRates: NonNullable<MarketRate>
 ): number {
   switch (metalType) {
     case "GOLD":
-      return marketRates.gold_egp_per_gram;
+      return marketRates.goldEgpPerGram;
     case "SILVER":
-      return marketRates.silver_egp_per_gram;
+      return marketRates.silverEgpPerGram;
     case "PLATINUM":
-      return marketRates.platinum_egp_per_gram;
+      return marketRates.platinumEgpPerGram;
     case "PALLADIUM":
-      return marketRates.palladium_egp_per_gram;
+      return marketRates.palladiumEgpPerGram;
     default:
       return 0;
   }

@@ -55,6 +55,7 @@ import { RecurringPayment } from "./models/RecurringPayment";
 import { Transaction } from "./models/Transaction";
 import { Transfer } from "./models/Transfer";
 import { Budget } from "./models/Budget";
+import { MarketRate } from "./models/MarketRate";
 
 let adapter: SQLiteAdapter;
 try {
@@ -87,5 +88,6 @@ export const database = new Database({
     Transaction,
     Transfer,
     Budget,
+    MarketRate,
   ],
 });

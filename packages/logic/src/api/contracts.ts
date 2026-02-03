@@ -10,17 +10,13 @@
  * - Path parameters type (for endpoints with :param placeholders)
  */
 
-import { MarketRates, NetWorthComparison, PreviousDayRates } from "../types";
+import { NetWorthComparison } from "../types";
 
 // =============================================================================
 // Endpoints
 // =============================================================================
 
 export const ApiEndpoints = {
-  // Market rates
-  marketRates: "/api/market-rates",
-  marketRatesPreviousDay: "/api/market-rates/previous-day",
-
   // Net worth
   netWorthComparison: "/api/net-worth/comparison",
 
@@ -139,18 +135,11 @@ interface DeleteContract<
  * Defines the contract for each endpoint using strict method-specific types
  */
 export interface ApiContract {
-  // Market rates - GET endpoints
-  [ApiEndpoints.marketRates]: GetContract<MarketRates>;
-  [ApiEndpoints.marketRatesPreviousDay]: GetContract<PreviousDayRates | null>;
-
   // Net worth - GET endpoints
   [ApiEndpoints.netWorthComparison]: GetContract<
     NetWorthComparison | null,
     { date: string }
   >;
-
-  // Mock endpoints - GET endpoints
-  [ApiEndpoints.mockRates]: GetContract<MarketRates>;
 }
 
 // =============================================================================

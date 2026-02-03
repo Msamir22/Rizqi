@@ -4,22 +4,6 @@
 
 import { CurrencyType, SupabaseDatabase, TransactionType } from "@astik/db";
 
-export type MarketRates =
-  SupabaseDatabase["public"]["Tables"]["market_rates"]["Row"];
-
-export type MarketRatesSnapshot =
-  SupabaseDatabase["public"]["Tables"]["daily_snapshot_market_rates"]["Row"];
-
-export type PreviousDayRates = Pick<
-  MarketRatesSnapshot,
-  | "usd_egp"
-  | "gold_egp_per_gram"
-  | "silver_egp_per_gram"
-  | "platinum_egp_per_gram"
-  | "palladium_egp_per_gram"
-  | "snapshot_date"
->;
-
 export type DailySnapshotNetWorth =
   SupabaseDatabase["public"]["Tables"]["daily_snapshot_net_worth"]["Row"];
 

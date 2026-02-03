@@ -1,4 +1,4 @@
-import { MarketRates } from "../types";
+import { MarketRate } from "@astik/db";
 
 export function egpToCurrency(
   amountInEgp: number,
@@ -20,21 +20,21 @@ export function currencyToEGP(
 export function convertToEGP(
   balance: number,
   currency: string,
-  marketRates: NonNullable<MarketRates>
+  marketRates: NonNullable<MarketRate>
 ): number {
   switch (currency) {
     case "EGP":
       return balance;
     case "USD":
-      return currencyToEGP(balance, marketRates.usd_egp);
+      return currencyToEGP(balance, marketRates.usdEgp);
     case "EUR":
-      return currencyToEGP(balance, marketRates.eur_egp);
+      return currencyToEGP(balance, marketRates.eurEgp);
     case "GBP":
-      return currencyToEGP(balance, marketRates.gbp_egp);
+      return currencyToEGP(balance, marketRates.gbpEgp);
     case "SAR":
-      return currencyToEGP(balance, marketRates.sar_egp);
+      return currencyToEGP(balance, marketRates.sarEgp);
     case "AED":
-      return currencyToEGP(balance, marketRates.aed_egp);
+      return currencyToEGP(balance, marketRates.aedEgp);
     default:
       return balance;
   }

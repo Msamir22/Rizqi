@@ -3,8 +3,7 @@
  * Calculate the distribution of assets across Bank, Cash, and Metals
  */
 
-import type { Account, AssetMetal } from "@astik/db";
-import type { MarketRates } from "../types";
+import type { Account, AssetMetal, MarketRate } from "@astik/db";
 import { convertToEGP } from "../utils/currency";
 import { getMetalPrice } from "../utils/metal";
 
@@ -28,7 +27,7 @@ export interface AssetBreakdownPercentage {
 export function calculateAssetBreakdown(
   accounts: Account[],
   assetMetals: AssetMetal[],
-  marketRates: MarketRates | null
+  marketRates: MarketRate | null
 ): AssetBreakdown {
   const breakdown: AssetBreakdown = {
     bank: 0,

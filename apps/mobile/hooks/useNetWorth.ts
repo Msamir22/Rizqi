@@ -31,7 +31,7 @@ export function useNetWorth(): UseNetWorthResult {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const { rates, isLoading: isRatesLoading } = useMarketRates();
+  const { latestRate, isLoading: isRatesLoading } = useMarketRates();
 
   const refresh = (): void => {
     setRefreshKey((prev) => prev + 1);
@@ -41,7 +41,8 @@ export function useNetWorth(): UseNetWorthResult {
     const accountsCollection = database.get<Account>("accounts");
     const query = accountsCollection.query(Q.where("deleted", false));
 
-    const subscription = query.observe().subscribe({
+    // Use observeWithColumns to react to balance changes
+    const subscription = query.observeWithColumns(["balance"]).subscribe({
       next: (result) => setAccounts(result),
       error: (err) => {
         console.error("Error observing accounts:", err);
@@ -73,18 +74,18 @@ export function useNetWorth(): UseNetWorthResult {
 
   // Calculate net worth when data changes
   const netWorthData = useMemo<NetWorthData | null>(() => {
-    if (isLoading || isRatesLoading || !rates) {
+    if (isLoading || isRatesLoading || !latestRate) {
       return null;
     }
 
     // Calculate total accounts in EGP
-    const totalAccounts = calculateTotalBalance(accounts, rates);
+    const totalAccounts = calculateTotalBalance(accounts, latestRate);
 
     // Calculate total assets in EGP
-    const totalAssets = calculateTotalAssets(assetMetals, rates);
+    const totalAssets = calculateTotalAssets(assetMetals, latestRate);
 
     return calculateNetWorth(totalAccounts, totalAssets);
-  }, [accounts, assetMetals, rates, isLoading, isRatesLoading]);
+  }, [accounts, assetMetals, latestRate, isLoading, isRatesLoading]);
 
   return {
     netWorthData,

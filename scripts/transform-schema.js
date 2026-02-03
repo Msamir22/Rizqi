@@ -33,8 +33,6 @@ const EXCLUDED_TABLES = [
   "daily_snapshot_assets",
   "daily_snapshot_balance",
   "daily_snapshot_net_worth",
-  "daily_snapshot_market_rates",
-  "market_rates",
 ];
 
 // Mapping from table names to class names (for irregular plurals)
@@ -265,7 +263,7 @@ ${columnDefs},
 import { appSchema, tableSchema } from "@nozbe/watermelondb";
 
 export const schema = appSchema({
-  version: 3,
+  version: 4,
   tables: [
 ${tableSchemas},
   ],
@@ -506,26 +504,11 @@ function generateExtendedModel(tableName) {
   const baseClassName = `Base${className}`;
   const baseFileName = `base-${pascalToKebab(className)}`;
 
-  return `/**
- * ${className} Model
- * MANUALLY MAINTAINED - Add custom getters, setters, and methods here
- * This class extends the auto-generated Base${className}
- */
+  return `
 
 import { ${baseClassName} } from "./base/${baseFileName}";
 
 export class ${className} extends ${baseClassName} {
-  // ===========================================
-  // CUSTOM GETTERS
-  // ===========================================
-
-  // Add custom getters here
-
-  // ===========================================
-  // CUSTOM METHODS
-  // ===========================================
-
-  // Add custom methods here
 }
 `;
 }

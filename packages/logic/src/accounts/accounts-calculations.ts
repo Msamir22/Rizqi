@@ -1,9 +1,8 @@
-import { Account } from "@astik/db";
-import { MarketRates } from "../types";
+import { Account, MarketRate } from "@astik/db";
 
 export function calculateTotalBalance(
   accounts: Account[],
-  latestMarketRates: MarketRates | null
+  latestMarketRates: MarketRate | null
 ) {
   // If market rates are available, calculate total balance using rates
   return latestMarketRates
@@ -12,9 +11,9 @@ export function calculateTotalBalance(
           case "EGP":
             return total + account.balance;
           case "USD":
-            return total + account.balance * latestMarketRates.usd_egp!;
+            return total + account.balance * latestMarketRates.usdEgp;
           case "EUR":
-            return total + account.balance * latestMarketRates.eur_egp!;
+            return total + account.balance * latestMarketRates.eurEgp;
           default:
             return total;
         }

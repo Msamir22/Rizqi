@@ -1,55 +1,76 @@
-import { MarketRates, PreviousDayRates } from "@astik/logic";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { MarketRate } from "@astik/db";
+import { Q } from "@nozbe/watermelondb";
 import { RealtimeChannel } from "@supabase/supabase-js";
 import { useEffect, useRef, useState } from "react";
-import {
-  getLatestMarketRates,
-  getPreviousDayRates,
-} from "../services/market-rates";
+import { useDatabase } from "../providers/DatabaseProvider";
 import { supabase } from "../services/supabase";
-
-// Query keys for cache management
-export const marketRatesKeys = {
-  all: ["market-rates"] as const,
-  current: () => [...marketRatesKeys.all, "current"] as const,
-  previousDay: () => [...marketRatesKeys.all, "previous-day"] as const,
-};
+import { useSync } from "@/providers/SyncProvider";
 
 interface UseMarketRatesResult {
-  rates: MarketRates | null;
-  previousDayRates: PreviousDayRates | null;
+  latestRate: MarketRate | null;
+  previousDayRate: MarketRate | null;
   isLoading: boolean;
-  error: Error | null;
   isConnected: boolean;
+  lastUpdated: Date | null;
+  isStale: boolean;
 }
 
 /**
- * Hook to get latest market rates with realtime updates.
- * Uses React Query for caching
+ * Hook to get market rates from local WatermelonDB with realtime updates
+ * Single source of truth: WatermelonDB (synced from Supabase)
  */
 export function useMarketRates(): UseMarketRatesResult {
-  const queryClient = useQueryClient();
+  const database = useDatabase();
+  const [latestRate, setLatestRate] = useState<MarketRate | null>(null);
+  const [previousDayRate, setPreviousDayRate] = useState<MarketRate | null>(
+    null
+  );
+  const [isLoading, setIsLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const { sync } = useSync();
 
-  // Fetch current rates with caching
-  const {
-    data: rates = null,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: marketRatesKeys.current(),
-    queryFn: getLatestMarketRates,
-  });
+  // Query latest market rate from local DB
+  useEffect(() => {
+    const subscription = database
+      .get<MarketRate>("market_rates")
+      .query(Q.sortBy("created_at", Q.desc), Q.take(1))
+      .observe()
+      .subscribe((rates) => {
+        const rate = rates.at(0) ?? null;
+        setLatestRate(rate);
+        setIsLoading(false);
+      });
 
-  // Fetch previous day rates with caching
-  const { data: previousDayRates = null } = useQuery({
-    queryKey: marketRatesKeys.previousDay(),
-    queryFn: getPreviousDayRates,
-    staleTime: 30 * 60 * 1000, // 30 minutes (doesn't change often)
-  });
+    return () => subscription.unsubscribe();
+  }, [database]);
 
-  // Set up realtime subscription for live updates
+  // Query previous day rate (before today)
+  useEffect(() => {
+    const fetchPreviousDay = async () => {
+      try {
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const rates = await database
+          .get<MarketRate>("market_rates")
+          .query(
+            Q.where("created_at", Q.lt(todayStart.getTime())),
+            Q.sortBy("created_at", Q.desc),
+            Q.take(1)
+          )
+          .fetch();
+
+        setPreviousDayRate(rates.at(0) ?? null);
+      } catch (err) {
+        console.error("Error fetching previous day rate:", err);
+      }
+    };
+
+    fetchPreviousDay();
+  }, [database, latestRate]); // Re-fetch when latest rate changes
+
+  // Set up realtime subscription for instant updates
   useEffect(() => {
     const channel = supabase
       .channel("market-rates-realtime")
@@ -60,12 +81,8 @@ export function useMarketRates(): UseMarketRatesResult {
           schema: "public",
           table: "market_rates",
         },
-        (payload) => {
-          // New rate inserted - update cache directly
-          queryClient.setQueryData(
-            marketRatesKeys.current(),
-            payload.new as MarketRates
-          );
+        async () => {
+          await sync();
         }
       )
       .subscribe((status) => {
@@ -80,13 +97,14 @@ export function useMarketRates(): UseMarketRatesResult {
         channelRef.current = null;
       }
     };
-  }, [queryClient]);
+  }, [database]);
 
   return {
-    rates,
-    previousDayRates,
+    latestRate,
+    previousDayRate,
     isLoading,
-    error,
     isConnected,
+    lastUpdated: latestRate?.createdAt || null,
+    isStale: latestRate?.isStale() ?? false,
   };
 }

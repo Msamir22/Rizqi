@@ -503,7 +503,7 @@ export type Database = {
           timestamp_metal: string | null;
           tnd_egp: number;
           try_egp: number;
-          updated_at: string | null;
+          updated_at: string;
           usd_egp: number;
           zar_egp: number;
         };
@@ -550,7 +550,7 @@ export type Database = {
           timestamp_metal?: string | null;
           tnd_egp: number;
           try_egp: number;
-          updated_at?: string | null;
+          updated_at?: string;
           usd_egp: number;
           zar_egp: number;
         };
@@ -597,7 +597,7 @@ export type Database = {
           timestamp_metal?: string | null;
           tnd_egp?: number;
           try_egp?: number;
-          updated_at?: string | null;
+          updated_at?: string;
           usd_egp?: number;
           zar_egp?: number;
         };
@@ -950,6 +950,11 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      recalculate_account_balance: {
+        Args: { account_id_param: string };
+        Returns: number;
+      };
+      recalculate_all_account_balances: { Args: never; Returns: number };
       recalculate_daily_snapshot_assets: { Args: never; Returns: undefined };
       recalculate_daily_snapshot_balance: { Args: never; Returns: undefined };
       recalculate_daily_snapshot_net_worth: { Args: never; Returns: undefined };

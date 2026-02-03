@@ -22,14 +22,13 @@ export const EXCLUDED_TABLES = [
   "daily_snapshot_balance",
   "daily_snapshot_net_worth",
   "daily_snapshot_market_rates",
-  "market_rates",
 ] as const;
 
 // Child tables that don't have user_id - need to sync via parent relationship
 const CHILD_TABLES_MAP: Record<
   string,
   {
-    parentTable: keyof SupabaseDatabase["public"]["Tables"];
+    parentTable: WritableSupabaseTablesNames;
     foreignKey: string;
   }
 > = {
@@ -43,12 +42,191 @@ type SupabaseTablesNames = Exclude<
   ExcludedTableName
 >;
 
+type WritableSupabaseTablesNames = Exclude<SupabaseTablesNames, "market_rates">;
+
 // Tables that should be synced to Supabase
 const SYNCABLE_TABLES = Object.keys(schema.tables).filter(
   (table) => !EXCLUDED_TABLES.includes(table as ExcludedTableName)
 ) as SupabaseTablesNames[];
 
 type SyncableTable = (typeof SYNCABLE_TABLES)[number];
+
+/**
+ * Pull market_rates (global data, last N days only)
+ */
+async function pullMarketRates(
+  daysToKeep: number = 7
+): Promise<SyncDatabaseChangeSet["market_rates"]> {
+  try {
+    // Calculate cutoff date (N days ago)
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
+
+    const { data, error } = await supabase
+      .from("market_rates")
+      .select("*")
+      .gt("created_at", cutoffDate.toISOString())
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error pulling market_rates:", error);
+      return { created: [], updated: [], deleted: [] };
+    }
+
+    if (!data || data.length === 0) {
+      return { created: [], updated: [], deleted: [] };
+    }
+
+    // Transform records
+    const activeRecords = data.map((record) => transformFromSupabase(record));
+
+    return {
+      created: [],
+      updated: activeRecords,
+      deleted: [],
+    };
+  } catch (err) {
+    console.error("Exception pulling market_rates:", err);
+    return { created: [], updated: [], deleted: [] };
+  }
+}
+
+/**
+ * Pull user-scoped table (normal tables with user_id)
+ */
+async function pullUserTable(
+  table: WritableSupabaseTablesNames,
+  userId: string,
+  lastSyncDate: string | null
+): Promise<SyncDatabaseChangeSet[WritableSupabaseTablesNames]> {
+  let query = supabase.from(table).select("*").eq("user_id", userId);
+
+  if (lastSyncDate) {
+    query = query.gt("updated_at", lastSyncDate);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error(`Error pulling ${table}:`, error);
+    return { created: [], updated: [], deleted: [] };
+  }
+
+  if (!data || data.length === 0) {
+    return { created: [], updated: [], deleted: [] };
+  }
+
+  const deleted = data
+    .filter((record) => record.deleted === true)
+    .map((record) => record.id);
+
+  const activeRecords = data
+    .filter((record) => record.deleted !== true)
+    .map((record) => transformFromSupabase(record));
+
+  return {
+    created: [],
+    updated: activeRecords,
+    deleted,
+  };
+}
+
+/**
+ * Pull child table (no user_id, filtered via parent FK)
+ */
+async function pullChildTable(
+  table: WritableSupabaseTablesNames,
+  childConfig: {
+    parentTable: WritableSupabaseTablesNames;
+    foreignKey: string;
+  },
+  userId: string,
+  lastSyncDate: string | null
+): Promise<SyncDatabaseChangeSet[WritableSupabaseTablesNames]> {
+  // Get parent IDs for this user
+  const { data: parentIds } = await supabase
+    .from(childConfig.parentTable)
+    .select("id")
+    .eq("user_id", userId);
+
+  if (!parentIds || parentIds.length === 0) {
+    return { created: [], updated: [], deleted: [] };
+  }
+
+  const ids = parentIds.map((p) => p.id);
+  let query = supabase.from(table).select("*").in(childConfig.foreignKey, ids);
+
+  if (lastSyncDate) {
+    query = query.gt("updated_at", lastSyncDate);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error(`Error pulling ${table}:`, error);
+    return { created: [], updated: [], deleted: [] };
+  }
+
+  if (!data || data.length === 0) {
+    return { created: [], updated: [], deleted: [] };
+  }
+
+  const deleted = data
+    .filter((record) => record.deleted === true)
+    .map((record) => record.id);
+
+  const activeRecords = data
+    .filter((record) => record.deleted !== true)
+    .map((record) => transformFromSupabase(record));
+
+  return {
+    created: [],
+    updated: activeRecords,
+    deleted,
+  };
+}
+
+/**
+ * Pull categories (user's categories + system categories)
+ */
+async function pullCategories(
+  userId: string,
+  lastSyncDate: string | null
+): Promise<SyncDatabaseChangeSet["categories"]> {
+  let query = supabase
+    .from("categories")
+    .select("*")
+    .or(`user_id.eq.${userId},user_id.is.null`);
+
+  if (lastSyncDate) {
+    query = query.gt("updated_at", lastSyncDate);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Error pulling categories:", error);
+    return { created: [], updated: [], deleted: [] };
+  }
+
+  if (!data || data.length === 0) {
+    return { created: [], updated: [], deleted: [] };
+  }
+
+  const deleted = data
+    .filter((record) => record.deleted === true)
+    .map((record) => record.id);
+
+  const activeRecords = data
+    .filter((record) => record.deleted !== true)
+    .map((record) => transformFromSupabase(record));
+
+  return {
+    created: [],
+    updated: activeRecords,
+    deleted,
+  };
+}
 
 /**
  * Pull changes from Supabase since last sync
@@ -70,73 +248,26 @@ async function pullChanges(
 
   for (const table of SYNCABLE_TABLES) {
     try {
-      // Check if this is a child table (no user_id)
       const childConfig = CHILD_TABLES_MAP[table];
 
-      let query;
-      if (childConfig) {
-        // For child tables, get records where parent belongs to user
-        // Use a subquery approach - first get parent IDs, then filter child records
-        const { data: parentIds } = await supabase
-          .from(childConfig.parentTable)
-          .select("id")
-          .eq("user_id", userId);
-
-        if (!parentIds || parentIds.length === 0) {
-          changes[table] = { created: [], updated: [], deleted: [] };
-          continue;
-        }
-
-        const ids = parentIds.map((p) => p.id);
-        query = supabase
-          .from(table)
-          .select("*")
-          .in(childConfig.foreignKey, ids);
+      // Route to appropriate specialized pull function
+      if (table === "market_rates") {
+        changes[table] = await pullMarketRates();
       } else if (table === "categories") {
-        // Categories: get both user's categories AND system categories (user_id is null)
-        query = supabase
-          .from(table)
-          .select("*")
-          .or(`user_id.eq.${userId},user_id.is.null`);
+        changes[table] = await pullCategories(userId, lastSyncDate);
+      } else if (childConfig) {
+        changes[table] = await pullChildTable(
+          table,
+          childConfig,
+          userId,
+          lastSyncDate
+        );
       } else {
-        // Normal tables with user_id
-        query = supabase.from(table).select("*").eq("user_id", userId);
+        changes[table] = await pullUserTable(table, userId, lastSyncDate);
       }
-
-      if (lastSyncDate) {
-        query = query.gt("updated_at", lastSyncDate);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error(`Error pulling ${table}:`, error);
-        continue;
-      }
-
-      if (!data || data.length === 0) {
-        changes[table] = { created: [], updated: [], deleted: [] };
-        continue;
-      }
-
-      // Separate deleted from updated/created
-      const deleted = data
-        .filter((record) => record.deleted === true)
-        .map((record) => record.id);
-
-      const activeRecords = data
-        .filter((record) => record.deleted !== true)
-        .map((record) => transformFromSupabase(record));
-
-      // With sendCreatedAsUpdated: true, ALL records must go in 'updated' array
-      // WatermelonDB will create them if they don't exist locally
-      changes[table] = {
-        created: [], // Never use 'created' when sendCreatedAsUpdated is enabled
-        updated: activeRecords,
-        deleted,
-      };
     } catch (err) {
       console.error(`Exception pulling ${table}:`, err);
+      changes[table] = { created: [], updated: [], deleted: [] };
     }
   }
 
@@ -165,6 +296,11 @@ async function pushChanges(
       continue;
     }
 
+    // Skip market_rates - it's read-only global data (pull only)
+    if (table === "market_rates") {
+      continue;
+    }
+
     // Check if this is a child table (no user_id column)
     const isChildTable = table in CHILD_TABLES_MAP;
 
@@ -174,6 +310,7 @@ async function pushChanges(
         const records = tableChanges.created.map((record) =>
           transformToSupabase(record, userId, isChildTable)
         );
+
         const { error } = await supabase.from(table).insert(records);
         if (error) {
           console.error(`Error inserting ${table}:`, error);
@@ -184,11 +321,17 @@ async function pushChanges(
       if (tableChanges.updated.length > 0) {
         for (const record of tableChanges.updated) {
           const transformed = transformToSupabase(record, userId, isChildTable);
+
           const { error } = await supabase
             .from(table)
             .upsert(transformed, { onConflict: "id" });
           if (error) {
             console.error(`Error upserting ${table}:`, error);
+            // Log the full record on error for debugging
+            console.error(
+              `Full record that caused error:`,
+              JSON.stringify(transformed, null, 2)
+            );
           }
         }
       }
@@ -208,6 +351,29 @@ async function pushChanges(
     }
   }
 }
+
+/**
+ * UUID validation regex
+ */
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/**
+ * Known UUID fields in the schema
+ */
+const UUID_FIELDS = [
+  "id",
+  "user_id",
+  "account_id",
+  "category_id",
+  "asset_id",
+  "linked_asset_id",
+  "linked_debt_id",
+  "linked_recurring_id",
+  "from_account_id",
+  "to_account_id",
+  "parent_id",
+];
 
 // TODO: Refactor this function to be more simple
 
@@ -255,7 +421,7 @@ function transformFromSupabase(
 }
 
 // Type helper for Supabase insert types
-type SupabaseInsert<T extends SyncableTable> =
+type SupabaseInsert<T extends WritableSupabaseTablesNames> =
   SupabaseDatabase["public"]["Tables"][T]["Insert"];
 
 // TODO: Refactor this function to be more simple
@@ -263,7 +429,7 @@ type SupabaseInsert<T extends SyncableTable> =
 /**
  * Transform WatermelonDB record to Supabase format
  */
-function transformToSupabase<T extends SyncableTable>(
+function transformToSupabase<T extends WritableSupabaseTablesNames>(
   record: unknown,
   userId: string,
   isChildTable: boolean = false
@@ -358,8 +524,10 @@ export async function syncDatabase(
       pullChanges: async ({ lastPulledAt }): Promise<SyncPullResult> => {
         // If forceFullSync is true, ignore the stored timestamp
         const effectiveLastPulledAt = forceFullSync ? null : lastPulledAt;
-        const result = await pullChanges(effectiveLastPulledAt ?? null);
-        return result as SyncPullResult;
+        const result: SyncPullResult = await pullChanges(
+          effectiveLastPulledAt ?? null
+        );
+        return result;
       },
       pushChanges: async ({ changes, lastPulledAt }) => {
         await pushChanges({ changes, lastPulledAt });
