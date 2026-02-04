@@ -55,16 +55,16 @@ export default function RootLayout() {
             <AuthProvider>
               <SyncProvider>
                 <ThemeProvider>
-                  <DrawerProvider>
-                    <SafeAreaProvider>
+                  <SafeAreaProvider>
+                    <DrawerProvider>
                       <ServerStatusProvider>
                         <ToastProvider>
                           <RootLayoutNav />
                           <ServiceUnavailableBanner />
                         </ToastProvider>
                       </ServerStatusProvider>
-                    </SafeAreaProvider>
-                  </DrawerProvider>
+                    </DrawerProvider>
+                  </SafeAreaProvider>
                 </ThemeProvider>
               </SyncProvider>
             </AuthProvider>
