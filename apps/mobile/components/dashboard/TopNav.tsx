@@ -9,7 +9,11 @@ import { useTheme } from "@/context/ThemeContext";
 // TODO: Replace with user context when available
 const USER_NAME = "Mohamed";
 
-export function TopNav(): React.ReactElement {
+interface TopNavProps {
+  onMenuPress?: () => void;
+}
+
+export function TopNav({ onMenuPress }: TopNavProps): React.ReactElement {
   const { theme } = useTheme();
 
   const getGreeting = () => {
@@ -22,6 +26,22 @@ export function TopNav(): React.ReactElement {
   return (
     <SafeAreaView edges={["top"]} className="pb-2">
       <View className=" flex-row items-center mb-5 mt-2">
+        {/* Hamburger Menu */}
+        {onMenuPress && (
+          <TouchableOpacity
+            onPress={onMenuPress}
+            accessibilityLabel="Open menu"
+            accessibilityRole="button"
+            className="mr-3"
+          >
+            <Ionicons
+              name="menu-outline"
+              size={26}
+              color={theme.text.primary}
+            />
+          </TouchableOpacity>
+        )}
+
         {/* Left Side: Logo & Greeting */}
         <View className="flex-row items-center gap-3 flex-1">
           <AstikLogo width={80} height={25} color={theme.text.primary} />
