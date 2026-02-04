@@ -34,6 +34,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { updateTransaction, updateTransfer } from "@/utils/transactions";
 import * as Haptics from "expo-haptics";
+import { useDrawer } from "@/context/DrawerContext";
+
 export default function TransactionsPlaceholder() {
   const [period, setPeriod] = useState<GroupingPeriod>("this_month");
   const [selectedTypes, setSelectedTypes] = useState<TransactionTypeFilter[]>([
@@ -42,6 +44,9 @@ export default function TransactionsPlaceholder() {
     "Transfer",
   ]);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Drawer
+  const { openDrawer } = useDrawer();
 
   // Modal State
   const [periodModalVisible, setPeriodModalVisible] = useState(false);
@@ -370,9 +375,21 @@ export default function TransactionsPlaceholder() {
           }}
         >
           <View className="flex-row justify-between items-center mb-4 h-10">
-            <Text className="text-3xl font-extrabold text-slate-800 dark:text-slate-50">
-              Transactions
-            </Text>
+            <View className="flex-row items-center gap-3">
+              <TouchableOpacity
+                onPress={openDrawer}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons
+                  name="menu-outline"
+                  size={28}
+                  color={theme.text.primary}
+                />
+              </TouchableOpacity>
+              <Text className="text-3xl font-extrabold text-slate-800 dark:text-slate-50">
+                Transactions
+              </Text>
+            </View>
 
             {isSelectionMode && (
               <View className="flex-row items-center">
