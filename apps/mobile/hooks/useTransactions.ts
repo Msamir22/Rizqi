@@ -16,19 +16,19 @@ interface UseTransactionsResult {
 }
 
 type UseTransactionsOptions = Partial<
-  Pick<Transaction, "accountId" | "categoryId">
+  Pick<Transaction, "accountId" | "categoryId" | "type">
 > & {
   limit?: number;
 };
 
 /**
  * Hook to get transactions reactively
- * @param options - Filter options (limit, accountId, categoryId)
+ * @param options - Filter options (limit, accountId, categoryId, type)
  */
 export function useTransactions(
   options: UseTransactionsOptions
 ): UseTransactionsResult {
-  const { limit = 20, accountId, categoryId } = options;
+  const { limit = 20, accountId, categoryId, type } = options;
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -56,6 +56,10 @@ export function useTransactions(
       conditions.push(Q.where("category_id", categoryId));
     }
 
+    if (type) {
+      conditions.push(Q.where("type", type));
+    }
+
     const query = transactionsCollection.query(
       ...conditions,
       Q.sortBy("date", Q.desc),
@@ -76,7 +80,7 @@ export function useTransactions(
     });
 
     return () => subscription.unsubscribe();
-  }, [limit, accountId, categoryId, refreshKey]);
+  }, [limit, accountId, categoryId, type, refreshKey]);
 
   return {
     transactions,

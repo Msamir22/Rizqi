@@ -1,36 +1,35 @@
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  TextInput,
-  StatusBar,
-  Alert,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
+import { Account, AccountType, database } from "@astik/db";
+import { FontAwesome5, Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useState } from "react";
+import {
+  Alert,
+  ScrollView,
+  StatusBar,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  Keyboard,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { database } from "../providers/DatabaseProvider";
-import { Account } from "@astik/db";
-
-type AccountType = "CASH" | "BANK" | "GOLD" | "ASSET";
+import { getCurrentUserId } from "../services/supabase";
 
 export default function AddAccount() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { mode } = useTheme();
+  const isDark = mode === "dark";
+
+  // New schema: CASH, BANK, DIGITAL_WALLET
+  const [accountType, setAccountType] = useState<AccountType>("BANK");
   const [name, setName] = useState("");
+  const [currency, setCurrency] = useState<"EGP" | "USD" | "EUR">("EGP");
   const [balance, setBalance] = useState("");
-  const [type, setType] = useState<AccountType>("CASH");
-  const [currency, setCurrency] = useState<"EGP" | "USD" | "XAU">("EGP");
-
-  // Gold specific
-  const [goldKarat, setGoldKarat] = useState<"24" | "21" | "18">("21");
-
-  // Bank specific
-  const [bankName, setBankName] = useState("");
-  const [cardLast4, setCardLast4] = useState("");
-
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSave = async () => {
@@ -38,35 +37,23 @@ export default function AddAccount() {
       Alert.alert("Required", "Please enter account name");
       return;
     }
-    if (!balance || isNaN(parseFloat(balance))) {
-      Alert.alert("Required", "Please enter valid balance");
+
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      Alert.alert("Error", "You must be signed in to create an account");
       return;
     }
 
     setIsSubmitting(true);
-
     try {
       await database.write(async () => {
         await database.get<Account>("accounts").create((account) => {
+          account.userId = userId;
           account.name = name.trim();
-          account.type = type;
-          account.balance = parseFloat(balance);
-          account.isLiquid = type === "CASH" || type === "BANK";
-
-          if (type === "GOLD") {
-            account.currency = "XAU";
-            account.goldKarat = parseInt(goldKarat);
-          } else if (type === "ASSET" && currency === "USD") {
-            // Simplified logic
-            account.currency = "USD";
-          } else {
-            account.currency = currency;
-          }
-
-          if (type === "BANK") {
-            account.bankName = bankName;
-            account.cardLast4 = cardLast4;
-          }
+          account.type = accountType;
+          account.balance = parseFloat(balance) || 0;
+          account.currency = currency;
+          account.deleted = false;
         });
       });
       router.back();
@@ -78,274 +65,290 @@ export default function AddAccount() {
     }
   };
 
+  const getAccountTypeStyle = (type: AccountType) => {
+    const isSelected = accountType === type;
+
+    const colors: Record<AccountType, { selected: string; icon: string }> = {
+      BANK: { selected: "blue", icon: "university" },
+      CASH: { selected: "green", icon: "wallet" },
+      DIGITAL_WALLET: { selected: "purple", icon: "mobile-alt" },
+    };
+
+    const color = colors[type];
+
+    if (type === "BANK") {
+      return {
+        container: `flex-1 items-center rounded-2xl border-2 p-5 ${
+          isSelected
+            ? "border-blue-500 bg-blue-50 dark:bg-blue-500/10 dark:border-blue-500"
+            : "border-border bg-surface dark:border-white/10 dark:bg-white/5"
+        }`,
+        iconBg: isSelected
+          ? "bg-blue-100 dark:bg-blue-500/20"
+          : "bg-slate-100 dark:bg-white/10",
+        iconColor: isSelected
+          ? palette.blue[500]
+          : isDark
+            ? palette.slate[400]
+            : palette.slate[500],
+        textColor: isSelected
+          ? "text-blue-500"
+          : "text-text-secondary dark:text-text-muted",
+      };
+    } else if (type === "CASH") {
+      return {
+        container: `flex-1 items-center rounded-2xl border-2 p-5 ${
+          isSelected
+            ? "border-action bg-action-light/20 dark:bg-action/10 dark:border-action"
+            : "border-border bg-surface dark:border-white/10 dark:bg-white/5"
+        }`,
+        iconBg: isSelected
+          ? "bg-action-light/30 dark:bg-action/20"
+          : "bg-slate-100 dark:bg-white/10",
+        iconColor: isSelected
+          ? palette.nileGreen[600]
+          : isDark
+            ? palette.slate[400]
+            : palette.slate[500],
+        textColor: isSelected
+          ? "text-action"
+          : "text-text-secondary dark:text-text-muted",
+      };
+    } else {
+      // DIGITAL_WALLET
+      return {
+        container: `flex-1 items-center rounded-2xl border-2 p-5 ${
+          isSelected
+            ? "border-purple-500 bg-purple-50 dark:bg-purple-500/10 dark:border-purple-500"
+            : "border-border bg-surface dark:border-white/10 dark:bg-white/5"
+        }`,
+        iconBg: isSelected
+          ? "bg-purple-100 dark:bg-purple-500/20"
+          : "bg-slate-100 dark:bg-white/10",
+        iconColor: isSelected
+          ? "#8B5CF6"
+          : isDark
+            ? palette.slate[400]
+            : palette.slate[500],
+        textColor: isSelected
+          ? "text-purple-500"
+          : "text-text-secondary dark:text-text-muted",
+      };
+    }
+  };
+
+  const bankStyle = getAccountTypeStyle("BANK");
+  const cashStyle = getAccountTypeStyle("CASH");
+  const walletStyle = getAccountTypeStyle("DIGITAL_WALLET");
+
   return (
-    <View style={{ flex: 1, backgroundColor: "#F8FAFC" }}>
-      <StatusBar barStyle="light-content" backgroundColor="#065F46" />
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View className="flex-1 bg-background dark:bg-background-dark">
+        <StatusBar
+          barStyle={isDark ? "light-content" : "dark-content"}
+          backgroundColor="transparent"
+        />
 
-      {/* Header */}
-      <View
-        style={{
-          backgroundColor: "#065F46",
-          paddingTop: insets.top + 16,
-          paddingBottom: 20,
-          paddingHorizontal: 20,
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="close" size={28} color="white" />
-        </TouchableOpacity>
-        <Text style={{ color: "white", fontSize: 18, fontWeight: "600" }}>
-          Add Account
-        </Text>
-        <TouchableOpacity onPress={handleSave} disabled={isSubmitting}>
-          <Text
-            style={{
-              color: isSubmitting ? "#6EE7B7" : "#10B981",
-              fontSize: 16,
-              fontWeight: "600",
-            }}
-          >
-            {isSubmitting ? "Saving..." : "Save"}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
-        {/* Type Selection */}
-        <Text
-          style={{
-            fontSize: 14,
-            fontWeight: "600",
-            color: "#6B7280",
-            marginBottom: 12,
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{
+            paddingTop: insets.top + 16,
+            paddingHorizontal: 24,
+            paddingBottom: 40,
           }}
+          showsVerticalScrollIndicator={false}
         >
-          Account Type
-        </Text>
-        <View style={{ flexDirection: "row", gap: 12, marginBottom: 24 }}>
-          {(["CASH", "BANK", "GOLD", "ASSET"] as const).map((t) => (
-            <TouchableOpacity
-              key={t}
-              onPress={() => {
-                setType(t);
-                if (t === "GOLD") setCurrency("XAU");
-                else if (currency === "XAU") setCurrency("EGP");
-              }}
-              style={{
-                paddingVertical: 10,
-                paddingHorizontal: 16,
-                backgroundColor: type === t ? "#10B981" : "white",
-                borderRadius: 12,
-                borderWidth: type === t ? 0 : 1,
-                borderColor: "#E5E7EB",
-              }}
-            >
-              <Text
-                style={{
-                  color: type === t ? "white" : "#374151",
-                  fontWeight: "600",
-                }}
-              >
-                {t}
-              </Text>
+          {/* Header */}
+          <View className="mb-8 flex-row items-center justify-between">
+            <TouchableOpacity onPress={() => router.back()} className="p-1">
+              <Ionicons
+                name="arrow-back"
+                size={24}
+                color={isDark ? "#FFF" : palette.slate[900]}
+              />
             </TouchableOpacity>
-          ))}
-        </View>
+            <Text className="text-xl font-semibold text-text-primary dark:text-white">
+              Add Account
+            </Text>
+            <View className="w-8" />
+          </View>
 
-        {/* Basic Fields */}
-        <View style={{ gap: 16 }}>
-          <View>
-            <Text
-              style={{
-                fontSize: 14,
-                fontWeight: "600",
-                color: "#6B7280",
-                marginBottom: 8,
-              }}
-            >
+          {/* Account Type Selection - 3 types now */}
+          <View className="mb-7">
+            <View className="flex-row gap-3">
+              {/* Bank Card */}
+              <TouchableOpacity
+                onPress={() => setAccountType("BANK")}
+                className={bankStyle.container}
+              >
+                {accountType === "BANK" && (
+                  <View className="absolute -right-2 -top-2 h-6 w-6 items-center justify-center rounded-full bg-blue-500">
+                    <Ionicons name="checkmark" size={16} color="#FFF" />
+                  </View>
+                )}
+                <View
+                  className={`mb-3 h-12 w-12 items-center justify-center rounded-xl ${bankStyle.iconBg}`}
+                >
+                  <FontAwesome5
+                    name="university"
+                    size={20}
+                    color={bankStyle.iconColor}
+                  />
+                </View>
+                <Text
+                  className={`text-xs font-semibold ${bankStyle.textColor}`}
+                >
+                  Bank
+                </Text>
+              </TouchableOpacity>
+
+              {/* Cash Card */}
+              <TouchableOpacity
+                onPress={() => setAccountType("CASH")}
+                className={cashStyle.container}
+              >
+                {accountType === "CASH" && (
+                  <View className="absolute -right-2 -top-2 h-6 w-6 items-center justify-center rounded-full bg-action">
+                    <Ionicons name="checkmark" size={16} color="#FFF" />
+                  </View>
+                )}
+                <View
+                  className={`mb-3 h-12 w-12 items-center justify-center rounded-xl ${cashStyle.iconBg}`}
+                >
+                  <FontAwesome5
+                    name="wallet"
+                    size={20}
+                    color={cashStyle.iconColor}
+                  />
+                </View>
+                <Text
+                  className={`text-xs font-semibold ${cashStyle.textColor}`}
+                >
+                  Cash
+                </Text>
+              </TouchableOpacity>
+
+              {/* Digital Wallet Card */}
+              <TouchableOpacity
+                onPress={() => setAccountType("DIGITAL_WALLET")}
+                className={walletStyle.container}
+              >
+                {accountType === "DIGITAL_WALLET" && (
+                  <View className="absolute -right-2 -top-2 h-6 w-6 items-center justify-center rounded-full bg-purple-500">
+                    <Ionicons name="checkmark" size={16} color="#FFF" />
+                  </View>
+                )}
+                <View
+                  className={`mb-3 h-12 w-12 items-center justify-center rounded-xl ${walletStyle.iconBg}`}
+                >
+                  <FontAwesome5
+                    name="mobile-alt"
+                    size={20}
+                    color={walletStyle.iconColor}
+                  />
+                </View>
+                <Text
+                  className={`text-xs font-semibold ${walletStyle.textColor}`}
+                >
+                  E-Wallet
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Account Name */}
+          <View className="mb-5">
+            <Text className="mb-2 text-sm font-medium text-text-secondary dark:text-text-muted">
               Account Name
             </Text>
             <TextInput
+              placeholder={
+                accountType === "BANK"
+                  ? "e.g. CIB Salary"
+                  : accountType === "DIGITAL_WALLET"
+                    ? "e.g. Vodafone Cash"
+                    : "e.g. My Wallet"
+              }
+              placeholderTextColor={
+                isDark ? palette.slate[500] : palette.slate[400]
+              }
               value={name}
               onChangeText={setName}
-              placeholder="e.g. Wallet, CIB, Gold Stash"
-              style={{
-                backgroundColor: "white",
-                padding: 16,
-                borderRadius: 12,
-                fontSize: 16,
-                borderWidth: 1,
-                borderColor: "#E5E7EB",
-              }}
+              className="rounded-2xl border border-border bg-surface p-4 text-base font-semibold text-text-primary dark:border-white/10 dark:bg-white/5 dark:text-white"
             />
           </View>
 
-          <View>
-            <Text
-              style={{
-                fontSize: 14,
-                fontWeight: "600",
-                color: "#6B7280",
-                marginBottom: 8,
-              }}
-            >
-              Current Balance
-            </Text>
-            <View style={{ flexDirection: "row", gap: 12 }}>
+          {/* Currency & Open Balance */}
+          <View className="mb-5 flex-row gap-4">
+            {/* Currency */}
+            <View className="flex-1">
+              <Text className="mb-2 text-sm font-medium text-text-secondary dark:text-text-muted">
+                Currency
+              </Text>
+              <View className="overflow-hidden rounded-2xl border border-border bg-surface dark:border-white/10 dark:bg-white/5">
+                <View className="flex-row">
+                  {(["EGP", "USD", "EUR"] as const).map((curr) => (
+                    <TouchableOpacity
+                      key={curr}
+                      onPress={() => setCurrency(curr)}
+                      className={`flex-1 items-center py-4 ${
+                        currency === curr
+                          ? "bg-slate-800 dark:bg-white"
+                          : "bg-transparent"
+                      }`}
+                    >
+                      <Text
+                        className={`text-sm font-bold ${
+                          currency === curr
+                            ? "text-white dark:text-black"
+                            : "text-text-secondary dark:text-text-muted"
+                        }`}
+                      >
+                        {curr}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </View>
+
+            {/* Balance */}
+            <View className="flex-1">
+              <Text className="mb-2 text-sm font-medium text-text-secondary dark:text-text-muted">
+                Initial Balance
+              </Text>
               <TextInput
+                placeholder="0.00"
+                placeholderTextColor={
+                  isDark ? palette.slate[500] : palette.slate[400]
+                }
                 value={balance}
                 onChangeText={setBalance}
                 keyboardType="numeric"
-                placeholder="0.00"
-                style={{
-                  flex: 1,
-                  backgroundColor: "white",
-                  padding: 16,
-                  borderRadius: 12,
-                  fontSize: 16,
-                  borderWidth: 1,
-                  borderColor: "#E5E7EB",
-                }}
+                className="rounded-2xl border border-border bg-surface p-4 text-base font-bold text-text-primary dark:border-white/10 dark:bg-white/5 dark:text-white"
               />
-              {type !== "GOLD" && (
-                <View
-                  style={{
-                    flexDirection: "row",
-                    backgroundColor: "white",
-                    borderRadius: 12,
-                    borderWidth: 1,
-                    borderColor: "#E5E7EB",
-                    overflow: "hidden",
-                  }}
-                >
-                  <TouchableOpacity
-                    onPress={() => setCurrency("EGP")}
-                    style={{
-                      padding: 16,
-                      backgroundColor:
-                        currency === "EGP" ? "#E5E7EB" : "transparent",
-                    }}
-                  >
-                    <Text>EGP</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => setCurrency("USD")}
-                    style={{
-                      padding: 16,
-                      backgroundColor:
-                        currency === "USD" ? "#E5E7EB" : "transparent",
-                    }}
-                  >
-                    <Text>USD</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
             </View>
           </View>
-        </View>
 
-        {/* Type Specific Fields */}
-        {type === "GOLD" && (
-          <View style={{ marginTop: 24 }}>
-            <Text
-              style={{
-                fontSize: 14,
-                fontWeight: "600",
-                color: "#6B7280",
-                marginBottom: 8,
-              }}
+          {/* Submit */}
+          <TouchableOpacity
+            onPress={handleSave}
+            disabled={isSubmitting}
+            className="mt-4 overflow-hidden rounded-2xl"
+          >
+            <LinearGradient
+              colors={[palette.slate[800], palette.slate[900]]}
+              className="items-center py-4"
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
             >
-              Gold Karat
-            </Text>
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              {(["18", "21", "24"] as const).map((k) => (
-                <TouchableOpacity
-                  key={k}
-                  onPress={() => setGoldKarat(k)}
-                  style={{
-                    flex: 1,
-                    padding: 16,
-                    backgroundColor: goldKarat === k ? "#D97706" : "white",
-                    borderRadius: 12,
-                    borderWidth: goldKarat === k ? 0 : 1,
-                    borderColor: "#E5E7EB",
-                    alignItems: "center",
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: goldKarat === k ? "white" : "#374151",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {k}K
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {type === "BANK" && (
-          <View style={{ marginTop: 24, gap: 16 }}>
-            <View>
-              <Text
-                style={{
-                  fontSize: 14,
-                  fontWeight: "600",
-                  color: "#6B7280",
-                  marginBottom: 8,
-                }}
-              >
-                Bank Name
+              <Text className="text-lg font-bold text-white">
+                {isSubmitting ? "Creating..." : "Create Account"}
               </Text>
-              <TextInput
-                value={bankName}
-                onChangeText={setBankName}
-                placeholder="e.g. CIB, NBE"
-                style={{
-                  backgroundColor: "white",
-                  padding: 16,
-                  borderRadius: 12,
-                  fontSize: 16,
-                  borderWidth: 1,
-                  borderColor: "#E5E7EB",
-                }}
-              />
-            </View>
-            <View>
-              <Text
-                style={{
-                  fontSize: 14,
-                  fontWeight: "600",
-                  color: "#6B7280",
-                  marginBottom: 8,
-                }}
-              >
-                Last 4 Digits (Optional)
-              </Text>
-              <TextInput
-                value={cardLast4}
-                onChangeText={setCardLast4}
-                placeholder="1234"
-                maxLength={4}
-                keyboardType="numeric"
-                style={{
-                  backgroundColor: "white",
-                  padding: 16,
-                  borderRadius: 12,
-                  fontSize: 16,
-                  borderWidth: 1,
-                  borderColor: "#E5E7EB",
-                }}
-              />
-            </View>
-          </View>
-        )}
-      </ScrollView>
-    </View>
+            </LinearGradient>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+    </TouchableWithoutFeedback>
   );
 }

@@ -8,4 +8,8 @@ export class Transfer extends BaseTransfer {
   get destinationAmount(): number {
     return this.convertedAmount ?? this.amount;
   }
+
+  get dateInMs(): number {
+    return this.date.getTime();
+  }
 }

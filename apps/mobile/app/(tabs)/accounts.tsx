@@ -1,20 +1,20 @@
+import { Account, AccountType, database } from "@astik/db";
+import { convertToEGP } from "@astik/logic";
+import { Ionicons } from "@expo/vector-icons";
+import { Q } from "@nozbe/watermelondb";
+import { withObservables } from "@nozbe/watermelondb/react";
+import { useRouter } from "expo-router";
 import {
-  View,
-  Text,
-  TouchableOpacity,
   ScrollView,
   StatusBar,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { withObservables } from "@nozbe/watermelondb/react";
-import { database } from "../../providers/DatabaseProvider";
-import { Account } from "@astik/db";
-import { INITIAL_RATES } from "../../constants/rates";
-import { useRouter } from "expo-router";
 import Animated, { FadeInDown } from "react-native-reanimated";
-
-const RATES = INITIAL_RATES;
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useMarketRates } from "../../hooks/useMarketRates";
+import { useNetWorth } from "@/hooks/useNetWorth";
 
 interface AccountsProps {
   accounts: Account[];
@@ -23,76 +23,53 @@ interface AccountsProps {
 function Accounts({ accounts }: AccountsProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { rates } = useMarketRates();
 
   // Calculate total net worth in EGP
-  const netWorth = accounts.reduce((total, account) => {
-    if (account.currency === "EGP") return total + account.balance;
-    if (account.currency === "USD") return total + account.balance * RATES.USD;
-    if (account.type === "GOLD" && account.goldKarat) {
-      // Assuming balance is in grams for Gold accounts
-      const rate =
-        account.goldKarat === 24
-          ? RATES.GOLD_24K
-          : account.goldKarat === 21
-            ? RATES.GOLD_21K
-            : RATES.GOLD_18K;
-      return total + account.balance * rate;
-    }
-    // Fallback if gold karat missing but type is gold?
-    if (account.currency === "XAU") {
-      return total + account.balance * RATES.GOLD_21K;
-    }
-    return total;
-  }, 0);
-
+  const { netWorthData } = useNetWorth();
+  const totalNetWorth = netWorthData?.totalNetWorth;
   const formatBalance = (account: Account): string => {
-    if (account.type === "GOLD") {
-      return `${account.balance}g ${account.goldKarat || ""}K`;
-    }
-    return `${account.currency === "USD" ? "$" : ""}${account.balance.toLocaleString()} ${
-      account.currency === "EGP" ? "EGP" : ""
-    }`;
+    const currencySymbols: Record<string, string> = {
+      USD: "$",
+      EUR: "€",
+      EGP: "",
+    };
+    const symbol = currencySymbols[account.currency] || "";
+    const suffix = account.currency === "EGP" ? " EGP" : "";
+    return `${symbol}${account.balance.toLocaleString()}${suffix}`;
   };
 
   const getAccountSubtitle = (account: Account): string => {
+    // For non-EGP accounts, show EGP equivalent
+    if (account.currency !== "EGP" && rates) {
+      const egpValue = convertToEGP(account.balance, account.currency, rates);
+      return `≈ EGP ${egpValue.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+    }
+
+    // Default subtitles by type
     switch (account.type) {
       case "BANK":
-        return account.bankName
-          ? `${account.bankName} ${account.cardLast4 ? `****${account.cardLast4}` : ""}`
-          : "Bank Account";
-      case "GOLD":
-        const rate =
-          account.goldKarat === 24
-            ? RATES.GOLD_24K
-            : account.goldKarat === 21
-              ? RATES.GOLD_21K
-              : RATES.GOLD_18K;
-        return `≈ EGP ${(account.balance * rate).toLocaleString()}`;
-      // Treating XAU as GOLD type implicitly
-      case "ASSET":
-        if (account.currency === "USD") {
-          return `≈ EGP ${(account.balance * RATES.USD).toLocaleString()}`;
-        }
-        return "";
-      default:
-        // For USD Cash
-        if (account.currency === "USD") {
-          return `≈ EGP ${(account.balance * RATES.USD).toLocaleString()}`;
-        }
-        // For EGP Cash
+        return "Bank Account";
+      case "DIGITAL_WALLET":
+        return "Digital Wallet";
+      case "CASH":
         return "Physical money";
+      default:
+        return "";
     }
   };
 
   // Helper to get icon/color based on type
-  const getAccountStyle = (account: Account) => {
-    switch (account.type) {
+  const getAccountStyle = (
+    type: AccountType
+  ): { icon: string; color: string } => {
+    switch (type) {
       case "CASH":
         return { icon: "cash", color: "#10B981" };
       case "BANK":
         return { icon: "business", color: "#3B82F6" };
-      case "GOLD":
-        return { icon: "trophy", color: "#D97706" }; // trophy or diamond
+      case "DIGITAL_WALLET":
+        return { icon: "phone-portrait", color: "#8B5CF6" };
       default:
         return { icon: "wallet", color: "#8B5CF6" };
     }
@@ -119,7 +96,7 @@ function Accounts({ accounts }: AccountsProps) {
 
         <View style={{ marginTop: 20 }}>
           <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 14 }}>
-            Total Net Worth
+            Total Balance
           </Text>
           <Text
             style={{
@@ -130,7 +107,7 @@ function Accounts({ accounts }: AccountsProps) {
             }}
           >
             EGP{" "}
-            {netWorth.toLocaleString("en-US", {
+            {totalNetWorth?.toLocaleString("en-US", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}
@@ -144,8 +121,40 @@ function Accounts({ accounts }: AccountsProps) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
       >
+        {accounts.length === 0 && (
+          <View
+            style={{
+              marginTop: 40,
+              alignItems: "center",
+              padding: 24,
+            }}
+          >
+            <Ionicons name="wallet-outline" size={64} color="#9CA3AF" />
+            <Text
+              style={{
+                fontSize: 18,
+                fontWeight: "600",
+                color: "#6B7280",
+                marginTop: 16,
+              }}
+            >
+              No accounts yet
+            </Text>
+            <Text
+              style={{
+                fontSize: 14,
+                color: "#9CA3AF",
+                marginTop: 8,
+                textAlign: "center",
+              }}
+            >
+              Add your first account to start tracking your finances
+            </Text>
+          </View>
+        )}
+
         {accounts.map((account, index) => {
-          const style = getAccountStyle(account);
+          const style = getAccountStyle(account.type);
           return (
             <Animated.View
               key={account.id}
@@ -179,7 +188,7 @@ function Accounts({ accounts }: AccountsProps) {
                     }}
                   >
                     <Ionicons
-                      name={style.icon as any}
+                      name={style.icon as keyof typeof Ionicons.glyphMap}
                       size={28}
                       color={style.color}
                     />
@@ -214,19 +223,13 @@ function Accounts({ accounts }: AccountsProps) {
                     >
                       {formatBalance(account)}
                     </Text>
-                    {account.type === "GOLD" && (
-                      <Text
-                        style={{ fontSize: 12, color: "#D97706", marginTop: 2 }}
-                      >
-                        {account.goldKarat} Karat Gold
-                      </Text>
-                    )}
                   </View>
                 </View>
               </TouchableOpacity>
             </Animated.View>
           );
         })}
+
         {/* Add Account Button */}
         <TouchableOpacity
           onPress={() => router.push("/add-account")}
@@ -266,6 +269,7 @@ function Accounts({ accounts }: AccountsProps) {
             Add New Account
           </Text>
         </TouchableOpacity>
+
         {/* Info Card */}
         <View
           style={{
@@ -296,7 +300,7 @@ function Accounts({ accounts }: AccountsProps) {
               lineHeight: 20,
             }}
           >
-            Track your money in EGP, USD, or Gold. Exchange rates are updated
+            Track your money in EGP, USD, or EUR. Exchange rates are updated
             automatically.
           </Text>
         </View>
@@ -306,7 +310,7 @@ function Accounts({ accounts }: AccountsProps) {
 }
 
 const enhance = withObservables([], () => ({
-  accounts: database.get<Account>("accounts").query(),
+  accounts: database.get<Account>("accounts").query(Q.where("deleted", false)),
 }));
 
 export default enhance(Accounts);

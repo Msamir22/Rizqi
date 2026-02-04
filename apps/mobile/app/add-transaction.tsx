@@ -1,24 +1,39 @@
+import { AccountSelector } from "@/components/add-transaction/AccountSelector";
+import { AmountDisplay } from "@/components/add-transaction/AmountDisplay";
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  TextInput,
-  StatusBar,
-  Alert,
-} from "react-native";
+  CalculatorKeypad,
+  CalculatorKey,
+} from "@/components/add-transaction/CalculatorKeypad";
+import { CategoryPicker } from "@/components/add-transaction/CategoryPicker";
+import { OptionalSection } from "@/components/add-transaction/OptionalSection";
+import { TransferFields } from "@/components/add-transaction/TransferFields";
+import { TypeTabs } from "@/components/add-transaction/TypeTabs";
+import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
+import { useCategories } from "@/hooks/useCategories";
+import { useMarketRates } from "@/hooks/useMarketRates";
+import {
+  createRecurringPayment,
+  createTransaction,
+  createTransfer,
+} from "@/utils/transactions";
+import { Account, database, TransactionType } from "@astik/db";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StatusBar,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { GradientBackground } from "../components/ui/GradientBackground";
+import { Q } from "@nozbe/watermelondb";
 import { withObservables } from "@nozbe/watermelondb/react";
-import { database } from "../providers/DatabaseProvider";
-import { Account } from "@astik/db";
-import { Category } from "@astik/logic";
-import { createTransaction } from "../utils/transactions";
-import { CATEGORY_LIST } from "../constants/categories";
-
-type TransactionType = "expense" | "income";
 
 interface AddTransactionProps {
   accounts: Account[];
@@ -27,46 +42,189 @@ interface AddTransactionProps {
 function AddTransaction({ accounts }: AddTransactionProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { mode } = useTheme();
+  const isDark = mode === "dark";
 
-  const [type, setType] = useState<TransactionType>("expense");
-  const [amount, setAmount] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<Category>("Food");
-  const [selectedAccount, setSelectedAccount] = useState<string>("");
+  // Form State
+  const [type, setType] = useState<TransactionType | "TRANSFER">("EXPENSE");
+  const [amount, setAmount] = useState<string>("");
+  const [targetAmount, setTargetAmount] = useState<string>("");
+
+  // Selection State
+  const [selectedAccountId, setSelectedAccountId] = useState<string>("");
+  const [toAccountId, setToAccountId] = useState<string>(""); // For Transfer
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
+
+  // Optional Fields
   const [merchant, setMerchant] = useState("");
   const [note, setNote] = useState("");
+  const [date, setDate] = useState(new Date());
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringName, setRecurringName] = useState("");
+  const [recurringAutoCreate, setRecurringAutoCreate] = useState(false);
+
+  // UI State
+  const [isOptionalExpanded, setIsOptionalExpanded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Set default account when accounts load
-  useEffect(() => {
-    if (accounts.length > 0 && !selectedAccount) {
-      // Prefer cash account as default, otherwise first available
-      const cashAccount = accounts.find((a) => a.type === "CASH");
-      setSelectedAccount(cashAccount ? cashAccount.id : accounts[0].id);
-    }
-  }, [accounts]);
+  // Hooks
+  const {
+    categories,
+    expenseCategories,
+    incomeCategories,
+    isLoading: categoriesLoading,
+  } = useCategories();
+  const { latestRate } = useMarketRates();
 
-  const handleSave = async () => {
-    if (!amount || isNaN(parseFloat(amount))) {
-      Alert.alert("Invalid Amount", "Please enter a valid number");
+  // Derived Values
+  const selectedAccount = accounts.find((a) => a.id === selectedAccountId);
+  const toAccount = accounts.find((a) => a.id === toAccountId);
+
+  const relevantCategories =
+    type === "EXPENSE" ? expenseCategories : incomeCategories;
+  const selectedCategory =
+    categories.find((c) => c.systemName === selectedCategoryId) || null;
+
+  // Initialize Defaults
+  useEffect(() => {
+    if (accounts.length > 0 && !selectedAccountId) {
+      const cashAccount = accounts.find((a) => a.type === "CASH");
+      setSelectedAccountId(cashAccount ? cashAccount.id : accounts[0].id);
+
+      // For transfer destination, pick different account if possible
+      const otherAccount = accounts.find(
+        (a) => a.id !== (cashAccount?.id || accounts[0].id)
+      );
+      if (otherAccount) setToAccountId(otherAccount.id);
+    }
+  }, [accounts, selectedAccountId]);
+
+  useEffect(() => {
+    if (relevantCategories.length > 0 && !selectedCategoryId) {
+      setSelectedCategoryId(relevantCategories[0].systemName);
+    }
+  }, [relevantCategories, selectedCategoryId, type]);
+
+  // Calculator Logic
+  const handleKeyPress = (key: CalculatorKey) => {
+    if (key === "DONE") {
+      handleSave();
       return;
     }
 
-    if (!selectedAccount) {
-      Alert.alert("No Account", "Please create an account first");
+    if (key === "DEL") {
+      setAmount((prev) => prev.slice(0, -1));
+      return;
+    }
+
+    // Simple handling - extensive calc logic can be added if needed
+    // Just appending for now, could implement eval() for basic math
+    setAmount((prev) => {
+      // Prevent multiple decimals
+      if (key === "." && prev.includes(".")) return prev;
+      // Prevent check for operators if just creating simple string for now
+      return prev + key;
+    });
+  };
+
+  // Convert amount logic
+  const calculateResult = (expr: string): number => {
+    try {
+      // simple eval replacement or use a math library
+      // unsafe eval usage? For simple calc, minimal hygiene needed
+      // Only allow digits  + - * / .
+      if (!/^[0-9+\-*/.]+$/.test(expr)) return parseFloat(expr) || 0;
+      // eslint-disable-next-line no-eval
+      return eval(expr);
+    } catch (e) {
+      return 0;
+    }
+  };
+
+  // Auto-calculate target amount for transfers
+  useEffect(() => {
+    if (
+      type === "TRANSFER" &&
+      selectedAccount &&
+      toAccount &&
+      amount &&
+      selectedAccount.currency !== toAccount.currency
+    ) {
+      const numAmount = calculateResult(amount);
+      if (numAmount > 0) {
+        const rate = latestRate?.getRate(selectedAccount.currency, toAccount.currency);
+        if (rate) {
+          setTargetAmount((numAmount * rate).toFixed(2));
+        }
+      }
+    }
+  }, [type, selectedAccount, toAccount, amount, latestRate]);
+
+  // Handle Save
+  const handleSave = async () => {
+    const finalAmount = calculateResult(amount);
+
+    if (finalAmount <= 0) {
+      Alert.alert("Invalid Amount", "Please enter an amount greater than 0");
+      return;
+    }
+
+    if (!selectedAccountId) {
+      Alert.alert("No Account", "Please select an account");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await createTransaction({
-        amount: parseFloat(amount),
-        currency: selectedAccountDetails?.currency || "EGP",
-        category: selectedCategory,
-        merchant: merchant.trim(),
-        accountId: selectedAccount,
-        note: note.trim(),
-        isExpense: type === "expense",
-      });
+      if (type === "TRANSFER") {
+        if (!toAccountId) {
+          Alert.alert("No Destination", "Please select a destination account");
+          setIsSubmitting(false);
+          return;
+        }
+
+        await createTransfer({
+          amount: finalAmount,
+          currency: selectedAccount?.currency || "EGP",
+          fromAccountId: selectedAccountId,
+          toAccountId: toAccountId,
+          date,
+          notes: note || undefined,
+          convertedAmount: targetAmount ? parseFloat(targetAmount) : undefined,
+          exchangeRate:
+            targetAmount && finalAmount
+              ? parseFloat(targetAmount) / finalAmount
+              : undefined,
+        });
+      } else {
+        let linkedRecurringId: string | undefined;
+
+        if (isRecurring && recurringName) {
+          const recurring = await createRecurringPayment({
+            name: recurringName,
+            amount: finalAmount,
+            type: type as TransactionType,
+            accountId: selectedAccountId,
+            categoryId: selectedCategoryId,
+            frequency: "MONTHLY", // TODO: Get from OptionalSection state if refined
+            startDate: date,
+            action: recurringAutoCreate ? "AUTO_CREATE" : "NOTIFY",
+          });
+          linkedRecurringId = recurring.id;
+        }
+
+        await createTransaction({
+          amount: finalAmount,
+          currency: selectedAccount?.currency || "EGP",
+          categoryId: selectedCategoryId,
+          merchant: merchant || undefined,
+          accountId: selectedAccountId,
+          note: note || undefined,
+          type: type as TransactionType,
+          date,
+          linkedRecurringId,
+        });
+      }
       router.back();
     } catch (error) {
       console.error(error);
@@ -76,347 +234,141 @@ function AddTransaction({ accounts }: AddTransactionProps) {
     }
   };
 
-  const selectedAccountDetails = accounts.find((a) => a.id === selectedAccount);
-
   return (
-    <View style={{ flex: 1, backgroundColor: "#F8FAFC" }}>
-      <StatusBar barStyle="light-content" backgroundColor="#065F46" />
+    <GradientBackground style={{ flex: 1 }}>
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor="transparent"
+        translucent
+      />
 
       {/* Header */}
       <View
-        style={{
-          backgroundColor: "#065F46",
-          paddingTop: insets.top + 16,
-          paddingBottom: 20,
-          paddingHorizontal: 20,
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
+        className="flex-row items-center justify-between px-6 pb-2"
+        style={{ paddingTop: insets.top + 16 }}
       >
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="close" size={28} color="white" />
+        <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2">
+          <Ionicons
+            name="close"
+            size={28}
+            color={isDark ? "#FFF" : palette.slate[900]}
+          />
         </TouchableOpacity>
-        <Text style={{ color: "white", fontSize: 18, fontWeight: "600" }}>
-          Add Transaction
+        <Text className="text-lg font-semibold text-slate-900 dark:text-white">
+          New Transaction
         </Text>
         <TouchableOpacity onPress={handleSave} disabled={isSubmitting}>
-          <Text
-            style={{
-              color: isSubmitting ? "#6EE7B7" : "#10B981",
-              fontSize: 16,
-              fontWeight: "600",
-            }}
-          >
-            {isSubmitting ? "Saving..." : "Save"}
-          </Text>
+          {isSubmitting ? (
+            <ActivityIndicator size="small" color={palette.nileGreen[500]} />
+          ) : (
+            <Text className="text-base font-bold text-nileGreen-600 dark:text-nileGreen-400">
+              Save
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
 
       <ScrollView
-        style={{ flex: 1 }}
+        className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 40 }}
       >
-        {/* Type Toggle */}
-        <View
-          style={{
-            flexDirection: "row",
-            backgroundColor: "#F1F5F9",
-            borderRadius: 12,
-            padding: 4,
-            marginBottom: 24,
-          }}
-        >
-          <TouchableOpacity
-            onPress={() => setType("expense")}
-            style={{
-              flex: 1,
-              paddingVertical: 12,
-              borderRadius: 10,
-              backgroundColor: type === "expense" ? "#EF4444" : "transparent",
-            }}
-          >
-            <Text
-              style={{
-                textAlign: "center",
-                fontWeight: "600",
-                color: type === "expense" ? "white" : "#6B7280",
-              }}
-            >
-              Expense
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setType("income")}
-            style={{
-              flex: 1,
-              paddingVertical: 12,
-              borderRadius: 10,
-              backgroundColor: type === "income" ? "#10B981" : "transparent",
-            }}
-          >
-            <Text
-              style={{
-                textAlign: "center",
-                fontWeight: "600",
-                color: type === "income" ? "white" : "#6B7280",
-              }}
-            >
-              Income
-            </Text>
-          </TouchableOpacity>
+        {/* Type Tabs */}
+        <View className="mt-4">
+          <TypeTabs selectedType={type} onSelect={setType} />
         </View>
 
-        {/* Amount Input */}
-        <View style={{ marginBottom: 24 }}>
-          <Text
-            style={{
-              fontSize: 14,
-              fontWeight: "600",
-              color: "#6B7280",
-              marginBottom: 8,
-            }}
-          >
-            Amount
-          </Text>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              backgroundColor: "white",
-              borderRadius: 16,
-              padding: 16,
-              borderWidth: 2,
-              borderColor: "#E5E7EB",
-            }}
-          >
-            <Text style={{ fontSize: 24, color: "#6B7280", marginRight: 8 }}>
-              {selectedAccountDetails?.currency || "EGP"}
-            </Text>
-            <TextInput
-              placeholder="0.00"
-              placeholderTextColor="#D1D5DB"
-              value={amount}
-              onChangeText={setAmount}
-              keyboardType="numeric"
-              style={{
-                flex: 1,
-                fontSize: 32,
-                fontWeight: "bold",
-                color: type === "expense" ? "#EF4444" : "#10B981",
-              }}
+        {/* Amount Display */}
+        <AmountDisplay
+          amount={amount}
+          currency={selectedAccount?.currency || "EGP"}
+          type={type as any}
+          mainColor={selectedCategory?.color}
+        />
+
+        {/* Form Content */}
+        <View className="px-6 mt-2">
+          {type === "TRANSFER" ? (
+            <TransferFields
+              accounts={accounts}
+              fromAccountId={selectedAccountId}
+              toAccountId={toAccountId}
+              onSelectFrom={setSelectedAccountId}
+              onSelectTo={setToAccountId}
+              amount={amount}
+              targetAmount={targetAmount}
+              onChangeTargetAmount={setTargetAmount}
+              exchangeRate={
+                selectedAccount && toAccount
+                  ?latestRate?.getRate(selectedAccount.currency, toAccount.currency)
+                  : undefined
+              }
             />
-          </View>
-        </View>
+          ) : (
+            <>
+              <AccountSelector
+                accounts={accounts}
+                selectedId={selectedAccountId}
+                onSelect={setSelectedAccountId}
+                label="ACCOUNT"
+                mainColor={selectedCategory?.color}
+              />
 
-        {/* Category Selection */}
-        <View style={{ marginBottom: 24 }}>
-          <Text
-            style={{
-              fontSize: 14,
-              fontWeight: "600",
-              color: "#6B7280",
-              marginBottom: 12,
-            }}
-          >
-            Category
-          </Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-            {CATEGORY_LIST.map((cat) => (
-              <TouchableOpacity
-                key={cat.id}
-                onPress={() => setSelectedCategory(cat.id)}
-                style={{
-                  width: "30%",
-                  aspectRatio: 1,
-                  backgroundColor:
-                    selectedCategory === cat.id ? cat.color : "white",
-                  borderRadius: 16,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderWidth: 2,
-                  borderColor:
-                    selectedCategory === cat.id ? cat.color : "#E5E7EB",
+              <CategoryPicker
+                selectedCategory={selectedCategory}
+                categories={relevantCategories}
+                onOpenPicker={() => {
+                  // TODO: Open modal picker layout
+                  // For now just toggle next available or dummy interaction
+                  // In real implementation this opens a bottom sheet
                 }}
-              >
-                <Ionicons
-                  name={cat.icon as any}
-                  size={28}
-                  color={selectedCategory === cat.id ? "white" : cat.color}
-                />
-                <Text
-                  style={{
-                    marginTop: 8,
-                    fontSize: 12,
-                    fontWeight: "600",
-                    color: selectedCategory === cat.id ? "white" : "#6B7280",
-                  }}
-                >
-                  {cat.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+                // Dummy recent categories for visual completeness till implemented
+                recentCategories={relevantCategories.slice(0, 3)}
+                onSelectRecent={(cat) => setSelectedCategoryId(cat.systemName)}
+              />
+            </>
+          )}
 
-        {/* Account Selection */}
-        <View style={{ marginBottom: 24 }}>
-          <Text
-            style={{
-              fontSize: 14,
-              fontWeight: "600",
-              color: "#6B7280",
-              marginBottom: 12,
+          {/* Optional Section */}
+          <OptionalSection
+            expanded={isOptionalExpanded}
+            onToggleExpand={() => setIsOptionalExpanded(!isOptionalExpanded)}
+            fields={{
+              merchant,
+              note,
+              date,
+              isRecurring,
+              recurringName,
+              recurringFrequency: "MONTHLY", // default
+              recurringAutoCreate,
             }}
-          >
-            Account
-          </Text>
-          <View style={{ gap: 8 }}>
-            {accounts.map((acc) => (
-              <TouchableOpacity
-                key={acc.id}
-                onPress={() => setSelectedAccount(acc.id)}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  backgroundColor: "white",
-                  borderRadius: 12,
-                  padding: 16,
-                  borderWidth: 2,
-                  borderColor:
-                    selectedAccount === acc.id ? "#10B981" : "#E5E7EB",
-                }}
-              >
-                <Ionicons
-                  name={
-                    acc.type === "CASH"
-                      ? "cash"
-                      : acc.type === "GOLD"
-                        ? "trophy" // Changed from diamond to trophy/something generic if needed, or pass correct enum
-                        : "card"
-                  }
-                  size={24}
-                  color={selectedAccount === acc.id ? "#10B981" : "#6B7280"}
-                />
-                <Text
-                  style={{
-                    marginLeft: 12,
-                    fontSize: 16,
-                    fontWeight: "500",
-                    color: "#1F2937",
-                  }}
-                >
-                  {acc.name}
-                </Text>
-                <Text
-                  style={{
-                    marginLeft: 8,
-                    fontSize: 14,
-                    color: "#9CA3AF",
-                  }}
-                >
-                  ({acc.currency})
-                </Text>
-                {selectedAccount === acc.id && (
-                  <Ionicons
-                    name="checkmark-circle"
-                    size={24}
-                    color="#10B981"
-                    style={{ marginLeft: "auto" }}
-                  />
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Merchant Input */}
-        <View style={{ marginBottom: 24 }}>
-          <Text
-            style={{
-              fontSize: 14,
-              fontWeight: "600",
-              color: "#6B7280",
-              marginBottom: 8,
-            }}
-          >
-            Merchant (Optional)
-          </Text>
-          <TextInput
-            placeholder="e.g., Starbucks, Uber, etc."
-            placeholderTextColor="#D1D5DB"
-            value={merchant}
-            onChangeText={setMerchant}
-            style={{
-              backgroundColor: "white",
-              borderRadius: 12,
-              padding: 16,
-              fontSize: 16,
-              color: "#1F2937",
-              borderWidth: 2,
-              borderColor: "#E5E7EB",
+            onChange={(updates) => {
+              if (updates.merchant !== undefined) setMerchant(updates.merchant);
+              if (updates.note !== undefined) setNote(updates.note);
+              if (updates.date !== undefined) setDate(updates.date);
+              if (updates.isRecurring !== undefined)
+                setIsRecurring(updates.isRecurring);
+              if (updates.recurringName !== undefined)
+                setRecurringName(updates.recurringName);
+              if (updates.recurringAutoCreate !== undefined)
+                setRecurringAutoCreate(updates.recurringAutoCreate);
             }}
           />
         </View>
-
-        {/* Note Input */}
-        <View style={{ marginBottom: 24 }}>
-          <Text
-            style={{
-              fontSize: 14,
-              fontWeight: "600",
-              color: "#6B7280",
-              marginBottom: 8,
-            }}
-          >
-            Note (Optional)
-          </Text>
-          <TextInput
-            placeholder="Add a note..."
-            placeholderTextColor="#D1D5DB"
-            value={note}
-            onChangeText={setNote}
-            multiline
-            numberOfLines={3}
-            style={{
-              backgroundColor: "white",
-              borderRadius: 12,
-              padding: 16,
-              fontSize: 16,
-              color: "#1F2937",
-              borderWidth: 2,
-              borderColor: "#E5E7EB",
-              minHeight: 80,
-              textAlignVertical: "top",
-            }}
-          />
-        </View>
-
-        {/* Save Button */}
-        <TouchableOpacity
-          onPress={handleSave}
-          disabled={isSubmitting}
-          style={{
-            backgroundColor: isSubmitting ? "#6EE7B7" : "#10B981",
-            borderRadius: 16,
-            paddingVertical: 18,
-            alignItems: "center",
-            marginTop: 12,
-          }}
-        >
-          <Text style={{ color: "white", fontSize: 18, fontWeight: "600" }}>
-            {isSubmitting ? "Saving..." : "Save Transaction"}
-          </Text>
-        </TouchableOpacity>
       </ScrollView>
-    </View>
+
+      {/* Keypad - Fixed at bottom */}
+      {/* Hide keypad when optional section is expanded to allow keyboard for text inputs */}
+      <CalculatorKeypad onKeyPress={handleKeyPress} hide={isOptionalExpanded} />
+
+      {/* Bottom spacer for safe area if keypad is hidden */}
+      {isOptionalExpanded && <View style={{ height: insets.bottom }} />}
+    </GradientBackground>
   );
 }
 
-// Enhance component with WatermelonDB observables
 const enhance = withObservables([], () => ({
-  accounts: database.get<Account>("accounts").query(),
+  accounts: database.get<Account>("accounts").query(Q.where("deleted", false)),
 }));
 
 export default enhance(AddTransaction);

@@ -1,11 +1,7 @@
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { Account, AccountType } from "@astik/db";
-import {
-  AssetBreakdownPercentage,
-  formatCurrency,
-  MarketRates,
-} from "@astik/logic";
+import { AssetBreakdownPercentage, formatCurrency } from "@astik/logic";
 import { Feather, FontAwesome5 } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";

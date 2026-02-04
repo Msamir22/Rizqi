@@ -1,401 +1,105 @@
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  Switch,
-  StatusBar,
-} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { useState } from "react";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { router } from "expo-router";
+import { ScrollView, Switch, Text, TouchableOpacity, View } from "react-native";
+import { GradientBackground } from "../components/ui/GradientBackground";
+import { useTheme } from "../context/ThemeContext";
 
-interface SettingItemProps {
-  icon: string;
-  iconColor: string;
-  title: string;
-  subtitle?: string;
-  onPress?: () => void;
-  rightElement?: React.ReactNode;
-  showChevron?: boolean;
-}
-
-function SettingItem({
-  icon,
-  iconColor,
-  title,
-  subtitle,
-  onPress,
-  rightElement,
-  showChevron = true,
-}: SettingItemProps) {
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "white",
-        paddingVertical: 16,
-        paddingHorizontal: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: "#F1F5F9",
-      }}
-    >
-      <View
-        style={{
-          width: 40,
-          height: 40,
-          borderRadius: 10,
-          backgroundColor: `${iconColor}15`,
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Ionicons name={icon as any} size={22} color={iconColor} />
-      </View>
-      <View style={{ flex: 1, marginLeft: 12 }}>
-        <Text style={{ fontSize: 16, fontWeight: "500", color: "#1F2937" }}>
-          {title}
-        </Text>
-        {subtitle && (
-          <Text style={{ fontSize: 13, color: "#9CA3AF", marginTop: 2 }}>
-            {subtitle}
-          </Text>
-        )}
-      </View>
-      {rightElement ||
-        (showChevron && (
-          <Ionicons name="chevron-forward" size={20} color="#D1D5DB" />
-        ))}
-    </TouchableOpacity>
-  );
-}
-
-export default function Settings() {
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
-
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
-  const [biometrics, setBiometrics] = useState(false);
+export default function SettingsScreen() {
+  const { theme, mode, toggleTheme } = useTheme();
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#F8FAFC" }}>
-      <StatusBar barStyle="light-content" backgroundColor="#065F46" />
-
+    <GradientBackground className="flex-1">
       {/* Header */}
-      <View
-        style={{
-          backgroundColor: "#065F46",
-          paddingTop: insets.top + 16,
-          paddingBottom: 20,
-          paddingHorizontal: 20,
-          flexDirection: "row",
-          alignItems: "center",
-        }}
-      >
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="white" />
+      <View className="flex-row items-center justify-between px-5 pt-2.5 mb-5">
+        <TouchableOpacity onPress={() => router.back()} className="p-1">
+          <Ionicons name="arrow-back" size={24} color={theme.text.primary} />
         </TouchableOpacity>
-        <Text
-          style={{
-            color: "white",
-            fontSize: 20,
-            fontWeight: "bold",
-            marginLeft: 16,
-          }}
-        >
+        <Text className="text-xl font-bold text-slate-900 dark:text-slate-50">
           Settings
         </Text>
+        <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView
-        style={{ flex: 1 }}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
-      >
-        {/* Account Section */}
-        <Text
-          style={{
-            fontSize: 13,
-            fontWeight: "600",
-            color: "#6B7280",
-            marginLeft: 20,
-            marginTop: 24,
-            marginBottom: 8,
-          }}
-        >
-          ACCOUNT
-        </Text>
-        <View
-          style={{
-            backgroundColor: "white",
-            borderRadius: 16,
-            marginHorizontal: 16,
-            overflow: "hidden",
-          }}
-        >
-          <SettingItem
-            icon="person"
-            iconColor="#3B82F6"
-            title="Profile"
-            subtitle="Manage your account"
-          />
-          <SettingItem
-            icon="wallet"
-            iconColor="#10B981"
-            title="Accounts"
-            subtitle="4 accounts"
-          />
-          <SettingItem
-            icon="card"
-            iconColor="#8B5CF6"
-            title="Linked Cards"
-            subtitle="2 cards linked"
-          />
-        </View>
-
-        {/* Preferences Section */}
-        <Text
-          style={{
-            fontSize: 13,
-            fontWeight: "600",
-            color: "#6B7280",
-            marginLeft: 20,
-            marginTop: 24,
-            marginBottom: 8,
-          }}
-        >
-          PREFERENCES
-        </Text>
-        <View
-          style={{
-            backgroundColor: "white",
-            borderRadius: 16,
-            marginHorizontal: 16,
-            overflow: "hidden",
-          }}
-        >
-          <SettingItem
-            icon="cash"
-            iconColor="#D97706"
-            title="Default Currency"
-            subtitle="EGP - Egyptian Pound"
-          />
-          <SettingItem
-            icon="language"
-            iconColor="#EC4899"
-            title="Language"
-            subtitle="English"
-          />
-          <SettingItem
-            icon="moon"
-            iconColor="#6366F1"
-            title="Dark Mode"
-            showChevron={false}
-            rightElement={
-              <Switch
-                value={darkMode}
-                onValueChange={setDarkMode}
-                trackColor={{ false: "#E5E7EB", true: "#10B981" }}
-                thumbColor="white"
-              />
-            }
-          />
-        </View>
-
-        {/* Notifications Section */}
-        <Text
-          style={{
-            fontSize: 13,
-            fontWeight: "600",
-            color: "#6B7280",
-            marginLeft: 20,
-            marginTop: 24,
-            marginBottom: 8,
-          }}
-        >
-          NOTIFICATIONS
-        </Text>
-        <View
-          style={{
-            backgroundColor: "white",
-            borderRadius: 16,
-            marginHorizontal: 16,
-            overflow: "hidden",
-          }}
-        >
-          <SettingItem
-            icon="notifications"
-            iconColor="#F59E0B"
-            title="Push Notifications"
-            showChevron={false}
-            rightElement={
-              <Switch
-                value={notificationsEnabled}
-                onValueChange={setNotificationsEnabled}
-                trackColor={{ false: "#E5E7EB", true: "#10B981" }}
-                thumbColor="white"
-              />
-            }
-          />
-          <SettingItem
-            icon="chatbubble"
-            iconColor="#14B8A6"
-            title="Bank SMS Parsing"
-            subtitle="Auto-detect bank transactions"
-          />
-        </View>
-
-        {/* Security Section */}
-        <Text
-          style={{
-            fontSize: 13,
-            fontWeight: "600",
-            color: "#6B7280",
-            marginLeft: 20,
-            marginTop: 24,
-            marginBottom: 8,
-          }}
-        >
-          SECURITY
-        </Text>
-        <View
-          style={{
-            backgroundColor: "white",
-            borderRadius: 16,
-            marginHorizontal: 16,
-            overflow: "hidden",
-          }}
-        >
-          <SettingItem
-            icon="finger-print"
-            iconColor="#065F46"
-            title="Biometric Login"
-            showChevron={false}
-            rightElement={
-              <Switch
-                value={biometrics}
-                onValueChange={setBiometrics}
-                trackColor={{ false: "#E5E7EB", true: "#10B981" }}
-                thumbColor="white"
-              />
-            }
-          />
-          <SettingItem
-            icon="lock-closed"
-            iconColor="#EF4444"
-            title="Change PIN"
-          />
-          <SettingItem
-            icon="shield-checkmark"
-            iconColor="#10B981"
-            title="Privacy"
-          />
-        </View>
-
-        {/* Support Section */}
-        <Text
-          style={{
-            fontSize: 13,
-            fontWeight: "600",
-            color: "#6B7280",
-            marginLeft: 20,
-            marginTop: 24,
-            marginBottom: 8,
-          }}
-        >
-          SUPPORT
-        </Text>
-        <View
-          style={{
-            backgroundColor: "white",
-            borderRadius: 16,
-            marginHorizontal: 16,
-            overflow: "hidden",
-          }}
-        >
-          <SettingItem
-            icon="help-circle"
-            iconColor="#3B82F6"
-            title="Help Center"
-          />
-          <SettingItem
-            icon="chatbubbles"
-            iconColor="#8B5CF6"
-            title="Contact Us"
-          />
-          <SettingItem icon="star" iconColor="#F59E0B" title="Rate App" />
-        </View>
-
-        {/* About Section */}
-        <Text
-          style={{
-            fontSize: 13,
-            fontWeight: "600",
-            color: "#6B7280",
-            marginLeft: 20,
-            marginTop: 24,
-            marginBottom: 8,
-          }}
-        >
-          ABOUT
-        </Text>
-        <View
-          style={{
-            backgroundColor: "white",
-            borderRadius: 16,
-            marginHorizontal: 16,
-            overflow: "hidden",
-          }}
-        >
-          <SettingItem
-            icon="information-circle"
-            iconColor="#6B7280"
-            title="Version"
-            subtitle="1.0.0"
-            showChevron={false}
-          />
-          <SettingItem
-            icon="document-text"
-            iconColor="#6B7280"
-            title="Terms of Service"
-          />
-          <SettingItem
-            icon="shield"
-            iconColor="#6B7280"
-            title="Privacy Policy"
-          />
-        </View>
-
-        {/* Logout Button */}
-        <TouchableOpacity
-          style={{
-            marginHorizontal: 16,
-            marginTop: 32,
-            backgroundColor: "#FEE2E2",
-            borderRadius: 16,
-            paddingVertical: 16,
-            alignItems: "center",
-          }}
-        >
-          <Text style={{ color: "#EF4444", fontSize: 16, fontWeight: "600" }}>
-            Sign Out
+      <ScrollView contentContainerClassName="px-5">
+        {/* Appearance Section */}
+        <View className="mb-8">
+          <Text className="text-[13px] font-semibold mb-3 ml-1 uppercase text-slate-500 dark:text-slate-400">
+            Appearance
           </Text>
-        </TouchableOpacity>
 
-        {/* App Branding */}
-        <View style={{ alignItems: "center", marginTop: 32 }}>
-          <Text style={{ fontSize: 24, color: "#065F46", fontWeight: "bold" }}>
-            أستيك
+          <View className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800">
+            <View className="flex-row items-center gap-3">
+              <View
+                className="w-8 h-8 rounded-lg justify-center items-center"
+                style={{
+                  backgroundColor: mode === "dark" ? "#6366f1" : "#fb923c",
+                }}
+              >
+                <Ionicons
+                  name={mode === "dark" ? "moon" : "sunny"}
+                  size={20}
+                  color="#FFF"
+                />
+              </View>
+              <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
+                Dark Mode
+              </Text>
+            </View>
+            <Switch
+              value={mode === "dark"}
+              onValueChange={toggleTheme}
+              trackColor={{ false: "#767577", true: "#10B981" }}
+              thumbColor={mode === "dark" ? "#FFF" : "#f4f3f4"}
+            />
+          </View>
+        </View>
+
+        {/* General Section (Mock) */}
+        {/* General Section (Mock) */}
+        <View className="mb-8">
+          <Text className="text-[13px] font-semibold mb-3 ml-1 uppercase text-slate-500 dark:text-slate-400">
+            General
           </Text>
-          <Text style={{ fontSize: 14, color: "#9CA3AF", marginTop: 4 }}>
-            Made with ❤️ in Egypt
-          </Text>
+
+          <TouchableOpacity className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800">
+            <View className="flex-row items-center gap-3">
+              <View
+                className="w-8 h-8 rounded-lg justify-center items-center"
+                style={{ backgroundColor: "#3b82f6" }}
+              >
+                <Ionicons name="person" size={20} color="#FFF" />
+              </View>
+              <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
+                Profile
+              </Text>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={theme.text.secondary}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800 mt-0.5">
+            <View className="flex-row items-center gap-3">
+              <View
+                className="w-8 h-8 rounded-lg justify-center items-center"
+                style={{ backgroundColor: "#f43f5e" }}
+              >
+                <Ionicons name="notifications" size={20} color="#FFF" />
+              </View>
+              <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
+                Notifications
+              </Text>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={theme.text.secondary}
+            />
+          </TouchableOpacity>
         </View>
       </ScrollView>
-    </View>
+    </GradientBackground>
   );
 }

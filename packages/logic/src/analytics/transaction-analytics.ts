@@ -103,8 +103,7 @@ function getCategoryDescendants(
  */
 export function aggregateByCategory(
   transactions: Transaction[],
-  categories: Category[],
-  displayLevel: 1 | 2 | 3
+  categories: Category[]
 ): CategoryBreakdown[] {
   // Only count expenses for category breakdown
   const expenses = transactions.filter((t) => t.type === "EXPENSE");
@@ -118,10 +117,7 @@ export function aggregateByCategory(
 
   const childrenMap = buildCategoryChildrenMap(categories);
 
-  // Only iterate categories at the display level
-  const categoriesToShow = categories.filter((c) => c.level === displayLevel);
-
-  for (const cat of categoriesToShow) {
+  for (const cat of categories) {
     const categoryDescendants = getCategoryDescendants(childrenMap, cat.id);
     const filteredTransactions = transactions.filter((t) =>
       categoryDescendants.includes(t.categoryId)

@@ -11,4 +11,17 @@ export {
 } from "./useTransactions";
 export { useMarketRates } from "./useMarketRates";
 export { useCategories, useCategory } from "./useCategories";
-export { useNetWorthSummary, useNetWorth } from "./useNetWorthSummary";
+export {
+  useNetWorthWithMonthlyPercentageChange,
+  useNetWorth,
+} from "./useNetWorth";
+export {
+  usePeriodSummary,
+  PERIOD_LABELS,
+  type PeriodFilter,
+  type PeriodSummary,
+} from "./usePeriodSummary";
+export {
+  useUpcomingPayments,
+  type UpcomingPayment,
+} from "./useUpcomingPayments";
