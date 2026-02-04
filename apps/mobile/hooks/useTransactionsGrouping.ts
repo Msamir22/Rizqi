@@ -112,7 +112,7 @@ export function useTransactionsGrouping(
   const [displayedItems, setDisplayedItems] = useState<DisplayTransaction[]>(
     []
   );
-  const { totalNetWorth: currentRealNetWorth, isLoading: isNetWorthLoading } =
+  const { totalNetWorth, isLoading: isNetWorthLoading } =
     useNetWorthWithMonthlyPercentageChange();
   const [isDataLoading, setIsDataLoading] = useState(true);
 
@@ -287,7 +287,7 @@ export function useTransactionsGrouping(
 
   // 2. Calculate Grouped Data
   const groupedData = useMemo(() => {
-    if (currentRealNetWorth === null) {
+    if (totalNetWorth === null) {
       return [];
     }
 
@@ -302,7 +302,7 @@ export function useTransactionsGrouping(
       return 0;
     };
 
-    let anchorNW = currentRealNetWorth;
+    let anchorNW = totalNetWorth;
 
     allTransactions.forEach((t) => {
       if (t.isIncome) anchorNW -= t.amount;
@@ -382,16 +382,9 @@ export function useTransactionsGrouping(
     if (currentGroup) groups.push(currentGroup);
 
     return groups;
-  }, [
-    allTransactions,
-    displayedItems,
-    currentRealNetWorth,
-    period,
-    searchQuery,
-  ]);
+  }, [allTransactions, displayedItems, totalNetWorth, period, searchQuery]);
 
-  const isLoading =
-    isDataLoading || isNetWorthLoading || currentRealNetWorth === null;
+  const isLoading = isDataLoading || isNetWorthLoading;
 
   return {
     groupedData,
