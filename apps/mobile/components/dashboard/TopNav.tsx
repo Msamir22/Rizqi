@@ -5,16 +5,14 @@ import { Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AstikLogo } from "../ui/AstikLogo";
 import { useTheme } from "@/context/ThemeContext";
+import { useDrawer } from "@/context/DrawerContext";
 
 // TODO: Replace with user context when available
 const USER_NAME = "Mohamed";
 
-interface TopNavProps {
-  onMenuPress?: () => void;
-}
-
-export function TopNav({ onMenuPress }: TopNavProps): React.ReactElement {
+export function TopNav(): React.ReactElement {
   const { theme } = useTheme();
+  const { openDrawer } = useDrawer();
 
   const getGreeting = () => {
     const hours = new Date().getHours();
@@ -27,20 +25,18 @@ export function TopNav({ onMenuPress }: TopNavProps): React.ReactElement {
     <SafeAreaView edges={["top"]} className="pb-2">
       <View className=" flex-row items-center mb-5 mt-2">
         {/* Hamburger Menu */}
-        {onMenuPress && (
-          <TouchableOpacity
-            onPress={onMenuPress}
-            accessibilityLabel="Open menu"
-            accessibilityRole="button"
-            className="mr-3"
-          >
-            <Ionicons
-              name="menu-outline"
-              size={26}
-              color={theme.text.primary}
-            />
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          onPress={openDrawer}
+          accessibilityLabel="Open menu"
+          accessibilityRole="button"
+          className="mr-3"
+        >
+          <Ionicons
+            name="menu-outline"
+            size={26}
+            color={theme.text.primary}
+          />
+        </TouchableOpacity>
 
         {/* Left Side: Logo & Greeting */}
         <View className="flex-row items-center gap-3 flex-1">

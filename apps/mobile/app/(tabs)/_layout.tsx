@@ -3,6 +3,7 @@ import { QuickActionFab } from "@/components/fab";
 import { Tabs } from "expo-router";
 import React from "react";
 import { View } from "react-native";
+import { ScreenHeader } from "@/components/navigation/ScreenHeader";
 
 export default function TabLayout(): React.ReactElement {
   return (
@@ -10,13 +11,15 @@ export default function TabLayout(): React.ReactElement {
       <Tabs
         tabBar={(props) => <CustomBottomTabBar {...props} />}
         screenOptions={{
-          headerShown: false,
+          header: ({ options }) => <ScreenHeader title={options.title} />,
+          headerShown: true,
         }}
       >
         <Tabs.Screen
           name="index"
           options={{
             title: "Home",
+            headerShown: false,
           }}
         />
         <Tabs.Screen

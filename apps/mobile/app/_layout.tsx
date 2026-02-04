@@ -75,6 +75,10 @@ export default function RootLayout() {
   );
 }
 
+import { ScreenHeader } from "../components/navigation/ScreenHeader";
+
+// ... (existing imports)
+
 function RootLayoutNav() {
   const { colorScheme, isDark } = useTheme();
 
@@ -84,7 +88,14 @@ function RootLayoutNav() {
         style={colorScheme}
         backgroundColor={isDark ? lightTheme.background : darkTheme.background}
       />
-      <Stack>
+      <Stack
+        screenOptions={{
+          header: ({ options }) => (
+            <ScreenHeader title={options.title} />
+          ),
+          headerShown: true, // Default to true, override per screen
+        }}
+      >
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -110,17 +121,18 @@ function RootLayoutNav() {
             headerShown: false,
           }}
         />
+        {/* Settings now uses the global ScreenHeader automatically */}
         <Stack.Screen
           name="settings"
           options={{
             title: "Settings",
-            headerShown: false,
           }}
         />
+        {/* Other screens inherit default header with menu/back button */}
         <Stack.Screen
           name="recurring-payments"
           options={{
-            headerShown: false,
+            title: "Recurring Payments",
           }}
         />
         <Stack.Screen

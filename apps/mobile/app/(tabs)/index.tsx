@@ -5,7 +5,6 @@ import { ThisMonth } from "@/components/dashboard/ThisMonth";
 import { UpcomingPayments } from "@/components/dashboard/UpcomingPayments";
 import { TopNav } from "@/components/dashboard/TopNav";
 import { TotalNetWorthCard } from "@/components/dashboard/TotalNetWorthCard";
-import { AppDrawer } from "@/components/navigation/AppDrawer";
 import { StarryBackground } from "@/components/ui/StarryBackground";
 import { palette } from "@/constants/colors";
 import { TAB_BAR_HEIGHT } from "@/constants/ui";
@@ -15,11 +14,10 @@ import { useNetWorthWithMonthlyPercentageChange } from "@/hooks/useNetWorth";
 import { useRecentTransactions } from "@/hooks/useTransactions";
 import { useDatabaseReady } from "@/providers/DatabaseProvider";
 import { egpToCurrency } from "@astik/logic";
-import React, { useState } from "react";
+import React from "react";
 import { ActivityIndicator, ScrollView, View } from "react-native";
 
 export default function DashboardScreen(): React.JSX.Element {
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const isDbReady = useDatabaseReady();
   const { accounts, isLoading: accountsLoading } = useTopAccounts(3);
   const {
@@ -59,7 +57,7 @@ export default function DashboardScreen(): React.JSX.Element {
         showsVerticalScrollIndicator={false}
       >
         <View className="px-5 pt-[10px]">
-          <TopNav onMenuPress={() => setIsDrawerOpen(true)} />
+          <TopNav />
           <TotalNetWorthCard
             totalEgp={totalNetWorth}
             totalUsd={
@@ -86,10 +84,6 @@ export default function DashboardScreen(): React.JSX.Element {
           />
         </View>
       </ScrollView>
-      <AppDrawer
-        visible={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-      />
     </StarryBackground>
   );
 }
