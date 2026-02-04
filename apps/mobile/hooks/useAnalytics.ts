@@ -102,7 +102,6 @@ export function useMonthlyChartData(
 export function useCategoryBreakdown(
   year: number,
   month: number,
-  displayLevel: 1 | 2 | 3,
   accountIds?: string[]
 ): UseAnalyticsResult<CategoryBreakdown[]> {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -169,8 +168,8 @@ export function useCategoryBreakdown(
 
   // Calculate category breakdown
   const data = useMemo(() => {
-    return aggregateByCategory(transactions, categories, displayLevel);
-  }, [transactions, categories, displayLevel]);
+    return aggregateByCategory(transactions, categories);
+  }, [transactions, categories]);
 
   return { data, isLoading, error, refetch };
 }
