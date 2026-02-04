@@ -11,7 +11,7 @@ export default function TabLayout(): React.ReactElement {
       <Tabs
         tabBar={(props) => <CustomBottomTabBar {...props} />}
         screenOptions={{
-          header: ({ options }) => <ScreenHeader title={options.title} />,
+          header: ({ options }) => <ScreenHeader title={options.title} forceMenu={true} />,
           headerShown: true,
         }}
       >

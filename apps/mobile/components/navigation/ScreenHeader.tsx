@@ -10,9 +10,10 @@ import { DrawerActions, useNavigation } from "@react-navigation/native";
 interface ScreenHeaderProps {
   title?: string;
   showBack?: boolean;
+  forceMenu?: boolean; // New prop to force hamburger menu
 }
 
-export function ScreenHeader({ title, showBack = true }: ScreenHeaderProps) {
+export function ScreenHeader({ title, showBack = true, forceMenu = false }: ScreenHeaderProps) {
   const { theme } = useTheme();
   const { toggleDrawer } = useDrawer();
   const navigation = useNavigation();
@@ -20,7 +21,9 @@ export function ScreenHeader({ title, showBack = true }: ScreenHeaderProps) {
   const insets = useSafeAreaInsets();
   
   // Use navigation state to determine if we can go back
+  // If forceMenu is true, we ignore canGoBack and show the menu
   const canGoBack = navigation.canGoBack();
+  const showMenu = forceMenu || !canGoBack;
 
   return (
     <View
@@ -36,19 +39,19 @@ export function ScreenHeader({ title, showBack = true }: ScreenHeaderProps) {
     >
       <View className="flex-row items-center gap-4">
         {/* Menu or Back Button */}
-        {showBack && canGoBack ? (
-          <TouchableOpacity
-            onPress={() => router.back()}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="arrow-back" size={24} color={theme.text.primary} />
-          </TouchableOpacity>
-        ) : (
+        {showMenu ? (
           <TouchableOpacity
             onPress={toggleDrawer}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Ionicons name="menu-outline" size={28} color={theme.text.primary} />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            onPress={() => router.back()}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="arrow-back" size={24} color={theme.text.primary} />
           </TouchableOpacity>
         )}
 
