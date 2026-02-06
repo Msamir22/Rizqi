@@ -32,6 +32,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Button } from "@/components/ui/Button";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { updateTransaction, updateTransfer } from "@/utils/transactions";
 import * as Haptics from "expo-haptics";
@@ -512,14 +513,10 @@ export default function TransactionsPlaceholder() {
             <Text className="text-base text-slate-500 dark:text-slate-400 text-center mb-8">
               Start tracking your spending by adding your first transaction.
             </Text>
-            <TouchableOpacity
-              className="bg-nileGreen-600 py-3.5 px-8 rounded-full shadow-sm"
+            <Button
+              title="Add Transaction"
               onPress={() => router.push("/add-transaction")}
-            >
-              <Text className="text-white font-bold text-base">
-                Add Transaction
-              </Text>
-            </TouchableOpacity>
+            />
           </View>
         ) : (
           <SectionList

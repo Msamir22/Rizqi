@@ -1,10 +1,3 @@
-/**
- * AccountsSection - Dashboard accounts preview with top 3 accounts
- *
- * Design: Horizontal cards layout with "See All" navigation
- * Shows top 3 accounts sorted by balance, navigates to Accounts tab
- */
-
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { Account, AccountType } from "@astik/db";
@@ -20,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { EmptyStateCard } from "../ui/EmptyStateCard";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -134,31 +128,6 @@ function AccountCard({ data, width }: AccountCardProps): React.JSX.Element {
   );
 }
 
-function EmptyState(): React.JSX.Element {
-  const { isDark } = useTheme();
-
-  return (
-    <TouchableOpacity
-      onPress={() => router.push("/add-account")}
-      activeOpacity={0.8}
-      style={{ height: CARD_HEIGHT, borderRadius: CARD_BORDER_RADIUS }}
-      className="border-2 border-dashed items-center justify-center px-4 bg-slate-100 border-slate-200 dark:bg-slate-800 dark:border-slate-700"
-    >
-      <Ionicons
-        name="wallet-outline"
-        size={32}
-        color={isDark ? palette.slate[500] : palette.slate[400]}
-      />
-      <Text className="text-sm font-semibold mt-2 text-slate-500 dark:text-slate-400">
-        No accounts yet
-      </Text>
-      <Text className="text-xs mt-1 text-slate-400 dark:text-slate-500">
-        Tap the + button to add one
-      </Text>
-    </TouchableOpacity>
-  );
-}
-
 function LoadingState(): React.JSX.Element {
   return (
     <View
@@ -225,7 +194,14 @@ export function AccountsSection({
       {isLoading ? (
         <LoadingState />
       ) : cardData.length === 0 ? (
-        <EmptyState />
+        <EmptyStateCard
+          onPress={() => router.push("/add-account")}
+          icon="wallet-outline"
+          title="No accounts yet"
+          description="Tap the + button to add one"
+          height={CARD_HEIGHT}
+          borderRadius={CARD_BORDER_RADIUS}
+        />
       ) : (
         <View className="flex-row" style={{ gap: CARD_GAP }}>
           {cardData.map((card) => {

@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 import { CategoryIcon } from "../common/CategoryIcon";
+import { EmptyStateCard } from "../ui/EmptyStateCard";
 
 interface RecentTransactionsProps {
   transactions: Transaction[];
@@ -102,32 +103,28 @@ export function RecentTransactions({
       </View>
 
       {/* Transactions List */}
-      <View className="dark:rounded-2xl dark:bg-slate-800 dark:p-4">
-        {isLoading ? (
-          <View className="items-center py-8">
-            <ActivityIndicator size="small" color={palette.nileGreen[500]} />
-          </View>
-        ) : transactions.length === 0 ? (
-          <View className="items-center py-8">
-            <Ionicons
-              name="receipt-outline"
-              size={48}
-              color={palette.slate[400]}
-            />
-            <Text className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-              No transactions yet
-            </Text>
-          </View>
-        ) : (
-          transactions.map((transaction, index) => (
+      {isLoading ? (
+        <View className="items-center py-8">
+          <ActivityIndicator size="small" color={palette.nileGreen[500]} />
+        </View>
+      ) : transactions.length === 0 ? (
+        <EmptyStateCard
+          onPress={() => router.push("/add-transaction")}
+          icon="receipt-outline"
+          title="No transactions yet"
+          description="Tap the + button to add one"
+        />
+      ) : (
+        <View className="dark:rounded-2xl dark:bg-slate-800 dark:p-4">
+          {transactions.map((transaction, index) => (
             <TransactionItem
               key={transaction.id}
               transaction={transaction}
               isLast={index === transactions.length - 1}
             />
-          ))
-        )}
-      </View>
+          ))}
+        </View>
+      )}
     </>
   );
 }

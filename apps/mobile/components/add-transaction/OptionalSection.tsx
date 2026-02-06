@@ -12,6 +12,7 @@ import {
 } from "react-native";
 // Will use DatePicker modal later, simplified for now
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { TextField } from "../ui/TextField";
 
 interface OptionalFields {
   merchant?: string;
@@ -82,35 +83,23 @@ export function OptionalSection({
 
       <View className="gap-5">
         {/* Merchant */}
-        <View>
-          <Text className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 px-1">
-            MERCHANT / PAYEE
-          </Text>
-          <TextInput
-            placeholder="e.g. Starbucks, Carrefour"
-            placeholderTextColor={isDark ? "#64748B" : "#94A3B8"}
-            value={fields.merchant}
-            onChangeText={(t) => onChange({ merchant: t })}
-            className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 text-base font-medium text-slate-900 dark:text-white"
-          />
-        </View>
+        <TextField
+          label="MERCHANT / PAYEE"
+          placeholder="e.g. Starbucks, Carrefour"
+          value={fields.merchant}
+          onChangeText={(t) => onChange({ merchant: t })}
+        />
 
         {/* Note */}
-        <View>
-          <Text className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 px-1">
-            NOTE
-          </Text>
-          <TextInput
-            placeholder="Add a note..."
-            placeholderTextColor={isDark ? "#64748B" : "#94A3B8"}
-            value={fields.note}
-            onChangeText={(t) => onChange({ note: t })}
-            multiline
-            numberOfLines={2}
-            className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 text-base font-medium text-slate-900 dark:text-white min-h-[80px]"
-            style={{ textAlignVertical: "top" }}
-          />
-        </View>
+        <TextField
+          label="NOTE"
+          placeholder="Add a note..."
+          value={fields.note}
+          onChangeText={(t) => onChange({ note: t })}
+          multiline
+          numberOfLines={2}
+          style={{ textAlignVertical: "top" }}
+        />
 
         {/* Date */}
         <View>
@@ -179,21 +168,16 @@ export function OptionalSection({
         {fields.isRecurring && (
           <View className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 gap-4">
             {/* Recurring logic will be implemented here later or simply show basic name/frequency for now as placeholders */}
-            <View>
-              <Text className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">
-                NAME
-              </Text>
-              <TextInput
-                value={fields.recurringName}
-                onChangeText={(t) => onChange({ recurringName: t })}
-                placeholder="Subscription Name"
-                className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white"
-              />
-            </View>
+            <TextField
+              label="NAME"
+              placeholder="Recurring Name"
+              value={fields.recurringName}
+              onChangeText={(t) => onChange({ recurringName: t })}
+            />
 
             <View>
               {/* Auto-create Toggle */}
-              <View className="flex-row items-center justify-between mt-2">
+              <View className="flex-row items-center ml-1 justify-between mt-2">
                 <View className="flex-1 mr-4">
                   <Text className="text-sm font-semibold text-slate-900 dark:text-white">
                     Auto-create transaction
