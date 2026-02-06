@@ -1,354 +1,253 @@
+import { Button } from "@/components/ui/Button";
+import { TextField } from "@/components/ui/TextField";
+import { Dropdown } from "@/components/ui/Dropdown";
+import { BankDetailsSection } from "@/components/add-account/BankDetailsSection";
 import { palette } from "@/constants/colors";
+import { ACCOUNT_TYPES, CURRENCIES } from "@/constants/accounts";
 import { useTheme } from "@/context/ThemeContext";
-import { Account, AccountType, database } from "@astik/db";
-import { FontAwesome5, Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import React, { useState } from "react";
 import {
-  Alert,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StatusBar,
   Text,
-  TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback,
-  Keyboard,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { getCurrentUserId } from "../services/supabase";
+import {
+  useAccountForm,
+  useCreateAccount,
+  useKeyboardVisibility,
+} from "@/hooks";
 
 export default function AddAccount() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { mode } = useTheme();
-  const isDark = mode === "dark";
+  const { isDark } = useTheme();
+  const isKeyboardVisible = useKeyboardVisibility();
 
-  // New schema: CASH, BANK, DIGITAL_WALLET
-  const [accountType, setAccountType] = useState<AccountType>("BANK");
-  const [name, setName] = useState("");
-  const [currency, setCurrency] = useState<"EGP" | "USD" | "EUR">("EGP");
-  const [balance, setBalance] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Custom hooks for form state and business logic
+  const { formData, errors, updateField, validate } = useAccountForm();
 
+  const { createAccount, isSubmitting } = useCreateAccount();
+
+  // Local UI state
+  const [isCurrencyOpen, setIsCurrencyOpen] = useState(false);
+  const [isBankDetailsExpanded, setIsBankDetailsExpanded] = useState(false);
+
+  /**
+   * Handles the save action by validating the form and calling the creation hook.
+   */
   const handleSave = async () => {
-    if (!name.trim()) {
-      Alert.alert("Required", "Please enter account name");
-      return;
-    }
-
-    const userId = await getCurrentUserId();
-    if (!userId) {
-      Alert.alert("Error", "You must be signed in to create an account");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      await database.write(async () => {
-        await database.get<Account>("accounts").create((account) => {
-          account.userId = userId;
-          account.name = name.trim();
-          account.type = accountType;
-          account.balance = parseFloat(balance) || 0;
-          account.currency = currency;
-          account.deleted = false;
-        });
-      });
-      router.back();
-    } catch (error) {
-      console.error(error);
-      Alert.alert("Error", "Failed to create account");
-    } finally {
-      setIsSubmitting(false);
+    if (validate()) {
+      await createAccount(formData);
     }
   };
-
-  const getAccountTypeStyle = (type: AccountType) => {
-    const isSelected = accountType === type;
-
-    const colors: Record<AccountType, { selected: string; icon: string }> = {
-      BANK: { selected: "blue", icon: "university" },
-      CASH: { selected: "green", icon: "wallet" },
-      DIGITAL_WALLET: { selected: "purple", icon: "mobile-alt" },
-    };
-
-    const color = colors[type];
-
-    if (type === "BANK") {
-      return {
-        container: `flex-1 items-center rounded-2xl border-2 p-5 ${
-          isSelected
-            ? "border-blue-500 bg-blue-50 dark:bg-blue-500/10 dark:border-blue-500"
-            : "border-border bg-surface dark:border-white/10 dark:bg-white/5"
-        }`,
-        iconBg: isSelected
-          ? "bg-blue-100 dark:bg-blue-500/20"
-          : "bg-slate-100 dark:bg-white/10",
-        iconColor: isSelected
-          ? palette.blue[500]
-          : isDark
-            ? palette.slate[400]
-            : palette.slate[500],
-        textColor: isSelected
-          ? "text-blue-500"
-          : "text-text-secondary dark:text-text-muted",
-      };
-    } else if (type === "CASH") {
-      return {
-        container: `flex-1 items-center rounded-2xl border-2 p-5 ${
-          isSelected
-            ? "border-action bg-action-light/20 dark:bg-action/10 dark:border-action"
-            : "border-border bg-surface dark:border-white/10 dark:bg-white/5"
-        }`,
-        iconBg: isSelected
-          ? "bg-action-light/30 dark:bg-action/20"
-          : "bg-slate-100 dark:bg-white/10",
-        iconColor: isSelected
-          ? palette.nileGreen[600]
-          : isDark
-            ? palette.slate[400]
-            : palette.slate[500],
-        textColor: isSelected
-          ? "text-action"
-          : "text-text-secondary dark:text-text-muted",
-      };
-    } else {
-      // DIGITAL_WALLET
-      return {
-        container: `flex-1 items-center rounded-2xl border-2 p-5 ${
-          isSelected
-            ? "border-purple-500 bg-purple-50 dark:bg-purple-500/10 dark:border-purple-500"
-            : "border-border bg-surface dark:border-white/10 dark:bg-white/5"
-        }`,
-        iconBg: isSelected
-          ? "bg-purple-100 dark:bg-purple-500/20"
-          : "bg-slate-100 dark:bg-white/10",
-        iconColor: isSelected
-          ? "#8B5CF6"
-          : isDark
-            ? palette.slate[400]
-            : palette.slate[500],
-        textColor: isSelected
-          ? "text-purple-500"
-          : "text-text-secondary dark:text-text-muted",
-      };
-    }
-  };
-
-  const bankStyle = getAccountTypeStyle("BANK");
-  const cashStyle = getAccountTypeStyle("CASH");
-  const walletStyle = getAccountTypeStyle("DIGITAL_WALLET");
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View className="flex-1 bg-background dark:bg-background-dark">
-        <StatusBar
-          barStyle={isDark ? "light-content" : "dark-content"}
-          backgroundColor="transparent"
-        />
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      className="flex-1 bg-background dark:bg-background-dark"
+    >
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor="transparent"
+      />
 
-        <ScrollView
-          className="flex-1"
-          contentContainerStyle={{
-            paddingTop: insets.top + 16,
-            paddingHorizontal: 24,
-            paddingBottom: 40,
-          }}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header */}
-          <View className="mb-8 flex-row items-center justify-between">
-            <TouchableOpacity onPress={() => router.back()} className="p-1">
-              <Ionicons
-                name="arrow-back"
-                size={24}
-                color={isDark ? "#FFF" : palette.slate[900]}
-              />
-            </TouchableOpacity>
-            <Text className="text-xl font-semibold text-text-primary dark:text-white">
-              Add Account
-            </Text>
-            <View className="w-8" />
-          </View>
-
-          {/* Account Type Selection - 3 types now */}
-          <View className="mb-7">
-            <View className="flex-row gap-3">
-              {/* Bank Card */}
-              <TouchableOpacity
-                onPress={() => setAccountType("BANK")}
-                className={bankStyle.container}
-              >
-                {accountType === "BANK" && (
-                  <View className="absolute -right-2 -top-2 h-6 w-6 items-center justify-center rounded-full bg-blue-500">
-                    <Ionicons name="checkmark" size={16} color="#FFF" />
-                  </View>
-                )}
-                <View
-                  className={`mb-3 h-12 w-12 items-center justify-center rounded-xl ${bankStyle.iconBg}`}
-                >
-                  <FontAwesome5
-                    name="university"
-                    size={20}
-                    color={bankStyle.iconColor}
-                  />
-                </View>
-                <Text
-                  className={`text-xs font-semibold ${bankStyle.textColor}`}
-                >
-                  Bank
-                </Text>
-              </TouchableOpacity>
-
-              {/* Cash Card */}
-              <TouchableOpacity
-                onPress={() => setAccountType("CASH")}
-                className={cashStyle.container}
-              >
-                {accountType === "CASH" && (
-                  <View className="absolute -right-2 -top-2 h-6 w-6 items-center justify-center rounded-full bg-action">
-                    <Ionicons name="checkmark" size={16} color="#FFF" />
-                  </View>
-                )}
-                <View
-                  className={`mb-3 h-12 w-12 items-center justify-center rounded-xl ${cashStyle.iconBg}`}
-                >
-                  <FontAwesome5
-                    name="wallet"
-                    size={20}
-                    color={cashStyle.iconColor}
-                  />
-                </View>
-                <Text
-                  className={`text-xs font-semibold ${cashStyle.textColor}`}
-                >
-                  Cash
-                </Text>
-              </TouchableOpacity>
-
-              {/* Digital Wallet Card */}
-              <TouchableOpacity
-                onPress={() => setAccountType("DIGITAL_WALLET")}
-                className={walletStyle.container}
-              >
-                {accountType === "DIGITAL_WALLET" && (
-                  <View className="absolute -right-2 -top-2 h-6 w-6 items-center justify-center rounded-full bg-purple-500">
-                    <Ionicons name="checkmark" size={16} color="#FFF" />
-                  </View>
-                )}
-                <View
-                  className={`mb-3 h-12 w-12 items-center justify-center rounded-xl ${walletStyle.iconBg}`}
-                >
-                  <FontAwesome5
-                    name="mobile-alt"
-                    size={20}
-                    color={walletStyle.iconColor}
-                  />
-                </View>
-                <Text
-                  className={`text-xs font-semibold ${walletStyle.textColor}`}
-                >
-                  E-Wallet
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Account Name */}
-          <View className="mb-5">
-            <Text className="mb-2 text-sm font-medium text-text-secondary dark:text-text-muted">
-              Account Name
-            </Text>
-            <TextInput
-              placeholder={
-                accountType === "BANK"
-                  ? "e.g. CIB Salary"
-                  : accountType === "DIGITAL_WALLET"
-                    ? "e.g. Vodafone Cash"
-                    : "e.g. My Wallet"
-              }
-              placeholderTextColor={
-                isDark ? palette.slate[500] : palette.slate[400]
-              }
-              value={name}
-              onChangeText={setName}
-              className="rounded-2xl border border-border bg-surface p-4 text-base font-semibold text-text-primary dark:border-white/10 dark:bg-white/5 dark:text-white"
-            />
-          </View>
-
-          {/* Currency & Open Balance */}
-          <View className="mb-5 flex-row gap-4">
-            {/* Currency */}
-            <View className="flex-1">
-              <Text className="mb-2 text-sm font-medium text-text-secondary dark:text-text-muted">
-                Currency
-              </Text>
-              <View className="overflow-hidden rounded-2xl border border-border bg-surface dark:border-white/10 dark:bg-white/5">
-                <View className="flex-row">
-                  {(["EGP", "USD", "EUR"] as const).map((curr) => (
-                    <TouchableOpacity
-                      key={curr}
-                      onPress={() => setCurrency(curr)}
-                      className={`flex-1 items-center py-4 ${
-                        currency === curr
-                          ? "bg-slate-800 dark:bg-white"
-                          : "bg-transparent"
-                      }`}
-                    >
-                      <Text
-                        className={`text-sm font-bold ${
-                          currency === curr
-                            ? "text-white dark:text-black"
-                            : "text-text-secondary dark:text-text-muted"
-                        }`}
-                      >
-                        {curr}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            </View>
-
-            {/* Balance */}
-            <View className="flex-1">
-              <Text className="mb-2 text-sm font-medium text-text-secondary dark:text-text-muted">
-                Initial Balance
-              </Text>
-              <TextInput
-                placeholder="0.00"
-                placeholderTextColor={
-                  isDark ? palette.slate[500] : palette.slate[400]
-                }
-                value={balance}
-                onChangeText={setBalance}
-                keyboardType="numeric"
-                className="rounded-2xl border border-border bg-surface p-4 text-base font-bold text-text-primary dark:border-white/10 dark:bg-white/5 dark:text-white"
-              />
-            </View>
-          </View>
-
-          {/* Submit */}
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{
+          paddingTop: insets.top + 16,
+          paddingBottom: insets.bottom + 120,
+        }}
+        showsVerticalScrollIndicator={false}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Header */}
+        <View className="mb-6 flex-row items-center justify-center px-4">
           <TouchableOpacity
-            onPress={handleSave}
-            disabled={isSubmitting}
-            className="mt-4 overflow-hidden rounded-2xl"
+            onPress={() => router.back()}
+            className="absolute left-4 p-1"
+            activeOpacity={0.7}
           >
-            <LinearGradient
-              colors={[palette.slate[800], palette.slate[900]]}
-              className="items-center py-4"
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0, y: 1 }}
-            >
-              <Text className="text-lg font-bold text-white">
-                {isSubmitting ? "Creating..." : "Create Account"}
-              </Text>
-            </LinearGradient>
+            <Ionicons
+              name="chevron-back"
+              size={24}
+              color={isDark ? palette.slate[400] : palette.slate[600]}
+            />
           </TouchableOpacity>
-        </ScrollView>
-      </View>
-    </TouchableWithoutFeedback>
+          <Text className="text-lg font-bold text-slate-900 dark:text-white">
+            New Account
+          </Text>
+        </View>
+
+        {/* Hero Illustration Section */}
+        <View className="mb-6 items-center px-4">
+          <LinearGradient
+            colors={
+              isDark
+                ? ["rgba(6, 95, 70, 0.15)", "rgba(16, 185, 129, 0.08)"]
+                : [palette.nileGreen[50], palette.nileGreen[100]]
+            }
+            style={{
+              width: "100%",
+              borderRadius: 32,
+              alignItems: "center",
+              justifyContent: "center",
+              paddingVertical: 32,
+              paddingHorizontal: 24,
+            }}
+          >
+            <View className="mb-4">
+              <Ionicons
+                name="wallet"
+                size={64}
+                color={isDark ? palette.nileGreen[400] : palette.nileGreen[600]}
+              />
+            </View>
+            <Text className="mb-2 text-center text-xl font-bold text-slate-900 dark:text-white">
+              Where's your money?
+            </Text>
+            <Text className="text-center text-sm text-slate-500 dark:text-slate-400">
+              Add an account to start tracking
+            </Text>
+          </LinearGradient>
+        </View>
+
+        {/* Account Type Pills */}
+        <View className="mb-8 flex-row justify-center gap-2 px-4 flex-wrap">
+          {ACCOUNT_TYPES.map((type) => {
+            const isSelected = formData.accountType === type.id;
+            return (
+              <TouchableOpacity
+                key={type.id}
+                onPress={() => updateField("accountType", type.id)}
+                activeOpacity={0.8}
+                className={`flex-row items-center rounded-full px-5 py-3 ${
+                  isSelected
+                    ? "bg-nileGreen-600"
+                    : isDark
+                      ? "bg-slate-800"
+                      : "bg-slate-100"
+                }`}
+                style={
+                  isSelected
+                    ? {
+                        shadowColor: "#000",
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 2,
+                        elevation: 2,
+                      }
+                    : undefined
+                }
+              >
+                <Ionicons
+                  name={type.icon}
+                  size={18}
+                  color={isSelected ? "#FFF" : isDark ? "#94A3B8" : "#64748B"}
+                  className="mr-2"
+                />
+                <Text
+                  className={`text-sm font-bold ${
+                    isSelected
+                      ? "text-white"
+                      : isDark
+                        ? "text-slate-400"
+                        : "text-slate-600"
+                  }`}
+                >
+                  {type.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Form Container */}
+        <View className="px-4">
+          {/* Account Name */}
+          <TextField
+            label="Account Name"
+            placeholder={
+              formData.accountType === "BANK"
+                ? "e.g., CIB Checking"
+                : formData.accountType === "DIGITAL_WALLET"
+                  ? "e.g., Vodafone Cash"
+                  : "e.g., My Wallet"
+            }
+            value={formData.name}
+            onChangeText={(text) => updateField("name", text)}
+            error={errors.name}
+            maxLength={50}
+          />
+
+          {/* Currency Selector */}
+          <Dropdown
+            label="Currency"
+            items={CURRENCIES}
+            value={formData.currency}
+            onChange={(val) => updateField("currency", val)}
+            isOpen={isCurrencyOpen}
+            onToggle={() => setIsCurrencyOpen(!isCurrencyOpen)}
+            className="mt-2"
+          />
+
+          {/* Initial Balance */}
+          <TextField
+            label="Initial Balance"
+            placeholder="0"
+            value={formData.balance}
+            onChangeText={(text) => {
+              const cleaned = text.replace(/[^0-9.]/g, "");
+              updateField("balance", cleaned);
+            }}
+            error={errors.balance}
+            keyboardType="numeric"
+          />
+
+          {/* Conditional Bank Details Section */}
+          {formData.accountType === "BANK" && (
+            <BankDetailsSection
+              expanded={isBankDetailsExpanded}
+              onToggleExpand={() =>
+                setIsBankDetailsExpanded(!isBankDetailsExpanded)
+              }
+              bankName={formData.bankName || ""}
+              cardLast4={formData.cardLast4 || ""}
+              cardLast4Error={errors.cardLast4}
+              onBankNameChange={(val) => updateField("bankName", val)}
+              onCardLast4Change={(val) => {
+                const cleaned = val.replace(/\D/g, "").slice(0, 4);
+                updateField("cardLast4", cleaned);
+              }}
+            />
+          )}
+        </View>
+      </ScrollView>
+
+      {/* Fixed Bottom Button - Hidden when keyboard is visible to prevent covering screen */}
+      {!isKeyboardVisible && (
+        <View
+          className="absolute bottom-0 left-0 right-0 px-4 pt-4 bg-background/80 dark:bg-background-dark/80"
+          style={{ paddingBottom: insets.bottom + 16 }}
+        >
+          <Button
+            title={isSubmitting ? "Creating..." : "Add Account"}
+            onPress={handleSave}
+            isLoading={isSubmitting}
+            variant="primary"
+            size="lg"
+            className="shadow-xl shadow-nileGreen-600/20"
+          />
+        </View>
+      )}
+    </KeyboardAvoidingView>
   );
 }
