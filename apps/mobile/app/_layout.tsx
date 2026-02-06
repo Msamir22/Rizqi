@@ -14,6 +14,7 @@ import { AuthProvider } from "../context/AuthContext";
 import { ThemeProvider, useTheme } from "../context/ThemeContext";
 import "../global.css";
 import { DatabaseProvider } from "../providers/DatabaseProvider";
+import { useEffect } from "react";
 
 import { darkTheme, lightTheme } from "@/constants/colors";
 import { ErrorBoundary } from "../components/ErrorBoundary";
@@ -33,6 +34,13 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
+
+  // Hide splash screen once fonts are loaded
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError]);
 
   // Don't render until fonts are loaded
   if (!fontsLoaded && !fontError) {
