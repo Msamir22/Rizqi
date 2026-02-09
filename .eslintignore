@@ -31,3 +31,4 @@ packages/db/src/supabase-types.ts
 metro.config.js
 babel.config.js
 tailwind.config.js
+index.js
