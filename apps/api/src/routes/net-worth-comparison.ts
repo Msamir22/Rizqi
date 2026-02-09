@@ -1,10 +1,10 @@
-import express from "express";
-import { asyncHandler, Errors } from "../lib/errors";
+import { DailySnapshotNetWorth, NetWorthComparison } from "@astik/logic";
+import { Router } from "express";
+import { Errors, asyncHandler } from "../lib/errors";
 import { getSupabaseClientAdmin } from "../lib/supabase";
 import { AuthenticatedRequest } from "../middleware/auth";
-import { DailySnapshotNetWorth, NetWorthComparison } from "@astik/logic";
 
-const router = express.Router();
+const router = Router();
 
 /**
  * GET /api/net-worth/comparison

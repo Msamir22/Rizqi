@@ -1,5 +1,5 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { SupabaseDatabase } from "@astik/db";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 export type TypedSubapaseClient = SupabaseClient<SupabaseDatabase>;
 

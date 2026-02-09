@@ -1,6 +1,6 @@
 import cors from "cors";
-import dotenv from "dotenv";
-import express from "express";
+import { config } from "dotenv";
+import express, { json } from "express";
 import { existsSync } from "fs";
 import path from "path";
 
@@ -16,7 +16,7 @@ const environment = isVercel
 if (!isProduction && !isVercel) {
   const envPath = path.resolve(__dirname, "../.env.local");
   if (existsSync(envPath)) {
-    dotenv.config({ path: envPath });
+    config({ path: envPath });
   } else {
     console.warn("⚠️ .env.local not found, using environment variables");
   }
@@ -38,7 +38,7 @@ if (missingVars.length > 0) {
 }
 
 // Import routes after environment is configured
-import { globalErrorHandler } from "./lib/errors";
+import { asyncHandler, globalErrorHandler } from "./lib/errors";
 import { Auth } from "./middleware/auth";
 import mockRouter from "./routes/mock";
 import netWorthRouter from "./routes/net-worth-comparison";
@@ -47,8 +47,8 @@ const app = express();
 
 // Middleware
 app.use(cors());
-app.use(express.json());
-app.use(Auth);
+app.use(json());
+app.use(asyncHandler(Auth));
 
 // Routes
 app.use("/api/mock", mockRouter);

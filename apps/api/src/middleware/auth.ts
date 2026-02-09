@@ -4,7 +4,7 @@
  */
 
 import { User } from "@supabase/supabase-js";
-import { NextFunction, Request, Response, RequestHandler } from "express";
+import { NextFunction, Request, Response } from "express";
 import { getSupabaseClient } from "../lib/supabase";
 
 // Extend Express Request to include user
@@ -27,6 +27,13 @@ export interface AuthenticatedRequest extends Request {
 
 // Paths that don't require authentication
 const PUBLIC_PATHS = ["/", "/health"];
+
+interface NetworkError extends Error {
+  code?: string;
+  cause?: {
+    code?: string;
+  };
+}
 
 /**
  * Middleware to require authenticated user
@@ -69,21 +76,23 @@ export async function Auth(
     req.userId = data.user.id;
 
     next();
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Auth middleware error:", err);
 
     // Check for connection timeout or network errors
-    // UND_ERR_CONNECT_TIMEOUT is the code for Undici (Node's fetch) timeouts
-    if (
-      err.code === "UND_ERR_CONNECT_TIMEOUT" ||
-      err.cause?.code === "UND_ERR_CONNECT_TIMEOUT" ||
-      err.cause?.code === "ENOTFOUND" ||
-      err.message?.includes("fetch failed")
-    ) {
-      res.status(503).json({
-        error: "Service unavailable. Please try again later.",
-      });
-      return;
+    if (err instanceof Error) {
+      const netErr = err as NetworkError;
+      if (
+        netErr.code === "UND_ERR_CONNECT_TIMEOUT" ||
+        netErr.cause?.code === "UND_ERR_CONNECT_TIMEOUT" ||
+        netErr.cause?.code === "ENOTFOUND" ||
+        err.message?.includes("fetch failed")
+      ) {
+        res.status(503).json({
+          error: "Service unavailable. Please try again later.",
+        });
+        return;
+      }
     }
 
     res.status(500).json({ error: "Authentication error" });
@@ -119,7 +128,7 @@ export async function optionalAuth(
     }
 
     next();
-  } catch (err) {
+  } catch (err: unknown) {
     // Don't fail on auth errors for optional auth
     console.error("Optional auth error:", err);
     next();

@@ -1,12 +1,9 @@
-import { Request, Response, NextFunction, RequestHandler } from "express";
+import { NextFunction, Request, RequestHandler, Response } from "express";
 
 /**
  * Custom application error with status code
  */
 export class AppError extends Error {
-  public readonly statusCode: number;
-  public readonly isOperational: boolean;
-
   public constructor(message: string, statusCode: number = 500) {
     super(message);
     this.statusCode = statusCode;
@@ -14,6 +11,9 @@ export class AppError extends Error {
 
     Error.captureStackTrace(this, this.constructor);
   }
+
+  public readonly statusCode: number;
+  public readonly isOperational: boolean;
 }
 
 /**
