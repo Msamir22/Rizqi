@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 
-import { palette, lightTheme, darkTheme } from "./constants/colors";
+import { darkTheme, lightTheme, palette } from "./constants/colors";
 
 module.exports = {
   darkMode: "class",
@@ -9,24 +9,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: {
-          DEFAULT: palette.nileGreen[700],
-          light: palette.nileGreen[600],
-          dark: palette.nileGreen[800],
-          muted: palette.nileGreen[100],
-        },
-        action: {
-          DEFAULT: lightTheme.action,
-          dark: darkTheme.action,
-        },
-        gold: {
-          DEFAULT: lightTheme.gold,
-          dark: darkTheme.gold,
-        },
-        expense: {
-          DEFAULT: lightTheme.expense,
-          dark: darkTheme.expense,
-        },
+        // UI
         background: {
           DEFAULT: lightTheme.background,
           dark: darkTheme.background,
@@ -71,7 +54,14 @@ module.exports = {
           DEFAULT: lightTheme.border,
           dark: darkTheme.border,
         },
+        tabBar: {
+          overlayLight: "rgba(0, 0, 0, 0.5)",
+          overlayDark: "rgba(0, 0, 0, 0.7)",
+          bgLight: "rgba(255, 255, 255, 0.85)",
+          bgDark: "rgba(15, 23, 42, 0.85)",
+        },
 
+        // Colors
         slate: {
           25: palette.slate[25],
           50: palette.slate[50],
@@ -122,12 +112,6 @@ module.exports = {
           100: palette.orange[100],
           500: palette.orange[500],
           600: palette.orange[600],
-        },
-        tabBar: {
-          overlayLight: "rgba(0, 0, 0, 0.5)",
-          overlayDark: "rgba(0, 0, 0, 0.7)",
-          bgLight: "rgba(255, 255, 255, 0.85)",
-          bgDark: "rgba(15, 23, 42, 0.85)",
         },
       },
     },
