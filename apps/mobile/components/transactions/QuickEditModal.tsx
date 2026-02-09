@@ -1,14 +1,15 @@
+import {
+  CalculatorKeypad,
+  CalculatorKey,
+} from "@/components/add-transaction/CalculatorKeypad";
+import { CategoryPicker } from "@/components/add-transaction/CategoryPicker";
+import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
+import { useCategories } from "@/hooks/useCategories";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import { Modal, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import {
-  CalculatorKey,
-  CalculatorKeypad,
-} from "@/components/add-transaction/CalculatorKeypad";
-import { CategoryPicker } from "@/components/add-transaction/CategoryPicker";
-import { palette } from "@/constants/colors";
-import { useCategories } from "@/hooks/useCategories";
 
 interface QuickEditModalProps {
   visible: boolean;
@@ -32,7 +33,8 @@ export function QuickEditModal({
   amountColor,
   onClose,
   onSave,
-}: QuickEditModalProps): React.JSX.Element | null {
+}: QuickEditModalProps) {
+  const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
 
   // State
@@ -60,7 +62,7 @@ export function QuickEditModal({
     categories.find((c) => c.systemName === selectedCategoryId) || null;
 
   // Handlers
-  const handleKeyPress = (key: CalculatorKey): void => {
+  const handleKeyPress = (key: CalculatorKey) => {
     if (key === "DONE") {
       const val = parseFloat(amount);
       if (!isNaN(val) && val > 0) {
@@ -79,7 +81,7 @@ export function QuickEditModal({
     });
   };
 
-  const handleCategorySelect = (catId: string): void => {
+  const handleCategorySelect = (catId: string) => {
     setSelectedCategoryId(catId);
     onSave(catId);
     onClose();
@@ -118,8 +120,8 @@ export function QuickEditModal({
             <View>
               <View className="items-center justify-center py-8">
                 <Text
-                  className="text-4xl font-bold text-slate-900 dark:text-slate-25"
-                  style={amountColor ? { color: amountColor } : {}}
+                  className="text-4xl font-bold"
+                  style={{ color: amountColor || palette.slate[900] }}
                 >
                   {currency} {amount || "0"}
                 </Text>
@@ -128,13 +130,20 @@ export function QuickEditModal({
             </View>
           ) : (
             <View className="h-[400px]">
+              {/* Reusing CategoryPicker Logic or simpler Vertical List */}
               <CategoryPicker
                 categories={relevantCategories}
                 selectedCategory={currentCategory}
                 onSelectRecent={(cat) => handleCategorySelect(cat.systemName)}
-                onOpenPicker={() => {}}
-                recentCategories={relevantCategories}
+                onOpenPicker={() => {}} // TODO: Handle full picker if needed
+                recentCategories={relevantCategories} // Show all as "recent" for now in this list view
+                // We might want to construct a simple list here instead of reusing the Horizontal Picker if we want full selection
               />
+              {/* 
+                    Note: The current CategoryPicker is horizontal "Recent". 
+                    For a quick edit modal, a vertical list or grid is better.
+                    I will use a simple Grid here for clarity.
+                 */}
               <View className="flex-row flex-wrap p-4 justify-between">
                 {relevantCategories.slice(0, 12).map((cat) => (
                   <TouchableOpacity
@@ -146,17 +155,14 @@ export function QuickEditModal({
                       className="w-12 h-12 rounded-full items-center justify-center mb-2"
                       style={{ backgroundColor: `${cat.color}20` }}
                     >
-                      <Ionicons
-                        name={cat.icon as keyof typeof Ionicons.glyphMap}
-                        size={20}
-                        color={cat.color || palette.nileGreen[500]}
-                      />
+                      {/* We need Icon Component here, assuming Category object has icon info */}
+                      {/* Category interface in hooks/useCategories might differ, checking... */}
                     </View>
                     <Text
                       className="text-xs text-center font-medium text-slate-700 dark:text-slate-300"
                       numberOfLines={1}
                     >
-                      {cat.displayName}
+                      {cat.name}
                     </Text>
                   </TouchableOpacity>
                 ))}

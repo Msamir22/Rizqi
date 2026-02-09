@@ -1,5 +1,5 @@
+import { darkTheme, lightTheme, ThemeColors } from "../constants/colors";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useColorScheme } from "nativewind";
 import React, {
   createContext,
   useCallback,
@@ -8,7 +8,7 @@ import React, {
   useState,
 } from "react";
 import { Appearance, ColorSchemeName, View } from "react-native";
-import { darkTheme, lightTheme, ThemeColors } from "../constants/colors";
+import { useColorScheme } from "nativewind";
 
 /**
  * Theme modes supported by the app
@@ -21,8 +21,8 @@ interface ThemeContextType {
   mode: ThemeMode;
   theme: ThemeColors;
   isDark: boolean;
-  toggleTheme: () => Promise<void>;
-  setTheme: (mode: ThemeMode) => Promise<void>;
+  toggleTheme: () => void;
+  setTheme: (mode: ThemeMode) => void;
   colorScheme: ColorScheme;
 }
 
@@ -42,35 +42,67 @@ interface ThemeProviderProps {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 /**
- * Custom hook to use the theme context
+ * Hook to access theme context
+ * @throws {Error} When used outside of ThemeProvider
  */
-export function useTheme(): ThemeContextType {
+export const useTheme = (): ThemeContextType => {
   const context = useContext(ThemeContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error("useTheme must be used within a ThemeProvider");
   }
   return context;
-}
+};
 
 /**
- * ThemeProvider component that manages the app's theme state and persistence
+ * Resolves the actual color scheme based on mode and system preference
  */
+const resolveColorScheme = (
+  mode: ThemeMode,
+  systemColorScheme: ColorSchemeName
+): ColorScheme => {
+  switch (mode) {
+    case "light":
+      return "light";
+    case "dark":
+      return "dark";
+    case "system":
+      return systemColorScheme === "dark" ? "dark" : "light";
+    default:
+      return "light";
+  }
+};
+
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   children,
   defaultMode = "system",
 }) => {
   const [mode, setMode] = useState<ThemeMode>(defaultMode);
-  const [_isLoading, setIsLoading] = useState(true);
-  const nwColorScheme = useColorScheme();
-
-  // Resolve system theme
-  const [colorScheme, setSystemColorScheme] = useState<ColorScheme>(
-    Appearance.getColorScheme() === "dark" ? "dark" : "light"
+  const [systemColorScheme, setSystemColorScheme] = useState<ColorSchemeName>(
+    Appearance.getColorScheme()
   );
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Derived state for quick checks
-  const isDark =
-    mode === "dark" || (mode === "system" && colorScheme === "dark");
+  const { setColorScheme } = useColorScheme();
+
+  // Resolve current color scheme based on mode and system preference
+  const colorScheme = resolveColorScheme(mode, systemColorScheme);
+  const isDark = colorScheme === "dark";
+
+  /**
+   * Load theme preference from storage on app start
+   */
+  const loadThemeFromStorage = useCallback(async (): Promise<void> => {
+    try {
+      const storedMode = await AsyncStorage.getItem(STORAGE_THEME_KEY);
+      if (storedMode && ["light", "dark", "system"].includes(storedMode)) {
+        setTheme(storedMode as ThemeMode);
+      }
+    } catch (error) {
+      console.warn("Failed to load theme from storage:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   /**
    * Save theme preference to storage
@@ -90,49 +122,28 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
    * Set theme mode and persist to storage
    */
   const setTheme = useCallback(
-    async (newMode: ThemeMode): Promise<void> => {
+    (newMode: ThemeMode): void => {
       setMode(newMode);
-      await saveThemeToStorage(newMode);
+      saveThemeToStorage(newMode);
     },
     [saveThemeToStorage]
   );
 
   /**
-   * Load theme preference from storage on app start
-   */
-  const loadThemeFromStorage = useCallback(async (): Promise<void> => {
-    try {
-      const storedMode = await AsyncStorage.getItem(STORAGE_THEME_KEY);
-      if (storedMode && ["light", "dark", "system"].includes(storedMode)) {
-        await setTheme(storedMode as ThemeMode);
-      }
-    } catch (error) {
-      console.warn("Failed to load theme from storage:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [setTheme]);
-
-  /**
    * Toggle between light and dark modes
    * If currently in system mode, toggles to the opposite of current system theme
    */
-  const toggleTheme = useCallback(async (): Promise<void> => {
-    const newMode =
-      mode === "dark" || (mode === "system" && colorScheme === "dark")
-        ? "light"
-        : "dark";
-    await setTheme(newMode);
-  }, [mode, colorScheme, setTheme]);
+  const toggleTheme = useCallback((): void => {
+    const newMode = isDark ? "light" : "dark";
+    setTheme(newMode);
+  }, [isDark, setTheme]);
 
   /**
    * Handle system color scheme changes
    */
   const handleSystemColorSchemeChange = useCallback(
     (newColorScheme: ColorSchemeName): void => {
-      if (newColorScheme) {
-        setSystemColorScheme(newColorScheme as ColorScheme);
-      }
+      setSystemColorScheme(newColorScheme);
     },
     []
   );
@@ -141,14 +152,14 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
    * Update NativeWind's color scheme when our resolved scheme changes
    */
   useEffect(() => {
-    nwColorScheme.setColorScheme(colorScheme);
-  }, [colorScheme, nwColorScheme]);
+    setColorScheme(colorScheme);
+  }, [colorScheme, setColorScheme]);
 
   /**
    * Set up system theme listener and load stored theme on mount
    */
   useEffect(() => {
-    loadThemeFromStorage().catch(console.error);
+    loadThemeFromStorage();
 
     const subscription = Appearance.addChangeListener(({ colorScheme }) => {
       handleSystemColorSchemeChange(colorScheme);
@@ -157,16 +168,13 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
     return () => subscription?.remove();
   }, [loadThemeFromStorage, handleSystemColorSchemeChange]);
 
-  const theme =
-    mode === "dark" || (mode === "system" && colorScheme === "dark")
-      ? darkTheme
-      : lightTheme;
+  const theme = isDark ? darkTheme : lightTheme;
 
   return (
     <ThemeContext.Provider
       value={{ mode, theme, isDark, colorScheme, toggleTheme, setTheme }}
     >
-      <View className="flex-1">{children}</View>
+      <View style={{ flex: 1 }}>{children}</View>
     </ThemeContext.Provider>
   );
 };

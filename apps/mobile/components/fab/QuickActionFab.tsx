@@ -5,6 +5,8 @@
  * Each action has: [Label] [Icon Button]
  */
 
+import { palette } from "@/constants/colors";
+import { TAB_BAR_HEIGHT } from "@/constants/ui";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -20,8 +22,6 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { palette } from "@/constants/colors";
-import { TAB_BAR_HEIGHT } from "@/constants/ui";
 
 const FAB_SIZE = 56;
 const ACTION_SIZE = 44;
@@ -121,7 +121,7 @@ export function QuickActionFab(): React.JSX.Element {
             exiting={SlideOutDown.duration(150)}
             className="mb-3"
           >
-            {QUICK_ACTIONS.map((action) => (
+            {QUICK_ACTIONS.map((action, index) => (
               <Pressable
                 key={action.id}
                 onPress={() => closeAndNavigate(action.route)}

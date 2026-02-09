@@ -1,14 +1,13 @@
-import { CurrencyType } from "@astik/db";
+import { palette } from "@/constants/colors";
 import { formatCurrency } from "@astik/logic";
 import React from "react";
-import { palette } from "@/constants/colors";
 import { IconLibrary } from "../common/CategoryIcon";
 import { BaseCard } from "./BaseCard";
 
 interface TransactionCardProps {
   id: string;
-  signedAmount: number;
-  currency: CurrencyType;
+  amount: number;
+  currency: string;
   date: Date;
   isExpense: boolean;
   isIncome: boolean;
@@ -28,7 +27,7 @@ interface TransactionCardProps {
 
 export function TransactionCard({
   id,
-  signedAmount,
+  amount,
   currency,
   date,
   isExpense,
@@ -63,10 +62,8 @@ export function TransactionCard({
       ? palette.nileGreen[500]
       : palette.slate[500];
 
-  const formattedAmount = formatCurrency({
-    amount: signedAmount,
-    currency,
-  });
+  const amountSign = isExpense ? "-" : isIncome ? "+" : "";
+  const formattedAmount = `${amountSign}${formatCurrency(Math.abs(amount), currency)}`;
   // Title is always the category name
   const title = categoryName;
   const details = note || source;

@@ -1,3 +1,5 @@
+import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import {
   ActivityIndicator,
@@ -6,17 +8,13 @@ import {
   TouchableOpacity,
   TouchableOpacityProps,
 } from "react-native";
-import { palette } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
-import { ReactNode } from "react";
 
 export type ButtonVariant =
   | "primary"
   | "secondary"
   | "outline"
   | "ghost"
-  | "danger"
-  | "dashed";
+  | "danger";
 
 export type ButtonSize = "sm" | "md" | "lg";
 
@@ -37,7 +35,6 @@ const variants = {
   outline: "bg-transparent border border-slate-200 dark:border-slate-700",
   ghost: "bg-transparent",
   danger: "bg-red-500 dark:bg-red-600",
-  dashed: "bg-slate-50 dark:bg-slate-800/40",
 };
 
 // Text Color for Variants
@@ -47,7 +44,6 @@ const textColors = {
   outline: "text-slate-700 dark:text-slate-200",
   ghost: "text-slate-600 dark:text-slate-400",
   danger: "text-white",
-  dashed: "text-slate-500 dark:text-slate-400",
 };
 
 // Size Styles
@@ -78,7 +74,7 @@ export function Button({
   children,
   style,
   ...props
-}: ButtonProps): ReactNode {
+}: ButtonProps) {
   const { isDark } = useTheme();
 
   const isDisabled = disabled || isLoading;
@@ -89,7 +85,7 @@ export function Button({
       disabled={isDisabled}
       activeOpacity={0.7}
       style={[variant === "primary" && !isDisabled && styles.shadow, style]}
-      className={`flex-row items-center justify-center ${variant === "dashed" ? "rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700" : "rounded-full"} ${variants[variant]} ${sizes[size]} ${isDisabled ? "opacity-50" : ""} ${className}`}
+      className={`flex-row items-center justify-center rounded-full ${variants[variant]} ${sizes[size]} ${isDisabled ? "opacity-50" : ""} ${className}`}
       {...props}
     >
       {isLoading ? (
@@ -152,10 +148,10 @@ export function Button({
 
 const styles = StyleSheet.create({
   shadow: {
-    elevation: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    elevation: 2,
   },
 });

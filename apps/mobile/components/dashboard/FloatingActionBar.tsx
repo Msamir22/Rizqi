@@ -6,6 +6,8 @@
  * This file is kept for reference and can be safely deleted after verifying
  * that the new CustomBottomTabBar works correctly.
  */
+import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
 import {
   FontAwesome5,
   Ionicons,
@@ -15,18 +17,16 @@ import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { TouchableOpacity, View } from "react-native";
-import { palette } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
 
-export function FloatingActionBar(): React.JSX.Element {
+export function FloatingActionBar() {
   const { mode } = useTheme();
   const isDark = mode === "dark";
 
-  const onVoicePress = (): void => {
+  const onVoicePress = () => {
     router.push("/voice-input");
   };
 
-  const onAddPress = (): void => {
+  const onAddPress = () => {
     router.push("/add-transaction");
   };
 

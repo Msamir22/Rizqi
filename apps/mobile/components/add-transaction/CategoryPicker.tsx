@@ -1,5 +1,6 @@
 import { CategoryIcon, IconLibrary } from "@/components/common/CategoryIcon";
 import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
 import { Category } from "@astik/db";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
@@ -18,7 +19,9 @@ export function CategoryPicker({
   onOpenPicker,
   recentCategories = [],
   onSelectRecent,
-}: CategoryPickerProps): React.JSX.Element {
+}: CategoryPickerProps) {
+  const { isDark } = useTheme();
+
   return (
     <View className="mb-6">
       <Text className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2 px-1">
@@ -32,11 +35,13 @@ export function CategoryPicker({
         className="flex-row items-center bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 mb-3"
       >
         <View
-          className="w-10 h-10 rounded-2xl items-center justify-center mr-3 bg-slate-100 dark:bg-slate-700/50"
+          className="w-10 h-10 rounded-full items-center justify-center mr-3"
           style={{
             backgroundColor: selectedCategory?.color
               ? `${selectedCategory.color}20`
-              : undefined,
+              : isDark
+                ? "rgba(255,255,255,0.05)"
+                : "#F1F5F9",
           }}
         >
           {selectedCategory ? (
@@ -50,8 +55,7 @@ export function CategoryPicker({
             <Ionicons
               name="grid-outline"
               size={20}
-              className="text-slate-500 dark:text-slate-400"
-              color={palette.slate[500]}
+              color={isDark ? "#A0AEC0" : "#64748B"}
             />
           )}
         </View>
@@ -63,8 +67,7 @@ export function CategoryPicker({
         <Ionicons
           name="chevron-down"
           size={20}
-          className="text-slate-400"
-          color={palette.slate[400]}
+          color={isDark ? "#A0AEC0" : "#94A3B8"}
         />
       </TouchableOpacity>
 

@@ -1,4 +1,7 @@
+import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
 import { Account, AccountType } from "@astik/db";
+import { formatCurrency } from "@astik/logic";
 import { FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -10,7 +13,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { palette } from "@/constants/colors";
 import { EmptyStateCard } from "../ui/EmptyStateCard";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -152,7 +154,7 @@ export function AccountsSection({
       return {
         id: account.id,
         name: account.name,
-        balance: account.formattedBalance,
+        balance: formatCurrency(account.balance, account.currency),
         type: account.type,
         gradient: config.gradient,
         iconName: config.iconName,
@@ -182,7 +184,8 @@ export function AccountsSection({
           <Ionicons
             name="arrow-forward"
             size={14}
-            className="text-nileGreen-500 ml-1"
+            color={palette.nileGreen[500]}
+            style={{ marginLeft: 4 }}
           />
         </TouchableOpacity>
       </View>

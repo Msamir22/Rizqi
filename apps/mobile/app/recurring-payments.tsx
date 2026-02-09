@@ -3,10 +3,13 @@
  * Full list of recurring payments with status filtering
  */
 
+import { StarryBackground } from "@/components/ui/StarryBackground";
+import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
 import { database, RecurringPayment } from "@astik/db";
 import { formatCurrency } from "@astik/logic";
-import { Ionicons } from "@expo/vector-icons";
 import { Q } from "@nozbe/watermelondb";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -17,9 +20,6 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { PageHeader } from "@/components/navigation/PageHeader";
-import { palette } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
 
 // =============================================================================
 // Types
@@ -90,6 +90,7 @@ function StatusTabs({
   onTabChange,
   counts,
 }: StatusTabsProps): React.JSX.Element {
+  const { isDark } = useTheme();
   const tabs: StatusFilter[] = ["ACTIVE", "PAUSED", "COMPLETED"];
 
   return (
@@ -98,29 +99,24 @@ function StatusTabs({
         <TouchableOpacity
           key={tab}
           onPress={() => onTabChange(tab)}
-          className={`flex-1 py-3 rounded-2xl mr-2 last:mr-0 ${
+          className={`flex-1 py-2 rounded-xl mr-2 last:mr-0 ${
             activeTab === tab
               ? "bg-nileGreen-500"
-              : "bg-slate-200 dark:bg-slate-800"
+              : isDark
+                ? "bg-slate-800"
+                : "bg-slate-200"
           }`}
         >
           <Text
-            className={`text-center text-sm font-bold ${
+            className={`text-center text-sm font-semibold ${
               activeTab === tab
                 ? "text-white"
-                : "text-slate-600 dark:text-slate-400"
+                : isDark
+                  ? "text-slate-400"
+                  : "text-slate-600"
             }`}
           >
-            {tab.charAt(0) + tab.slice(1).toLowerCase()}
-          </Text>
-          <Text
-            className={`text-center text-[10px] font-medium mt-0.5 ${
-              activeTab === tab
-                ? "text-white/80"
-                : "text-slate-500 dark:text-slate-500"
-            }`}
-          >
-            {counts[tab]}
+            {tab.charAt(0) + tab.slice(1).toLowerCase()} ({counts[tab]})
           </Text>
         </TouchableOpacity>
       ))}
@@ -137,23 +133,36 @@ function HeroSummary({
   next7Days,
   thisMonth,
 }: HeroSummaryProps): React.JSX.Element {
+  const { isDark } = useTheme();
+  const containerClass = isDark
+    ? "bg-slate-800/70 border-slate-700"
+    : "bg-white/70 border-slate-200";
+
   return (
-    <View className="rounded-3xl border p-6 mb-6 bg-white/60 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700">
+    <View className={`rounded-2xl border p-4 mb-5 ${containerClass}`}>
       <View className="flex-row">
-        <View className="flex-1 items-center border-r border-slate-200 dark:border-slate-700 pr-4">
-          <Text className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">
+        <View className="flex-1 items-center border-r border-slate-600/30 pr-4">
+          <Text
+            className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}
+          >
             Next 7 days
           </Text>
-          <Text className="text-xl font-bold mt-1 text-slate-800 dark:text-white">
-            {formatCurrency({ amount: next7Days, currency: "EGP" })}
+          <Text
+            className={`text-xl font-bold mt-1 ${isDark ? "text-white" : "text-slate-800"}`}
+          >
+            {formatCurrency(next7Days, "EGP")}
           </Text>
         </View>
         <View className="flex-1 items-center pl-4">
-          <Text className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">
+          <Text
+            className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}
+          >
             This Month
           </Text>
-          <Text className="text-xl font-bold mt-1 text-slate-800 dark:text-white">
-            {formatCurrency({ amount: thisMonth, currency: "EGP" })}
+          <Text
+            className={`text-xl font-bold mt-1 ${isDark ? "text-white" : "text-slate-800"}`}
+          >
+            {formatCurrency(thisMonth, "EGP")}
           </Text>
         </View>
       </View>
@@ -175,25 +184,24 @@ function PaymentCard({
   const isOverdue = daysUntil < 0;
   const isIncome = payment.type === "INCOME";
 
+  const containerClass = isDark
+    ? "bg-slate-800/50 border-slate-700"
+    : "bg-white border-slate-200";
+
   return (
     <TouchableOpacity
       onPress={onPress}
-      className="flex-row items-center p-4 rounded-2xl border mb-3 bg-white dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 shadow-sm"
+      className={`flex-row items-center p-4 rounded-xl border mb-3 ${containerClass}`}
     >
       {/* Icon */}
       <View
-        className={`w-12 h-12 rounded-2xl items-center justify-center mr-4 ${
-          isIncome ? "bg-nileGreen-500/10" : "bg-slate-100 dark:bg-slate-700/50"
+        className={`w-12 h-12 rounded-full items-center justify-center mr-4 ${
+          isIncome ? "bg-nileGreen-500/20" : "bg-slate-700/50"
         }`}
       >
         <Ionicons
           name={getPaymentIcon(payment.name)}
           size={24}
-          className={
-            isIncome
-              ? "text-nileGreen-500"
-              : "text-slate-600 dark:text-slate-300"
-          }
           color={
             isIncome
               ? palette.nileGreen[500]
@@ -207,16 +215,18 @@ function PaymentCard({
       {/* Info */}
       <View className="flex-1">
         <Text
-          className="text-base font-bold text-slate-800 dark:text-white"
+          className={`text-base font-semibold ${isDark ? "text-white" : "text-slate-800"}`}
           numberOfLines={1}
         >
           {payment.name}
         </Text>
         <Text
-          className={`text-sm font-medium ${
+          className={`text-sm ${
             isOverdue
-              ? "text-red-500/80 dark:text-red-400/80"
-              : "text-slate-500 dark:text-slate-400"
+              ? "text-red-400"
+              : isDark
+                ? "text-slate-400"
+                : "text-slate-500"
           }`}
         >
           {getDueText(payment.nextDueDate)}
@@ -225,12 +235,16 @@ function PaymentCard({
 
       {/* Amount */}
       <Text
-        className={`text-base font-extrabold ${
-          isIncome ? "text-nileGreen-500" : "text-slate-800 dark:text-white"
+        className={`text-base font-bold ${
+          isIncome
+            ? "text-nileGreen-500"
+            : isDark
+              ? "text-white"
+              : "text-slate-800"
         }`}
       >
         {isIncome ? "+" : ""}
-        {formatCurrency({ amount: payment.amount, currency: "EGP" })}
+        {formatCurrency(payment.amount, "EGP")}
       </Text>
     </TouchableOpacity>
   );
@@ -304,10 +318,24 @@ export default function RecurringPaymentsScreen(): React.JSX.Element {
   };
 
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
-      <PageHeader title="My Bills" showBackButton={true} showDrawer={false} />
+    <StarryBackground>
+      <View className="flex-1 px-5" style={{ paddingTop: insets.top + 10 }}>
+        {/* Header */}
+        <View className="flex-row items-center mb-5">
+          <TouchableOpacity onPress={() => router.back()} className="mr-4">
+            <Ionicons
+              name="arrow-back"
+              size={24}
+              color={isDark ? "white" : palette.slate[800]}
+            />
+          </TouchableOpacity>
+          <Text
+            className={`text-2xl font-bold ${isDark ? "text-white" : "text-slate-800"}`}
+          >
+            My Bills
+          </Text>
+        </View>
 
-      <View className="flex-1 px-5 pt-4">
         {/* Hero Summary */}
         <HeroSummary next7Days={next7Days} thisMonth={thisMonth} />
 
@@ -360,6 +388,6 @@ export default function RecurringPaymentsScreen(): React.JSX.Element {
           <Ionicons name="add" size={28} color="white" />
         </TouchableOpacity>
       </View>
-    </View>
+    </StarryBackground>
   );
 }

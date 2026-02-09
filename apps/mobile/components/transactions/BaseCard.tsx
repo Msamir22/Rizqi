@@ -1,11 +1,15 @@
+import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
 import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
-import { cssInterop } from "react-native-css-interop";
-import {
+import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
+import Animated, {
   configureReanimatedLogger,
+  FadeInUp,
+  FadeOut,
   ReanimatedLogLevel,
 } from "react-native-reanimated";
 import { CategoryIcon, IconLibrary } from "../common/CategoryIcon";
@@ -13,13 +17,6 @@ import { CategoryIcon, IconLibrary } from "../common/CategoryIcon";
 configureReanimatedLogger({
   level: ReanimatedLogLevel.warn,
   strict: false,
-});
-
-cssInterop(Ionicons, {
-  className: {
-    target: "style",
-    nativeStyleToProp: { color: true },
-  },
 });
 
 interface BaseCardProps {
@@ -61,21 +58,54 @@ export function BaseCard({
   details,
   displayNetWorth,
   date,
+  index = 0,
+  onSwipeDelete,
   onCategoryPress,
   onAmountPress,
 }: BaseCardProps): React.JSX.Element {
+  const { isDark } = useTheme();
+
+  const renderRightActions = () => {
+    if (!onSwipeDelete) return null;
+
+    return (
+      <View
+        style={{
+          width: 80,
+          marginBottom: 8, // match mb-2 of card
+          marginRight: 16, // match mx-4 of card (right side)
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: palette.red[500],
+          borderTopRightRadius: 16,
+          borderBottomRightRadius: 16,
+        }}
+      >
+        <TouchableOpacity
+          onPress={() => onSwipeDelete(id)}
+          style={{
+            width: "100%",
+            height: "100%",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Ionicons name="trash-outline" size={24} color="white" />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   return (
     <TouchableOpacity
       activeOpacity={0.7}
       onPress={() => onPress(id)}
       onLongPress={() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(
-          console.error
-        );
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         onLongPress(id);
       }}
-      style={{ borderLeftColor: mainColor }}
-      className={`bg-white dark:bg-slate-800 rounded-2xl mb-2 mx-4 p-3 shadow-sm border-t border-r border-b border-slate-200 dark:border-slate-700 border-l-4 ${
+      style={{ borderLeftColor: mainColor, borderLeftWidth: 4 }}
+      className={`bg-white dark:bg-slate-800 rounded-2xl mb-2 mx-4 p-3 shadow-sm border-t border-r border-b border-slate-200 dark:border-slate-700 ${
         isSelected
           ? "border-nileGreen-500 bg-nileGreen-50 dark:bg-nileGreen-900/25"
           : ""
@@ -88,10 +118,12 @@ export function BaseCard({
             <Ionicons
               name={isSelected ? "checkbox" : "square-outline"}
               size={24}
-              className={
+              color={
                 isSelected
-                  ? "text-nileGreen-500"
-                  : "text-slate-400 dark:text-slate-500"
+                  ? palette.nileGreen[500]
+                  : isDark
+                    ? palette.slate[500]
+                    : palette.slate[400]
               }
             />
           </View>
@@ -116,7 +148,7 @@ export function BaseCard({
               <Ionicons
                 name="pencil"
                 size={8}
-                className="text-slate-500 dark:text-slate-400"
+                color={isDark ? palette.slate[400] : palette.slate[500]}
               />
             </View>
           )}
@@ -145,13 +177,7 @@ export function BaseCard({
                 {amount}
               </Text>
               {!isSelectionMode && onAmountPress && (
-                <View className="ml-1">
-                  <Ionicons
-                    name="pencil"
-                    size={10}
-                    style={{ color: mainColor }}
-                  />
-                </View>
+                <Ionicons name="pencil" size={10} color={mainColor} />
               )}
             </TouchableOpacity>
           </View>
@@ -193,10 +219,7 @@ export function BaseCard({
                   NW:{" "}
                 </Text>
                 <Text className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
-                  {formatCurrency({
-                    amount: displayNetWorth,
-                    currency: "EGP",
-                  })}
+                  {formatCurrency(displayNetWorth, "EGP")}
                 </Text>
               </View>
               <Text className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">

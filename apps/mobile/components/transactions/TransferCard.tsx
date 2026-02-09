@@ -1,13 +1,12 @@
-import { CurrencyType } from "@astik/db";
+import { palette } from "@/constants/colors";
 import { formatCurrency } from "@astik/logic";
 import React from "react";
-import { palette } from "@/constants/colors";
 import { BaseCard } from "./BaseCard";
 
 interface TransferCardProps {
   id: string;
   amount: number;
-  currency: CurrencyType;
+  currency: string;
   date: Date;
   fromAccountName: string;
   toAccountName: string;
@@ -30,19 +29,20 @@ export function TransferCard({
   displayNetWorth,
   isSelectionMode,
   isSelected,
-  index,
   onPress,
   onLongPress,
+  index,
   onSwipeDelete,
+  onCategoryPress,
+  onAmountPress,
 }: TransferCardProps & {
   index?: number;
   onSwipeDelete?: (id: string) => void;
+  onCategoryPress?: (id: string) => void;
+  onAmountPress?: (id: string) => void;
 }): React.JSX.Element {
   const mainColor = palette.blue[500];
-  const formattedAmount = formatCurrency({
-    amount: Math.abs(amount),
-    currency,
-  });
+  const formattedAmount = formatCurrency(Math.abs(amount), currency);
   const subtitle = `${fromAccountName} → ${toAccountName}`;
 
   return (

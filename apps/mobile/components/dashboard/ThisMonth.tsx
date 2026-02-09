@@ -6,6 +6,13 @@
  * Features: Filter chips for different time periods, dynamic title
  */
 
+import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
+import {
+  PERIOD_LABELS,
+  PeriodFilter,
+  usePeriodSummary,
+} from "@/hooks/usePeriodSummary";
 import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -18,13 +25,6 @@ import {
   View,
 } from "react-native";
 import Svg, { Circle } from "react-native-svg";
-import { palette } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
-import {
-  PERIOD_LABELS,
-  PeriodFilter,
-  usePeriodSummary,
-} from "@/hooks/usePeriodSummary";
 
 // =============================================================================
 // Constants
@@ -50,10 +50,10 @@ const FILTER_OPTIONS: PeriodFilter[] = [
 
 interface RingGaugeProps {
   percentage: number;
+  isDark: boolean;
 }
 
-function RingGauge({ percentage }: RingGaugeProps): React.JSX.Element {
-  const { isDark } = useTheme();
+function RingGauge({ percentage, isDark }: RingGaugeProps): React.JSX.Element {
   // Clamp percentage between 0 and 100
   const clampedPercentage = Math.min(100, Math.max(0, percentage));
   const strokeDashoffset =
@@ -91,10 +91,14 @@ function RingGauge({ percentage }: RingGaugeProps): React.JSX.Element {
       </Svg>
       {/* Center Text */}
       <View className="absolute items-center justify-center">
-        <Text className="text-lg font-bold text-slate-800 dark:text-slate-25">
+        <Text
+          className={`text-lg font-bold ${isDark ? "text-slate-25" : "text-slate-800"}`}
+        >
           {clampedPercentage}%
         </Text>
-        <Text className="text-[10px] font-medium mt-0.5 text-slate-500 dark:text-slate-400">
+        <Text
+          className={`text-[10px] font-medium mt-0.5 ${isDark ? "text-slate-400" : "text-slate-500"}`}
+        >
           Spent
         </Text>
       </View>
@@ -106,29 +110,33 @@ interface FilterChipProps {
   label: string;
   isSelected: boolean;
   onPress: () => void;
+  isDark: boolean;
 }
 
 function FilterChip({
   label,
   isSelected,
   onPress,
+  isDark,
 }: FilterChipProps): React.JSX.Element {
+  const bgClass = isSelected
+    ? "bg-nileGreen-500"
+    : isDark
+      ? "bg-slate-800 border border-slate-700"
+      : "bg-slate-100 border border-slate-200";
+
+  const textClass = isSelected
+    ? "text-white"
+    : isDark
+      ? "text-slate-300"
+      : "text-slate-600";
+
   return (
     <TouchableOpacity
       onPress={onPress}
-      className={`px-3 py-1.5 rounded-2xl border ${
-        isSelected
-          ? "bg-nileGreen-500 border-nileGreen-500"
-          : "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
-      }`}
+      className={`px-3 py-1.5 rounded-2xl ${bgClass}`}
     >
-      <Text
-        className={`text-xs font-semibold ${
-          isSelected ? "text-white" : "text-slate-600 dark:text-slate-300"
-        }`}
-      >
-        {label}
-      </Text>
+      <Text className={`text-xs font-semibold ${textClass}`}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -138,6 +146,7 @@ function FilterChip({
 // =============================================================================
 
 export function ThisMonth(): React.JSX.Element {
+  const { isDark } = useTheme();
   const [selectedPeriod, setSelectedPeriod] =
     useState<PeriodFilter>("this_month");
   const { data, isLoading } = usePeriodSummary(selectedPeriod);
@@ -148,11 +157,19 @@ export function ThisMonth(): React.JSX.Element {
 
   const title = PERIOD_LABELS[selectedPeriod];
 
+  const containerClass = isDark
+    ? "bg-slate-800/50 border-slate-700"
+    : "bg-slate-100/50 border-slate-200";
+
   return (
-    <View className="my-3 rounded-2xl border p-4 overflow-hidden bg-slate-100/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700">
+    <View
+      className={`my-3 rounded-2xl border p-4 overflow-hidden ${containerClass}`}
+    >
       {/* Header */}
       <View className="flex-row items-center justify-between mb-4">
-        <Text className="text-lg font-bold text-slate-800 dark:text-slate-25">
+        <Text
+          className={`text-lg font-bold ${isDark ? "text-slate-25" : "text-slate-800"}`}
+        >
           {title}
         </Text>
         <TouchableOpacity
@@ -180,49 +197,44 @@ export function ThisMonth(): React.JSX.Element {
       ) : (
         <View className="flex-row items-center mb-4">
           {/* Ring Gauge */}
-          <RingGauge percentage={data.spentPercentage} />
+          <RingGauge percentage={data.spentPercentage} isDark={isDark} />
 
           {/* Stats */}
           <View className="flex-1 ml-5 gap-2">
             {/* Income */}
             <View className="flex-row items-center">
-              <Text className="text-[13px] font-medium mr-1.5 text-slate-500 dark:text-slate-400">
+              <Text
+                className={`text-[13px] font-medium mr-1.5 ${isDark ? "text-slate-400" : "text-slate-500"}`}
+              >
                 Income:
               </Text>
               <Text className="text-sm font-semibold text-nileGreen-500">
-                {formatCurrency({
-                  amount: data.totalIncome,
-                  currency: "EGP",
-                })}{" "}
-                ↑
+                {formatCurrency(data.totalIncome, "EGP")} ↑
               </Text>
             </View>
 
             {/* Expenses */}
             <View className="flex-row items-center">
-              <Text className="text-[13px] font-medium mr-1.5 text-slate-500 dark:text-slate-400">
+              <Text
+                className={`text-[13px] font-medium mr-1.5 ${isDark ? "text-slate-400" : "text-slate-500"}`}
+              >
                 Expenses:
               </Text>
               <Text className="text-sm font-semibold text-red-500">
-                {formatCurrency({
-                  amount: data.totalExpenses,
-                  currency: "EGP",
-                })}{" "}
-                ↓
+                {formatCurrency(data.totalExpenses, "EGP")} ↓
               </Text>
             </View>
 
             {/* Saved */}
             <View className="flex-row items-center">
-              <Text className="text-[13px] font-medium mr-1.5 text-slate-500 dark:text-slate-400">
+              <Text
+                className={`text-[13px] font-medium mr-1.5 ${isDark ? "text-slate-400" : "text-slate-500"}`}
+              >
                 Saved:
               </Text>
               <Text className="text-sm font-semibold text-gold-600">
-                {formatCurrency({
-                  amount: data.savings,
-                  currency: "EGP",
-                })}{" "}
-                ({data.savingsPercentage}%) ✓
+                {formatCurrency(data.savings, "EGP")} ({data.savingsPercentage}
+                %) ✓
               </Text>
             </View>
           </View>
@@ -230,7 +242,9 @@ export function ThisMonth(): React.JSX.Element {
       )}
 
       {/* Divider Line */}
-      <View className="h-[1px] bg-slate-200 dark:bg-slate-700 -mx-4 mb-3" />
+      <View
+        className={`h-[1px] ${isDark ? "bg-slate-700" : "bg-slate-200"} -mx-4 mb-3`}
+      />
 
       {/* Filter Chips */}
       <ScrollView
@@ -245,6 +259,7 @@ export function ThisMonth(): React.JSX.Element {
             label={PERIOD_LABELS[filter]}
             isSelected={selectedPeriod === filter}
             onPress={() => setSelectedPeriod(filter)}
+            isDark={isDark}
           />
         ))}
       </ScrollView>

@@ -3,8 +3,10 @@
  * Slide-out navigation menu with profile header and sectioned menu
  */
 
+import { palette } from "@/constants/colors";
+import { useAuth } from "@/context/AuthContext";
+import { useTheme } from "@/context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React from "react";
 import {
@@ -18,9 +20,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { palette } from "@/constants/colors";
-import { useAuth } from "@/context/AuthContext";
-import { useTheme } from "@/context/ThemeContext";
+import { LinearGradient } from "expo-linear-gradient";
 
 // =============================================================================
 // Types
@@ -138,6 +138,11 @@ export function AppDrawer({
     await signOut();
   };
 
+  const containerBg = isDark ? "bg-slate-900" : "bg-white";
+  const textColor = isDark ? "text-white" : "text-slate-800";
+  const mutedText = isDark ? "text-slate-400" : "text-slate-500";
+  const sectionTitle = isDark ? "text-slate-500" : "text-slate-400";
+
   return (
     <Modal
       visible={visible}
@@ -156,7 +161,7 @@ export function AppDrawer({
           }}
         >
           <Pressable
-            className="flex-1 bg-white dark:bg-slate-900"
+            className={`flex-1 ${containerBg}`}
             style={{ paddingTop: insets.top }}
           >
             {/* Header with gradient */}
@@ -183,7 +188,9 @@ export function AppDrawer({
             <View className="flex-1 p-4">
               {MENU_SECTIONS.map((section) => (
                 <View key={section.title} className="mb-4">
-                  <Text className="text-xs font-semibold mb-2 text-slate-400 dark:text-slate-500">
+                  <Text
+                    className={`text-xs font-semibold mb-2 ${sectionTitle}`}
+                  >
                     {section.title}
                   </Text>
                   {section.items.map((item) => (
@@ -197,7 +204,7 @@ export function AppDrawer({
                         size={22}
                         color={isDark ? palette.slate[300] : palette.slate[600]}
                       />
-                      <Text className="ml-4 text-base text-slate-800 dark:text-white">
+                      <Text className={`ml-4 text-base ${textColor}`}>
                         {item.label}
                       </Text>
                     </TouchableOpacity>
@@ -208,7 +215,7 @@ export function AppDrawer({
 
             {/* Settings section */}
             <View
-              className="border-t p-4 border-slate-200 dark:border-slate-800"
+              className={`border-t p-4 ${isDark ? "border-slate-800" : "border-slate-200"}`}
               style={{ paddingBottom: insets.bottom + 16 }}
             >
               {/* Dark mode toggle */}
@@ -219,7 +226,7 @@ export function AppDrawer({
                     size={22}
                     color={isDark ? palette.slate[300] : palette.slate[600]}
                   />
-                  <Text className="ml-4 text-base text-slate-800 dark:text-white">
+                  <Text className={`ml-4 text-base ${textColor}`}>
                     Dark Mode
                   </Text>
                 </View>
