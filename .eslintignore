@@ -19,3 +19,12 @@ coverage/
 .DS_Store
 *.min.js
 *.bundle.js
+
+# Supabase
+supabase/functions/
+
+# Scripts
+scripts/
+
+
+packages/db/src/supabase-types.ts

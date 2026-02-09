@@ -6,7 +6,8 @@
     "sourceType": "module",
     "ecmaFeatures": {
       "jsx": true
-    }
+    },
+    "project": true
   },
   "env": {
     "browser": true,
@@ -22,7 +23,6 @@
     "plugin:import/typescript",
     "plugin:react/recommended",
     "plugin:react-hooks/recommended",
-    "plugin:react-native/all",
     "prettier"
   ],
   "plugins": [
@@ -93,7 +93,7 @@
     // `parseInt()`.
     "radix": ["error"],
     // Enforces consistent spacing after the `//` or `/*` in a comment.
-    "spaced-comment": ["error", "always", { "block": { "balanced": true } }],
+    "spaced-comment": ["error", "always", { "markers": ["/"] }],
 
     // Requires using either T[] or Array<T> for arrays.
     "@typescript-eslint/array-type": [
@@ -119,11 +119,7 @@
         "allowExpressions": true
       }
     ],
-    // Require explicit accessibility modifiers on class properties and methods.
-    "@typescript-eslint/explicit-member-accessibility": [
-      "error",
-      { "accessibility": "explicit" }
-    ],
+
     // Require explicit return and argument types on exported functions' and
     // classes' public class methods.
     "@typescript-eslint/explicit-module-boundary-types": "error",
@@ -150,7 +146,7 @@
       },
       {
         "selector": "function",
-        "format": ["camelCase"]
+        "format": ["camelCase", "PascalCase"]
       },
       {
         "selector": "interface",
@@ -187,37 +183,48 @@
     // Warns for any two overloads that could be unified into one by using a
     // union or an optional/rest parameter.
     "@typescript-eslint/unified-signatures": "warn",
-
-    // Enforce a convention in the order of require() / import statements.
-    // (Import members handled by `sort-imports`.)
-    "import/order": [
-      "error",
-      {
-        "alphabetize": { "order": "asc", "caseInsensitive": true },
-        "groups": [
-          ["builtin", "external"],
-          "internal",
-          "parent",
-          "sibling",
-          "index"
-        ]
-      }
-    ],
-    // Only used to sort the members, not the declarations. (Declarations
-    // handled by `import/order`.)
-    "sort-imports": [
-      "error",
-      {
-        "ignoreCase": true,
-        "ignoreDeclarationSort": true
-      }
-    ]
+    "@typescript-eslint/no-floating-promises": "warn",
+    "@typescript-eslint/no-misused-promises": "warn",
+    "@typescript-eslint/await-thenable": "error",
+    "@typescript-eslint/no-unnecessary-type-assertion": "warn",
+    "@typescript-eslint/restrict-template-expressions": "error",
+    "@typescript-eslint/restrict-plus-operands": "error"
   },
   "settings": {
-    "import/resolver": { "typescript": { "project": ["tsconfig.json"] } },
+    "import/resolver": {
+      "typescript": {
+        "project": [
+          "tsconfig.json",
+          "apps/*/tsconfig.json",
+          "packages/*/tsconfig.json"
+        ]
+      }
+    },
     "react": {
       "version": "detect"
     }
   },
-  "ignorePatterns": ["node_modules", "dist", "build", ".nx", "*.min.js"]
+  "ignorePatterns": ["node_modules", "dist", "build", ".nx", "*.min.js"],
+  "overrides": [
+    {
+      "files": ["apps/mobile/**/*.tsx", "apps/mobile/**/*.ts"],
+      "rules": {
+        "no-restricted-syntax": [
+          "warn",
+          {
+            "selector": "ConditionalExpression[test.name='isDark']",
+            "message": "Avoid using 'isDark' in ternary expressions for styling in JSX. Prefer Tailwind 'dark:' variants to keep components declarative and clean."
+          },
+          {
+            "selector": "JSXAttribute[name.name='color'] > Literal[value=/^#([A-Fa-f0-9]{3}){1,2}$/], JSXAttribute[name.name='shadowColor'] > Literal[value=/^#([A-Fa-f0-9]{3}){1,2}$/]",
+            "message": "Avoid hardcoded hex colors in JSX attributes. Use the project palette constants from '@/constants/colors' or Tailwind classes."
+          },
+          {
+            "selector": "VariableDeclarator > Literal[value=/^#([A-Fa-f0-9]{3}){1,2}$/]:not([id.name=/^[A-Z0-9_]+$/])",
+            "message": "Avoid hardcoded hex colors. If you must use a hex color, define it as a constant or use the project palette from '@/constants/colors'."
+          }
+        ]
+      }
+    }
+  ]
 }
