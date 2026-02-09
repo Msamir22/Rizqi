@@ -1,9 +1,29 @@
-import { palette } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
-import { formatTimeAgo } from "@/utils/dateHelpers";
 import { MarketRate } from "@astik/db";
-import { FontAwesome5, MaterialIcons, Ionicons } from "@expo/vector-icons";
+import { FontAwesome5, Ionicons, MaterialIcons } from "@expo/vector-icons";
+import React from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
+import { cssInterop } from "react-native-css-interop";
+import { palette } from "@/constants/colors";
+import { formatTimeAgo } from "@/utils/dateHelpers";
+
+cssInterop(FontAwesome5, {
+  className: {
+    target: "style",
+    nativeStyleToProp: { color: true },
+  },
+});
+cssInterop(MaterialIcons, {
+  className: {
+    target: "style",
+    nativeStyleToProp: { color: true },
+  },
+});
+cssInterop(Ionicons, {
+  className: {
+    target: "style",
+    nativeStyleToProp: { color: true },
+  },
+});
 
 interface Rate {
   id: string;
@@ -91,44 +111,42 @@ function buildRatesDisplay(
   ];
 }
 
+/**
+ * Helper to get the correct icon for a rate pill
+ */
+function getPillIcon(
+  type: Rate["type"],
+  className?: string
+): React.ReactElement | null {
+  switch (type) {
+    case "currency":
+      return <Text className="text-sm">🇺🇸</Text>;
+    case "gold":
+      return <FontAwesome5 name="coins" size={14} className={className} />;
+    case "silver":
+      return (
+        <FontAwesome5 name="coins" size={12} className={className} solid />
+      );
+    default:
+      return null;
+  }
+}
+
 export function LiveRates({
   latestRates,
   previousDayRate,
   isLoading = false,
   lastUpdated,
   isStale,
-}: LiveRatesProps): React.JSX.Element {
-  const { mode } = useTheme();
-  const isDark = mode === "dark";
-
+}: LiveRatesProps): React.ReactElement {
   const ratesDisplay = buildRatesDisplay(latestRates, previousDayRate);
-
-  const getIconColor = (type: Rate["type"]): string => {
-    switch (type) {
-      case "currency":
-        return isDark ? palette.slate[400] : palette.slate[600];
-      case "gold":
-        return isDark ? palette.gold[400] : palette.gold[600];
-      case "silver":
-        return isDark ? palette.slate[400] : palette.silver[500];
-    }
-  };
-
-  const getIcon = (type: Rate["type"], color: string): React.JSX.Element => {
-    switch (type) {
-      case "currency":
-        return <Text className="text-sm">🇺🇸</Text>;
-      case "gold":
-        return <FontAwesome5 name="coins" size={14} color={color} />;
-      case "silver":
-        return <FontAwesome5 name="coins" size={12} color={color} solid />;
-    }
-  };
 
   return (
     <View className="my-3">
       <View className="mb-3 flex-row items-center">
-        <Text className="header-text ml-1">Live Rates</Text>
+        <Text className="header-text ml-1 text-slate-800 dark:text-slate-50">
+          Live Rates
+        </Text>
         {isLoading && (
           <ActivityIndicator
             size="small"
@@ -141,7 +159,7 @@ export function LiveRates({
             <Ionicons
               name="alert-circle-outline"
               size={16}
-              color={palette.orange[500]}
+              className="text-orange-500"
             />
           </View>
         )}
@@ -153,13 +171,21 @@ export function LiveRates({
       >
         {ratesDisplay.map((rate) => {
           const config = pillConfig[rate.type];
-          const iconColor = getIconColor(rate.type);
+          const iconClassName =
+            rate.type === "gold"
+              ? "text-gold-600 dark:text-gold-400"
+              : rate.type === "silver"
+                ? "text-slate-500 dark:text-slate-400"
+                : "text-slate-600 dark:text-slate-400";
+
           return (
             <View
               key={rate.id}
               className={`flex-row items-center rounded-full px-3 py-2 ${config.container}`}
             >
-              <View className="mr-1.5">{getIcon(rate.type, iconColor)}</View>
+              <View className="mr-1.5">
+                {getPillIcon(rate.type, iconClassName)}
+              </View>
 
               <Text className={`mr-1 text-[13px] font-medium ${config.label}`}>
                 {rate.label}:
@@ -174,10 +200,8 @@ export function LiveRates({
                     rate.trend === "up" ? "arrow-drop-up" : "arrow-drop-down"
                   }
                   size={22}
-                  color={
-                    rate.trend === "up"
-                      ? palette.nileGreen[500]
-                      : palette.red[500]
+                  className={
+                    rate.trend === "up" ? "text-nileGreen-500" : "text-red-500"
                   }
                   style={{ marginLeft: 2, marginRight: -4 }}
                 />

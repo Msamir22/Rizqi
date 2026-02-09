@@ -1,9 +1,7 @@
-import { palette } from "@/constants/colors";
 import { formatCurrency } from "@astik/logic";
 import { BlurView } from "expo-blur";
 import React from "react";
-import { Platform, useColorScheme, View, Text } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Platform, Text, useColorScheme, View } from "react-native";
 
 interface GroupHeaderProps {
   title: string;
@@ -44,12 +42,20 @@ export function GroupHeader({
             <View className="flex-row items-center gap-2 mb-0.5">
               {income > 0 && (
                 <Text className="text-[11px] text-nileGreen-600 dark:text-nileGreen-400 font-semibold">
-                  +{formatCurrency(income, "EGP")}
+                  +
+                  {formatCurrency({
+                    amount: income,
+                    currency: "EGP",
+                  })}
                 </Text>
               )}
               {expense > 0 && (
                 <Text className="text-[11px] text-red-500 dark:text-red-400 font-semibold">
-                  -{formatCurrency(expense, "EGP")}
+                  -
+                  {formatCurrency({
+                    amount: expense,
+                    currency: "EGP",
+                  })}
                 </Text>
               )}
             </View>
@@ -59,7 +65,10 @@ export function GroupHeader({
           <Text className="text-[10px] text-slate-400 dark:text-slate-500">
             Bal:{" "}
             <Text className="text-slate-600 dark:text-slate-300 font-medium">
-              {formatCurrency(netWorth, "EGP")}
+              {formatCurrency({
+                amount: netWorth,
+                currency: "EGP",
+              })}
             </Text>
           </Text>
         </View>

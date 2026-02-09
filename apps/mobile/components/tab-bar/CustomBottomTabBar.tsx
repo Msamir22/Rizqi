@@ -1,6 +1,5 @@
 import { palette } from "@/constants/colors";
 import { MIC_BUTTON_SIZE, TAB_BAR_HEIGHT } from "@/constants/ui";
-import { useTheme } from "@/context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { BlurView } from "expo-blur";
@@ -44,13 +43,10 @@ const TAB_LABELS: Record<string, string> = {
  */
 const TAB_ORDER = ["index", "accounts", "__mic__", "transactions", "metals"];
 
-interface CustomBottomTabBarProps extends BottomTabBarProps {}
-
 function CustomBottomTabBarComponent({
   state,
   navigation,
-}: CustomBottomTabBarProps): React.ReactElement {
-  const { isDark } = useTheme();
+}: BottomTabBarProps): React.ReactElement {
   const insets = useSafeAreaInsets();
 
   // Calculate safe bottom padding
@@ -77,12 +73,6 @@ function CustomBottomTabBarComponent({
     const isFocused = state.index === routeIndex;
     const iconConfig = TAB_ICON_CONFIG[routeName];
     const label = TAB_LABELS[routeName] || routeName;
-
-    const color = isFocused
-      ? palette.nileGreen[500]
-      : isDark
-        ? palette.slate[400]
-        : palette.slate[500];
 
     const onPress = (): void => {
       const event = navigation.emit({
@@ -117,7 +107,6 @@ function CustomBottomTabBarComponent({
         <TabIcon
           config={iconConfig}
           focused={isFocused}
-          color={color}
           size={24}
           label={label}
         />
@@ -133,11 +122,33 @@ function CustomBottomTabBarComponent({
         style={{ paddingBottom: bottomPadding, height: tabBarHeight }}
       >
         <BlurView
-          intensity={isDark ? 60 : 80}
-          tint={isDark ? "systemThinMaterialDark" : "light"}
-          className="flex-1 overflow-hidden rounded-t-3xl"
+          intensity={80}
+          tint="light"
+          className="flex-1 overflow-hidden rounded-t-3xl dark:hidden"
         >
-          <View className="flex-1 flex-row items-center bg-tabBar-bgLight dark:bg-tabBar-bgDark">
+          <View className="flex-1 flex-row items-center bg-white/80">
+            {/* Left tabs: Home, Accounts */}
+            <View className="flex-1 flex-row">
+              {TAB_ORDER.slice(0, 2).map((routeName) =>
+                renderTabItem(routeName)
+              )}
+            </View>
+
+            {/* Center: Mic button placeholder */}
+            <View style={{ width: MIC_BUTTON_SIZE + 16 }} />
+
+            {/* Right tabs: Transactions, Metals */}
+            <View className="flex-1 flex-row">
+              {TAB_ORDER.slice(3).map((routeName) => renderTabItem(routeName))}
+            </View>
+          </View>
+        </BlurView>
+        <BlurView
+          intensity={60}
+          tint="dark"
+          className="hidden dark:flex flex-1 overflow-hidden rounded-t-3xl"
+        >
+          <View className="flex-1 flex-row items-center bg-slate-900/80">
             {/* Left tabs: Home, Accounts */}
             <View className="flex-1 flex-row">
               {TAB_ORDER.slice(0, 2).map((routeName) =>

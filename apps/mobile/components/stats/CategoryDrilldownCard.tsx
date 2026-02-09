@@ -4,15 +4,15 @@
  * L1 → L2 → L3 navigation with breadcrumbs
  */
 
-import { palette } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
 import { Category, database, Transaction } from "@astik/db";
 import { formatCurrency } from "@astik/logic";
-import { Q } from "@nozbe/watermelondb";
 import { Ionicons } from "@expo/vector-icons";
+import { Q } from "@nozbe/watermelondb";
 import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 import { PieChart } from "react-native-gifted-charts";
+import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
 
 // =============================================================================
 // Types
@@ -150,7 +150,10 @@ function CategoryListItem({
       <Text
         className={`text-sm font-semibold mr-2 ${isDark ? "text-slate-300" : "text-slate-600"}`}
       >
-        {formatCurrency(category.amount, "EGP")}
+        {formatCurrency({
+          amount: category.amount,
+          currency: "EGP",
+        })}
       </Text>
       <Text
         className={`text-xs ${isDark ? "text-slate-500" : "text-slate-400"}`}
@@ -274,7 +277,7 @@ export function CategoryDrilldownCard(): React.JSX.Element {
       if (!tx.categoryId) return;
 
       // Find the appropriate category at current level
-      let catId = tx.categoryId;
+      const catId = tx.categoryId;
       let cat = categoryMap.get(catId);
 
       // Walk up the hierarchy to find the category at current level
@@ -419,7 +422,10 @@ export function CategoryDrilldownCard(): React.JSX.Element {
                   <Text
                     className={`text-sm font-bold ${isDark ? "text-white" : "text-slate-800"}`}
                   >
-                    {formatCurrency(totalAmount, "EGP")}
+                    {formatCurrency({
+                      amount: totalAmount,
+                      currency: "EGP",
+                    })}
                   </Text>
                 </View>
               )}

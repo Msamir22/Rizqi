@@ -6,18 +6,10 @@
  * Features: Pay Now opens modal with editable amount, creates transaction directly
  */
 
-import { palette } from "@/constants/colors";
-import { useToast } from "@/components/ui/Toast";
-import { useTheme } from "@/context/ThemeContext";
-import { useAccounts } from "@/hooks/useAccounts";
-import {
-  UpcomingPayment,
-  useUpcomingPayments,
-} from "@/hooks/useUpcomingPayments";
-import { createTransaction } from "@/utils/transactions";
 import { database, RecurringPayment } from "@astik/db";
 import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -31,7 +23,14 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import { router } from "expo-router";
+import { useToast } from "@/components/ui/Toast";
+import { palette } from "@/constants/colors";
+import { useAccounts } from "@/hooks/useAccounts";
+import { createTransaction } from "@/hooks/useTransactions";
+import {
+  UpcomingPayment,
+  useUpcomingPayments,
+} from "@/hooks/useUpcomingPayments";
 
 // =============================================================================
 // Types
@@ -139,7 +138,6 @@ function PayNowModal({
   onClose,
   onSuccess,
 }: PayNowModalProps): React.JSX.Element | null {
-  const { isDark } = useTheme();
   const { accounts } = useAccounts();
   const [amount, setAmount] = useState<string>("");
   const [selectedAccountId, setSelectedAccountId] = useState<string>("");
@@ -159,14 +157,6 @@ function PayNowModal({
 
   const selectedAccount = accounts.find((a) => a.id === selectedAccountId);
 
-  const containerClass = isDark
-    ? "bg-slate-800 border-slate-700"
-    : "bg-white border-slate-200";
-
-  const inputClass = isDark
-    ? "bg-slate-700 border-slate-600 text-white"
-    : "bg-slate-100 border-slate-200 text-slate-800";
-
   const handleConfirm = async (): Promise<void> => {
     const numericAmount = parseFloat(amount);
     if (isNaN(numericAmount) || numericAmount <= 0) {
@@ -184,6 +174,7 @@ function PayNowModal({
         accountId: selectedAccountId,
         note: `Payment for ${payment.name}`,
         type: "EXPENSE",
+        source: "MANUAL",
         date: new Date(),
       });
 
@@ -212,71 +203,56 @@ function PayNowModal({
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View className="flex-1 bg-black/50 items-center justify-center px-5">
-          <View
-            className={`w-full max-w-[340px] rounded-[20px] border p-6 ${containerClass}`}
-          >
+          <View className="w-full max-w-[340px] rounded-[20px] border p-6 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
             {/* Header */}
-            <Text
-              className={`text-lg font-bold text-center mb-5 ${isDark ? "text-slate-25" : "text-slate-800"}`}
-            >
+            <Text className="text-lg font-bold text-center mb-5 text-slate-800 dark:text-slate-25">
               Pay {payment.name}
             </Text>
 
             {/* Amount Input */}
             <View className="mb-4">
-              <Text
-                className={`text-sm font-medium mb-2 ${isDark ? "text-slate-400" : "text-slate-500"}`}
-              >
+              <Text className="text-sm font-medium mb-2 text-slate-500 dark:text-slate-400">
                 Amount (EGP)
               </Text>
               <TextInput
                 value={amount}
                 onChangeText={setAmount}
                 keyboardType="decimal-pad"
-                className={`px-4 py-3 rounded-xl border text-lg font-semibold ${inputClass}`}
+                className="px-4 py-3 rounded-xl border text-lg font-semibold bg-slate-100 dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white"
                 placeholder="0.00"
-                placeholderTextColor={
-                  isDark ? palette.slate[500] : palette.slate[400]
-                }
+                placeholderTextColor={palette.slate[400]}
               />
             </View>
 
             {/* Account Selector */}
             <View className="mb-4">
-              <Text
-                className={`text-sm font-medium mb-2 ${isDark ? "text-slate-400" : "text-slate-500"}`}
-              >
+              <Text className="text-sm font-medium mb-2 text-slate-500 dark:text-slate-400">
                 Deduct from
               </Text>
               <TouchableOpacity
                 onPress={() => setShowAccountPicker(!showAccountPicker)}
-                className={`px-4 py-3 rounded-xl border flex-row items-center justify-between ${inputClass}`}
+                className="px-4 py-3 rounded-xl border flex-row items-center justify-between bg-slate-100 dark:bg-slate-700 border-slate-200 dark:border-slate-600"
               >
                 <View className="flex-row items-center">
                   <Ionicons
                     name="wallet-outline"
                     size={18}
-                    color={isDark ? palette.slate[400] : palette.slate[500]}
-                    style={{ marginRight: 8 }}
+                    className="text-slate-500 mr-2"
                   />
-                  <Text
-                    className={`text-base font-medium ${isDark ? "text-white" : "text-slate-800"}`}
-                  >
+                  <Text className="text-base font-medium text-slate-800 dark:text-white">
                     {selectedAccount?.name || "Select account"}
                   </Text>
                 </View>
                 <Ionicons
                   name={showAccountPicker ? "chevron-up" : "chevron-down"}
                   size={18}
-                  color={isDark ? palette.slate[400] : palette.slate[500]}
+                  className="text-slate-500"
                 />
               </TouchableOpacity>
 
               {/* Account Picker Dropdown */}
               {showAccountPicker && (
-                <View
-                  className={`mt-2 rounded-xl border overflow-hidden ${isDark ? "bg-slate-700 border-slate-600" : "bg-slate-50 border-slate-200"}`}
-                >
+                <View className="mt-2 rounded-xl border overflow-hidden bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600">
                   <ScrollView style={{ maxHeight: 150 }}>
                     {accounts.map((account) => (
                       <TouchableOpacity
@@ -285,27 +261,25 @@ function PayNowModal({
                           setSelectedAccountId(account.id);
                           setShowAccountPicker(false);
                         }}
-                        className={`px-4 py-3 flex-row items-center justify-between border-b ${
-                          isDark ? "border-slate-600" : "border-slate-200"
-                        } ${account.id === selectedAccountId ? (isDark ? "bg-nileGreen-800/30" : "bg-nileGreen-50") : ""}`}
+                        className={`px-4 py-3 flex-row items-center justify-between border-b border-slate-200 dark:border-slate-600 ${
+                          account.id === selectedAccountId
+                            ? "bg-nileGreen-50 dark:bg-nileGreen-800/30"
+                            : ""
+                        }`}
                       >
                         <View className="flex-1">
-                          <Text
-                            className={`text-sm font-medium ${isDark ? "text-white" : "text-slate-800"}`}
-                          >
+                          <Text className="text-sm font-medium text-slate-800 dark:text-white">
                             {account.name}
                           </Text>
-                          <Text
-                            className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}
-                          >
-                            {formatCurrency(account.balance, account.currency)}
+                          <Text className="text-xs text-slate-500 dark:text-slate-400">
+                            {account.formattedBalance}
                           </Text>
                         </View>
                         {account.id === selectedAccountId && (
                           <Ionicons
                             name="checkmark-circle"
                             size={20}
-                            color={palette.nileGreen[500]}
+                            className="text-nileGreen-500"
                           />
                         )}
                       </TouchableOpacity>
@@ -318,25 +292,26 @@ function PayNowModal({
             {/* Payment Info */}
             <View className="gap-2 mb-4">
               <View className="flex-row justify-between items-center">
-                <Text
-                  className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}
-                >
+                <Text className="text-sm text-slate-500 dark:text-slate-400">
                   Original amount:
                 </Text>
-                <Text
-                  className={`text-sm ${isDark ? "text-slate-300" : "text-slate-600"}`}
-                >
-                  {formatCurrency(payment.amount, "EGP")}
+                <Text className="text-sm text-slate-600 dark:text-slate-300">
+                  {formatCurrency({
+                    amount: payment.amount,
+                    currency: "EGP",
+                  })}
                 </Text>
               </View>
               <View className="flex-row justify-between items-center">
-                <Text
-                  className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}
-                >
+                <Text className="text-sm text-slate-500 dark:text-slate-400">
                   Due:
                 </Text>
                 <Text
-                  className={`text-sm font-semibold ${payment.daysUntilDue <= 0 ? "text-red-500" : isDark ? "text-slate-25" : "text-slate-800"}`}
+                  className={`text-sm font-semibold ${
+                    payment.daysUntilDue <= 0
+                      ? "text-red-500"
+                      : "text-slate-800 dark:text-slate-25"
+                  }`}
                 >
                   {formatDueDate(payment.daysUntilDue)}
                 </Text>
@@ -344,9 +319,7 @@ function PayNowModal({
             </View>
 
             {/* Info text */}
-            <Text
-              className={`text-xs text-center mb-5 leading-[18px] ${isDark ? "text-slate-400" : "text-slate-500"}`}
-            >
+            <Text className="text-xs text-center mb-5 leading-[18px] text-slate-500 dark:text-slate-400">
               This will create a transaction and update your account balance.
             </Text>
 
@@ -355,11 +328,9 @@ function PayNowModal({
               <TouchableOpacity
                 onPress={onClose}
                 disabled={isSubmitting}
-                className={`flex-1 py-3 rounded-xl border items-center ${isDark ? "border-slate-700" : "border-slate-300"}`}
+                className="flex-1 py-3 rounded-xl border items-center border-slate-300 dark:border-slate-700"
               >
-                <Text
-                  className={`text-sm font-semibold ${isDark ? "text-slate-300" : "text-slate-600"}`}
-                >
+                <Text className="text-sm font-semibold text-slate-600 dark:text-slate-300">
                   Cancel
                 </Text>
               </TouchableOpacity>
@@ -387,13 +358,11 @@ function PayNowModal({
 interface FeaturedPaymentCardProps {
   payment: UpcomingPayment;
   onPayNow: () => void;
-  isDark: boolean;
 }
 
 function FeaturedPaymentCard({
   payment,
   onPayNow,
-  isDark,
 }: FeaturedPaymentCardProps): React.JSX.Element {
   const dueText = formatDueDate(payment.daysUntilDue);
   const iconName = getPaymentIcon(payment.name);
@@ -402,21 +371,10 @@ function FeaturedPaymentCard({
     payment.daysUntilDue <= 3 ? "text-red-400" : "text-nileGreen-400";
 
   return (
-    <View
-      className="flex-1 rounded-2xl p-4 items-center border-2 border-nileGreen-600/50"
-      style={{
-        backgroundColor: `${palette.slate[800]}E6`,
-        // Subtle glow effect
-        shadowColor: palette.nileGreen[500],
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.3,
-        shadowRadius: 12,
-        elevation: 8,
-      }}
-    >
+    <View className="flex-1 rounded-2xl p-4 items-center border-2 border-nileGreen-600/50 bg-slate-800/90 shadow-lg shadow-nileGreen-500/30">
       {/* Large Icon in Circle */}
       <View className="w-16 h-16 rounded-full items-center justify-center mb-3 bg-nileGreen-800/50 border border-nileGreen-600">
-        <Ionicons name={iconName} size={32} color={palette.nileGreen[400]} />
+        <Ionicons name={iconName} size={32} className="text-nileGreen-400" />
       </View>
 
       {/* Name */}
@@ -429,7 +387,10 @@ function FeaturedPaymentCard({
 
       {/* Amount */}
       <Text className="text-xl font-bold text-nileGreen-400 mb-1">
-        {formatCurrency(payment.amount, "EGP")}
+        {formatCurrency({
+          amount: payment.amount,
+          currency: "EGP",
+        })}
       </Text>
 
       {/* Days until due */}
@@ -449,13 +410,9 @@ function FeaturedPaymentCard({
 
 interface MiniPaymentItemProps {
   payment: UpcomingPayment;
-  isDark: boolean;
 }
 
-function MiniPaymentItem({
-  payment,
-  isDark,
-}: MiniPaymentItemProps): React.JSX.Element {
+function MiniPaymentItem({ payment }: MiniPaymentItemProps): React.JSX.Element {
   const dueText = formatDueDate(payment.daysUntilDue);
   const iconName = getPaymentIcon(payment.name);
 
@@ -463,17 +420,10 @@ function MiniPaymentItem({
     payment.daysUntilDue <= 3 ? "text-red-400" : "text-slate-400";
 
   return (
-    <View
-      className="flex-row items-center rounded-xl p-3"
-      style={{
-        backgroundColor: `${palette.slate[800]}CC`,
-        borderWidth: 1,
-        borderColor: palette.slate[700],
-      }}
-    >
+    <View className="flex-row items-center rounded-xl p-3 bg-slate-800/80 border border-slate-700">
       {/* Icon */}
       <View className="w-10 h-10 rounded-lg items-center justify-center mr-3 bg-slate-700/50">
-        <Ionicons name={iconName} size={20} color={palette.nileGreen[400]} />
+        <Ionicons name={iconName} size={20} className="text-nileGreen-400" />
       </View>
 
       {/* Content */}
@@ -492,41 +442,36 @@ function MiniPaymentItem({
         <Ionicons
           name="chevron-forward"
           size={14}
-          color={palette.nileGreen[400]}
+          className="text-nileGreen-400"
         />
       </View>
     </View>
   );
 }
 
-function EmptyState({ isDark }: { isDark: boolean }): React.JSX.Element {
-  return (
-    <View className="py-6 items-center justify-center">
-      <Ionicons
-        name="checkmark-circle-outline"
-        size={32}
-        color={palette.nileGreen[500]}
-      />
-      <Text
-        className={`text-sm font-semibold mt-2 ${isDark ? "text-slate-300" : "text-slate-600"}`}
-      >
-        No upcoming bills
-      </Text>
-      <Text
-        className={`text-xs text-center mt-1 ${isDark ? "text-slate-500" : "text-slate-400"}`}
-      >
-        Add recurring payments to track them here
-      </Text>
-    </View>
-  );
-}
+// function EmptyState(): React.JSX.Element {
+//   return (
+//     <View className="py-6 items-center justify-center">
+//       <Ionicons
+//         name="checkmark-circle-outline"
+//         size={32}
+//         className="text-nileGreen-500"
+//       />
+//       <Text className="text-sm font-semibold mt-2 text-slate-600 dark:text-slate-300">
+//         No upcoming bills
+//       </Text>
+//       <Text className="text-xs text-center mt-1 text-slate-400 dark:text-slate-500">
+//         Add recurring payments to track them here
+//       </Text>
+//     </View>
+//   );
+// }
 
 // =============================================================================
 // Main Component
 // =============================================================================
 
 export function UpcomingPayments(): React.JSX.Element {
-  const { isDark } = useTheme();
   const { showToast } = useToast();
   const { payments, totalDueThisMonth, isLoading, refetch } =
     useUpcomingPayments(5);
@@ -544,7 +489,10 @@ export function UpcomingPayments(): React.JSX.Element {
     showToast({
       type: "success",
       title: "Payment Recorded",
-      message: `${selectedPayment?.name} - ${formatCurrency(amount, "EGP")}`,
+      message: `${selectedPayment?.name} - ${formatCurrency({
+        amount,
+        currency: "EGP",
+      })}`,
       duration: 3500,
     });
   };
@@ -562,19 +510,11 @@ export function UpcomingPayments(): React.JSX.Element {
     return <></>;
   }
 
-  const containerClass = isDark
-    ? "bg-slate-800/50 border-slate-700"
-    : "bg-slate-100/50 border-slate-200";
-
   return (
-    <View
-      className={`mt-3 mb-6 rounded-2xl border p-4 overflow-hidden ${containerClass}`}
-    >
+    <View className="mt-3 mb-6 rounded-2xl border p-4 overflow-hidden bg-slate-100/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700">
       {/* Header */}
       <View className="flex-row items-center justify-between mb-3">
-        <Text
-          className={`text-lg font-bold ${isDark ? "text-slate-25" : "text-slate-800"}`}
-        >
+        <Text className="text-lg font-bold text-slate-800 dark:text-slate-25">
           Upcoming Bills
         </Text>
         <TouchableOpacity
@@ -588,8 +528,7 @@ export function UpcomingPayments(): React.JSX.Element {
           <Ionicons
             name="arrow-forward"
             size={14}
-            color={palette.nileGreen[500]}
-            style={{ marginLeft: 4 }}
+            className="text-nileGreen-500 ml-1"
           />
         </TouchableOpacity>
       </View>
@@ -608,7 +547,6 @@ export function UpcomingPayments(): React.JSX.Element {
               <FeaturedPaymentCard
                 payment={featuredPayment}
                 onPayNow={() => handlePayNow(featuredPayment)}
-                isDark={isDark}
               />
             )}
 
@@ -616,27 +554,22 @@ export function UpcomingPayments(): React.JSX.Element {
             {sidePayments.length > 0 && (
               <View className="flex-1 gap-2 justify-center">
                 {sidePayments.map((payment) => (
-                  <MiniPaymentItem
-                    key={payment.id}
-                    payment={payment}
-                    isDark={isDark}
-                  />
+                  <MiniPaymentItem key={payment.id} payment={payment} />
                 ))}
               </View>
             )}
           </View>
 
           {/* Total Due This Month */}
-          <View
-            className={`flex-row items-center justify-between mt-3 pt-3 border-t ${isDark ? "border-slate-700" : "border-slate-200"}`}
-          >
-            <Text
-              className={`text-[13px] font-medium ${isDark ? "text-slate-400" : "text-slate-500"}`}
-            >
+          <View className="flex-row items-center justify-between mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+            <Text className="text-[13px] font-medium text-slate-500 dark:text-slate-400">
               Total due this month:
             </Text>
             <Text className="text-base font-bold text-nileGreen-500">
-              {formatCurrency(totalDueThisMonth, "EGP")}
+              {formatCurrency({
+                amount: totalDueThisMonth,
+                currency: "EGP",
+              })}
             </Text>
           </View>
         </>

@@ -1,9 +1,9 @@
-import { palette } from "@/constants/colors";
 import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { ActivityIndicator, Text, View, Dimensions } from "react-native";
-import Svg, { Defs, RadialGradient, Stop, Rect } from "react-native-svg";
+import { ActivityIndicator, Dimensions, Text, View } from "react-native";
+import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
+import { palette } from "@/constants/colors";
 
 interface Props {
   totalEgp: number | null;
@@ -103,13 +103,24 @@ export function TotalNetWorthCard({
             </View>
           ) : (
             <Text className="mt-1 text-[42px] font-extrabold tracking-tight text-white">
-              EGP {totalEgp ? formatCurrency(totalEgp, "") : 0}
+              {totalEgp
+                ? formatCurrency({
+                    amount: totalEgp,
+                    currency: "EGP",
+                  })
+                : 0}
             </Text>
           )}
 
           {/* Secondary Amount (USD) */}
           <Text className="text-base font-medium text-slate-100 opacity-80">
-            ≈ ${totalUsd ? formatCurrency(totalUsd, "USD") : 0}
+            ≈
+            {totalUsd
+              ? formatCurrency({
+                  amount: totalUsd,
+                  currency: "USD",
+                })
+              : 0}
           </Text>
 
           {/* Monthly Percentage Change */}

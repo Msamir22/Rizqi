@@ -8,25 +8,25 @@
  * - Preview with customizable color
  */
 
-import React, { useState, useMemo, useCallback } from "react";
-import {
-  View,
-  Text,
-  Modal,
-  TouchableOpacity,
-  TextInput,
-  FlatList,
-  ScrollView,
-} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import React, { useCallback, useMemo, useState } from "react";
+import {
+  FlatList,
+  Modal,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import {
+  ALL_ICONS,
+  ICON_GROUPS,
+  type IconLibrary,
+  type IconOption,
+} from "@/constants/category-icons";
 import { palette } from "@/constants/colors";
 import { CategoryIcon } from "../common/CategoryIcon";
-import {
-  ICON_GROUPS,
-  ALL_ICONS,
-  type IconOption,
-  type IconLibrary,
-} from "@/constants/category-icons";
 
 interface IconPickerProps {
   /** Whether the modal is visible */
@@ -146,7 +146,7 @@ export function IconPicker({
             color={palette.slate[400]}
           />
           <Text className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-            No icons found for "{searchQuery}"
+            No icons found for {searchQuery}
           </Text>
         </View>
       }

@@ -1,17 +1,9 @@
-import { palette } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
-import {
-  Keyboard,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
-// Will use DatePicker modal later, simplified for now
 import DateTimePicker from "@react-native-community/datetimepicker";
+import React, { useState } from "react";
+import { Switch, Text, TouchableOpacity, View } from "react-native";
+// Will use DatePicker modal later, simplified for now
+import { palette } from "@/constants/colors";
 import { TextField } from "../ui/TextField";
 
 interface OptionalFields {
@@ -36,8 +28,7 @@ export function OptionalSection({
   onChange,
   expanded,
   onToggleExpand,
-}: OptionalSectionProps) {
-  const { isDark } = useTheme();
+}: OptionalSectionProps): React.JSX.Element {
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   if (!expanded) {
@@ -49,16 +40,17 @@ export function OptionalSection({
         <Ionicons
           name="create-outline"
           size={18}
-          color={isDark ? palette.nileGreen[400] : palette.nileGreen[600]}
+          className="text-nileGreen-600 dark:text-nileGreen-400"
+          color={palette.nileGreen[500]}
         />
-        <Text className="ml-2 text-sm font-semibold text-nileGreen-600 dark:text-nileGreen-400">
+        <Text className="ml-2 text-sm font-bold text-nileGreen-600 dark:text-nileGreen-400">
           Add more details
         </Text>
         <Ionicons
           name="chevron-down"
           size={16}
-          color={isDark ? palette.nileGreen[400] : palette.nileGreen[600]}
-          style={{ marginLeft: 4 }}
+          className="text-nileGreen-600 dark:text-nileGreen-400 ml-1"
+          color={palette.nileGreen[500]}
         />
       </TouchableOpacity>
     );
@@ -70,14 +62,14 @@ export function OptionalSection({
         onPress={onToggleExpand}
         className="flex-row items-center justify-center mb-6"
       >
-        <Text className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide">
+        <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
           Hide Details
         </Text>
         <Ionicons
           name="chevron-up"
           size={14}
-          color={isDark ? "#94A3B8" : "#94A3B8"}
-          style={{ marginLeft: 4 }}
+          className="text-slate-400 dark:text-slate-500 ml-1"
+          color={palette.slate[400]}
         />
       </TouchableOpacity>
 
@@ -103,7 +95,7 @@ export function OptionalSection({
 
         {/* Date */}
         <View>
-          <Text className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 px-1">
+          <Text className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 px-1 uppercase tracking-wider">
             DATE
           </Text>
           <TouchableOpacity
@@ -113,8 +105,8 @@ export function OptionalSection({
             <Ionicons
               name="calendar-outline"
               size={20}
-              color={isDark ? "#A0AEC0" : "#64748B"}
-              style={{ marginRight: 10 }}
+              className="text-slate-500 dark:text-slate-400 mr-2"
+              color={palette.slate[500]}
             />
             <Text className="text-base font-medium text-slate-900 dark:text-white">
               {fields.date.toLocaleDateString("en-US", {
@@ -159,8 +151,11 @@ export function OptionalSection({
           <Switch
             value={fields.isRecurring}
             onValueChange={(v) => onChange({ isRecurring: v })}
-            trackColor={{ false: "#E2E8F0", true: palette.nileGreen[500] }}
-            thumbColor={"#FFF"}
+            trackColor={{
+              false: palette.slate[200],
+              true: palette.nileGreen[500],
+            }}
+            thumbColor={palette.slate[25]}
           />
         </View>
 
@@ -191,8 +186,11 @@ export function OptionalSection({
                 <Switch
                   value={fields.recurringAutoCreate}
                   onValueChange={(v) => onChange({ recurringAutoCreate: v })}
-                  trackColor={{ false: "#E2E8F0", true: palette.blue[500] }}
-                  thumbColor={"#FFF"}
+                  trackColor={{
+                    false: palette.slate[200],
+                    true: palette.blue[500],
+                  }}
+                  thumbColor={palette.slate[25]}
                 />
               </View>
             </View>

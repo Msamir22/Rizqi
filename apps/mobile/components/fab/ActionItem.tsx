@@ -3,8 +3,6 @@
  * Animates from center outward with spring physics
  */
 
-import { palette } from "@/constants/colors";
-
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Pressable, Text } from "react-native";
@@ -13,6 +11,7 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from "react-native-reanimated";
+import { palette } from "@/constants/colors";
 
 const SPRING_CONFIG = {
   damping: 15,

@@ -1,7 +1,7 @@
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import React, { useEffect } from "react";
-import { Dimensions, View } from "react-native";
+import { View } from "react-native";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -143,7 +143,7 @@ const COLOR_MAP: Record<string, string> = {
   "bg-gold-600": palette.gold[600],
 };
 
-const Star = ({ data }: { data: StarConfig }) => {
+const Star = ({ data }: { data: StarConfig }): JSX.Element => {
   const opacity = useSharedValue(0.3);
 
   useEffect(() => {
@@ -172,9 +172,9 @@ const Star = ({ data }: { data: StarConfig }) => {
 
   return (
     <Animated.View
+      className="absolute"
       style={[
         {
-          position: "absolute",
           left: `${data.left * 100}%`,
           top: `${data.top * 100}%`,
           width: renderSize,
@@ -215,7 +215,7 @@ const Star = ({ data }: { data: StarConfig }) => {
   );
 };
 
-export function StarryBackground({ children }: Props) {
+export function StarryBackground({ children }: Props): JSX.Element {
   const { isDark } = useTheme();
 
   if (isDark) {

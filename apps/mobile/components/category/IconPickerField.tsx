@@ -6,11 +6,11 @@
  */
 
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { Text, TouchableOpacity, View } from "react-native";
+import type { IconLibrary } from "@/constants/category-icons";
 import { palette } from "@/constants/colors";
 import { CategoryIcon } from "../common/CategoryIcon";
 import { IconPicker } from "./IconPicker";
-import type { IconLibrary } from "@/constants/category-icons";
 
 interface IconPickerFieldProps {
   /** Label for the field */

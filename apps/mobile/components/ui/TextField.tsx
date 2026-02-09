@@ -1,6 +1,5 @@
-import { palette } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
 import { Text, TextInput, TextInputProps, View, ViewStyle } from "react-native";
+import { palette } from "@/constants/colors";
 
 interface TextFieldProps extends TextInputProps {
   label: string;
@@ -14,20 +13,24 @@ export function TextField({
   containerStyle,
   className,
   ...props
-}: TextFieldProps) {
-  const { isDark } = useTheme();
-
+}: TextFieldProps): React.JSX.Element {
   return (
-    <View style={containerStyle}>
-      <Text className="input-label">{label}</Text>
+    <View style={containerStyle} className="mb-1">
+      <Text className="text-xs font-extrabold text-slate-500 dark:text-slate-400 mb-2 px-1 uppercase tracking-widest">
+        {label}
+      </Text>
       <TextInput
-        placeholderTextColor={isDark ? palette.slate[500] : palette.slate[400]}
-        className={`input-field ${
-          error ? "border-red-500" : ""
-        } ${className || ""}`}
+        placeholderTextColor={palette.slate[400]}
+        className={`bg-white dark:bg-slate-800 p-4 rounded-2xl border ${
+          error ? "border-red-500" : "border-slate-200 dark:border-slate-700"
+        } text-base font-semibold text-slate-900 dark:text-white ${className || ""}`}
         {...props}
       />
-      {error && <Text className="mt-1 px-1 text-xs text-red-500">{error}</Text>}
+      {error && (
+        <Text className="mt-1.5 px-2 text-xs font-bold text-red-500">
+          {error}
+        </Text>
+      )}
     </View>
   );
 }

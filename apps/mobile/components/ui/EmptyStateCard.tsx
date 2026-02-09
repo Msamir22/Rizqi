@@ -1,5 +1,3 @@
-import { palette } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Text, TouchableOpacity, ViewStyle } from "react-native";
 
@@ -23,9 +21,7 @@ export function EmptyStateCard({
   borderRadius = 16,
   className = "",
   style,
-}: EmptyStateCardProps) {
-  const { isDark } = useTheme();
-
+}: EmptyStateCardProps): React.JSX.Element {
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -36,7 +32,7 @@ export function EmptyStateCard({
       <Ionicons
         name={icon}
         size={32}
-        color={isDark ? palette.slate[500] : palette.slate[400]}
+        className="text-slate-400 dark:text-slate-500"
       />
       <Text className="text-sm font-semibold mt-2 text-slate-500 dark:text-slate-400">
         {title}

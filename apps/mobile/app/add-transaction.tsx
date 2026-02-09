@@ -1,51 +1,31 @@
+import { TransactionType } from "@astik/db";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import { Alert, ScrollView, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AccountSelector } from "@/components/add-transaction/AccountSelector";
 import { AmountDisplay } from "@/components/add-transaction/AmountDisplay";
 import {
-  CalculatorKeypad,
   CalculatorKey,
+  CalculatorKeypad,
 } from "@/components/add-transaction/CalculatorKeypad";
 import { CategoryPicker } from "@/components/add-transaction/CategoryPicker";
 import { OptionalSection } from "@/components/add-transaction/OptionalSection";
 import { TransferFields } from "@/components/add-transaction/TransferFields";
 import { TypeTabs } from "@/components/add-transaction/TypeTabs";
-import { palette } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
+import { PageHeader } from "@/components/navigation/PageHeader";
+import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
 import { useMarketRates } from "@/hooks/useMarketRates";
-import {
-  createRecurringPayment,
-  createTransaction,
-  createTransfer,
-} from "@/utils/transactions";
-import { Account, database, TransactionType } from "@astik/db";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  StatusBar,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { GradientBackground } from "../components/ui/GradientBackground";
-import { Q } from "@nozbe/watermelondb";
-import { withObservables } from "@nozbe/watermelondb/react";
+import { createTransaction } from "@/hooks/useTransactions";
+import { createRecurringPayment, createTransfer } from "@/utils/transactions";
 
-interface AddTransactionProps {
-  accounts: Account[];
-}
-
-function AddTransaction({ accounts }: AddTransactionProps) {
+export default function AddTransaction(): React.ReactNode {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { mode } = useTheme();
-  const isDark = mode === "dark";
 
-  // Form State
+  const { accounts } = useAccounts();
+
   const [type, setType] = useState<TransactionType | "TRANSFER">("EXPENSE");
   const [amount, setAmount] = useState<string>("");
   const [targetAmount, setTargetAmount] = useState<string>("");
@@ -56,8 +36,8 @@ function AddTransaction({ accounts }: AddTransactionProps) {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
 
   // Optional Fields
-  const [merchant, setMerchant] = useState("");
-  const [note, setNote] = useState("");
+  const [merchant, setMerchant] = useState<string | undefined>(undefined);
+  const [note, setNote] = useState<string | undefined>(undefined);
   const [date, setDate] = useState(new Date());
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurringName, setRecurringName] = useState("");
@@ -72,12 +52,13 @@ function AddTransaction({ accounts }: AddTransactionProps) {
     categories,
     expenseCategories,
     incomeCategories,
-    isLoading: categoriesLoading,
+    isLoading: _categoriesLoading,
   } = useCategories();
   const { latestRates } = useMarketRates();
 
   // Derived Values
-  const selectedAccount = accounts.find((a) => a.id === selectedAccountId);
+  // Selected account should never be undefined, so we can safely use the non-null assertion operator (!)
+  const selectedAccount = accounts.find((a) => a.id === selectedAccountId)!;
   const toAccount = accounts.find((a) => a.id === toAccountId);
 
   const relevantCategories =
@@ -87,15 +68,23 @@ function AddTransaction({ accounts }: AddTransactionProps) {
 
   // Initialize Defaults
   useEffect(() => {
-    if (accounts.length > 0 && !selectedAccountId) {
-      const cashAccount = accounts.find((a) => a.type === "CASH");
-      setSelectedAccountId(cashAccount ? cashAccount.id : accounts[0].id);
+    if (accounts.length === 0) {
+      // TODO: Show Empty State with Add account button
+      Alert.alert("No Accounts", "Please add an account to continue");
+      return;
+    }
 
-      // For transfer destination, pick different account if possible
-      const otherAccount = accounts.find(
-        (a) => a.id !== (cashAccount?.id || accounts[0].id)
-      );
-      if (otherAccount) setToAccountId(otherAccount.id);
+    if (!selectedAccountId) {
+      // It's safe to use the non-null assertion operator (!)
+      // because we've already checked that accounts.length > 0
+      const firstAccount = accounts.at(0)!;
+      setSelectedAccountId(firstAccount.id);
+
+      if (accounts.length > 1) {
+        // For transfer destination, pick different account if possible
+        const otherAccount = accounts.at(1)!;
+        setToAccountId(otherAccount.id);
+      }
     }
   }, [accounts, selectedAccountId]);
 
@@ -106,9 +95,9 @@ function AddTransaction({ accounts }: AddTransactionProps) {
   }, [relevantCategories, selectedCategoryId, type]);
 
   // Calculator Logic
-  const handleKeyPress = (key: CalculatorKey) => {
+  const handleKeyPress = async (key: CalculatorKey): Promise<void> => {
     if (key === "DONE") {
-      handleSave();
+      await handleSave();
       return;
     }
 
@@ -135,8 +124,8 @@ function AddTransaction({ accounts }: AddTransactionProps) {
       // Only allow digits  + - * / .
       if (!/^[0-9+\-*/.]+$/.test(expr)) return parseFloat(expr) || 0;
       // eslint-disable-next-line no-eval
-      return eval(expr);
-    } catch (e) {
+      return eval(expr) as number;
+    } catch {
       return 0;
     }
   };
@@ -164,7 +153,7 @@ function AddTransaction({ accounts }: AddTransactionProps) {
   }, [type, selectedAccount, toAccount, amount, latestRates]);
 
   // Handle Save
-  const handleSave = async () => {
+  const handleSave = async (): Promise<void> => {
     const finalAmount = calculateResult(amount);
 
     if (finalAmount <= 0) {
@@ -188,12 +177,13 @@ function AddTransaction({ accounts }: AddTransactionProps) {
 
         await createTransfer({
           amount: finalAmount,
-          currency: selectedAccount?.currency || "EGP",
+          currency: selectedAccount.currency,
           fromAccountId: selectedAccountId,
-          toAccountId: toAccountId,
+          toAccountId,
           date,
-          notes: note || undefined,
+          notes: note,
           convertedAmount: targetAmount ? parseFloat(targetAmount) : undefined,
+          // TODO: Get the Actual Exchange Rate Without calculation
           exchangeRate:
             targetAmount && finalAmount
               ? parseFloat(targetAmount) / finalAmount
@@ -206,7 +196,7 @@ function AddTransaction({ accounts }: AddTransactionProps) {
           const recurring = await createRecurringPayment({
             name: recurringName,
             amount: finalAmount,
-            type: type as TransactionType,
+            type,
             accountId: selectedAccountId,
             categoryId: selectedCategoryId,
             frequency: "MONTHLY", // TODO: Get from OptionalSection state if refined
@@ -218,12 +208,13 @@ function AddTransaction({ accounts }: AddTransactionProps) {
 
         await createTransaction({
           amount: finalAmount,
-          currency: selectedAccount?.currency || "EGP",
+          currency: selectedAccount.currency,
           categoryId: selectedCategoryId,
-          merchant: merchant || undefined,
+          merchant,
           accountId: selectedAccountId,
-          note: note || undefined,
-          type: type as TransactionType,
+          note,
+          source: "MANUAL",
+          type,
           date,
           linkedRecurringId,
         });
@@ -238,38 +229,18 @@ function AddTransaction({ accounts }: AddTransactionProps) {
   };
 
   return (
-    <GradientBackground style={{ flex: 1 }}>
-      <StatusBar
-        barStyle={isDark ? "light-content" : "dark-content"}
-        backgroundColor="transparent"
-        translucent
-      />
-
+    <View className="flex-1 bg-background dark:bg-background-dark">
       {/* Header */}
-      <View
-        className="flex-row items-center justify-between px-6 pb-2"
-        style={{ paddingTop: insets.top + 16 }}
-      >
-        <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2">
-          <Ionicons
-            name="close"
-            size={28}
-            color={isDark ? "#FFF" : palette.slate[900]}
-          />
-        </TouchableOpacity>
-        <Text className="text-lg font-semibold text-slate-900 dark:text-white">
-          New Transaction
-        </Text>
-        <TouchableOpacity onPress={handleSave} disabled={isSubmitting}>
-          {isSubmitting ? (
-            <ActivityIndicator size="small" color={palette.nileGreen[500]} />
-          ) : (
-            <Text className="text-base font-bold text-nileGreen-600 dark:text-nileGreen-400">
-              Save
-            </Text>
-          )}
-        </TouchableOpacity>
-      </View>
+      <PageHeader
+        title="New Transaction"
+        showBackButton={true}
+        backIcon="arrow"
+        rightAction={{
+          label: "Save",
+          onPress: handleSave,
+          loading: isSubmitting,
+        }}
+      />
 
       <ScrollView
         className="flex-1"
@@ -285,7 +256,7 @@ function AddTransaction({ accounts }: AddTransactionProps) {
         <AmountDisplay
           amount={amount}
           currency={selectedAccount?.currency || "EGP"}
-          type={type as any}
+          type={type}
           mainColor={selectedCategory?.color}
         />
 
@@ -369,12 +340,6 @@ function AddTransaction({ accounts }: AddTransactionProps) {
 
       {/* Bottom spacer for safe area if keypad is hidden */}
       {isOptionalExpanded && <View style={{ height: insets.bottom }} />}
-    </GradientBackground>
+    </View>
   );
 }
-
-const enhance = withObservables([], () => ({
-  accounts: database.get<Account>("accounts").query(Q.where("deleted", false)),
-}));
-
-export default enhance(AddTransaction);

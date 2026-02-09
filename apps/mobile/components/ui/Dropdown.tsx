@@ -1,8 +1,15 @@
-import { palette } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
+import { cssInterop } from "react-native-css-interop";
+import { palette } from "@/constants/colors";
+
+cssInterop(Ionicons, {
+  className: {
+    target: "style",
+    nativeStyleToProp: { color: true },
+  },
+});
 
 export interface DropdownItem<T> {
   value: T;
@@ -14,7 +21,7 @@ export interface DropdownItem<T> {
 
 interface DropdownProps<T> {
   label: string;
-  items: readonly DropdownItem<T>[];
+  items: ReadonlyArray<DropdownItem<T>>;
   value: T;
   onChange: (value: T) => void;
   isOpen: boolean;
@@ -36,8 +43,7 @@ export function Dropdown<T extends string | number>({
   onToggle,
   className = "",
   placeholder = "Select...",
-}: DropdownProps<T>) {
-  const { isDark } = useTheme();
+}: DropdownProps<T>): React.JSX.Element {
   const selectedItem = items.find((item) => item.value === value);
 
   return (
@@ -56,11 +62,9 @@ export function Dropdown<T extends string | number>({
                 <View className="mr-3 w-8 items-center">
                   {selectedItem.iconType === "ionicons" ? (
                     <Ionicons
-                      name={selectedItem.icon as any}
+                      name={selectedItem.icon as keyof typeof Ionicons.glyphMap}
                       size={20}
-                      color={
-                        isDark ? palette.nileGreen[400] : palette.nileGreen[600]
-                      }
+                      className="text-nileGreen-600 dark:text-nileGreen-400"
                     />
                   ) : (
                     <Text className="text-xl">{selectedItem.icon}</Text>
@@ -74,7 +78,7 @@ export function Dropdown<T extends string | number>({
             <Ionicons
               name={isOpen ? "chevron-up" : "chevron-down"}
               size={18}
-              color={isDark ? palette.slate[400] : palette.slate[500]}
+              className="text-slate-500 dark:text-slate-400"
             />
           </View>
         </TouchableOpacity>
@@ -103,14 +107,12 @@ export function Dropdown<T extends string | number>({
                   <View className="mr-3 w-8 items-center">
                     {item.iconType === "ionicons" ? (
                       <Ionicons
-                        name={item.icon as any}
+                        name={item.icon as keyof typeof Ionicons.glyphMap}
                         size={20}
-                        color={
+                        className={
                           item.value === value
-                            ? palette.nileGreen[600]
-                            : isDark
-                              ? palette.slate[400]
-                              : palette.slate[500]
+                            ? "text-nileGreen-600"
+                            : "text-slate-500 dark:text-slate-400"
                         }
                       />
                     ) : (
@@ -138,7 +140,7 @@ export function Dropdown<T extends string | number>({
                   <Ionicons
                     name="checkmark-circle"
                     size={20}
-                    color={palette.nileGreen[600]}
+                    style={{ color: palette.nileGreen[600] }}
                   />
                 )}
               </TouchableOpacity>

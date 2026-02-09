@@ -1,19 +1,13 @@
-import { AppDrawer } from "@/components/navigation/AppDrawer";
-import { palette } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
-import { getMetalPrices, MetalPrices } from "@/utils/api";
 import {
   FontAwesome5,
   Ionicons,
   MaterialCommunityIcons,
 } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { ReactElement, useState } from "react";
 import {
   Modal,
   ScrollView,
-  StatusBar,
   Text,
   TextInput,
   TouchableOpacity,
@@ -21,51 +15,33 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { PageHeader } from "@/components/navigation/PageHeader";
+import { palette } from "@/constants/colors";
+import { useMarketRates } from "@/hooks/useMarketRates";
 
 // 1. Total Value Card
-const MetalsValueCard = ({ mode }: { mode: string }) => {
-  const isDark = mode === "dark";
+const MetalsValueCard = (): ReactElement => {
   const totalEGP = 32450;
   const totalUSD = 649;
 
-  const Content = () => (
-    <View className="items-center gap-2">
-      <Text className="text-sm font-medium text-text-secondary dark:text-white/70">
-        Total Metals Value
-      </Text>
-      <Text className="font-[System] text-4xl font-bold text-text-primary dark:text-white">
-        EGP {totalEGP.toLocaleString()}
-      </Text>
-      <Text className="text-base text-text-secondary dark:text-white/50">
-        ≈ ${totalUSD} USD
-      </Text>
-    </View>
-  );
-
-  if (isDark) {
-    return (
-      <LinearGradient
-        colors={["rgba(217, 119, 6, 0.4)", "rgba(0,0,0,0)"]}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-        className="mb-8 rounded-3xl p-[1px]"
-      >
-        <LinearGradient
-          colors={["#1C1917", "#000000"]}
-          className="items-center rounded-[23px] py-8"
-        >
-          <Content />
-        </LinearGradient>
-      </LinearGradient>
-    );
-  }
-
   return (
-    <View
-      className="mb-8 items-center rounded-3xl border border-gold/10 bg-white py-8 shadow-md"
-      style={{ shadowColor: palette.gold[600], shadowOpacity: 0.15 }}
-    >
-      <Content />
+    <View className="mb-8 rounded-3xl overflow-hidden bg-white dark:bg-slate-800 border border-gold/10 dark:border-white/10 shadow-md dark:shadow-none">
+      <LinearGradient
+        colors={[palette.slate[50], palette.slate[100]]}
+        className="hidden dark:flex absolute inset-0"
+        // In dark mode we use a specific gradient but Tailwind handles most of it
+      />
+      <View className="items-center py-8 gap-2">
+        <Text className="text-sm font-medium text-slate-500 dark:text-slate-400">
+          Total Metals Value
+        </Text>
+        <Text className="text-4xl font-bold text-slate-800 dark:text-white">
+          EGP {totalEGP.toLocaleString()}
+        </Text>
+        <Text className="text-base text-slate-500 dark:text-white/50">
+          ≈ ${totalUSD} USD
+        </Text>
+      </View>
     </View>
   );
 };
@@ -81,55 +57,44 @@ const HoldingItem = ({
   weight: string;
   value: string;
   isGold: boolean;
-}) => {
-  const { mode } = useTheme();
-  const isDark = mode === "dark";
-
-  // Dynamic styles that are hard to do with just classes
-  const badgeBg = isGold
-    ? isDark
-      ? "#B45309"
-      : "#FDE68A"
-    : isDark
-      ? "#4B5563"
-      : "#E2E8F0";
-
-  const badgeText = isGold
-    ? isDark
-      ? "#FFF"
-      : "#92400E"
-    : isDark
-      ? "#FFF"
-      : "#475569";
-
+}): ReactElement => {
   return (
-    <View className="mb-3 flex-row items-center justify-between rounded-2xl border border-border bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#1C1917] dark:shadow-none">
+    <View className="mb-3 flex-row items-center justify-between rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-800 p-4 shadow-sm dark:shadow-none">
       <View className="flex-row items-center gap-4">
         {/* Badge */}
         <View
-          className="min-w-[60px] items-center rounded-full px-3 py-1.5"
-          style={{ backgroundColor: badgeBg }}
+          className={`min-w-[60px] items-center rounded-full px-3 py-1.5 ${
+            isGold
+              ? "bg-amber-100 dark:bg-amber-700"
+              : "bg-slate-100 dark:bg-slate-600"
+          }`}
         >
-          <Text className="text-[13px] font-bold" style={{ color: badgeText }}>
+          <Text
+            className={`text-[13px] font-bold ${
+              isGold
+                ? "text-amber-800 dark:text-white"
+                : "text-slate-600 dark:text-white"
+            }`}
+          >
             {badge}
           </Text>
         </View>
 
         {/* Weight */}
-        <Text className="text-base font-semibold text-text-primary dark:text-white">
+        <Text className="text-base font-semibold text-slate-800 dark:text-white">
           {weight}
         </Text>
       </View>
 
       <View className="flex-row items-center gap-3">
-        <Text className="text-base text-text-primary dark:text-white">
+        <Text className="text-base text-slate-800 dark:text-white">
           {value}
         </Text>
         <TouchableOpacity>
           <MaterialCommunityIcons
             name="pencil-outline"
             size={20}
-            color={isDark ? palette.slate[400] : palette.slate[600]}
+            className="text-slate-400 dark:text-slate-500"
           />
         </TouchableOpacity>
       </View>
@@ -146,21 +111,23 @@ const AddSectionButton = ({
   label: string;
   onPress: () => void;
   isGold: boolean;
-}) => (
+}): ReactElement => (
   <TouchableOpacity
     onPress={onPress}
     className={`mt-1 flex-row items-center justify-center gap-2 rounded-xl border py-3.5 ${
-      isGold ? "border-gold" : "border-text-secondary"
+      isGold
+        ? "border-amber-500/50 dark:border-amber-500/30"
+        : "border-slate-200 dark:border-slate-700"
     }`}
   >
     <Ionicons
       name="add"
       size={20}
-      color={isGold ? palette.gold[600] : palette.slate[600]}
+      color={isGold ? palette.gold[600] : palette.slate[500]}
     />
     <Text
       className={`text-base font-semibold ${
-        isGold ? "text-gold" : "text-text-secondary"
+        isGold ? "text-amber-600 dark:text-amber-500" : "text-slate-500"
       }`}
     >
       {label}
@@ -168,75 +135,30 @@ const AddSectionButton = ({
   </TouchableOpacity>
 );
 
-export default function MyMetalsScreen() {
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const router = useRouter();
+export default function MyMetalsScreen(): ReactElement {
   const insets = useSafeAreaInsets();
-  const { mode } = useTheme();
-  const isDark = mode === "dark";
-
-  const [prices, setPrices] = useState<MetalPrices | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { latestRates } = useMarketRates();
   const [modalVisible, setModalVisible] = useState(false);
   const [addType, setAddType] = useState<"gold" | "silver">("gold");
 
-  useEffect(() => {
-    loadPrices();
-  }, []);
-
-  const loadPrices = async () => {
-    try {
-      setLoading(true);
-      const data = await getMetalPrices();
-      setPrices(data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const GoldPrice = prices ? prices.gold.price : 0;
-  const SilverPrice = prices ? prices.silver.price : 0;
+  // Calculate prices based on latestRates
+  // goldEgpPerGram -> USD per ounce
+  // USD price = (EGP per gram / usdEgp) * 31.1035
+  const usdEgp = latestRates?.usdEgp || 50;
+  const GoldPrice = latestRates
+    ? (latestRates.goldEgpPerGram / usdEgp) * 31.1035
+    : 0;
+  const SilverPrice = latestRates ? latestRates.silverEgpPerGram / usdEgp : 0; // Silver usually shown per gram or ounce, here ticker says per gram for silver?
+  // Wait, original ticker: Silver: ${SilverPrice.toFixed(2)}/g
 
   return (
-    <View className="flex-1 bg-background dark:bg-background-dark">
-      <StatusBar
-        barStyle={isDark ? "light-content" : "dark-content"}
-        backgroundColor="transparent"
-      />
-
-      {/* Header */}
-      <View
-        className="flex-row items-center justify-between px-5 pb-5"
-        style={{ paddingTop: insets.top + 12 }}
-      >
-        <TouchableOpacity
-          onPress={() => setIsDrawerOpen(true)}
-          className="h-10 w-10 items-center justify-center rounded-xl bg-surface-highlight dark:bg-white/10"
-        >
-          <Ionicons
-            name="menu-outline"
-            size={24}
-            color={isDark ? "#FFF" : palette.slate[800]}
-          />
-        </TouchableOpacity>
-        <Text className="text-lg font-semibold text-text-primary dark:text-white">
-          My Metals
-        </Text>
-        <TouchableOpacity className="h-10 w-10 items-center justify-center rounded-xl bg-surface-highlight dark:bg-white/10">
-          <Ionicons
-            name="settings-outline"
-            size={22}
-            color={isDark ? "#FFF" : palette.slate[800]}
-          />
-        </TouchableOpacity>
-      </View>
+    <View className="flex-1 bg-slate-50 dark:bg-slate-900">
+      <PageHeader title="My Metals" />
 
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
       >
-        <MetalsValueCard mode={mode} />
+        <MetalsValueCard />
 
         {/* Gold Holdings */}
         <View className="mb-8">
@@ -247,7 +169,7 @@ export default function MyMetalsScreen() {
               color={palette.gold[600]}
               style={{ marginRight: 10 }}
             />
-            <Text className="text-lg font-bold text-text-primary dark:text-white">
+            <Text className="text-lg font-bold text-slate-800 dark:text-white">
               Gold Holdings
             </Text>
           </View>
@@ -281,7 +203,7 @@ export default function MyMetalsScreen() {
             <View className="mr-2.5 h-6 w-6 items-center justify-center rounded-full bg-slate-300">
               <View className="h-4 w-4 rounded-full bg-slate-400" />
             </View>
-            <Text className="text-lg font-bold text-text-primary dark:text-white">
+            <Text className="text-lg font-bold text-slate-800 dark:text-white">
               Silver Holdings
             </Text>
           </View>
@@ -306,24 +228,24 @@ export default function MyMetalsScreen() {
 
       {/* Live Ticker */}
       <View
-        className="absolute bottom-5 left-5 right-5 flex-row items-center justify-center gap-3 rounded-2xl border border-border bg-surface p-3 shadow-sm dark:border-white/10 dark:bg-black/90"
+        className="absolute bottom-5 left-5 right-5 flex-row items-center justify-center gap-3 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-800 p-3 shadow-sm"
         style={{ bottom: insets.bottom + 10 }}
       >
         <View className="flex-row items-center gap-1">
-          <Text className="text-xs text-text-secondary dark:text-text-muted">
+          <Text className="text-xs text-slate-500 dark:text-slate-400">
             Gold 24K:
           </Text>
-          <Text className="text-xs font-bold text-text-primary dark:text-white">
+          <Text className="text-xs font-bold text-slate-800 dark:text-white">
             ${GoldPrice.toFixed(0)}/oz
           </Text>
           <Ionicons name="arrow-up" size={12} color={palette.nileGreen[500]} />
         </View>
-        <View className="h-4 w-[1px] bg-border dark:bg-white/20" />
+        <View className="h-4 w-[1px] bg-slate-200 dark:bg-white/20" />
         <View className="flex-row items-center gap-1">
-          <Text className="text-xs text-text-secondary dark:text-text-muted">
+          <Text className="text-xs text-slate-500 dark:text-slate-400">
             Silver:
           </Text>
-          <Text className="text-xs font-bold text-text-primary dark:text-white">
+          <Text className="text-xs font-bold text-slate-800 dark:text-white">
             ${SilverPrice.toFixed(2)}/g
           </Text>
           <Ionicons name="arrow-forward" size={12} color={palette.slate[400]} />
@@ -341,28 +263,24 @@ export default function MyMetalsScreen() {
           <View className="flex-1 justify-end bg-black/50">
             <TouchableWithoutFeedback onPress={() => {}}>
               <View
-                className="rounded-t-[32px] bg-white p-6 dark:bg-[#1C1917]"
+                className="rounded-t-[32px] bg-white dark:bg-slate-800 p-6"
                 style={{ paddingBottom: insets.bottom + 24 }}
               >
                 {/* Handle */}
-                <View className="mb-6 h-1 w-10 self-center rounded-full bg-border dark:bg-white/20" />
+                <View className="mb-6 h-1 w-10 self-center rounded-full bg-slate-200 dark:bg-white/20" />
 
-                <Text className="mb-6 self-center text-2xl font-bold text-text-primary dark:text-white">
+                <Text className="mb-6 self-center text-2xl font-bold text-slate-800 dark:text-white">
                   Add New Holding
                 </Text>
 
                 {/* Type Toggle */}
-                <View className="mb-6 flex-row rounded-2xl bg-slate-100 p-1 dark:bg-[#292524]">
+                <View className="mb-6 flex-row rounded-2xl bg-slate-100 dark:bg-slate-700 p-1">
                   {(["gold", "silver"] as const).map((t) => (
                     <TouchableOpacity
                       key={t}
                       onPress={() => setAddType(t)}
                       className={`flex-1 items-center rounded-xl py-3 ${
-                        addType === t
-                          ? t === "gold"
-                            ? "bg-gold"
-                            : "bg-slate-400"
-                          : "bg-transparent"
+                        addType === t ? "" : "bg-transparent"
                       }`}
                       style={{
                         backgroundColor:
@@ -377,7 +295,7 @@ export default function MyMetalsScreen() {
                         className={`font-semibold capitalize ${
                           addType === t
                             ? "text-white"
-                            : "text-text-secondary dark:text-text-muted"
+                            : "text-slate-500 dark:text-slate-400"
                         }`}
                       >
                         {t}
@@ -404,8 +322,8 @@ export default function MyMetalsScreen() {
                         <Text
                           className={`font-semibold ${
                             i === 0
-                              ? "text-gold"
-                              : "text-text-secondary dark:text-text-muted"
+                              ? "text-amber-600 dark:text-amber-500"
+                              : "text-slate-500 dark:text-slate-400"
                           }`}
                         >
                           {k}
@@ -416,16 +334,14 @@ export default function MyMetalsScreen() {
                 )}
 
                 {/* Weight Input */}
-                <View className="mb-8 flex-row items-center border-b border-border pb-2 dark:border-white/20">
-                  <Text className="mr-2 text-2xl font-bold text-text-primary dark:text-white">
+                <View className="mb-8 flex-row items-center border-b border-slate-200 dark:border-white/20 pb-2">
+                  <Text className="mr-2 text-2xl font-bold text-slate-800 dark:text-white">
                     0.0 g
                   </Text>
                   <TextInput
                     placeholder="Enter weight in grams"
-                    placeholderTextColor={
-                      isDark ? palette.slate[500] : palette.slate[400]
-                    }
-                    className="flex-1 text-right text-base text-text-primary dark:text-white"
+                    placeholderTextColor={palette.slate[400]}
+                    className="flex-1 text-right text-base text-slate-800 dark:text-white"
                     keyboardType="numeric"
                   />
                 </View>
@@ -450,10 +366,7 @@ export default function MyMetalsScreen() {
         </TouchableWithoutFeedback>
       </Modal>
 
-      <AppDrawer
-        visible={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-      />
+      <PageHeader title="My Metals" />
     </View>
   );
 }

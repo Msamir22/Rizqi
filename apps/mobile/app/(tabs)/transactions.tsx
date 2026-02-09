@@ -1,16 +1,16 @@
+import { IconLibrary } from "@/components/common/CategoryIcon";
 import { DeleteConfirmationModal } from "@/components/modals/DeleteConfirmationModal";
 import { PeriodFilterModal } from "@/components/modals/PeriodFilterModal";
-import { TypeFilterModal } from "@/components/modals/TypeFilterModal";
 import { RecurringEditModal } from "@/components/modals/RecurringEditModal";
-import { AppDrawer } from "@/components/navigation/AppDrawer";
-import { QuickEditModal } from "@/components/transactions/QuickEditModal";
-import { IconLibrary } from "@/components/common/CategoryIcon";
+import { TypeFilterModal } from "@/components/modals/TypeFilterModal";
+import { PageHeader } from "@/components/navigation/PageHeader";
 import { GroupHeader } from "@/components/transactions/GroupHeader";
+import { QuickEditModal } from "@/components/transactions/QuickEditModal";
 import { TransactionCard } from "@/components/transactions/TransactionCard";
 import { TransferCard } from "@/components/transactions/TransferCard";
+import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
-import { darkTheme, lightTheme, palette } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
+import { palette } from "@/constants/colors";
 import { PERIOD_LABELS } from "@/hooks/usePeriodSummary";
 import { useTransactionOperations } from "@/hooks/useTransactionOperations";
 import {
@@ -19,25 +19,21 @@ import {
   useTransactionsGrouping,
 } from "@/hooks/useTransactionsGrouping";
 import { useSync } from "@/providers/SyncProvider";
-import { router } from "expo-router";
+import { updateTransaction, updateTransfer } from "@/utils/transactions";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import * as Haptics from "expo-haptics";
+import { router } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
   SectionList,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { Button } from "@/components/ui/Button";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { updateTransaction, updateTransfer } from "@/utils/transactions";
-import * as Haptics from "expo-haptics";
-export default function TransactionsPlaceholder() {
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+export default function TransactionsPlaceholder(): React.JSX.Element {
   const [period, setPeriod] = useState<GroupingPeriod>("this_month");
   const [selectedTypes, setSelectedTypes] = useState<TransactionTypeFilter[]>([
     "Income",
@@ -55,13 +51,6 @@ export default function TransactionsPlaceholder() {
   const isSelectionMode = selectedIds.size > 0;
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
 
-  // Header height for dynamic padding
-  const [headerHeight, setHeaderHeight] = useState(200);
-
-  const insets = useSafeAreaInsets();
-  const { isDark } = useTheme();
-  const theme = isDark ? darkTheme : lightTheme;
-
   // Data Hook - now accepts array of selected types directly
   const { groupedData, isLoading, refetch } = useTransactionsGrouping(
     period,
@@ -76,7 +65,7 @@ export default function TransactionsPlaceholder() {
   const { sync } = useSync();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const handleRefresh = async () => {
+  const handleRefresh = async (): Promise<void> => {
     setIsRefreshing(true);
     await sync();
     // Also trigger local refetch just in case
@@ -99,7 +88,9 @@ export default function TransactionsPlaceholder() {
   }>({ visible: false, type: "CATEGORY", transactionId: "" });
 
   // Update handlers
-  const handleUpdateTransaction = async (val: string | number) => {
+  const handleUpdateTransaction = async (
+    val: string | number
+  ): Promise<void> => {
     const { transactionId, type: editType, transactionType } = quickEdit;
 
     try {
@@ -116,7 +107,7 @@ export default function TransactionsPlaceholder() {
           await updateTransaction(transactionId, { categoryId: String(val) });
         }
       }
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       refetch();
       showToast({
         type: "success",
@@ -125,7 +116,7 @@ export default function TransactionsPlaceholder() {
       });
     } catch (e) {
       console.error(e);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showToast({
         type: "error",
         title: "Error",
@@ -135,7 +126,7 @@ export default function TransactionsPlaceholder() {
   };
 
   // Selection Handlers
-  const handleLongPress = (id: string) => {
+  const handleLongPress = (id: string): void => {
     const newSelected = new Set(selectedIds);
     if (newSelected.has(id)) {
       newSelected.delete(id);
@@ -145,7 +136,7 @@ export default function TransactionsPlaceholder() {
     setSelectedIds(newSelected);
   };
 
-  const handlePress = (id: string) => {
+  const handlePress = (id: string): void => {
     if (isSelectionMode) {
       handleLongPress(id); // Toggle selection
     } else {
@@ -154,7 +145,7 @@ export default function TransactionsPlaceholder() {
     }
   };
 
-  const handleSwipeDelete = async (id: string) => {
+  const handleSwipeDelete = async (id: string): Promise<void> => {
     // Find item to confirm type? Or just delete?
     // Usually swipe to delete asks for confirmation or undo.
     // For now, let's just delete (or maybe triggering the modal is better UX?)
@@ -179,7 +170,7 @@ export default function TransactionsPlaceholder() {
     action: "CATEGORY",
   });
 
-  const handleRecurringOption = (scope: "THIS" | "TEMPLATE") => {
+  const handleRecurringOption = (scope: "THIS" | "TEMPLATE"): void => {
     const { transactionId, action } = recurringEditModal;
     setRecurringEditModal((prev) => ({ ...prev, visible: false }));
 
@@ -238,7 +229,7 @@ export default function TransactionsPlaceholder() {
     }
   };
 
-  const handleCategoryPress = (id: string) => {
+  const handleCategoryPress = (id: string): void => {
     const item = groupedData
       .flatMap((g) => g.transactions)
       .find((t) => t.id === id);
@@ -264,7 +255,7 @@ export default function TransactionsPlaceholder() {
     }
   };
 
-  const handleAmountPress = (id: string) => {
+  const handleAmountPress = (id: string): void => {
     const item = groupedData
       .flatMap((g) => g.transactions)
       .find((t) => t.id === id);
@@ -302,7 +293,7 @@ export default function TransactionsPlaceholder() {
     }
   };
 
-  const handleSelectAll = () => {
+  const handleSelectAll = (): void => {
     // Flatten all transactions to get IDs
     const allIds = groupedData.flatMap((g) => g.transactions.map((t) => t.id));
     if (selectedIds.size === allIds.length) {
@@ -312,11 +303,11 @@ export default function TransactionsPlaceholder() {
     }
   };
 
-  const handleDeleteSelected = () => {
+  const handleDeleteSelected = (): void => {
     setDeleteModalVisible(true);
   };
 
-  const confirmDelete = async () => {
+  const confirmDelete = async (): Promise<void> => {
     const ids = Array.from(selectedIds);
     const allTransactions = groupedData.flatMap((g) => g.transactions);
     const selectedItems = allTransactions.filter((item) =>
@@ -337,7 +328,7 @@ export default function TransactionsPlaceholder() {
   };
 
   // Type Filter Toggle Handler
-  const handleTypeToggle = (type: TransactionTypeFilter) => {
+  const handleTypeToggle = (type: TransactionTypeFilter): void => {
     setSelectedTypes((prev) => {
       if (prev.includes(type)) {
         return prev.filter((t) => t !== type);
@@ -350,146 +341,109 @@ export default function TransactionsPlaceholder() {
   return (
     <>
       <View className="flex-1 bg-slate-50 dark:bg-slate-950">
-        {/* Background */}
-        <LinearGradient
-          colors={theme.backgroundGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFillObject}
-        />
-
         {/* Stars/Dots Layer (Simulated with simple views or image - Skipping for pure code now, 
           using gradient is cleaner. User mockup had stars, we can add later if requested component exists) */}
 
         {/* Header Section */}
-        <View
-          className="absolute top-0 left-0 right-0 bg-slate-50 dark:bg-slate-950 px-5 pb-3 z-10"
-          style={{ paddingTop: insets.top + 16 }}
-          onLayout={(event) => {
-            const { height } = event.nativeEvent.layout;
-            if (height !== headerHeight) {
-              setHeaderHeight(height);
-            }
-          }}
-        >
-          <View className="flex-row justify-between items-center mb-4 h-10">
-            <View className="flex-row items-center">
-              <TouchableOpacity
-                onPress={() => setIsDrawerOpen(true)}
-                className="mr-3"
-              >
-                <Ionicons
-                  name="menu-outline"
-                  size={30}
-                  color={isDark ? "#f8fafc" : "#1e293b"}
-                />
-              </TouchableOpacity>
-              <Text className="text-3xl font-extrabold text-slate-800 dark:text-slate-50">
-                Transactions
-              </Text>
-            </View>
+        {/* Header Section */}
+        <PageHeader
+          title="Transactions"
+          selectionMode={
+            isSelectionMode
+              ? {
+                  count: selectedIds.size,
+                  totalCount: groupedData.flatMap((g) => g.transactions).length,
+                  onClear: () => setSelectedIds(new Set()),
+                  onSelectAll: handleSelectAll,
+                  onDelete: handleDeleteSelected,
+                }
+              : undefined
+          }
+          rightAction={
+            isSelectionMode
+              ? undefined
+              : {
+                  icon: "add",
+                  onPress: () => router.push("/add-transaction"),
+                }
+          }
+        />
 
-            {isSelectionMode && (
-              <View className="flex-row items-center">
-                <TouchableOpacity onPress={handleSelectAll} className="mr-4">
-                  <Text className="text-nileGreen-500 dark:text-nileGreen-400 font-semibold text-base">
-                    Select All
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={handleDeleteSelected}>
-                  <Ionicons
-                    name="trash-outline"
-                    size={22}
-                    color={palette.red[500]}
-                  />
-                </TouchableOpacity>
-              </View>
-            )}
+        {/* Filters & Search Row */}
+
+        <View className="px-5 pb-4 bg-slate-50 dark:bg-slate-900">
+          <View className="flex-row mb-3 flex-wrap gap-2">
+            {/* Period Filter Button */}
+            <TouchableOpacity
+              className="flex-row items-center bg-white dark:bg-slate-800 py-2.5 px-4 rounded-3xl border border-slate-200 dark:border-slate-700 gap-2 flex-1 shadow-sm"
+              onPress={() => setPeriodModalVisible(true)}
+            >
+              <Ionicons
+                name="calendar-outline"
+                size={18}
+                className="text-nileGreen-600 dark:text-nileGreen-400"
+              />
+              <Text className="text-sm font-semibold text-slate-700 dark:text-slate-200 flex-1">
+                {PERIOD_LABELS[period]}
+              </Text>
+              <Ionicons
+                name="chevron-down"
+                size={16}
+                className="text-slate-400 dark:text-slate-500"
+              />
+            </TouchableOpacity>
+
+            {/* Type Filter Button */}
+            <TouchableOpacity
+              className="flex-row items-center bg-white dark:bg-slate-800 py-2.5 px-4 rounded-3xl border border-slate-200 dark:border-slate-700 gap-2 flex-1 shadow-sm"
+              onPress={() => setTypeModalVisible(true)}
+            >
+              <Ionicons
+                name="funnel-outline"
+                size={18}
+                className="text-nileGreen-600 dark:text-nileGreen-400"
+              />
+              <Text
+                className="text-sm font-semibold text-slate-700 dark:text-slate-200 flex-1"
+                numberOfLines={1}
+              >
+                {selectedTypes.length === 3
+                  ? "All Types"
+                  : selectedTypes.length === 0
+                    ? "No Types"
+                    : selectedTypes.join(", ")}
+              </Text>
+              <Ionicons
+                name="chevron-down"
+                size={16}
+                className="text-slate-400 dark:text-slate-500"
+              />
+            </TouchableOpacity>
           </View>
 
-          {/* Filters */}
-          <View>
-            <View className="flex-row mb-3 flex-wrap gap-2">
-              {/* Period Filter Button */}
-              <TouchableOpacity
-                className="flex-row items-center bg-slate-100 dark:bg-slate-800 py-2.5 px-4 rounded-3xl border border-slate-200 dark:border-slate-700 gap-2 flex-1"
-                onPress={() => {
-                  console.log("Period button pressed");
-                  setPeriodModalVisible(true);
-                }}
-              >
+          {/* Search Bar */}
+          <View className="bg-white dark:bg-slate-900 flex-row items-center px-4 h-12 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <Ionicons
+              name="search-outline"
+              size={20}
+              className="text-slate-400 dark:text-slate-500"
+            />
+            <TextInput
+              className="flex-1 ml-3 text-slate-800 dark:text-slate-100 text-[16px]"
+              placeholder="Search transactions..."
+              placeholderTextColor={palette.slate[400]}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery("")}>
                 <Ionicons
-                  name="calendar"
-                  size={16}
-                  color={
-                    isDark ? palette.nileGreen[400] : palette.nileGreen[600]
-                  }
-                />
-                <Text className="text-sm font-semibold text-slate-700 dark:text-slate-200 flex-1">
-                  {PERIOD_LABELS[period]}
-                </Text>
-                <Ionicons
-                  name="chevron-down"
-                  size={16}
-                  color={isDark ? palette.slate[400] : palette.slate[500]}
+                  name="close-circle"
+                  size={20}
+                  className="text-slate-400 dark:text-slate-500"
                 />
               </TouchableOpacity>
-
-              {/* Type Filter Button */}
-              <TouchableOpacity
-                className="flex-row items-center bg-slate-100 dark:bg-slate-800 py-2.5 px-4 rounded-3xl border border-slate-200 dark:border-slate-700 gap-2 flex-1"
-                onPress={() => setTypeModalVisible(true)}
-              >
-                <Ionicons
-                  name="filter"
-                  size={16}
-                  color={
-                    isDark ? palette.nileGreen[400] : palette.nileGreen[600]
-                  }
-                />
-                <Text className="text-sm font-semibold text-slate-700 dark:text-slate-200 flex-1">
-                  {selectedTypes.length === 3
-                    ? "All Types"
-                    : selectedTypes.length === 0
-                      ? "No Types"
-                      : selectedTypes.join(", ")}
-                </Text>
-                <Ionicons
-                  name="chevron-down"
-                  size={16}
-                  color={isDark ? palette.slate[400] : palette.slate[500]}
-                />
-              </TouchableOpacity>
-            </View>
-
-            {/* Search Bar */}
-            <View className="mt-1">
-              <View className="bg-slate-100 dark:bg-slate-900 flex-row items-center px-3 h-12 rounded-xl border border-slate-200 dark:border-slate-800">
-                <Ionicons
-                  name="search"
-                  size={16}
-                  color={isDark ? palette.slate[500] : palette.slate[400]}
-                />
-                <TextInput
-                  className="flex-1 ml-2.5 text-slate-800 dark:text-slate-100 text-[15px]"
-                  placeholder="Search transactions..."
-                  placeholderTextColor={
-                    isDark ? palette.slate[600] : palette.slate[400]
-                  }
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                />
-                {searchQuery.length > 0 && (
-                  <TouchableOpacity onPress={() => setSearchQuery("")}>
-                    <Ionicons
-                      name="close-circle"
-                      size={16}
-                      color={isDark ? palette.slate[500] : palette.slate[400]}
-                    />
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
+            )}
           </View>
         </View>
 
@@ -504,7 +458,7 @@ export default function TransactionsPlaceholder() {
               <Ionicons
                 name="receipt-outline"
                 size={48}
-                color={isDark ? palette.slate[600] : palette.slate[400]}
+                className="text-slate-400 dark:text-slate-600"
               />
             </View>
             <Text className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2 text-center">
@@ -558,15 +512,13 @@ export default function TransactionsPlaceholder() {
                     onLongPress={handleLongPress}
                     index={index}
                     onSwipeDelete={handleSwipeDelete}
-                    onAmountPress={handleAmountPress}
-                    // Transfers usually don't have categories to edit
                   />
                 );
               }
               return (
                 <TransactionCard
                   id={item.id}
-                  amount={item.amount}
+                  signedAmount={item.signedAmount}
                   currency={item.currency}
                   date={item.date}
                   isExpense={item.isExpense}
@@ -584,17 +536,14 @@ export default function TransactionsPlaceholder() {
                   onPress={handlePress}
                   onLongPress={handleLongPress}
                   index={index}
-                  onSwipeDelete={handleSwipeDelete}
+                  // Delete Transfer should have different logic
+                  // onSwipeDelete={handleSwipeDelete}
                   onCategoryPress={handleCategoryPress}
                   onAmountPress={handleAmountPress}
                 />
               );
             }}
             stickySectionHeadersEnabled={false}
-            contentContainerStyle={{
-              paddingTop: headerHeight,
-              paddingBottom: 100,
-            }}
           />
         )}
       </View>
@@ -650,10 +599,6 @@ export default function TransactionsPlaceholder() {
         onCancel={() =>
           setRecurringEditModal((prev) => ({ ...prev, visible: false }))
         }
-      />
-      <AppDrawer
-        visible={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
       />
     </>
   );

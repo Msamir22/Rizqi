@@ -1,13 +1,13 @@
-import React from "react";
+import { BlurView } from "expo-blur";
+import { ReactNode } from "react";
 import {
-  View,
+  Platform,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  Platform,
+  View,
 } from "react-native";
-import { lightTheme, colors, palette } from "../../constants/colors";
-import { BlurView } from "expo-blur";
+import { palette } from "../../constants/colors";
 
 export type FilterType = "All" | "Expenses" | "Income";
 
@@ -19,7 +19,7 @@ interface TransactionFiltersProps {
 export function TransactionFilters({
   activeFilter,
   onFilterChange,
-}: TransactionFiltersProps) {
+}: TransactionFiltersProps): ReactNode {
   const filters: FilterType[] = ["All", "Expenses", "Income"];
 
   return (
@@ -48,7 +48,7 @@ const renderPill = (
   filter: FilterType,
   activeFilter: FilterType,
   onFilterChange: (filter: FilterType) => void
-) => {
+): ReactNode => {
   const isActive = activeFilter === filter;
   return (
     <TouchableOpacity
@@ -70,32 +70,6 @@ const renderPill = (
 };
 
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    marginBottom: 8,
-  },
-  glassContainer: {
-    borderRadius: 16,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.3)",
-    backgroundColor: "rgba(255, 255, 255, 0.1)", // Slight base tint
-  },
-  pillsContainer: {
-    flexDirection: "row",
-    padding: 6,
-  },
-  androidFallback: {
-    backgroundColor: "rgba(255, 255, 255, 0.5)",
-  },
-  pill: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   activePill: {
     backgroundColor: palette.nileGreen[600], // Strong brand color for active state
     shadowColor: palette.nileGreen[900],
@@ -104,17 +78,43 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  activePillText: {
+    color: palette.slate[50],
+  },
+  androidFallback: {
+    backgroundColor: "rgba(255, 255, 255, 0.5)",
+  },
+  container: {
+    marginBottom: 8,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  glassContainer: {
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderColor: "rgba(255, 255, 255, 0.3)",
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: "hidden", // Slight base tint
+  },
   inactivePill: {
     backgroundColor: "transparent",
+  },
+  inactivePillText: {
+    color: palette.slate[700],
+  },
+  pill: {
+    alignItems: "center",
+    borderRadius: 12,
+    flex: 1,
+    justifyContent: "center",
+    paddingVertical: 10,
   },
   pillText: {
     fontSize: 14,
     fontWeight: "600",
   },
-  activePillText: {
-    color: palette.slate[50],
-  },
-  inactivePillText: {
-    color: palette.slate[700],
+  pillsContainer: {
+    flexDirection: "row",
+    padding: 6,
   },
 });

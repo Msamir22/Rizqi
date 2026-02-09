@@ -1,4 +1,3 @@
-import { palette } from "@/constants/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import React from "react";
@@ -10,6 +9,7 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+import { palette } from "@/constants/colors";
 
 interface RecurringEditModalProps {
   visible: boolean;

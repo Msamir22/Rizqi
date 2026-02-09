@@ -162,7 +162,7 @@ function parseSupabaseTypes(content) {
         }
         relationships[tableName].push({
           foreignKey: relMatch[2],
-          referencedTable: referencedTable,
+          referencedTable,
         });
       }
     }
@@ -381,8 +381,8 @@ function generateBaseModel(tableName, columns, relationships, allTables) {
     );
   }
 
-  // Build imports
-  const imports = ['import { Model, Query } from "@nozbe/watermelondb";'];
+  // Build consolidated WatermelonDB imports
+  const wmImports = ["Model"];
   const decorators = new Set(["field"]);
 
   for (const col of columns) {
@@ -390,18 +390,27 @@ function generateBaseModel(tableName, columns, relationships, allTables) {
     if (col.isReadonly) decorators.add("readonly");
   }
 
-  if (rels.length > 0) decorators.add("relation");
-  if (hasMany.length > 0) decorators.add("children");
-
-  imports.push(
-    `import { ${Array.from(decorators).join(", ")} } from "@nozbe/watermelondb/decorators";`
-  );
-  imports.push(
-    'import type { Associations } from "@nozbe/watermelondb/Model";'
-  );
-
   if (rels.length > 0) {
-    imports.push('import type { Relation } from "@nozbe/watermelondb";');
+    decorators.add("relation");
+    wmImports.push("type Relation");
+  }
+  if (hasMany.length > 0) {
+    decorators.add("children");
+    wmImports.push("Query");
+  }
+
+  const imports = [
+    `import { ${wmImports.join(", ")} } from "@nozbe/watermelondb";`,
+  ];
+
+  imports.push(
+    `import { ${Array.from(decorators).sort().join(", ")} } from "@nozbe/watermelondb/decorators";`
+  );
+
+  if (associations.length > 0) {
+    imports.push(
+      'import type { Associations } from "@nozbe/watermelondb/Model";'
+    );
   }
 
   // Add type imports
@@ -476,13 +485,14 @@ function generateBaseModel(tableName, columns, relationships, allTables) {
       ? `  static associations: Associations = {\n${associations.join(",\n")},\n  };`
       : "";
 
-  return `/**
+  return `
+/**
  * Base${className} - Abstract Base Model for WatermelonDB
  * AUTO-GENERATED - DO NOT EDIT MANUALLY
  * Run 'npm run db:sync' to regenerate
  * 
  * Extend this class in ../${className}.ts to add custom methods
- */
+*/
 
 ${imports.join("\n")}
 
@@ -609,11 +619,18 @@ function main() {
 
   // Format the generated base model files with Prettier
   console.log("\n🎨 Formatting base model files...");
+  console.log("\n🎨 Linting base model files...");
+
   try {
     execSync(`npx prettier --write "${BASE_MODELS_DIR}/**/*.ts"`, {
       stdio: "inherit",
     });
     console.log("   ✅ Base models formatted");
+
+    execSync(`npx eslint "${BASE_MODELS_DIR}" --ext .ts --fix`, {
+      stdio: "inherit",
+    });
+    console.log("   ✅ Base models linted");
   } catch (error) {
     console.warn("   ⚠️  Prettier formatting failed:", error.message);
   }

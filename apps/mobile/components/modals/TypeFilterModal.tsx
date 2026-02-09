@@ -1,5 +1,3 @@
-import { palette } from "@/constants/colors";
-import { TransactionTypeFilter } from "@/hooks/useTransactionsGrouping";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import React from "react";
@@ -12,6 +10,8 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+import { palette } from "@/constants/colors";
+import { TransactionTypeFilter } from "@/hooks/useTransactionsGrouping";
 
 interface TypeFilterModalProps {
   visible: boolean;
@@ -20,11 +20,11 @@ interface TypeFilterModalProps {
   onClose: () => void;
 }
 
-const TYPE_OPTIONS: {
+const TYPE_OPTIONS: Array<{
   value: TransactionTypeFilter;
   label: string;
-  icon: string;
-}[] = [
+  icon: keyof typeof Ionicons.glyphMap;
+}> = [
   { value: "Income", label: "Income", icon: "trending-up" },
   { value: "Expense", label: "Expense", icon: "trending-down" },
   { value: "Transfer", label: "Transfer", icon: "swap-horizontal" },
@@ -91,7 +91,7 @@ export function TypeFilterModal({
                     >
                       <View className="flex-row items-center gap-3">
                         <Ionicons
-                          name={option.icon as any}
+                          name={option.icon}
                           size={20}
                           color={
                             isSelected

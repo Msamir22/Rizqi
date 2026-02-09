@@ -1,8 +1,8 @@
-import { useTheme } from "@/context/ThemeContext";
 import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
 import { View, ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTheme } from "@/context/ThemeContext";
 
 interface Props {
   children: React.ReactNode;
@@ -10,7 +10,11 @@ interface Props {
   className?: string;
 }
 
-export function GradientBackground({ children, style, className }: Props) {
+export function GradientBackground({
+  children,
+  style,
+  className,
+}: Props): JSX.Element {
   const { theme, isDark } = useTheme();
 
   if (isDark && theme.backgroundGradient) {

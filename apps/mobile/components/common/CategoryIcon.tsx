@@ -5,14 +5,15 @@
  * Automatically handles fallback for invalid icon/library combinations.
  */
 
-import React from "react";
+import type { Category } from "@astik/db";
 import {
+  FontAwesome5,
   Ionicons,
   MaterialCommunityIcons,
-  FontAwesome5,
   MaterialIcons,
 } from "@expo/vector-icons";
-import type { Category } from "@astik/db";
+import React from "react";
+import { cssInterop } from "react-native-css-interop";
 
 /** Supported icon libraries from @expo/vector-icons */
 export type IconLibrary =
@@ -21,6 +22,17 @@ export type IconLibrary =
   | "FontAwesome5"
   | "MaterialIcons";
 
+/** Standard props for @expo/vector-icons components */
+interface IconProps {
+  name: string;
+  size?: number;
+  color?: string;
+  className?: string;
+}
+
+/** Generic type for an icon component */
+type IconComponentType = React.ComponentType<IconProps>;
+
 interface CategoryIconProps {
   /** Icon name from the target library */
   iconName: string;
@@ -28,16 +40,47 @@ interface CategoryIconProps {
   iconLibrary: IconLibrary;
   /** Icon size in pixels */
   size?: number;
-  /** Icon color */
+  /** Icon color (supports Tailwind via className) */
   color?: string;
+  /** Tailwind classes */
+  className?: string;
 }
 
-const ICON_LIBRARIES = {
-  Ionicons,
-  MaterialCommunityIcons,
-  FontAwesome5,
-  MaterialIcons,
-} as const;
+// Enable Tailwind support for icon components
+cssInterop(Ionicons, {
+  className: {
+    target: "style",
+    nativeStyleToProp: { color: true },
+  },
+});
+cssInterop(MaterialCommunityIcons, {
+  className: {
+    target: "style",
+    nativeStyleToProp: { color: true },
+  },
+});
+cssInterop(FontAwesome5, {
+  className: {
+    target: "style",
+    nativeStyleToProp: { color: true },
+  },
+});
+cssInterop(MaterialIcons, {
+  className: {
+    target: "style",
+    nativeStyleToProp: { color: true },
+  },
+});
+
+const ICON_LIBRARIES: Record<IconLibrary, IconComponentType> = {
+  Ionicons: Ionicons as unknown as IconComponentType,
+  MaterialCommunityIcons:
+    MaterialCommunityIcons as unknown as IconComponentType,
+  FontAwesome5: FontAwesome5 as unknown as IconComponentType,
+  MaterialIcons: MaterialIcons as unknown as IconComponentType,
+};
+
+// Duplicate interface removed - merged at top
 
 /**
  * Renders a category icon from the specified icon library.
@@ -48,15 +91,16 @@ export function CategoryIcon({
   iconLibrary,
   color,
   size = 24,
-}: CategoryIconProps): React.ReactElement {
-  const IconComponent = ICON_LIBRARIES[iconLibrary] ?? Ionicons;
+  className,
+}: CategoryIconProps): React.JSX.Element {
+  const IconComponent = ICON_LIBRARIES[iconLibrary] || ICON_LIBRARIES.Ionicons;
 
   return (
     <IconComponent
-      // Using 'as never' to handle the union type mismatch between libraries
-      name={iconName as never}
+      name={iconName}
       size={size}
       color={color}
+      className={className}
     />
   );
 }
@@ -71,7 +115,7 @@ export function CategoryIconFromModel({
 }: {
   category: Category;
   size?: number;
-}): React.ReactElement {
+}): React.JSX.Element {
   const { iconName, iconLibrary, iconColor } = category.iconConfig;
 
   return (

@@ -1,14 +1,5 @@
-import { Button } from "@/components/ui/Button";
-import { TextField } from "@/components/ui/TextField";
-import { Dropdown } from "@/components/ui/Dropdown";
-import { BankDetailsSection } from "@/components/add-account/BankDetailsSection";
-import { palette } from "@/constants/colors";
-import { ACCOUNT_TYPES, CURRENCIES } from "@/constants/accounts";
-import { useTheme } from "@/context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -19,17 +10,24 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BankDetailsSection } from "@/components/add-account/BankDetailsSection";
+import { PageHeader } from "@/components/navigation/PageHeader";
+import { Button } from "@/components/ui/Button";
+import { Dropdown } from "@/components/ui/Dropdown";
+import { TextField } from "@/components/ui/TextField";
+import { ACCOUNT_TYPES, CURRENCIES } from "@/constants/accounts";
+import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
 import {
   useAccountForm,
   useCreateAccount,
   useKeyboardVisibility,
 } from "@/hooks";
 
-export default function AddAccount() {
-  const router = useRouter();
+export default function AddAccount(): React.ReactNode {
   const insets = useSafeAreaInsets();
-  const { isDark } = useTheme();
   const isKeyboardVisible = useKeyboardVisibility();
+  const { isDark } = useTheme();
 
   // Custom hooks for form state and business logic
   const { formData, errors, updateField, validate } = useAccountForm();
@@ -43,7 +41,7 @@ export default function AddAccount() {
   /**
    * Handles the save action by validating the form and calling the creation hook.
    */
-  const handleSave = async () => {
+  const handleSave = async (): Promise<void> => {
     if (validate()) {
       await createAccount(formData);
     }
@@ -58,70 +56,47 @@ export default function AddAccount() {
         barStyle={isDark ? "light-content" : "dark-content"}
         backgroundColor="transparent"
       />
+      <PageHeader
+        title="New Account"
+        showBackButton={true}
+        backIcon="arrow"
+        rightAction={{
+          label: "Save",
+          onPress: handleSave,
+          loading: isSubmitting,
+        }}
+      />
 
       <ScrollView
         className="flex-1"
         contentContainerStyle={{
-          paddingTop: insets.top + 16,
           paddingBottom: insets.bottom + 120,
         }}
         showsVerticalScrollIndicator={false}
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
       >
-        {/* Header */}
-        <View className="mb-6 flex-row items-center justify-center px-4">
-          <TouchableOpacity
-            onPress={() => router.back()}
-            className="absolute left-4 p-1"
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name="chevron-back"
-              size={24}
-              color={isDark ? palette.slate[400] : palette.slate[600]}
-            />
-          </TouchableOpacity>
-          <Text className="text-lg font-bold text-slate-900 dark:text-white">
-            New Account
-          </Text>
-        </View>
-
         {/* Hero Illustration Section */}
         <View className="mb-6 items-center px-4">
-          <LinearGradient
-            colors={
-              isDark
-                ? ["rgba(6, 95, 70, 0.15)", "rgba(16, 185, 129, 0.08)"]
-                : [palette.nileGreen[50], palette.nileGreen[100]]
-            }
-            style={{
-              width: "100%",
-              borderRadius: 32,
-              alignItems: "center",
-              justifyContent: "center",
-              paddingVertical: 32,
-              paddingHorizontal: 24,
-            }}
-          >
-            <View className="mb-4">
+          <View className="w-full rounded-[40px] items-center justify-center py-8 px-6 bg-nileGreen-50 dark:bg-nileGreen-900/30 border border-nileGreen-100 dark:border-nileGreen-800/50">
+            <View className="mb-4 w-20 h-20 rounded-3xl bg-nileGreen-500/10 items-center justify-center">
               <Ionicons
                 name="wallet"
-                size={64}
-                color={isDark ? palette.nileGreen[400] : palette.nileGreen[600]}
+                size={50}
+                color={palette.nileGreen[500]}
               />
             </View>
-            <Text className="mb-2 text-center text-xl font-bold text-slate-900 dark:text-white">
-              Where's your money?
+            <Text className="mb-2 text-center text-xl font-black text-slate-900 dark:text-white">
+              Where&apos;s your money?
             </Text>
-            <Text className="text-center text-sm text-slate-500 dark:text-slate-400">
+            <Text className="text-center text-sm font-bold text-slate-500 dark:text-slate-400">
               Add an account to start tracking
             </Text>
-          </LinearGradient>
+          </View>
         </View>
 
         {/* Account Type Pills */}
-        <View className="mb-8 flex-row justify-center gap-2 px-4 flex-wrap">
+        <View className="mb-8 flex-row justify-center gap-2.5 px-6 flex-wrap">
           {ACCOUNT_TYPES.map((type) => {
             const isSelected = formData.accountType === type.id;
             return (
@@ -129,17 +104,15 @@ export default function AddAccount() {
                 key={type.id}
                 onPress={() => updateField("accountType", type.id)}
                 activeOpacity={0.8}
-                className={`flex-row items-center rounded-full px-5 py-3 ${
+                className={`flex-row items-center rounded-2xl px-5 py-3.5 border ${
                   isSelected
-                    ? "bg-nileGreen-600"
-                    : isDark
-                      ? "bg-slate-800"
-                      : "bg-slate-100"
+                    ? "bg-nileGreen-600 border-nileGreen-600"
+                    : "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
                 }`}
                 style={
                   isSelected
                     ? {
-                        shadowColor: "#000",
+                        shadowColor: "rgb(5 150 105 / 0.2)",
                         shadowOffset: { width: 0, height: 1 },
                         shadowOpacity: 0.1,
                         shadowRadius: 2,
@@ -151,16 +124,20 @@ export default function AddAccount() {
                 <Ionicons
                   name={type.icon}
                   size={18}
-                  color={isSelected ? "#FFF" : isDark ? "#94A3B8" : "#64748B"}
+                  color={
+                    isSelected
+                      ? "#FFF"
+                      : isDark
+                        ? palette.slate[400]
+                        : palette.slate[600]
+                  }
                   className="mr-2"
                 />
                 <Text
-                  className={`text-sm font-bold ${
+                  className={`text-xs font-extrabold tracking-widest uppercase ${
                     isSelected
                       ? "text-white"
-                      : isDark
-                        ? "text-slate-400"
-                        : "text-slate-600"
+                      : "text-slate-500 dark:text-slate-400"
                   }`}
                 >
                   {type.label}
@@ -235,7 +212,7 @@ export default function AddAccount() {
       {/* Fixed Bottom Button - Hidden when keyboard is visible to prevent covering screen */}
       {!isKeyboardVisible && (
         <View
-          className="absolute bottom-0 left-0 right-0 px-4 pt-4 bg-background/80 dark:bg-background-dark/80"
+          className="absolute bottom-0 left-0 right-0 px-6 pt-6 pb-10 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-800"
           style={{ paddingBottom: insets.bottom + 16 }}
         >
           <Button

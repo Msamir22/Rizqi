@@ -3,8 +3,8 @@ import { router } from "expo-router";
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { AstikLogo } from "../ui/AstikLogo";
 import { useTheme } from "@/context/ThemeContext";
+import { AstikLogo } from "../ui/AstikLogo";
 
 // TODO: Replace with user context when available
 const USER_NAME = "Mohamed";
@@ -16,7 +16,7 @@ interface TopNavProps {
 export function TopNav({ onMenuPress }: TopNavProps): React.ReactElement {
   const { theme } = useTheme();
 
-  const getGreeting = () => {
+  const getGreeting = (): string => {
     const hours = new Date().getHours();
     if (hours < 12) return "Good Morning";
     if (hours < 18) return "Good Afternoon";

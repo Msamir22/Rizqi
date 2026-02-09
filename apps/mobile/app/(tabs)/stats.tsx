@@ -3,7 +3,7 @@
  * Analytics and insights about spending patterns
  */
 
-import { StarryBackground } from "@/components/ui/StarryBackground";
+import { PageHeader } from "@/components/navigation/PageHeader";
 import { CategoryDrilldownCard } from "@/components/stats/CategoryDrilldownCard";
 import { palette } from "@/constants/colors";
 import { TAB_BAR_HEIGHT } from "@/constants/ui";
@@ -50,7 +50,11 @@ function MonthlyExpenseChart(): React.JSX.Element {
   const isLoading = expenseLoading || incomeLoading;
 
   // Transform data for grouped bar chart
-  const chartData: { value: number; frontColor: string; label?: string }[] = [];
+  const chartData: Array<{
+    value: number;
+    frontColor: string;
+    label?: string;
+  }> = [];
 
   expenseData.forEach((expense, index) => {
     const income = incomeData[index];
@@ -72,17 +76,11 @@ function MonthlyExpenseChart(): React.JSX.Element {
   const totalIncome = incomeData.reduce((sum, d) => sum + d.value, 0);
   const netSavings = totalIncome - totalExpenses;
 
-  const containerClass = isDark
-    ? "bg-slate-800/50 border-slate-700"
-    : "bg-slate-100/50 border-slate-200";
-
   return (
-    <View className={`rounded-2xl border p-4 mb-4 ${containerClass}`}>
+    <View className="rounded-3xl border p-5 mb-5 bg-white/60 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700">
       {/* Header */}
       <View className="flex-row items-center justify-between mb-4">
-        <Text
-          className={`text-lg font-bold ${isDark ? "text-white" : "text-slate-800"}`}
-        >
+        <Text className="text-lg font-bold text-slate-800 dark:text-white">
           Monthly Overview
         </Text>
         <View className="flex-row gap-1">
@@ -90,10 +88,10 @@ function MonthlyExpenseChart(): React.JSX.Element {
             <TouchableOpacity
               key={p}
               onPress={() => setPeriod(p)}
-              className={`px-3 py-1 rounded-full ${period === p ? "bg-nileGreen-500" : isDark ? "bg-slate-700" : "bg-slate-200"}`}
+              className={`px-3 py-1 rounded-full ${period === p ? "bg-nileGreen-500" : "bg-slate-200 dark:bg-slate-700"}`}
             >
               <Text
-                className={`text-xs font-semibold ${period === p ? "text-white" : isDark ? "text-slate-300" : "text-slate-600"}`}
+                className={`text-xs font-semibold ${period === p ? "text-white" : "text-slate-600 dark:text-slate-300"}`}
               >
                 {p}
               </Text>
@@ -106,20 +104,13 @@ function MonthlyExpenseChart(): React.JSX.Element {
       <View className="flex-row gap-4 mb-3">
         <View className="flex-row items-center">
           <View className="w-3 h-3 rounded-sm mr-1 bg-nileGreen-500" />
-          <Text
-            className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}
-          >
+          <Text className="text-xs text-slate-500 dark:text-slate-400">
             Income
           </Text>
         </View>
         <View className="flex-row items-center">
-          <View
-            className="w-3 h-3 rounded-sm mr-1"
-            style={{ backgroundColor: palette.red[400] }}
-          />
-          <Text
-            className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}
-          >
+          <View className="w-3 h-3 rounded-sm mr-1 bg-red-400" />
+          <Text className="text-xs text-slate-500 dark:text-slate-400">
             Expenses
           </Text>
         </View>
@@ -158,42 +149,31 @@ function MonthlyExpenseChart(): React.JSX.Element {
       )}
 
       {/* Summary Stats */}
-      <View
-        className={`flex-row justify-between mt-4 pt-3 border-t ${isDark ? "border-slate-700" : "border-slate-200"}`}
-      >
+      <View className="flex-row justify-between mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
         <View className="items-center flex-1">
-          <Text
-            className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}
-          >
+          <Text className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">
             Total Income
           </Text>
-          <Text className="text-sm font-bold text-nileGreen-500">
-            {formatCurrency(totalIncome, "EGP")}
+          <Text className="text-sm font-bold text-nileGreen-500 mt-0.5">
+            {formatCurrency({ amount: totalIncome, currency: "EGP" })}
           </Text>
         </View>
         <View className="items-center flex-1">
-          <Text
-            className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}
-          >
+          <Text className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">
             Total Expenses
           </Text>
-          <Text
-            className="text-sm font-bold"
-            style={{ color: palette.red[400] }}
-          >
-            {formatCurrency(totalExpenses, "EGP")}
+          <Text className="text-sm font-bold text-red-500 dark:text-red-400 mt-0.5">
+            {formatCurrency({ amount: totalExpenses, currency: "EGP" })}
           </Text>
         </View>
         <View className="items-center flex-1">
-          <Text
-            className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}
-          >
+          <Text className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">
             Net Savings
           </Text>
           <Text
-            className={`text-sm font-bold ${netSavings >= 0 ? "text-nileGreen-500" : "text-red-400"}`}
+            className={`text-sm font-bold mt-0.5 ${netSavings >= 0 ? "text-nileGreen-500" : "text-red-400"}`}
           >
-            {formatCurrency(netSavings, "EGP")}
+            {formatCurrency({ amount: netSavings, currency: "EGP" })}
           </Text>
         </View>
       </View>
@@ -202,12 +182,7 @@ function MonthlyExpenseChart(): React.JSX.Element {
 }
 
 function QuickStats(): React.JSX.Element {
-  const { isDark } = useTheme();
   const { data: summaries, isLoading } = useMonthlySummaries(3);
-
-  const containerClass = isDark
-    ? "bg-slate-800/50 border-slate-700"
-    : "bg-slate-100/50 border-slate-200";
 
   const currentMonth = summaries[0];
   const lastMonth = summaries[1];
@@ -226,10 +201,8 @@ function QuickStats(): React.JSX.Element {
       : 0;
 
   return (
-    <View className={`rounded-2xl border p-4 mb-4 ${containerClass}`}>
-      <Text
-        className={`text-lg font-bold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}
-      >
+    <View className="rounded-3xl border p-5 mb-5 bg-white/60 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700">
+      <Text className="text-lg font-bold mb-4 text-slate-800 dark:text-white">
         Quick Insights
       </Text>
 
@@ -240,28 +213,18 @@ function QuickStats(): React.JSX.Element {
       ) : (
         <View className="flex-row gap-3">
           {/* Average */}
-          <View
-            className={`flex-1 rounded-xl p-3 ${isDark ? "bg-slate-700/50" : "bg-slate-100"}`}
-          >
-            <Text
-              className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}
-            >
+          <View className="flex-1 rounded-2xl p-4 bg-slate-100/50 dark:bg-slate-700/50">
+            <Text className="text-xs text-slate-500 dark:text-slate-400 font-medium">
               Avg Monthly Spend
             </Text>
-            <Text
-              className={`text-base font-bold mt-1 ${isDark ? "text-white" : "text-slate-800"}`}
-            >
-              {formatCurrency(avgExpense, "EGP")}
+            <Text className="text-base font-bold mt-1 text-slate-800 dark:text-white">
+              {formatCurrency({ amount: avgExpense, currency: "EGP" })}
             </Text>
           </View>
 
           {/* Month over Month */}
-          <View
-            className={`flex-1 rounded-xl p-3 ${isDark ? "bg-slate-700/50" : "bg-slate-100"}`}
-          >
-            <Text
-              className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}
-            >
+          <View className="flex-1 rounded-2xl p-4 bg-slate-100/50 dark:bg-slate-700/50">
+            <Text className="text-xs text-slate-500 dark:text-slate-400 font-medium">
               vs Last Month
             </Text>
             <View className="flex-row items-center mt-1">
@@ -275,7 +238,9 @@ function QuickStats(): React.JSX.Element {
                 }
               />
               <Text
-                className={`text-base font-bold ml-1 ${percentageChange >= 0 ? "text-red-400" : "text-nileGreen-500"}`}
+                className={`text-base font-bold ml-1 ${
+                  percentageChange >= 0 ? "text-red-400" : "text-nileGreen-500"
+                }`}
               >
                 {Math.abs(percentageChange).toFixed(1)}%
               </Text>
@@ -292,22 +257,14 @@ function QuickStats(): React.JSX.Element {
 // =============================================================================
 
 export default function StatsScreen(): React.JSX.Element {
-  const { isDark } = useTheme();
-
   return (
-    <StarryBackground>
+    <View className="flex-1 bg-slate-50 dark:bg-slate-900">
+      <PageHeader title="Stats" />
       <ScrollView
         contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + 20 }}
         showsVerticalScrollIndicator={false}
       >
-        <View className="px-5 pt-14">
-          {/* Header */}
-          <Text
-            className={`text-2xl font-bold mb-5 ${isDark ? "text-white" : "text-slate-800"}`}
-          >
-            Stats
-          </Text>
-
+        <View className="px-5 pt-4">
           {/* Quick Stats */}
           <QuickStats />
 
@@ -318,6 +275,6 @@ export default function StatsScreen(): React.JSX.Element {
           <CategoryDrilldownCard />
         </View>
       </ScrollView>
-    </StarryBackground>
+    </View>
   );
 }
