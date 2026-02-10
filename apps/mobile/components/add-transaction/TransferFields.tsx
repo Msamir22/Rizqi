@@ -2,7 +2,8 @@ import { palette } from "@/constants/colors";
 import { Account } from "@astik/db";
 import { Ionicons } from "@expo/vector-icons";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
-import { AccountSelector } from "./AccountSelector";
+import { Dropdown, DropdownItem } from "../ui/Dropdown";
+import { useState } from "react";
 
 interface TransferFieldsProps {
   accounts: Account[];
@@ -26,6 +27,23 @@ export function TransferFields({
   onChangeTargetAmount,
   exchangeRate,
 }: TransferFieldsProps): React.JSX.Element {
+  const [isFromDropdownOpen, setIsFromDropdownOpen] = useState(false);
+  const [isToDropdownOpen, setIsToDropdownOpen] = useState(false);
+
+  const dropdownItems = accounts.map(
+    (acc): DropdownItem<string> => ({
+      label: acc.name,
+      value: acc.id,
+      description: `${acc.currency} • ${acc.type.replace("_", " ")}`,
+      icon:
+        acc.type === "BANK"
+          ? "business-outline"
+          : acc.type === "DIGITAL_WALLET"
+            ? "card-outline"
+            : "wallet-outline",
+      iconType: "ionicons",
+    })
+  );
   const fromAccount = accounts.find((a) => a.id === fromAccountId);
   const toAccount = accounts.find((a) => a.id === toAccountId);
 
@@ -43,12 +61,13 @@ export function TransferFields({
   return (
     <View className="mb-4">
       {/* From Account */}
-      <AccountSelector
-        accounts={accounts}
-        selectedId={fromAccountId}
-        onSelect={onSelectFrom}
+      <Dropdown
         label="FROM ACCOUNT"
-        mainColor={palette.blue[500]}
+        items={dropdownItems}
+        value={fromAccountId}
+        onChange={onSelectFrom}
+        isOpen={isFromDropdownOpen}
+        onToggle={() => setIsFromDropdownOpen(!isFromDropdownOpen)}
       />
 
       {/* Swap Button */}
@@ -63,12 +82,13 @@ export function TransferFields({
       </View>
 
       {/* To Account */}
-      <AccountSelector
-        accounts={accounts}
-        selectedId={toAccountId}
-        onSelect={onSelectTo}
+      <Dropdown
         label="TO ACCOUNT"
-        mainColor={palette.blue[500]}
+        items={dropdownItems}
+        value={toAccountId}
+        onChange={onSelectTo}
+        isOpen={isToDropdownOpen}
+        onToggle={() => setIsToDropdownOpen(!isToDropdownOpen)}
       />
 
       {/* Multi-currency Target Amount Section */}

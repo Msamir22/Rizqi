@@ -3,7 +3,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AccountSelector } from "@/components/add-transaction/AccountSelector";
+import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
 import { AmountDisplay } from "@/components/add-transaction/AmountDisplay";
 import {
   CalculatorKey,
@@ -46,6 +46,7 @@ export default function AddTransaction(): React.ReactNode {
   // UI State
   const [isOptionalExpanded, setIsOptionalExpanded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
 
   // Hooks
   const {
@@ -283,12 +284,26 @@ export default function AddTransaction(): React.ReactNode {
             />
           ) : (
             <>
-              <AccountSelector
-                accounts={accounts}
-                selectedId={selectedAccountId}
-                onSelect={setSelectedAccountId}
+              <Dropdown
                 label="ACCOUNT"
-                mainColor={selectedCategory?.color}
+                items={accounts.map(
+                  (acc): DropdownItem<string> => ({
+                    label: acc.name,
+                    value: acc.id,
+                    description: `${acc.currency} • ${acc.type.replace("_", " ")}`,
+                    icon:
+                      acc.type === "BANK"
+                        ? "business-outline"
+                        : acc.type === "DIGITAL_WALLET"
+                          ? "card-outline"
+                          : "wallet-outline",
+                    iconType: "ionicons",
+                  })
+                )}
+                value={selectedAccountId}
+                onChange={setSelectedAccountId}
+                isOpen={isAccountDropdownOpen}
+                onToggle={() => setIsAccountDropdownOpen(!isAccountDropdownOpen)}
               />
 
               <CategoryPicker
