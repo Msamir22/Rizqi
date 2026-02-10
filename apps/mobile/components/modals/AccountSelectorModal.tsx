@@ -39,7 +39,7 @@ export function AccountSelectorModal({
     >
       <TouchableWithoutFeedback onPress={onClose}>
         <View className="flex-1 bg-black/60 justify-end">
-          <View className="rounded-t-3xl overflow-hidden max-h-[80%] bg-white dark:bg-slate-900">
+          <View className="rounded-t-3xl overflow-hidden max-h-[80%] bg-white dark:bg-slate-900 z-50">
             <BlurView
               intensity={40}
               tint={isDark ? "dark" : "light"}
@@ -47,7 +47,7 @@ export function AccountSelectorModal({
             />
             <View className="absolute inset-0 bg-white/95 dark:bg-slate-900/95" />
 
-            <View className="flex-1">
+            <View>
               {/* Header */}
               <View className="flex-row justify-between items-center px-6 py-5 border-b border-slate-200 dark:border-slate-800">
                 <Text className="text-xl font-bold text-slate-800 dark:text-slate-100">
