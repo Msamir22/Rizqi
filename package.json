@@ -32,7 +32,7 @@
     "db:reset": "npx supabase db reset",
     "db:migrations": "npx supabase migration list",
     "fn:deploy:rates": "npx supabase functions deploy fetch-metal-rates --project-ref yulbcndyssdjicbpmlrk",
-    "prepare": "husky"
+    "prepare": "node -e \"if (process.env.CI !== 'true') { process.exit(1) }\" || husky"
   },
   "dependencies": {
     "@nozbe/watermelondb": "^0.28.0"
