@@ -264,6 +264,7 @@ export type Database = {
           system_name: string;
           type: Database["public"]["Enums"]["transaction_type"] | null;
           updated_at: string;
+          usage_count: number;
           user_id: string | null;
         };
         Insert: {
@@ -284,6 +285,7 @@ export type Database = {
           system_name: string;
           type?: Database["public"]["Enums"]["transaction_type"] | null;
           updated_at?: string;
+          usage_count?: number;
           user_id?: string | null;
         };
         Update: {
@@ -304,6 +306,7 @@ export type Database = {
           system_name?: string;
           type?: Database["public"]["Enums"]["transaction_type"] | null;
           updated_at?: string;
+          usage_count?: number;
           user_id?: string | null;
         };
         Relationships: [
@@ -747,6 +750,7 @@ export type Database = {
           account_id: string;
           amount: number;
           category_id: string;
+          counterparty: string | null;
           created_at: string;
           currency: Database["public"]["Enums"]["currency_type"];
           date: string;
@@ -756,7 +760,6 @@ export type Database = {
           linked_asset_id: string | null;
           linked_debt_id: string | null;
           linked_recurring_id: string | null;
-          merchant: string | null;
           note: string | null;
           source: Database["public"]["Enums"]["transaction_source"];
           type: Database["public"]["Enums"]["transaction_type"];
@@ -767,6 +770,7 @@ export type Database = {
           account_id: string;
           amount: number;
           category_id: string;
+          counterparty?: string | null;
           created_at?: string;
           currency: Database["public"]["Enums"]["currency_type"];
           date: string;
@@ -776,7 +780,6 @@ export type Database = {
           linked_asset_id?: string | null;
           linked_debt_id?: string | null;
           linked_recurring_id?: string | null;
-          merchant?: string | null;
           note?: string | null;
           source?: Database["public"]["Enums"]["transaction_source"];
           type: Database["public"]["Enums"]["transaction_type"];
@@ -787,6 +790,7 @@ export type Database = {
           account_id?: string;
           amount?: number;
           category_id?: string;
+          counterparty?: string | null;
           created_at?: string;
           currency?: Database["public"]["Enums"]["currency_type"];
           date?: string;
@@ -796,7 +800,6 @@ export type Database = {
           linked_asset_id?: string | null;
           linked_debt_id?: string | null;
           linked_recurring_id?: string | null;
-          merchant?: string | null;
           note?: string | null;
           source?: Database["public"]["Enums"]["transaction_source"];
           type?: Database["public"]["Enums"]["transaction_type"];

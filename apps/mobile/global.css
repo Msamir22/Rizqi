@@ -13,3 +13,11 @@
 .button-text {
   @apply text-[13px] font-semibold text-slate-100 opacity-90;
 }
+
+.input-label {
+  @apply text-xs font-extrabold text-slate-500 dark:text-slate-400 mb-2 px-1 uppercase tracking-widest;
+}
+
+.input-error {
+  @apply mt-1.5 px-2 text-xs font-bold text-red-500;
+}

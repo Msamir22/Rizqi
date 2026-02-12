@@ -11,10 +11,7 @@ export {
 } from "./useTransactions";
 export { useMarketRates } from "./useMarketRates";
 export { useCategories, useCategory } from "./useCategories";
-export {
-  useNetWorthWithMonthlyPercentageChange,
-  useNetWorth,
-} from "./useNetWorth";
+export { useMonthlyPercentageChange, useNetWorth } from "./useNetWorth";
 export {
   usePeriodSummary,
   PERIOD_LABELS,

@@ -58,3 +58,8 @@ mobile application.
 - Custom header implementations in individual screens.
 - `withObservables` HOC for simple data fetching; prefer hooks like
   `useAccounts` or `useCategories`.
+- **NativeWind shadow classes on interactive components**: `shadow-*`,
+  `opacity-*`, and `bg-color/opacity` classes on `TouchableOpacity` or
+  `Pressable` cause a NativeWind v4 race condition crash ("Couldn't find a
+  navigation context"). Use inline `style` for shadows on these components
+  instead.

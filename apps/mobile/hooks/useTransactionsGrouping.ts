@@ -1,6 +1,3 @@
-import { database, Transaction, Transfer } from "@astik/db";
-import { Q } from "@nozbe/watermelondb";
-import { useEffect, useMemo, useState } from "react";
 import {
   formatDate,
   getEndOfDay,
@@ -11,7 +8,10 @@ import {
   getStartOfWeek,
   isSameDay,
 } from "@/utils/dateHelpers";
-import { useNetWorthWithMonthlyPercentageChange } from "./useNetWorth";
+import { database, Transaction, Transfer } from "@astik/db";
+import { Q } from "@nozbe/watermelondb";
+import { useEffect, useMemo, useState } from "react";
+import { useNetWorth } from "./useNetWorth";
 import { PeriodFilter } from "./usePeriodSummary";
 
 export type TransactionTypeFilter = "All" | "Income" | "Expense" | "Transfer";
@@ -118,8 +118,7 @@ export function useTransactionsGrouping(
   const [displayedItems, setDisplayedItems] = useState<DisplayTransaction[]>(
     []
   );
-  const { totalNetWorth, isLoading: isNetWorthLoading } =
-    useNetWorthWithMonthlyPercentageChange();
+  const { totalNetWorth, isLoading: isNetWorthLoading } = useNetWorth();
   const [isDataLoading, setIsDataLoading] = useState(true);
 
   // 1. Fetch Transactions and Transfers
@@ -257,8 +256,8 @@ export function useTransactionsGrouping(
           if (item._type === "transaction") {
             return (
               (item.note && item.note.toLowerCase().includes(lowerQuery)) ||
-              (item.merchant &&
-                item.merchant.toLowerCase().includes(lowerQuery)) ||
+              (item.counterparty &&
+                item.counterparty.toLowerCase().includes(lowerQuery)) ||
               (item.categoryName &&
                 item.categoryName.toLowerCase().includes(lowerQuery)) ||
               item.amount.toString().includes(lowerQuery)

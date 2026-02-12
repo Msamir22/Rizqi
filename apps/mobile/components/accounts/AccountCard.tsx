@@ -59,8 +59,17 @@ export function AccountCard({
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.7}
-      className="mb-3 mx-5 rounded-2xl overflow-hidden bg-white dark:bg-slate-800 border-l-[4px] border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-none"
-      style={{ borderLeftColor: config.color }}
+      className="mb-3 mx-5 rounded-2xl overflow-hidden bg-white dark:bg-slate-800 border-l-[4px] border-slate-100 dark:border-slate-700"
+      // shadow-* classes moved to inline style to avoid NativeWind v4
+      // race condition with React Navigation context (known bug)
+      style={{
+        borderLeftColor: config.color,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
+      }}
     >
       <View className="flex-row items-center p-4">
         {/* Icon Container with subtle background */}

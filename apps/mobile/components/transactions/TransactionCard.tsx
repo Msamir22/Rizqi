@@ -1,7 +1,7 @@
+import { palette } from "@/constants/colors";
 import { CurrencyType } from "@astik/db";
 import { formatCurrency } from "@astik/logic";
 import React from "react";
-import { palette } from "@/constants/colors";
 import { IconLibrary } from "../common/CategoryIcon";
 import { BaseCard } from "./BaseCard";
 
@@ -12,7 +12,7 @@ interface TransactionCardProps {
   date: Date;
   isExpense: boolean;
   isIncome: boolean;
-  merchant?: string;
+  counterparty?: string;
   note?: string;
   source?: string;
   accountName: string;
@@ -33,9 +33,8 @@ export function TransactionCard({
   date,
   isExpense,
   isIncome,
-  merchant,
+  counterparty,
   note,
-  source,
   accountName,
   categoryName,
   categoryIconName,
@@ -67,9 +66,6 @@ export function TransactionCard({
     amount: signedAmount,
     currency,
   });
-  // Title is always the category name
-  const title = categoryName;
-  const details = note || source;
 
   return (
     <BaseCard
@@ -81,11 +77,13 @@ export function TransactionCard({
       mainColor={mainColor}
       iconName={categoryIconName}
       iconLibrary={categoryIconLibrary}
-      title={title}
+      title={categoryName}
       amount={formattedAmount}
       subtitle={accountName}
-      merchant={merchant}
-      details={details}
+      counterparty={counterparty}
+      isExpense={isExpense}
+      isIncome={isIncome}
+      details={note}
       displayNetWorth={displayNetWorth}
       date={date}
       index={index}

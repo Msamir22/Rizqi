@@ -16,7 +16,9 @@ import { getNetWorthComparison } from "@/services/net-worth";
 import { useMarketRates } from "./useMarketRates";
 
 interface UseNetWorthResult {
-  netWorthData: NetWorthData | null;
+  totalNetWorth: number | null;
+  totalAccounts: number | null;
+  totalAssets: number | null;
   isLoading: boolean;
   error: Error | null;
   refresh: () => void;
@@ -88,7 +90,9 @@ export function useNetWorth(): UseNetWorthResult {
   }, [accounts, assetMetals, latestRates, isLoading, isRatesLoading]);
 
   return {
-    netWorthData,
+    totalNetWorth: netWorthData?.totalNetWorth ?? null,
+    totalAccounts: netWorthData?.totalAccounts ?? null,
+    totalAssets: netWorthData?.totalAssets ?? null,
     isLoading: isLoading || isRatesLoading,
     error,
     refresh,
@@ -100,20 +104,15 @@ export function useNetWorth(): UseNetWorthResult {
  * Useful for components that only need the total
  * Also fetches monthly percentage change from API via service layer
  */
-export function useNetWorthWithMonthlyPercentageChange(): {
-  totalNetWorth: number | null;
+export function useMonthlyPercentageChange(): {
   monthlyPercentageChange: number | null;
   isLoading: boolean;
 } {
-  const { netWorthData, isLoading } = useNetWorth();
+  const { isLoading } = useNetWorth();
   const [monthlyPercentageChange, setMonthlyPercentageChange] = useState<
     number | null
   >(null);
   const [isComparisonLoading, setIsComparisonLoading] = useState(true);
-
-  const totalNetWorth = useMemo(() => {
-    return netWorthData?.totalNetWorth ?? null;
-  }, [netWorthData]);
 
   useEffect(() => {
     async function fetchComparison(): Promise<void> {
@@ -128,7 +127,6 @@ export function useNetWorthWithMonthlyPercentageChange(): {
   }, [isLoading]);
 
   return {
-    totalNetWorth,
     monthlyPercentageChange,
     isLoading: isLoading || isComparisonLoading,
   };

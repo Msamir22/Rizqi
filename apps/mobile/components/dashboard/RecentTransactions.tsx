@@ -51,7 +51,7 @@ function TransactionItem({
         {/* Text Info */}
         <View className="flex-1 gap-0.5">
           <Text className="text-[15px] font-semibold text-slate-800 dark:text-white">
-            {transaction.merchant || category?.displayName || "Transaction"}
+            {transaction.counterparty || category?.displayName || "Transaction"}
           </Text>
           <Text className="text-xs text-slate-500 dark:text-slate-400">
             {formatTransactionDate(transaction.date)}

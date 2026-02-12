@@ -141,7 +141,7 @@ function extractCurrency(text: string): CurrencyType {
 }
 
 /**
- * Extract merchant/description from voice text
+ * Extract counterparty/description from voice text
  */
 function extractDescription(text: string): string {
   // Remove amount and currency keywords
@@ -195,7 +195,7 @@ export function parseVoiceTransaction(
     amount,
     currency,
     description,
-    merchant: description !== "Transaction" ? description : undefined,
+    counterparty: description !== "Transaction" ? description : undefined,
     detectedCategory: isIncome ? "Income" : "Other",
     confidence: isIncome ? 0.9 : 1,
     isIncome,

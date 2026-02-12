@@ -44,58 +44,29 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
 
   const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const sync = useCallback(
-    async (forceFullSync = false): Promise<void> => {
-      // Check if authenticated before syncing
-      const authenticated = await isAuthenticated();
-      if (!authenticated) {
-        console.log("Sync skipped: Not authenticated");
-        return;
-      }
-
-      if (isSyncing) {
-        console.log("Sync already in progress");
-        return;
-      }
-
-      setIsSyncing(true);
-      setSyncError(null);
-
-      try {
-        await syncDatabase(database, forceFullSync);
-        setLastSyncedAt(new Date());
-        console.log("✅ Sync completed successfully");
-      } catch (error) {
-        console.error("Sync failed:", error);
-        setSyncError(error instanceof Error ? error : new Error("Sync failed"));
-      } finally {
-        setIsSyncing(false);
-      }
-    },
-    [isSyncing]
-  );
-
-  /**
-   * Check if local database is empty (data was cleared)
-   * If empty and user is authenticated, trigger immediate sync
-   */
-  const checkDataClearedAndSync = useCallback(async (): Promise<void> => {
-    try {
-      const authenticated = await isAuthenticated();
-      if (!authenticated) return;
-
-      // Check if accounts collection is empty
-      const accountsCollection = database.get("accounts");
-      const count = await accountsCollection.query().fetchCount();
-
-      if (count === 0) {
-        console.log("📱 Local DB empty - triggering full sync from server");
-        await sync(true); // Force full sync to fetch all data
-      }
-    } catch (error) {
-      console.error("Error checking data cleared status:", error);
+  const sync = useCallback(async (forceFullSync = false): Promise<void> => {
+    // Check if authenticated before syncing
+    const authenticated = await isAuthenticated();
+    if (!authenticated) {
+      console.log("Sync skipped: Not authenticated");
+      return;
     }
-  }, [sync]);
+
+    setIsSyncing(true);
+    setSyncError(null);
+
+    try {
+      // Concurrency guard is handled inside syncDatabase (module-level lock in sync.ts)
+      await syncDatabase(database, forceFullSync);
+      setLastSyncedAt(new Date());
+      console.log("✅ Sync completed successfully");
+    } catch (error) {
+      console.error("Sync failed:", error);
+      setSyncError(error instanceof Error ? error : new Error("Sync failed"));
+    } finally {
+      setIsSyncing(false);
+    }
+  }, []);
 
   /**
    * Set up the sync interval based on app state
@@ -172,10 +143,17 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
       }
 
       // Check if data was cleared (empty local DB but authenticated)
-      await checkDataClearedAndSync();
+      // checkDataClearedAndSync will call sync(true) if DB is empty,
+      // so we only do a regular sync if the DB wasn't empty
+      const accountsCollection = database.get("accounts");
+      const count = await accountsCollection.query().fetchCount();
 
-      // Then do normal initial sync
-      await sync();
+      if (count === 0) {
+        console.log("📱 Local DB empty - triggering full sync from server");
+        await sync(true);
+      } else {
+        await sync();
+      }
 
       // Set up initial interval (app starts active)
       setupSyncInterval(true);
