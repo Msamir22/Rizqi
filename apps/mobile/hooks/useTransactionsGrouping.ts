@@ -9,8 +9,10 @@ import {
   isSameDay,
 } from "@/utils/dateHelpers";
 import { database, Transaction, Transfer } from "@astik/db";
+import { convertToEGP } from "@astik/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
+import { useMarketRates } from "./useMarketRates";
 import { useNetWorth } from "./useNetWorth";
 import { PeriodFilter } from "./usePeriodSummary";
 
@@ -119,6 +121,7 @@ export function useTransactionsGrouping(
     []
   );
   const { totalNetWorth, isLoading: isNetWorthLoading } = useNetWorth();
+  const { latestRates } = useMarketRates();
   const [isDataLoading, setIsDataLoading] = useState(true);
 
   // 1. Fetch Transactions and Transfers
@@ -296,11 +299,18 @@ export function useTransactionsGrouping(
       return [];
     }
 
+    // Helper: convert a transaction amount to EGP using market rates
+    const toEGP = (amount: number, currency: string): number => {
+      if (!latestRates) return amount;
+      return convertToEGP(amount, currency, latestRates);
+    };
+
     // Step A: Calculate Anchor Net Worth
     const getSignedAmount = (item: DisplayTransaction): number => {
       if (item._type === "transaction") {
-        if (item.isIncome) return item.amount;
-        if (item.isExpense) return -item.amount;
+        const egpAmount = toEGP(item.amount, item.currency);
+        if (item.isIncome) return egpAmount;
+        if (item.isExpense) return -egpAmount;
         return 0;
       }
       // Transfers don't affect net worth (money moves between accounts)
@@ -310,8 +320,9 @@ export function useTransactionsGrouping(
     let anchorNW = totalNetWorth;
 
     allTransactions.forEach((t) => {
-      if (t.isIncome) anchorNW -= t.amount;
-      if (t.isExpense) anchorNW += t.amount;
+      const egpAmount = toEGP(t.amount, t.currency);
+      if (t.isIncome) anchorNW -= egpAmount;
+      if (t.isExpense) anchorNW += egpAmount;
     });
 
     // Step B: Unwind Displayed Items with Net Worth
@@ -375,10 +386,11 @@ export function useTransactionsGrouping(
       if (currentGroup) {
         currentGroup.transactions.push(item);
         if (item._type === "transaction") {
+          const egpAmount = toEGP(item.amount, item.currency);
           if (item.isIncome) {
-            currentGroup.groupTotalIncome += item.amount;
+            currentGroup.groupTotalIncome += egpAmount;
           } else if (item.isExpense) {
-            currentGroup.groupTotalExpense += item.amount;
+            currentGroup.groupTotalExpense += egpAmount;
           }
         }
       }
@@ -387,7 +399,14 @@ export function useTransactionsGrouping(
     if (currentGroup) groups.push(currentGroup);
 
     return groups;
-  }, [allTransactions, displayedItems, totalNetWorth, period, searchQuery]);
+  }, [
+    allTransactions,
+    displayedItems,
+    totalNetWorth,
+    latestRates,
+    period,
+    searchQuery,
+  ]);
 
   const isLoading = isDataLoading || isNetWorthLoading;
 
