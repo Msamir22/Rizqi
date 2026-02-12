@@ -11,6 +11,7 @@ import { TransferCard } from "@/components/transactions/TransferCard";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
 import { PERIOD_LABELS } from "@/hooks/usePeriodSummary";
 import { useTransactionOperations } from "@/hooks/useTransactionOperations";
 import {
@@ -23,7 +24,6 @@ import { updateTransaction, updateTransfer } from "@/services";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import { useTheme } from "@/context/ThemeContext";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -516,8 +516,7 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
               return (
                 <TransactionCard
                   id={item.id}
-                  signedAmount={item.signedAmount}
-                  currency={item.currency}
+                  signedFormatedAmount={item.signedFormatedAmount}
                   date={item.date}
                   isExpense={item.isExpense}
                   isIncome={item.isIncome}
