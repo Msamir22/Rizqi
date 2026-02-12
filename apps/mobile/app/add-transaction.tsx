@@ -11,22 +11,24 @@ import { OptionalSection } from "@/components/add-transaction/OptionalSection";
 import { TransferFields } from "@/components/add-transaction/TransferFields";
 import { TypeTabs } from "@/components/add-transaction/TypeTabs";
 import { CategoryIcon, IconLibrary } from "@/components/common/CategoryIcon";
-import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { AccountSelectorModal } from "@/components/modals/AccountSelectorModal";
-import {
-  validateTransactionForm,
-  type TransactionValidationErrors,
-} from "@/validation/transaction-validation";
 import { CategorySelectorModal } from "@/components/modals/CategorySelectorModal";
 import { PageHeader } from "@/components/navigation/PageHeader";
+import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
+import { useToast } from "@/components/ui/Toast";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories, useCategory } from "@/hooks/useCategories";
 import { useCategoryChildren } from "@/hooks/useCategoryChildren";
 import { useMarketRates } from "@/hooks/useMarketRates";
-import { createTransaction } from "@/hooks/useTransactions";
-import { createRecurringPayment, createTransfer } from "@/utils/transactions";
+import { createRecurringPayment } from "@/services/recurring-payment-service";
+import { createTransaction } from "@/services/transaction-service";
+import { createTransfer } from "@/services/transfer-service";
+import {
+  validateTransactionForm,
+  type TransactionValidationErrors,
+} from "@/validation/transaction-validation";
 import type { RecurringFrequency, TransactionType } from "@astik/db";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -79,6 +81,7 @@ export default function AddTransaction(): React.ReactNode {
     isLoading: _categoriesLoading,
   } = useCategories();
   const { latestRates } = useMarketRates();
+  const { showToast } = useToast();
 
   // Derived Values
   const selectedAccount = accounts.find((a) => a.id === selectedAccountId);
@@ -248,6 +251,94 @@ export default function AddTransaction(): React.ReactNode {
     }
   }, [type, selectedAccount, toAccount, amount, latestRates]);
 
+  const createRecurring = async (
+    amount: number,
+    type: TransactionType
+  ): Promise<string> => {
+    const recurring = await createRecurringPayment({
+      name: recurringName,
+      amount,
+      type,
+      accountId: selectedAccountId,
+      categoryId: selectedCategoryId,
+      frequency: recurringFrequency,
+      startDate: date,
+      action: recurringAutoCreate ? "AUTO_CREATE" : "NOTIFY",
+    });
+    return recurring.id;
+  };
+
+  const validateAndCreateTransfer = async (amount: number): Promise<void> => {
+    if (!toAccountId) {
+      setFormErrors({ toAccountId: "Please select a destination account" });
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (!selectedAccount) {
+      setFormErrors({ fromAccountId: "Please select source account" });
+      setIsSubmitting(false);
+      return;
+    }
+
+    const exchangeRate =
+      targetAmount && amount ? parseFloat(targetAmount) / amount : undefined;
+
+    await createTransfer({
+      amount,
+      currency: selectedAccount.currency,
+      fromAccountId: selectedAccountId,
+      toAccountId,
+      date,
+      notes: note,
+      convertedAmount: targetAmount ? parseFloat(targetAmount) : undefined,
+      exchangeRate,
+    }).catch(() => {
+      showToast({
+        type: "error",
+        title: "Error",
+        message: "Transaction creation failed",
+      });
+    });
+
+    showToast({
+      type: "success",
+      title: "Created",
+      message: "Transaction Created successfully",
+    });
+  };
+
+  const validateAndCreateTransaction = async ({
+    amount,
+    note,
+    type,
+    linkedRecurringId,
+  }: {
+    amount: number;
+    note?: string;
+    type: TransactionType;
+    linkedRecurringId?: string;
+  }): Promise<void> => {
+    if (!selectedAccount) {
+      setFormErrors({ accountId: "Please select an account" });
+      setIsSubmitting(false);
+      return;
+    }
+
+    await createTransaction({
+      amount,
+      currency: selectedAccount.currency,
+      categoryId: selectedCategoryId,
+      counterparty,
+      accountId: selectedAccountId,
+      note,
+      source: "MANUAL",
+      type,
+      date,
+      linkedRecurringId,
+    });
+  };
+
   // Handle Save
   const handleSave = async (): Promise<void> => {
     // Clear previous errors
@@ -274,67 +365,27 @@ export default function AddTransaction(): React.ReactNode {
     setIsSubmitting(true);
     try {
       if (type === "TRANSFER") {
-        if (!toAccountId) {
-          setFormErrors({ toAccountId: "Please select a destination account" });
-          setIsSubmitting(false);
-          return;
-        }
-
-        if (!selectedAccount) {
-          setFormErrors({ fromAccountId: "Please select source account" });
-          setIsSubmitting(false);
-          return;
-        }
-
-        await createTransfer({
-          amount: finalAmount,
-          currency: selectedAccount.currency,
-          fromAccountId: selectedAccountId,
-          toAccountId,
-          date,
-          notes: note,
-          convertedAmount: targetAmount ? parseFloat(targetAmount) : undefined,
-          exchangeRate:
-            targetAmount && finalAmount
-              ? parseFloat(targetAmount) / finalAmount
-              : undefined,
-        });
+        await validateAndCreateTransfer(finalAmount);
       } else {
         let linkedRecurringId: string | undefined;
 
         if (isRecurring && recurringName) {
-          const recurring = await createRecurringPayment({
-            name: recurringName,
-            amount: finalAmount,
-            type,
-            accountId: selectedAccountId,
-            categoryId: selectedCategoryId,
-            frequency: recurringFrequency,
-            startDate: date,
-            action: recurringAutoCreate ? "AUTO_CREATE" : "NOTIFY",
-          });
-          linkedRecurringId = recurring.id;
+          linkedRecurringId = await createRecurring(finalAmount, type);
         }
 
-        if (!selectedAccount) {
-          setFormErrors({ accountId: "Please select an account" });
-          setIsSubmitting(false);
-          return;
-        }
-
-        await createTransaction({
+        await validateAndCreateTransaction({
           amount: finalAmount,
-          currency: selectedAccount.currency,
-          categoryId: selectedCategoryId,
-          counterparty,
-          accountId: selectedAccountId,
           note,
-          source: "MANUAL",
           type,
-          date,
           linkedRecurringId,
         });
       }
+
+      showToast({
+        type: "success",
+        title: "Created",
+        message: "Transaction Created successfully",
+      });
       router.back();
     } catch (error) {
       console.error(error);
@@ -371,6 +422,20 @@ export default function AddTransaction(): React.ReactNode {
         {/* Amount Display — hidden when transfer has no valid accounts */}
         {!(type === "TRANSFER" && !canTransfer) && (
           <>
+            {/* Insufficient balance warning */}
+            {type === "EXPENSE" &&
+              selectedAccount &&
+              amount &&
+              !isNaN(parseFloat(amount)) &&
+              parseFloat(amount) > selectedAccount.balance && (
+                <Text className="text-amber-500 text-xs font-medium text-center mb-1">
+                  ⚠️ This will put your balance at -
+                  {formatWithCommas(
+                    (parseFloat(amount) - selectedAccount.balance).toFixed(2)
+                  )}{" "}
+                  {selectedAccount.currency}
+                </Text>
+              )}
             <AmountDisplay
               amount={amount}
               currency={selectedAccount?.currency || "EGP"}
@@ -389,25 +454,11 @@ export default function AddTransaction(): React.ReactNode {
                 {formErrors.amount}
               </Text>
             )}
-            {/* Insufficient balance warning */}
-            {type === "EXPENSE" &&
-              selectedAccount &&
-              amount &&
-              !isNaN(parseFloat(amount)) &&
-              parseFloat(amount) > selectedAccount.balance && (
-                <Text className="text-amber-500 text-xs font-medium text-center mt-1">
-                  ⚠️ This will put your balance at -
-                  {formatWithCommas(
-                    (parseFloat(amount) - selectedAccount.balance).toFixed(2)
-                  )}{" "}
-                  {selectedAccount.currency}
-                </Text>
-              )}
           </>
         )}
 
         {/* Form Content */}
-        <View className="px-6 mt-2">
+        <View className="px-6 mt-">
           {type === "TRANSFER" ? (
             canTransfer ? (
               <TransferFields

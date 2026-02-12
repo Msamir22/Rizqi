@@ -10,3 +10,12 @@ export {
   supabase,
 } from "./supabase";
 export { syncDatabase } from "./sync";
+export {
+  createTransaction,
+  updateTransaction,
+  deleteTransaction,
+} from "./transaction-service";
+export { createTransfer, updateTransfer } from "./transfer-service";
+export type { TransferData } from "./transfer-service";
+export { createRecurringPayment } from "./recurring-payment-service";
+export type { RecurringPaymentData } from "./recurring-payment-service";

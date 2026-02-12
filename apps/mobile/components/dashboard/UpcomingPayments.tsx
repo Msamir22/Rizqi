@@ -26,7 +26,7 @@ import {
 import { useToast } from "@/components/ui/Toast";
 import { palette } from "@/constants/colors";
 import { useAccounts } from "@/hooks/useAccounts";
-import { createTransaction } from "@/hooks/useTransactions";
+import { createTransaction } from "@/services/transaction-service";
 import {
   UpcomingPayment,
   useUpcomingPayments,

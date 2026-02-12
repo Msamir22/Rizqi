@@ -4,7 +4,7 @@ alwaysApply: true
 
 # 🧠 Astik Project Memory
 
-> **Last Updated:** 2026-02-07 **Purpose:** Persistent context for AI agents
+> **Last Updated:** 2026-02-12 **Purpose:** Persistent context for AI agents
 > across conversations
 
 ---
@@ -169,9 +169,12 @@ for asset transactions)
 - [x] Dashboard refactoring to Tailwind CSS & Dark Mode compliance
 - [x] Vector Icons standardization with Tailwind support (CategoryIcon)
 - [x] ESLint styling rules & Pre-commit hooks (no-restricted-syntax)
+- [x] Concurrent sync fix (module-level lock + graceful error handling)
+- [x] NativeWind v4 shadow workaround documented & applied
 
 ### 🔄 In Progress
 
+- [ ] Add Transaction form with category selector
 - [ ] Analytics UI (charts, comparison cards)
 
 ### ⏳ Pending
@@ -229,6 +232,16 @@ for asset transactions)
 ## 7. Recent Sessions
 
 > Last 10 sessions for context continuity
+
+### Session: 2026-02-12 (09:44)
+
+- **Topic:** Concurrent Sync Fix & Category Selector
+- **Accomplished:** Fixed concurrent sync error during git commit by adding
+  Promise-based lock in `syncDatabase()` and gracefully catching WatermelonDB's
+  diagnostic error. Applied NativeWind v4 shadow workaround. User created
+  category selector components (breadcrumb, list items, search, modals, hooks).
+- **Outcome:** Concurrent sync errors downgraded from red ERROR to benign
+  warning.
 
 ### Session: 2026-02-07 (02:45)
 
@@ -349,20 +362,6 @@ for asset transactions)
 - **Topic:** AI Agent Memory System Setup
 - **Accomplished:** Created memory system files, workflows, and history log.
 - **Pending:** Testing in new conversation.
-
-### Session: 2026-01-04
-
-- **Topic:** Fixing Decorator Signature Error
-- **Accomplished:** Resolved TypeScript error for `@field` decorator in
-  `UserCategorySettings.ts`.
-- **Outcome:** Fixed build error.
-
-### Session: 2025-12-31 to 2026-01-04
-
-- **Topic:** Seeding Categories on Launch
-- **Accomplished:** Created `seedCategories.ts`, defined system categories
-  (L1/L2), integrated with app init.
-- **Pending:** Category picker UI.
 
 ### Session: 2026-01-02
 

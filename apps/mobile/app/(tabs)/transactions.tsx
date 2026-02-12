@@ -19,7 +19,7 @@ import {
   useTransactionsGrouping,
 } from "@/hooks/useTransactionsGrouping";
 import { useSync } from "@/providers/SyncProvider";
-import { updateTransaction, updateTransfer } from "@/utils/transactions";
+import { updateTransaction, updateTransfer } from "@/services";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";

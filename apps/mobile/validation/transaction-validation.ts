@@ -31,6 +31,10 @@ const transferSchema = z
       .refine(
         (val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0,
         "Amount must be greater than 0"
+      )
+      .refine(
+        (val) => parseFloat(val) <= 1000000000,
+        "Amount must be less than 1,000,000,000"
       ),
     fromAccountId: z.string().min(1, "Source account is required"),
     toAccountId: z.string().min(1, "Destination account is required"),
@@ -69,7 +73,9 @@ export type TransactionValidationErrors = Partial<
  */
 export function validateTransactionForm(
   type: TransactionType | "TRANSFER",
-  data: unknown
+  data:
+    | { amount: string; accountId: string; categoryId: string }
+    | { amount: string; fromAccountId: string; toAccountId: string }
 ): { isValid: boolean; errors: TransactionValidationErrors } {
   const schema = type === "TRANSFER" ? transferSchema : baseTransactionSchema;
   const result = schema.safeParse(data);
