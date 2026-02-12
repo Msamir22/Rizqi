@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 # Database Migration Rules
 
 ## Local-First Migrations
@@ -13,8 +17,8 @@ dashboard directly.
 - Use the Supabase MCP tool **only for reading** (querying data, checking
   schema, listing tables, inspecting logs, etc.)
 - Run `npm run db:push` to apply local migrations to the remote database
-- Run `npm run db:sync-local` to regenerate WatermelonDB schema and types from
-  the latest migration
+- Run `npm run db:migrate` to regenerate WatermelonDB schema and types from the
+  latest migration
 
 ### ❌ DON'T
 
@@ -46,5 +50,6 @@ supabase/migrations/023_descriptive_name.sql
 
 1. Write the SQL migration file locally
 2. Run `npm run db:push` to apply to remote
-3. Run `npm run db:sync-local` to regenerate WatermelonDB schema/types
+3. Run `npm run db:migrate` to regenerate WatermelonDB schema/types and create
+   local watermelon migrations
 4. Commit both the migration file and generated schema changes

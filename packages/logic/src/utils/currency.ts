@@ -87,13 +87,13 @@ const CURRENCY_SYMBOLS: Partial<Record<CurrencyType, string>> = {
 export const formatCurrency = ({
   amount,
   currency,
-  signDisplay = "never",
+  signDisplay = "auto",
   minimumFractionDigits = 0,
   maximumFractionDigits = 0,
 }: {
   amount: number;
   currency: CurrencyType;
-  signDisplay?: "always" | "exceptZero" | "negative" | "never";
+  signDisplay?: "always" | "exceptZero" | "negative" | "never" | "auto";
   minimumFractionDigits?: number;
   maximumFractionDigits?: number;
 }): string => {
@@ -124,7 +124,11 @@ export const formatCurrency = ({
     "SGD",
     "HKD",
   ];
+
   if (prefixCurrencies.includes(currency)) {
+    if (amount < 0) {
+      return `-${symbol}${Math.abs(Number(formattedNumber))}`;
+    }
     return `${symbol}${formattedNumber}`;
   }
 

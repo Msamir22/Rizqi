@@ -17,6 +17,7 @@ import {
 import type { Associations } from "@nozbe/watermelondb/Model";
 import type {
   RecurringAction,
+  CurrencyType,
   RecurringFrequency,
   RecurringStatus,
   TransactionType,
@@ -39,6 +40,7 @@ export abstract class BaseRecurringPayment extends Model {
   @field("amount") amount!: number;
   @field("category_id") categoryId!: string;
   @readonly @date("created_at") createdAt!: Date;
+  @field("currency") currency!: CurrencyType;
   @field("deleted") deleted!: boolean;
   @date("end_date") endDate?: Date;
   @field("frequency") frequency!: RecurringFrequency;

@@ -45,6 +45,23 @@ export function getEndOfMonth(d: Date): number {
   ).getTime();
 }
 
+/**
+ * Get the same day of the month in the next month.
+ * Handles month-end overflow (e.g., Jan 31 → Feb 28).
+ */
+export function getNextMonthSameDay(date: Date): Date {
+  const next = new Date(date);
+  const currentDay = next.getDate();
+  next.setMonth(next.getMonth() + 1);
+
+  // If the day overflowed (e.g., Jan 31 → Mar 3), clamp to last day of target month
+  if (next.getDate() !== currentDay) {
+    next.setDate(0); // sets to last day of the previous month (i.e. the target month)
+  }
+
+  return next;
+}
+
 export function isSameDay(d1: Date, d2: Date): boolean {
   return (
     d1.getFullYear() === d2.getFullYear() &&

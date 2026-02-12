@@ -664,6 +664,7 @@ export type Database = {
           amount: number;
           category_id: string;
           created_at: string;
+          currency: Database["public"]["Enums"]["currency_type"];
           deleted: boolean;
           end_date: string | null;
           frequency: Database["public"]["Enums"]["recurring_frequency"];
@@ -685,6 +686,7 @@ export type Database = {
           amount: number;
           category_id: string;
           created_at?: string;
+          currency?: Database["public"]["Enums"]["currency_type"];
           deleted?: boolean;
           end_date?: string | null;
           frequency: Database["public"]["Enums"]["recurring_frequency"];
@@ -706,6 +708,7 @@ export type Database = {
           amount?: number;
           category_id?: string;
           created_at?: string;
+          currency?: Database["public"]["Enums"]["currency_type"];
           deleted?: boolean;
           end_date?: string | null;
           frequency?: Database["public"]["Enums"]["recurring_frequency"];

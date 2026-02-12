@@ -1,15 +1,18 @@
-import { getCurrentUserId } from "@/services";
+import { getNextMonthSameDay } from "@/utils/dateHelpers";
 import {
+  CurrencyType,
   database,
   RecurringAction,
   RecurringFrequency,
   RecurringPayment,
   TransactionType,
 } from "@astik/db";
+import { getCurrentUserId } from "./supabase";
 
 export interface RecurringPaymentData {
   name: string;
   amount: number;
+  currency: CurrencyType;
   type: TransactionType;
   accountId: string;
   categoryId: string;
@@ -37,12 +40,13 @@ export async function createRecurringPayment(
       rec.userId = userId;
       rec.name = data.name;
       rec.amount = Math.abs(data.amount);
+      rec.currency = data.currency;
       rec.type = data.type;
       rec.accountId = data.accountId;
       rec.categoryId = data.categoryId;
       rec.frequency = data.frequency;
       rec.startDate = data.startDate;
-      rec.nextDueDate = data.startDate;
+      rec.nextDueDate = getNextMonthSameDay(data.startDate);
       rec.action = data.action;
       rec.status = "ACTIVE";
       rec.deleted = false;

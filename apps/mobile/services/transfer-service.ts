@@ -1,4 +1,4 @@
-import { getCurrentUserId } from "@/services";
+import { getCurrentUserId } from "./supabase";
 import { Account, CurrencyType, database, Transfer } from "@astik/db";
 
 export interface TransferData {

@@ -29,7 +29,11 @@ import {
   validateTransactionForm,
   type TransactionValidationErrors,
 } from "@/validation/transaction-validation";
-import type { RecurringFrequency, TransactionType } from "@astik/db";
+import type {
+  CurrencyType,
+  RecurringFrequency,
+  TransactionType,
+} from "@astik/db";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -253,11 +257,13 @@ export default function AddTransaction(): React.ReactNode {
 
   const createRecurring = async (
     amount: number,
-    type: TransactionType
+    type: TransactionType,
+    currency: CurrencyType
   ): Promise<string> => {
     const recurring = await createRecurringPayment({
       name: recurringName,
       amount,
+      currency,
       type,
       accountId: selectedAccountId,
       categoryId: selectedCategoryId,
@@ -369,8 +375,12 @@ export default function AddTransaction(): React.ReactNode {
       } else {
         let linkedRecurringId: string | undefined;
 
-        if (isRecurring && recurringName) {
-          linkedRecurringId = await createRecurring(finalAmount, type);
+        if (isRecurring && recurringName && selectedAccount) {
+          linkedRecurringId = await createRecurring(
+            finalAmount,
+            type,
+            selectedAccount.currency
+          );
         }
 
         await validateAndCreateTransaction({

@@ -15,6 +15,15 @@ import {
 export const migrations = schemaMigrations({
   migrations: [
     {
+      toVersion: 7,
+      steps: [
+        addColumns({
+          table: "recurring_payments",
+          columns: [{ name: "currency", type: "string" }],
+        }),
+      ],
+    },
+    {
       toVersion: 6,
       steps: [
         addColumns({
