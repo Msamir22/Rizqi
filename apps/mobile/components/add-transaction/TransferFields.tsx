@@ -1,9 +1,10 @@
 import { palette } from "@/constants/colors";
 import { Account } from "@astik/db";
 import { Ionicons } from "@expo/vector-icons";
-import { Text, TextInput, TouchableOpacity, View } from "react-native";
-import { useState } from "react";
+import { Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
 import { AccountSelectorModal } from "../modals/AccountSelectorModal";
+import { formatWithCommas } from "./AmountDisplay";
 
 interface TransferFieldsProps {
   accounts: Account[];
@@ -14,7 +15,11 @@ interface TransferFieldsProps {
   amount: string;
   targetAmount: string;
   onChangeTargetAmount: (amount: string) => void;
-  exchangeRate?: number; // Optional exchange rate for auto-calculation
+  exchangeRate?: number;
+  /** Whether the target amount field is the active keypad target */
+  isTargetAmountActive?: boolean;
+  /** Called when user taps the target amount to switch keypad focus */
+  onFocusTargetAmount?: () => void;
 }
 
 export function TransferFields({
@@ -24,8 +29,10 @@ export function TransferFields({
   onSelectFrom,
   onSelectTo,
   targetAmount,
-  onChangeTargetAmount,
+  onChangeTargetAmount: _onChangeTargetAmount,
   exchangeRate,
+  isTargetAmountActive,
+  onFocusTargetAmount,
 }: TransferFieldsProps): React.JSX.Element {
   const [isFromModalOpen, setIsFromModalOpen] = useState(false);
   const [isToModalOpen, setIsToModalOpen] = useState(false);
@@ -35,6 +42,23 @@ export function TransferFields({
 
   const isMultiCurrency =
     fromAccount && toAccount && fromAccount.currency !== toAccount.currency;
+
+  // Filter destination accounts to exclude the currently selected source account
+  const toAccountOptions = useMemo(
+    () => accounts.filter((a) => a.id !== fromAccountId),
+    [accounts, fromAccountId]
+  );
+
+  // Auto-correct: if From account now matches To account, select the first available alternative
+  useEffect(() => {
+    if (
+      fromAccountId &&
+      fromAccountId === toAccountId &&
+      toAccountOptions.length > 0
+    ) {
+      onSelectTo(toAccountOptions[0].id);
+    }
+  }, [fromAccountId, toAccountId, toAccountOptions, onSelectTo]);
 
   // Auto-calculate target amount if exchange rate exists and target amount is empty/zero
   // This logic normally lives in the parent form, but visual feedback is here
@@ -63,7 +87,11 @@ export function TransferFields({
             >
               {fromAccount?.name || "Select"}
             </Text>
-            <Ionicons name="chevron-down" size={14} color={palette.slate[400]} />
+            <Ionicons
+              name="chevron-down"
+              size={14}
+              color={palette.slate[400]}
+            />
           </TouchableOpacity>
         </View>
 
@@ -74,7 +102,11 @@ export function TransferFields({
             className="bg-white dark:bg-slate-800 p-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm"
             activeOpacity={0.8}
           >
-            <Ionicons name="swap-horizontal" size={18} color={palette.blue[500]} />
+            <Ionicons
+              name="swap-horizontal"
+              size={18}
+              color={palette.blue[500]}
+            />
           </TouchableOpacity>
         </View>
 
@@ -94,7 +126,11 @@ export function TransferFields({
             >
               {toAccount?.name || "Select"}
             </Text>
-            <Ionicons name="chevron-down" size={14} color={palette.slate[400]} />
+            <Ionicons
+              name="chevron-down"
+              size={14}
+              color={palette.slate[400]}
+            />
           </TouchableOpacity>
         </View>
       </View>
@@ -110,7 +146,7 @@ export function TransferFields({
 
       <AccountSelectorModal
         visible={isToModalOpen}
-        accounts={accounts}
+        accounts={toAccountOptions}
         selectedId={toAccountId}
         onSelect={onSelectTo}
         onClose={() => setIsToModalOpen(false)}
@@ -131,23 +167,31 @@ export function TransferFields({
             )}
           </View>
 
-          <View className="flex-row items-center bg-white dark:bg-slate-800 rounded-2xl px-4 border border-blue-200 dark:border-blue-900/50 shadow-sm">
+          <TouchableOpacity
+            onPress={onFocusTargetAmount}
+            activeOpacity={0.7}
+            className={`flex-row items-center bg-white dark:bg-slate-800 rounded-2xl px-4 border shadow-sm ${
+              isTargetAmountActive
+                ? "border-blue-400 dark:border-blue-500"
+                : "border-blue-200 dark:border-blue-900/50"
+            }`}
+          >
             <Text className="text-lg font-bold text-slate-400 mr-2">
               {toAccount?.currency}
             </Text>
-            <TextInput
-              value={targetAmount}
-              onChangeText={onChangeTargetAmount}
-              keyboardType="numeric"
-              className="flex-1 py-4 text-xl font-extrabold text-slate-800 dark:text-white"
-              placeholder="0.00"
-              placeholderTextColor={palette.slate[400]}
-            />
-          </View>
+            <Text
+              className={`flex-1 py-4 text-xl font-extrabold ${
+                targetAmount
+                  ? "text-slate-800 dark:text-white"
+                  : "text-slate-400"
+              }`}
+            >
+              {targetAmount ? formatWithCommas(targetAmount) : "0.00"}
+            </Text>
+          </TouchableOpacity>
 
           <Text className="text-xs text-slate-400 mt-2">
-            Different currencies detected. Please confirm the amount received in{" "}
-            {toAccount?.currency}.
+            Please confirm the amount received in {toAccount?.currency}.
           </Text>
         </View>
       )}

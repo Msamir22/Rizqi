@@ -121,7 +121,7 @@ export function CategorySelectorModal({
 
   // Auto-skip L1 when there are fewer than MIN_ROOT_FOR_L1 root categories.
   // This avoids a single-item list (e.g., income with 1 L1 category).
-  const MIN_ROOT_FOR_L1 = 3;
+  const MIN_ROOT_FOR_L1 = 2;
   const hasAutoSkippedRef = useRef(false);
 
   useEffect(() => {

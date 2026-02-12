@@ -67,10 +67,12 @@ export function AccountSelectorModal({
                 <View className="gap-3 pb-10">
                   {accounts.map((account) => {
                     const isSelected = account.id === selectedId;
-                    
-                    let iconName: keyof typeof Ionicons.glyphMap = "wallet-outline";
+
+                    let iconName: keyof typeof Ionicons.glyphMap =
+                      "wallet-outline";
                     if (account.type === "BANK") iconName = "business-outline";
-                    if (account.type === "DIGITAL_WALLET") iconName = "card-outline";
+                    if (account.type === "DIGITAL_WALLET")
+                      iconName = "card-outline";
 
                     return (
                       <TouchableOpacity
@@ -87,30 +89,38 @@ export function AccountSelectorModal({
                       >
                         <View
                           className={`w-12 h-12 rounded-2xl items-center justify-center mr-4 ${
-                            isSelected 
-                              ? "bg-nileGreen-500" 
+                            isSelected
+                              ? "bg-nileGreen-500"
                               : "bg-slate-200 dark:bg-slate-700"
                           }`}
                         >
                           <Ionicons
                             name={iconName}
                             size={24}
-                            color={isSelected ? "white" : isDark ? palette.slate[400] : palette.slate[500]}
+                            color={
+                              isSelected
+                                ? "white"
+                                : isDark
+                                  ? palette.slate[400]
+                                  : palette.slate[500]
+                            }
                           />
                         </View>
-                        
+
                         <View className="flex-1">
                           <Text
                             className={`text-base font-bold ${
                               isSelected
-                                ? "text-nileGreen-700 dark:text-nileGreen-300"
+                                ? "text-nileGreen-600 dark:text-nileGreen-400"
                                 : "text-slate-800 dark:text-slate-100"
                             }`}
                           >
                             {account.name}
                           </Text>
                           <Text className="text-xs text-slate-500 dark:text-slate-400">
-                            {account.currency} • {account.type.replace("_", " ")}
+                            {account.currency} •{" "}
+                            {account.type.replace("_", " ")} •{" "}
+                            {account.formattedBalance}
                           </Text>
                         </View>
 
@@ -118,7 +128,11 @@ export function AccountSelectorModal({
                           <Ionicons
                             name="checkmark-circle"
                             size={24}
-                            color={isDark ? palette.nileGreen[400] : palette.nileGreen[600]}
+                            color={
+                              isDark
+                                ? palette.nileGreen[400]
+                                : palette.nileGreen[600]
+                            }
                           />
                         )}
                       </TouchableOpacity>

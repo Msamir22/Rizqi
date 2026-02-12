@@ -6,6 +6,7 @@ import {
   CalculatorKey,
   CalculatorKeypad,
 } from "@/components/add-transaction/CalculatorKeypad";
+import { formatWithCommas } from "@/components/add-transaction/AmountDisplay";
 import { CategoryPicker } from "@/components/add-transaction/CategoryPicker";
 import { palette } from "@/constants/colors";
 import { useCategories } from "@/hooks/useCategories";
@@ -69,6 +70,18 @@ export function QuickEditModal({
       onClose();
       return;
     }
+    if (key === "=") {
+      try {
+        if (/^[0-9+\-*/.]+$/.test(amount)) {
+          // eslint-disable-next-line no-eval
+          const result = eval(amount) as number;
+          setAmount(parseFloat(result.toFixed(10)).toString());
+        }
+      } catch {
+        // invalid expression, ignore
+      }
+      return;
+    }
     if (key === "DEL") {
       setAmount((prev) => prev.slice(0, -1));
       return;
@@ -121,7 +134,7 @@ export function QuickEditModal({
                   className="text-4xl font-bold text-slate-900 dark:text-slate-25"
                   style={amountColor ? { color: amountColor } : {}}
                 >
-                  {currency} {amount || "0"}
+                  {currency} {formatWithCommas(amount) || "0"}
                 </Text>
               </View>
               <CalculatorKeypad onKeyPress={handleKeyPress} />
@@ -131,9 +144,8 @@ export function QuickEditModal({
               <CategoryPicker
                 categories={relevantCategories}
                 selectedCategory={currentCategory}
-                onSelectRecent={(cat) => handleCategorySelect(cat.systemName)}
+                onSelectCategory={(cat) => handleCategorySelect(cat.systemName)}
                 onOpenPicker={() => {}}
-                recentCategories={relevantCategories}
               />
               <View className="flex-row flex-wrap p-4 justify-between">
                 {relevantCategories.slice(0, 12).map((cat) => (

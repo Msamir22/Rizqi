@@ -28,7 +28,9 @@ interface BaseCardProps {
   title: string;
   amount: string;
   subtitle: string;
-  merchant?: string;
+  isExpense: boolean;
+  isIncome: boolean;
+  counterparty?: string;
   details?: string;
   displayNetWorth: number;
   date: Date;
@@ -51,7 +53,8 @@ export function BaseCard({
   title,
   amount,
   subtitle,
-  merchant,
+  counterparty,
+  isExpense,
   details,
   displayNetWorth,
   date,
@@ -164,12 +167,14 @@ export function BaseCard({
                 {subtitle}
               </Text>
               {/* Merchant (if present) */}
-              {merchant && (
+              {counterparty && (
                 <Text
                   className="text-[11px] text-slate-400 dark:text-slate-400 mb-0.5"
                   numberOfLines={1}
                 >
-                  Merchant: {merchant}
+                  {isExpense
+                    ? "Merchant: " + counterparty
+                    : "Payer: " + counterparty}
                 </Text>
               )}
               {/* Details/Note (optional) */}

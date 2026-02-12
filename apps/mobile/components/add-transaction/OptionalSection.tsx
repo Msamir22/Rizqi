@@ -5,15 +5,27 @@ import { Switch, Text, TouchableOpacity, View } from "react-native";
 // Will use DatePicker modal later, simplified for now
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
+import type { RecurringFrequency } from "@astik/db";
 import { TextField } from "../ui/TextField";
 
+const FREQUENCY_OPTIONS: ReadonlyArray<{
+  readonly value: RecurringFrequency;
+  readonly label: string;
+}> = [
+  { value: "DAILY", label: "Daily" },
+  { value: "WEEKLY", label: "Weekly" },
+  { value: "MONTHLY", label: "Monthly" },
+  { value: "QUARTERLY", label: "Quarterly" },
+  { value: "YEARLY", label: "Yearly" },
+];
+
 interface OptionalFields {
-  merchant?: string;
+  counterparty?: string;
   note?: string;
   date: Date;
   isRecurring: boolean;
   recurringName?: string;
-  recurringFrequency?: string;
+  recurringFrequency?: RecurringFrequency;
   recurringAutoCreate?: boolean;
 }
 
@@ -22,6 +34,7 @@ interface OptionalSectionProps {
   onChange: (fields: Partial<OptionalFields>) => void;
   expanded: boolean;
   onToggleExpand: () => void;
+  transactionType: "EXPENSE" | "INCOME" | "TRANSFER";
 }
 
 export function OptionalSection({
@@ -29,9 +42,18 @@ export function OptionalSection({
   onChange,
   expanded,
   onToggleExpand,
+  transactionType,
 }: OptionalSectionProps): React.JSX.Element {
   const { isDark } = useTheme();
   const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const counterpartyLabel =
+    transactionType === "INCOME" ? "PAYER" : "MERCHANT / PAYEE";
+
+  const counterpartyPlaceholder =
+    transactionType === "INCOME"
+      ? "e.g. Company name, Client"
+      : "e.g. Starbucks, Carrefour";
 
   if (!expanded) {
     return (
@@ -75,12 +97,12 @@ export function OptionalSection({
       </TouchableOpacity>
 
       <View className="gap-5">
-        {/* Merchant */}
+        {/* Counterparty (Merchant/Payee or Payer) */}
         <TextField
-          label="MERCHANT / PAYEE"
-          placeholder="e.g. Starbucks, Carrefour"
-          value={fields.merchant}
-          onChangeText={(t) => onChange({ merchant: t })}
+          label={counterpartyLabel}
+          placeholder={counterpartyPlaceholder}
+          value={fields.counterparty}
+          onChangeText={(t) => onChange({ counterparty: t })}
         />
 
         {/* Note */}
@@ -170,6 +192,41 @@ export function OptionalSection({
               value={fields.recurringName}
               onChangeText={(t) => onChange({ recurringName: t })}
             />
+
+            {/* Frequency Picker */}
+            <View>
+              <Text className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 px-1 uppercase tracking-wider">
+                FREQUENCY
+              </Text>
+              <View className="flex-row flex-wrap gap-1">
+                {FREQUENCY_OPTIONS.map((option) => {
+                  const isSelected = fields.recurringFrequency === option.value;
+                  return (
+                    <TouchableOpacity
+                      key={option.value}
+                      onPress={() =>
+                        onChange({ recurringFrequency: option.value })
+                      }
+                      className={`px-4 py-2.5 rounded-xl border ${
+                        isSelected
+                          ? "bg-nileGreen-50 dark:bg-nileGreen-900/20 border-nileGreen-500 dark:border-nileGreen-600"
+                          : "bg-white dark:bg-slate-700/50 border-slate-200 dark:border-slate-600"
+                      }`}
+                    >
+                      <Text
+                        className={`text-sm font-semibold ${
+                          isSelected
+                            ? "text-nileGreen-700 dark:text-nileGreen-300"
+                            : "text-slate-600 dark:text-slate-300"
+                        }`}
+                      >
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
 
             <View>
               {/* Auto-create Toggle */}
