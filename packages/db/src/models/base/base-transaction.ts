@@ -38,6 +38,7 @@ export abstract class BaseTransaction extends Model {
   @field("account_id") accountId!: string;
   @field("amount") amount!: number;
   @field("category_id") categoryId!: string;
+  @field("counterparty") counterparty?: string;
   @readonly @date("created_at") createdAt!: Date;
   @field("currency") currency!: CurrencyType;
   @date("date") date!: Date;
@@ -46,7 +47,6 @@ export abstract class BaseTransaction extends Model {
   @field("linked_asset_id") linkedAssetId?: string;
   @field("linked_debt_id") linkedDebtId?: string;
   @field("linked_recurring_id") linkedRecurringId?: string;
-  @field("merchant") merchant?: string;
   @field("note") note?: string;
   @field("source") source!: TransactionSource;
   @field("type") type!: TransactionType;

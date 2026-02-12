@@ -43,6 +43,7 @@ export abstract class BaseCategory extends Model {
   @field("system_name") systemName!: string;
   @field("type") type?: TransactionType;
   @date("updated_at") updatedAt!: Date;
+  @field("usage_count") usageCount!: number;
   @field("user_id") userId?: string;
 
   @relation("categories", "parent_id") parent!: Relation<BaseCategory>;

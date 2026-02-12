@@ -72,7 +72,7 @@ export async function createTransactionFromVoice(
       tx.currency = parsed.currency;
       tx.type = parsed.isIncome ? "INCOME" : "EXPENSE";
       tx.categoryId = parsed.detectedCategory || "other"; // Will need category lookup
-      tx.merchant = parsed.merchant || parsed.description || undefined;
+      tx.counterparty = parsed.counterparty || parsed.description || undefined;
       tx.note = parsed.description || undefined;
       tx.date = new Date();
       tx.source = "VOICE";
