@@ -77,6 +77,31 @@ const READONLY_FIELDS = ["created_at"];
 const JSON_FIELDS = ["notification_settings"];
 
 // =============================================================================
+// VERSION RESOLUTION
+// =============================================================================
+
+/**
+ * Read the schema version from migrations.ts (source of truth).
+ * Returns the highest `toVersion` found, or 1 if no migrations exist.
+ */
+function getSchemaVersion() {
+  const migrationsPath = path.join(OUTPUT_DIR, "migrations.ts");
+  if (fs.existsSync(migrationsPath)) {
+    const content = fs.readFileSync(migrationsPath, "utf-8");
+    const versions = [...content.matchAll(/toVersion:\s*(\d+)/g)].map((m) =>
+      parseInt(m[1], 10)
+    );
+    if (versions.length > 0) {
+      const version = Math.max(...versions);
+      console.log(`   Schema version resolved from migrations.ts: ${version}`);
+      return version;
+    }
+  }
+  console.log("   No migrations found, using default schema version: 1");
+  return 1;
+}
+
+// =============================================================================
 // PARSING HELPERS
 // =============================================================================
 
@@ -263,7 +288,7 @@ ${columnDefs},
 import { appSchema, tableSchema } from "@nozbe/watermelondb";
 
 export const schema = appSchema({
-  version: 4,
+  version: ${getSchemaVersion()},
   tables: [
 ${tableSchemas},
   ],

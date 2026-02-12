@@ -17,7 +17,7 @@ export interface NetWorthComparison {
 export interface ParsedVoiceTransaction {
   amount: number;
   currency: CurrencyType;
-  merchant?: string;
+  counterparty?: string;
   description?: string;
   detectedCategory?: string | null;
   confidence: number; // 0-1, for category detection
@@ -29,7 +29,7 @@ export interface ParsedNotification {
   type: TransactionType;
   amount: number;
   currency: CurrencyType;
-  merchant?: string;
+  counterparty?: string;
   description: string;
 
   // Account matching data

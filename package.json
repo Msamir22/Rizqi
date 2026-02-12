@@ -27,12 +27,15 @@
     "db:format-types": "npx prettier --write packages/db/src/supabase-types.ts",
     "db:transform": "node scripts/transform-schema.js",
     "db:sync": "npm run db:types && npm run db:format-types && npm run db:transform",
+    "db:watermelon-migrate": "node scripts/sql-to-watermelon-migration.js",
+    "db:migrate": "npm run db:push && npm run db:watermelon-migrate -- --latest && npm run db:sync",
+    "db:sync-local": "npm run db:watermelon-migrate -- --latest && npm run db:sync",
     "db:pull": "npx supabase db pull",
     "db:push": "npx supabase db push",
     "db:reset": "npx supabase db reset",
     "db:migrations": "npx supabase migration list",
     "fn:deploy:rates": "npx supabase functions deploy fetch-metal-rates --project-ref yulbcndyssdjicbpmlrk",
-    "prepare": "husky"
+    "prepare": "node -e \"if (process.env.CI !== 'true') { process.exit(1) }\" || husky"
   },
   "dependencies": {
     "@nozbe/watermelondb": "^0.28.0"

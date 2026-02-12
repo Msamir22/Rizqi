@@ -352,29 +352,6 @@ async function pushChanges(
   }
 }
 
-/**
- * UUID validation regex
- */
-// const UUID_REGEX =
-//   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-// /**
-//  * Known UUID fields in the schema
-//  */
-// const UUID_FIELDS = [
-//   "id",
-//   "user_id",
-//   "account_id",
-//   "category_id",
-//   "asset_id",
-//   "linked_asset_id",
-//   "linked_debt_id",
-//   "linked_recurring_id",
-//   "from_account_id",
-//   "to_account_id",
-//   "parent_id",
-// ];
-
 // TODO: Refactor this function to be more simple
 
 /**
@@ -497,6 +474,10 @@ function transformToSupabase<T extends WritableSupabaseTablesNames>(
   return transformed as SupabaseInsert<T>;
 }
 
+// Module-level sync lock — tracks in-flight sync to prevent concurrent synchronize() calls.
+// If syncDatabase is called while one is already running, the second call silently returns.
+let activeSyncPromise: Promise<void> | null = null;
+
 /**
  * Synchronize WatermelonDB with Supabase
  * Call this after app start and periodically
@@ -508,6 +489,12 @@ export async function syncDatabase(
   database: Database,
   forceFullSync = false
 ): Promise<void> {
+  // If a sync is already in-flight, skip this call
+  if (activeSyncPromise) {
+    console.log("Sync already in progress, skipping");
+    return;
+  }
+
   const userId = await getCurrentUserId();
   if (!userId) {
     console.log("Sync skipped: No authenticated user");
@@ -518,29 +505,46 @@ export async function syncDatabase(
     console.log("🔄 Force full sync requested - fetching all data from server");
   }
 
-  try {
-    await synchronize({
-      database,
-      pullChanges: async ({ lastPulledAt }): Promise<SyncPullResult> => {
-        // If forceFullSync is true, ignore the stored timestamp
-        const effectiveLastPulledAt = forceFullSync ? null : lastPulledAt;
-        const result: SyncPullResult = await pullChanges(
-          effectiveLastPulledAt ?? null
+  const doSync = async (): Promise<void> => {
+    try {
+      await synchronize({
+        database,
+        pullChanges: async ({ lastPulledAt }): Promise<SyncPullResult> => {
+          // If forceFullSync is true, ignore the stored timestamp
+          const effectiveLastPulledAt = forceFullSync ? null : lastPulledAt;
+          const result: SyncPullResult = await pullChanges(
+            effectiveLastPulledAt ?? null
+          );
+          return result;
+        },
+        pushChanges: async ({ changes, lastPulledAt }) => {
+          await pushChanges({ changes, lastPulledAt });
+        },
+        // Server may return records that don't exist locally (e.g., first sync or after local data cleared)
+        // This flag tells WatermelonDB to create them instead of treating it as an error
+        sendCreatedAsUpdated: true,
+      });
+      console.log("Sync completed successfully");
+    } catch (error) {
+      // WatermelonDB throws a diagnostic error when concurrent synchronize() calls occur.
+      // This is benign — the later sync is aborted, no data corruption.
+      // This can happen during Metro hot reload (e.g. pre-commit hook updates schema files).
+      const errorMessage = String(error);
+      if (errorMessage.includes("Concurrent synchronization")) {
+        console.warn(
+          "⚠️ Concurrent sync detected (benign) — later sync was aborted"
         );
-        return result;
-      },
-      pushChanges: async ({ changes, lastPulledAt }) => {
-        await pushChanges({ changes, lastPulledAt });
-      },
-      // Server may return records that don't exist locally (e.g., first sync or after local data cleared)
-      // This flag tells WatermelonDB to create them instead of treating it as an error
-      sendCreatedAsUpdated: true,
-    });
-    console.log("Sync completed successfully");
-  } catch (error) {
-    console.error("Sync failed:", error);
-    throw error;
-  }
+        return;
+      }
+      console.error("Sync failed:", error);
+      throw error;
+    } finally {
+      activeSyncPromise = null;
+    }
+  };
+
+  activeSyncPromise = doSync();
+  return activeSyncPromise;
 }
 
 /**

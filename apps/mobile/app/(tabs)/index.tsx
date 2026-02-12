@@ -1,6 +1,3 @@
-import { egpToCurrency } from "@astik/logic";
-import React, { useState } from "react";
-import { ActivityIndicator, ScrollView, View } from "react-native";
 import { AccountsSection } from "@/components/dashboard/AccountsSection";
 import { LiveRates } from "@/components/dashboard/LiveRates";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
@@ -14,9 +11,12 @@ import { palette } from "@/constants/colors";
 import { TAB_BAR_HEIGHT } from "@/constants/ui";
 import { useTopAccounts } from "@/hooks/useAccounts";
 import { useMarketRates } from "@/hooks/useMarketRates";
-import { useNetWorthWithMonthlyPercentageChange } from "@/hooks/useNetWorth";
+import { useMonthlyPercentageChange, useNetWorth } from "@/hooks/useNetWorth";
 import { useRecentTransactions } from "@/hooks/useTransactions";
 import { useDatabaseReady } from "@/providers/DatabaseProvider";
+import { egpToCurrency } from "@astik/logic";
+import React, { useState } from "react";
+import { ActivityIndicator, ScrollView, View } from "react-native";
 
 export default function DashboardScreen(): React.JSX.Element {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -32,11 +32,9 @@ export default function DashboardScreen(): React.JSX.Element {
   const { transactions, isLoading: transactionsLoading } =
     useRecentTransactions(3);
 
-  const {
-    totalNetWorth,
-    monthlyPercentageChange,
-    isLoading: netWorthLoading,
-  } = useNetWorthWithMonthlyPercentageChange();
+  const { totalNetWorth, isLoading: netWorthLoading } = useNetWorth();
+
+  const { monthlyPercentageChange } = useMonthlyPercentageChange();
 
   // Overall loading state
   const isLoading = accountsLoading || ratesLoading || netWorthLoading;

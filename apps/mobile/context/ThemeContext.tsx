@@ -138,11 +138,13 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   );
 
   /**
-   * Update NativeWind's color scheme when our resolved scheme changes
+   * Update NativeWind's color scheme when our resolved scheme changes.
+   * Must use the resolved `isDark` value (which accounts for explicit mode
+   * AND system preference), not just the raw system `colorScheme`.
    */
   useEffect(() => {
-    nwColorScheme.setColorScheme(colorScheme);
-  }, [colorScheme, nwColorScheme]);
+    nwColorScheme.setColorScheme(isDark ? "dark" : "light");
+  }, [isDark, nwColorScheme]);
 
   /**
    * Set up system theme listener and load stored theme on mount

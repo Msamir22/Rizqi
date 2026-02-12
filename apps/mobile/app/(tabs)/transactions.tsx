@@ -521,7 +521,7 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
                   date={item.date}
                   isExpense={item.isExpense}
                   isIncome={item.isIncome}
-                  merchant={item.merchant}
+                  counterparty={item.counterparty}
                   note={item.note}
                   source={item.source}
                   accountName={item.accountName}

@@ -22,6 +22,7 @@ export type CalculatorKey =
   | "-"
   | "*"
   | "/"
+  | "="
   | "DONE";
 
 interface CalculatorKeypadProps {
@@ -29,20 +30,37 @@ interface CalculatorKeypadProps {
   hide?: boolean;
 }
 
+const KEY_HEIGHT = 44;
+
+/** Acceleration curve for long-press DEL (ms between deletions) */
+const DEL_INITIAL_DELAY = 200;
+const DEL_FAST_DELAY = 100;
+const DEL_FASTEST_DELAY = 50;
+const DEL_SPEED_UP_THRESHOLD = 5; // deletions before first speed-up
+const DEL_FASTEST_THRESHOLD = 15; // deletions before reaching max speed
+
 const Key = ({
   label,
   value,
   onPress,
+  onLongPress,
+  onPressOut,
   className = "",
 }: {
   label: string | React.ReactNode;
   value: CalculatorKey;
   onPress: (value: CalculatorKey) => void;
+  onLongPress?: () => void;
+  onPressOut?: () => void;
   className?: string;
 }): React.JSX.Element => (
   <TouchableOpacity
-    className={`h-[56px] items-center justify-center rounded-2xl mx-1 active:opacity-70 flex-1 bg-slate-100 dark:bg-slate-800/50 ${className}`}
+    className={`items-center justify-center rounded-2xl mx-1 active:opacity-70 flex-1 bg-slate-100 dark:bg-slate-800/50 ${className}`}
+    style={{ height: KEY_HEIGHT }}
     onPress={() => onPress(value)}
+    onLongPress={onLongPress}
+    onPressOut={onPressOut}
+    delayLongPress={400}
   >
     {typeof label === "string" ? (
       <Text className="text-xl font-bold text-slate-900 dark:text-white">
@@ -78,15 +96,61 @@ export function CalculatorKeypad({
   const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
 
+  // Long-press DEL acceleration state
+  const deleteIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(
+    null
+  );
+  const deleteCountRef = React.useRef(0);
+
+  const clearDeleteInterval = React.useCallback((): void => {
+    if (deleteIntervalRef.current !== null) {
+      clearInterval(deleteIntervalRef.current);
+      deleteIntervalRef.current = null;
+    }
+    deleteCountRef.current = 0;
+  }, []);
+
+  const startAcceleratingDelete = React.useCallback((): void => {
+    // Fire one immediate delete (the normal onPress already fired once)
+    deleteCountRef.current = 1;
+
+    const tick = (): void => {
+      onKeyPress("DEL");
+      deleteCountRef.current += 1;
+
+      // Determine the next interval based on how many deletions have occurred
+      let nextDelay = DEL_INITIAL_DELAY;
+      if (deleteCountRef.current > DEL_FASTEST_THRESHOLD) {
+        nextDelay = DEL_FASTEST_DELAY;
+      } else if (deleteCountRef.current > DEL_SPEED_UP_THRESHOLD) {
+        nextDelay = DEL_FAST_DELAY;
+      }
+
+      // Clear and restart with potentially faster interval
+      if (deleteIntervalRef.current !== null) {
+        clearInterval(deleteIntervalRef.current);
+      }
+      deleteIntervalRef.current = setInterval(tick, nextDelay);
+    };
+
+    // Start the initial repeating interval
+    deleteIntervalRef.current = setInterval(tick, DEL_INITIAL_DELAY);
+  }, [onKeyPress]);
+
+  // Cleanup on unmount
+  React.useEffect(() => {
+    return () => clearDeleteInterval();
+  }, [clearDeleteInterval]);
+
   if (hide) return null;
 
   return (
     <View
       className="bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 shadow-2xl"
-      style={{ paddingBottom: insets.bottom + 8, paddingTop: 16 }}
+      style={{ paddingBottom: insets.bottom + 4, paddingTop: 10 }}
     >
       {/* Row 1 */}
-      <View className="flex-row mb-3 px-3">
+      <View className="flex-row mb-2 px-3">
         <Key label="1" value="1" onPress={onKeyPress} />
         <Key label="2" value="2" onPress={onKeyPress} />
         <Key label="3" value="3" onPress={onKeyPress} />
@@ -94,7 +158,7 @@ export function CalculatorKeypad({
       </View>
 
       {/* Row 2 */}
-      <View className="flex-row mb-3 px-3">
+      <View className="flex-row mb-2 px-3">
         <Key label="4" value="4" onPress={onKeyPress} />
         <Key label="5" value="5" onPress={onKeyPress} />
         <Key label="6" value="6" onPress={onKeyPress} />
@@ -102,7 +166,7 @@ export function CalculatorKeypad({
       </View>
 
       {/* Row 3 */}
-      <View className="flex-row mb-3 px-3">
+      <View className="flex-row mb-2 px-3">
         <Key label="7" value="7" onPress={onKeyPress} />
         <Key label="8" value="8" onPress={onKeyPress} />
         <Key label="9" value="9" onPress={onKeyPress} />
@@ -110,30 +174,42 @@ export function CalculatorKeypad({
       </View>
 
       {/* Row 4 */}
-      <View className="flex-row px-3">
+      <View className="flex-row mb-2 px-3">
         <Key label="." value="." onPress={onKeyPress} />
         <Key label="0" value="0" onPress={onKeyPress} />
         <Key
           label={
             <Ionicons
               name="backspace-outline"
-              size={24}
+              size={22}
               color={isDark ? palette.red[100] : palette.red[500]}
             />
           }
           value="DEL"
           onPress={onKeyPress}
+          onLongPress={startAcceleratingDelete}
+          onPressOut={clearDeleteInterval}
         />
         <OperationKey label="+" value="+" onPress={onKeyPress} />
       </View>
 
-      {/* Bottom Row - DONE only */}
-      <View className="flex-row mt-4 px-4">
+      {/* Bottom Row: = and Done */}
+      <View className="flex-row mt-1 px-3">
         <TouchableOpacity
-          className="flex-1 h-[56px] items-center justify-center rounded-2xl bg-nileGreen-500 active:opacity-80 shadow-md"
+          className="flex-1 items-center justify-center rounded-2xl mx-1 active:opacity-70 bg-nileGreen-500/15 dark:bg-nileGreen-500/15"
+          style={{ height: KEY_HEIGHT }}
+          onPress={() => onKeyPress("=")}
+        >
+          <Text className="text-xl font-extrabold text-nileGreen-600 dark:text-nileGreen-400">
+            =
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          className="flex-[2] items-center justify-center rounded-2xl mx-1 bg-nileGreen-500 active:opacity-80 shadow-md"
+          style={{ height: KEY_HEIGHT }}
           onPress={() => onKeyPress("DONE")}
         >
-          <Text className="text-white font-extrabold text-lg">Done</Text>
+          <Text className="text-white font-extrabold text-base">Done</Text>
         </TouchableOpacity>
       </View>
     </View>

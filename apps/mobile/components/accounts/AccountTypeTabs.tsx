@@ -34,9 +34,22 @@ export function AccountTypeTabs({
               activeOpacity={0.8}
               className={`px-6 py-2.5 rounded-2xl border ${
                 isSelected
-                  ? "bg-nileGreen-500 border-nileGreen-500 shadow-md shadow-nileGreen-500/20"
+                  ? "bg-nileGreen-500 border-nileGreen-500"
                   : "bg-white border-slate-200 dark:bg-slate-800 dark:border-slate-700"
               }`}
+              // shadow-* classes moved to inline style to avoid NativeWind v4
+              // race condition with React Navigation context (known bug)
+              style={
+                isSelected
+                  ? {
+                      shadowColor: "rgba(16, 185, 129, 0.2)",
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 1,
+                      shadowRadius: 6,
+                      elevation: 4,
+                    }
+                  : undefined
+              }
             >
               <Text
                 className={`text-xs font-extrabold tracking-widest uppercase ${

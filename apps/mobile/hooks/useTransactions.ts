@@ -209,7 +209,7 @@ export async function createTransaction(data: {
   amount: number;
   currency: CurrencyType;
   categoryId: string;
-  merchant?: string;
+  counterparty?: string;
   accountId: string;
   note?: string;
   type: TransactionType;
@@ -235,7 +235,7 @@ export async function createTransaction(data: {
       tx.currency = data.currency;
       tx.type = data.type;
       tx.categoryId = data.categoryId;
-      tx.merchant = data.merchant || undefined;
+      tx.counterparty = data.counterparty || undefined;
       tx.note = data.note || undefined;
       tx.date = data.date || new Date();
       tx.source = data.source;
@@ -245,7 +245,6 @@ export async function createTransaction(data: {
     });
 
     // Update account balance in the same write block
-    // TODO : Remove this and depend on pull data from supabase once transaction is created. (supabase trigger should update the account balance)
     const account = await accountsCollection.find(data.accountId);
     await account.update((acc) => {
       if (data.type === "EXPENSE") {

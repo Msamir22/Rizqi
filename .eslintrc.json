@@ -225,6 +225,15 @@
           }
         ]
       }
+    },
+    {
+      "files": [
+        "apps/mobile/components/accounts/AccountTypeTabs.tsx",
+        "apps/mobile/components/accounts/AccountCard.tsx"
+      ],
+      "rules": {
+        "react-native/no-inline-styles": "off"
+      }
     }
   ]
 }

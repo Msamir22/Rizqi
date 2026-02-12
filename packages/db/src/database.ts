@@ -21,6 +21,7 @@ import { RecurringPayment } from "./models/RecurringPayment";
 import { Transaction } from "./models/Transaction";
 import { Transfer } from "./models/Transfer";
 import { UserCategorySettings } from "./models/UserCategorySettings";
+import { migrations } from "./migrations";
 import { schema } from "./schema";
 
 // =============================================================================
@@ -64,6 +65,7 @@ let adapter: SQLiteAdapter;
 try {
   adapter = new SQLiteAdapter({
     schema,
+    migrations,
     jsi: true,
     onSetUpError: (error) => console.error("Database setup error:", error),
   });
@@ -71,6 +73,7 @@ try {
   console.error("Failed to create SQLite adapter:", error);
   adapter = new SQLiteAdapter({
     schema,
+    migrations,
     jsi: false,
     onSetUpError: (error) => console.error("Database setup error:", error),
   });
