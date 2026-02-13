@@ -70,6 +70,24 @@ export function isSameDay(d1: Date, d2: Date): boolean {
   );
 }
 
+export function getDaysUntil(date: Date): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(date);
+  target.setHours(0, 0, 0, 0);
+  return Math.ceil(
+    (target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+  );
+}
+
+export function getDueText(date: Date): string {
+  const days = getDaysUntil(date);
+  if (days < 0) return `${Math.abs(days)}d overdue`;
+  if (days === 0) return "Due today";
+  if (days === 1) return "Due tomorrow";
+  return `Due in ${days} days`;
+}
+
 const SHORT_MONTHS = [
   "Jan",
   "Feb",

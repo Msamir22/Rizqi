@@ -1,3 +1,4 @@
+import { formatCurrency } from "@astik/logic";
 import { BaseTransaction } from "./base/base-transaction";
 
 export class Transaction extends BaseTransaction {
@@ -33,8 +34,10 @@ export class Transaction extends BaseTransaction {
     return this.linkedAssetId !== undefined && this.linkedAssetId !== null;
   }
 
-  get signedAmount(): number {
+  get signedFormatedAmount(): string {
     const sign = this.type === "EXPENSE" ? "-" : "+";
-    return Number(`${sign}${this.amount}`);
+    return (
+      sign + formatCurrency({ amount: this.amount, currency: this.currency })
+    );
   }
 }

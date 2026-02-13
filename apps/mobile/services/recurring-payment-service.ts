@@ -19,6 +19,7 @@ export interface RecurringPaymentData {
   frequency: RecurringFrequency;
   startDate: Date;
   action: RecurringAction;
+  notes?: string;
 }
 
 /**
@@ -50,6 +51,7 @@ export async function createRecurringPayment(
       rec.action = data.action;
       rec.status = "ACTIVE";
       rec.deleted = false;
+      rec.notes = data.notes;
     });
   });
 }

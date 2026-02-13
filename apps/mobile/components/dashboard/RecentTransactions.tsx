@@ -64,7 +64,7 @@ function TransactionItem({
             isExpense ? "text-red-500" : "text-nileGreen-500"
           }`}
         >
-          {transaction.signedAmount}
+          {transaction.signedFormatedAmount}
         </Text>
       </TouchableOpacity>
 

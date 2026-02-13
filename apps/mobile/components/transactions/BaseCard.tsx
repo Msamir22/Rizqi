@@ -1,3 +1,5 @@
+import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
 import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -7,8 +9,6 @@ import {
   configureReanimatedLogger,
   ReanimatedLogLevel,
 } from "react-native-reanimated";
-import { useTheme } from "@/context/ThemeContext";
-import { palette } from "@/constants/colors";
 import { CategoryIcon, IconLibrary } from "../common/CategoryIcon";
 
 configureReanimatedLogger({
@@ -34,7 +34,6 @@ interface BaseCardProps {
   details?: string;
   displayNetWorth: number;
   date: Date;
-  // New Props
   index?: number;
   onSwipeDelete?: (id: string) => void;
   onCategoryPress?: (id: string) => void;
