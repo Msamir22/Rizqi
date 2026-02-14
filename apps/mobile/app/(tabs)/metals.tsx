@@ -152,7 +152,7 @@ export default function MyMetalsScreen(): ReactElement {
   // Wait, original ticker: Silver: ${SilverPrice.toFixed(2)}/g
 
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-900">
+    <View className="flex-1">
       <PageHeader title="My Metals" />
 
       <ScrollView

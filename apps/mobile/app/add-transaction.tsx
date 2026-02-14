@@ -406,7 +406,7 @@ export default function AddTransaction(): React.ReactNode {
   };
 
   return (
-    <View className="flex-1 bg-background dark:bg-background-dark">
+    <View className="flex-1">
       {/* Header */}
       <PageHeader
         title="New Transaction"

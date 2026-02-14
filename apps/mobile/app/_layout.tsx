@@ -82,7 +82,15 @@ function RootLayoutNav(): React.ReactNode {
         style={colorScheme}
         backgroundColor={isDark ? lightTheme.background : darkTheme.background}
       />
-      <Stack>
+      <Stack
+        screenOptions={{
+          contentStyle: {
+            backgroundColor: isDark
+              ? darkTheme.background
+              : lightTheme.background,
+          },
+        }}
+      >
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

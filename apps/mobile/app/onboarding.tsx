@@ -116,7 +116,7 @@ export default function OnboardingScreen(): React.JSX.Element {
   };
 
   return (
-    <View className="flex-1 bg-background dark:bg-background-dark">
+    <View className="flex-1">
       {/* Background Gradient for Dark Mode */}
       {isDark && (
         <LinearGradient

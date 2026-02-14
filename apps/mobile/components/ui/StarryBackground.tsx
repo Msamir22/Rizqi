@@ -220,7 +220,7 @@ export function StarryBackground({ children }: Props): JSX.Element {
 
   if (isDark) {
     return (
-      <View className="flex-1 bg-background dark:bg-background-dark">
+      <View className="flex-1">
         <SafeAreaView className="flex-1" edges={["top"]}>
           {STATIC_STARS.map((star) => (
             <Star key={star.id} data={star} />
@@ -233,7 +233,7 @@ export function StarryBackground({ children }: Props): JSX.Element {
 
   // Light mode fallback (Standard light background)
   return (
-    <View className="flex-1 bg-background dark:bg-background-dark">
+    <View className="flex-1">
       <SafeAreaView className="flex-1" edges={["top"]}>
         {children}
       </SafeAreaView>

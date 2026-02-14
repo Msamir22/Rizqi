@@ -103,7 +103,7 @@ export default function Accounts(): ReactElement {
   );
 
   return (
-    <View className="flex-1 bg-background dark:bg-background-dark">
+    <View className="flex-1">
       <PageHeader
         title="Accounts"
         rightAction={{

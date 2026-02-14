@@ -258,7 +258,7 @@ function QuickStats(): React.JSX.Element {
 
 export default function StatsScreen(): React.JSX.Element {
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-900">
+    <View className="flex-1">
       <PageHeader title="Stats" />
       <ScrollView
         contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + 20 }}
