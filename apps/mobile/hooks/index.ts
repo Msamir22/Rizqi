@@ -10,7 +10,7 @@ export {
   useMonthlyTransactions,
 } from "./useTransactions";
 export { useMarketRates } from "./useMarketRates";
-export { useCategories, useCategory } from "./useCategories";
+export { useCategories } from "./useCategories";
 export { useMonthlyPercentageChange, useNetWorth } from "./useNetWorth";
 export {
   usePeriodSummary,
@@ -19,9 +19,10 @@ export {
   type PeriodSummary,
 } from "./usePeriodSummary";
 export {
-  useUpcomingPayments,
-  type UpcomingPayment,
-} from "./useUpcomingPayments";
+  useRecurringPayments,
+  type UseRecurringPaymentsOptions,
+  type UseRecurringPaymentsResult,
+} from "./useRecurringPayments";
 export { useKeyboardVisibility } from "./useKeyboardVisibility";
 export { useAccountForm } from "./useAccountForm";
 export { useCreateAccount } from "./useCreateAccount";

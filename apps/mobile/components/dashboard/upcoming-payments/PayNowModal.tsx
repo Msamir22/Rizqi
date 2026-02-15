@@ -1,0 +1,267 @@
+/**
+ * PayNowModal — Modal for confirming and executing a recurring payment.
+ *
+ * Allows the user to adjust the amount, select a deduction account,
+ * and confirm. Creates a transaction and advances the next due date.
+ */
+
+import { formatCurrency } from "@astik/logic";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Keyboard,
+  Modal,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
+} from "react-native";
+import { TextField } from "@/components/ui/TextField";
+import { useToast } from "@/components/ui/Toast";
+import { palette } from "@/constants/colors";
+import { useAccounts } from "@/hooks/useAccounts";
+import { getDueText } from "@/utils/dateHelpers";
+import { updateRecurringPaymentNextDueDate } from "@/services/recurring-payment-service";
+import { createTransaction } from "@/services/transaction-service";
+
+import type { PayNowModalProps } from "./types";
+
+export function PayNowModal({
+  payment,
+  visible,
+  onClose,
+  onSuccess,
+}: PayNowModalProps): React.JSX.Element | null {
+  const { accounts } = useAccounts();
+  const { showToast } = useToast();
+  const [amount, setAmount] = useState<string>("");
+  const [amountError, setAmountError] = useState<string>("");
+  const [selectedAccountId, setSelectedAccountId] = useState<string>("");
+  const [showAccountPicker, setShowAccountPicker] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Reset amount, error, and account when payment changes
+  useEffect(() => {
+    if (payment) {
+      setAmount(payment.amount.toString());
+      setAmountError("");
+      setSelectedAccountId(payment.accountId);
+      setShowAccountPicker(false);
+    }
+  }, [payment]);
+
+  if (!payment) return null;
+
+  const selectedAccount = accounts.find((a) => a.id === selectedAccountId);
+
+  const handleAmountChange = (text: string): void => {
+    setAmount(text);
+    if (amountError) {
+      const num = parseFloat(text);
+      if (!isNaN(num) && num > 0) {
+        setAmountError("");
+      }
+    }
+  };
+
+  const handleConfirm = async (): Promise<void> => {
+    const numericAmount = parseFloat(amount);
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      setAmountError("Please enter a valid amount.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      await createTransaction({
+        amount: numericAmount,
+        currency: "EGP",
+        categoryId: payment.categoryId,
+        accountId: selectedAccountId,
+        note: `Payment for ${payment.name}`,
+        type: "EXPENSE",
+        source: "MANUAL",
+        date: new Date(),
+      });
+
+      await updateRecurringPaymentNextDueDate(
+        payment.id,
+        payment.nextDueDate,
+        payment.frequency
+      );
+
+      setIsSubmitting(false);
+      onClose();
+      onSuccess(numericAmount);
+    } catch (error) {
+      setIsSubmitting(false);
+      console.error("Error creating transaction:", error);
+      showToast({
+        type: "error",
+        title: "Payment Failed",
+        message: "Failed to create transaction. Please try again.",
+      });
+    }
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View className="flex-1 bg-black/50 items-center justify-center px-5">
+          <View className="w-full max-w-[340px] rounded-[20px] border p-6 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+            {/* Header */}
+            <Text className="text-lg font-bold text-center mb-5 text-slate-800 dark:text-slate-25">
+              Pay {payment.name}
+            </Text>
+
+            {/* Amount Input — uses project TextField component */}
+            <TextField
+              label="Amount (EGP)"
+              value={amount}
+              onChangeText={handleAmountChange}
+              keyboardType="decimal-pad"
+              placeholder="0.00"
+              error={amountError}
+            />
+
+            {/* Account Selector */}
+            <View className="mb-4">
+              <Text className="text-sm font-medium mb-2 text-slate-500 dark:text-slate-400">
+                Deduct from
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowAccountPicker(!showAccountPicker)}
+                className="px-4 py-3 rounded-xl border flex-row items-center justify-between bg-slate-100 dark:bg-slate-700 border-slate-200 dark:border-slate-600"
+              >
+                <View className="flex-row items-center">
+                  <Ionicons
+                    name="wallet-outline"
+                    size={18}
+                    color={palette.slate[500]}
+                    className="mr-2"
+                  />
+                  <Text className="text-base font-medium text-slate-800 dark:text-white">
+                    {selectedAccount?.name || "Select account"}
+                  </Text>
+                </View>
+                <Ionicons
+                  name={showAccountPicker ? "chevron-up" : "chevron-down"}
+                  size={18}
+                  color={palette.slate[500]}
+                />
+              </TouchableOpacity>
+
+              {/* Account Picker Dropdown */}
+              {showAccountPicker && (
+                <View className="mt-2 rounded-xl border overflow-hidden bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600">
+                  <ScrollView style={{ maxHeight: 150 }}>
+                    {accounts.map((account) => (
+                      <TouchableOpacity
+                        key={account.id}
+                        onPress={() => {
+                          setSelectedAccountId(account.id);
+                          setShowAccountPicker(false);
+                        }}
+                        className={`px-4 py-3 flex-row items-center justify-between border-b border-slate-200 dark:border-slate-600 ${
+                          account.id === selectedAccountId
+                            ? "bg-nileGreen-50 dark:bg-nileGreen-800/30"
+                            : ""
+                        }`}
+                      >
+                        <View className="flex-1">
+                          <Text className="text-sm font-medium text-slate-800 dark:text-white">
+                            {account.name}
+                          </Text>
+                          <Text className="text-xs text-slate-500 dark:text-slate-400">
+                            {account.formattedBalance}
+                          </Text>
+                        </View>
+                        {account.id === selectedAccountId && (
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={20}
+                            color={palette.nileGreen[500]}
+                          />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+            </View>
+
+            {/* Payment Info */}
+            <View className="gap-2 mb-4">
+              <View className="flex-row justify-between items-center">
+                <Text className="text-sm text-slate-500 dark:text-slate-400">
+                  Original amount:
+                </Text>
+                <Text className="text-sm text-slate-600 dark:text-slate-300">
+                  {formatCurrency({
+                    amount: payment.amount,
+                    currency: "EGP",
+                  })}
+                </Text>
+              </View>
+              <View className="flex-row justify-between items-center">
+                <Text className="text-sm text-slate-500 dark:text-slate-400">
+                  Due:
+                </Text>
+                <Text
+                  className={`text-sm font-semibold ${
+                    payment.daysUntilDue <= 0
+                      ? "text-red-500"
+                      : "text-slate-800 dark:text-slate-25"
+                  }`}
+                >
+                  {getDueText(payment.nextDueDate)}
+                </Text>
+              </View>
+            </View>
+
+            {/* Info text */}
+            <Text className="text-xs text-center mb-5 leading-[18px] text-slate-500 dark:text-slate-400">
+              This will create a transaction and update your account balance.
+            </Text>
+
+            {/* Buttons */}
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                onPress={onClose}
+                disabled={isSubmitting}
+                className="flex-1 py-3 rounded-xl border items-center border-slate-300 dark:border-slate-700"
+              >
+                <Text className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  handleConfirm();
+                }}
+                disabled={isSubmitting}
+                className={`flex-1 py-3 rounded-xl items-center ${isSubmitting ? "bg-nileGreen-600" : "bg-nileGreen-500"}`}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <Text className="text-sm font-semibold text-white">
+                    Confirm
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </TouchableWithoutFeedback>
+    </Modal>
+  );
+}

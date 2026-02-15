@@ -4,7 +4,8 @@
  * L1 → L2 → L3 navigation with breadcrumbs
  */
 
-import { Category, database, Transaction } from "@astik/db";
+import { database, Transaction } from "@astik/db";
+import { useAllCategories } from "@/context/CategoriesContext";
 import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { Q } from "@nozbe/watermelondb";
@@ -183,50 +184,40 @@ export function CategoryDrilldownCard(): React.JSX.Element {
 
   // State
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { categories, isLoading: categoriesLoading } = useAllCategories();
+  const [transactionsLoading, setTransactionsLoading] = useState(true);
   const [currentParentId, setCurrentParentId] = useState<string | null>(null);
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([
     { id: null, name: "All Categories", level: 0 },
   ]);
 
-  // Load data
+  const isLoading = transactionsLoading || categoriesLoading;
+
+  // Load transactions only (categories come from context)
   useEffect(() => {
     const { startDate, endDate } = getYearMonthBoundaries(
       currentYear,
       currentMonth
     );
 
-    const transactionsQuery = database
+    const subscription = database
       .get<Transaction>("transactions")
       .query(
         Q.where("deleted", false),
         Q.where("date", Q.gte(startDate)),
         Q.where("date", Q.lte(endDate)),
         Q.where("type", "EXPENSE")
-      );
+      )
+      .observe()
+      .subscribe({
+        next: (result) => {
+          setTransactions(result);
+          setTransactionsLoading(false);
+        },
+        error: (err) => console.error("Error loading transactions:", err),
+      });
 
-    const categoriesQuery = database
-      .get<Category>("categories")
-      .query(Q.where("deleted", false));
-
-    const txSub = transactionsQuery.observe().subscribe({
-      next: (result) => setTransactions(result),
-      error: (err) => console.error("Error loading transactions:", err),
-    });
-
-    const catSub = categoriesQuery.observe().subscribe({
-      next: (result) => {
-        setCategories(result);
-        setIsLoading(false);
-      },
-      error: (err) => console.error("Error loading categories:", err),
-    });
-
-    return () => {
-      txSub.unsubscribe();
-      catSub.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, [currentYear, currentMonth]);
 
   // Build category map with children info

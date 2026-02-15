@@ -1,7 +1,7 @@
 import { palette } from "@/constants/colors";
-import { useCategory } from "@/hooks/useCategories";
+import { useCategoryLookup } from "@/context/CategoriesContext";
 import { formatTransactionDate } from "@/utils/transactions";
-import { Transaction } from "@astik/db";
+import { Category, Transaction } from "@astik/db";
 import { router } from "expo-router";
 import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 import { CategoryIcon } from "../common/CategoryIcon";
@@ -15,13 +15,14 @@ interface RecentTransactionsProps {
 interface TransactionItemProps {
   transaction: Transaction;
   isLast: boolean;
+  category?: Category;
 }
 
 function TransactionItem({
   transaction,
   isLast,
+  category,
 }: TransactionItemProps): React.JSX.Element {
-  const { category } = useCategory(transaction.categoryId);
   const isExpense = transaction.isExpense;
 
   // Use category's iconConfig or fallback to default icons
@@ -80,6 +81,8 @@ export function RecentTransactions({
   transactions,
   isLoading = false,
 }: RecentTransactionsProps): React.JSX.Element {
+  const categoryMap = useCategoryLookup();
+
   const handleSeeAll = (): void => {
     router.push("/(tabs)/transactions");
   };
@@ -115,6 +118,7 @@ export function RecentTransactions({
               key={transaction.id}
               transaction={transaction}
               isLast={index === transactions.length - 1}
+              category={categoryMap.get(transaction.categoryId)}
             />
           ))}
         </View>

@@ -1,4 +1,4 @@
-import { getNextMonthSameDay } from "@/utils/dateHelpers";
+import { calculateNextDueDate, getNextMonthSameDay } from "@/utils/dateHelpers";
 import {
   CurrencyType,
   database,
@@ -52,6 +52,26 @@ export async function createRecurringPayment(
       rec.status = "ACTIVE";
       rec.deleted = false;
       rec.notes = data.notes;
+    });
+  });
+}
+
+/**
+ * Update the next due date of a recurring payment after a "Pay Now" action.
+ * Calculates the next due date based on the payment's frequency.
+ */
+export async function updateRecurringPaymentNextDueDate(
+  paymentId: string,
+  currentDueDate: Date,
+  frequency: string
+): Promise<void> {
+  const recurringCollection =
+    database.get<RecurringPayment>("recurring_payments");
+
+  await database.write(async () => {
+    const payment = await recurringCollection.find(paymentId);
+    await payment.update((record) => {
+      record.nextDueDate = calculateNextDueDate(currentDueDate, frequency);
     });
   });
 }

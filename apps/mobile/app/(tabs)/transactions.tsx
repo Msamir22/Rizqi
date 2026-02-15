@@ -13,7 +13,7 @@ import { useToast } from "@/components/ui/Toast";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { PERIOD_LABELS } from "@/hooks/usePeriodSummary";
-import { useTransactionOperations } from "@/hooks/useTransactionOperations";
+import { batchDeleteDisplayTransactions } from "@/services/transaction-service";
 import {
   GroupingPeriod,
   TransactionTypeFilter,
@@ -59,9 +59,6 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
     selectedTypes,
     searchQuery
   );
-
-  // Transaction Operations Hook
-  const { deleteTransactions } = useTransactionOperations();
 
   // Sync Hook
   const { sync } = useSync();
@@ -144,20 +141,6 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
     } else {
       // TODO: Navigate to details?
       console.log("View details for", id);
-    }
-  };
-
-  const handleSwipeDelete = async (id: string): Promise<void> => {
-    // Find item to confirm type? Or just delete?
-    // Usually swipe to delete asks for confirmation or undo.
-    // For now, let's just delete (or maybe triggering the modal is better UX?)
-    // User requested "Swipe Actions", let's do direct delete with Toast Undo ideally, but specific req wasn't Undo.
-    // Let's call the delete function directly.
-    const allTransactions = groupedData.flatMap((g) => g.transactions);
-    const item = allTransactions.find((t) => t.id === id);
-    if (item) {
-      await deleteTransactions([item]);
-      refetch();
     }
   };
 
@@ -316,15 +299,24 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
       ids.includes(item.id)
     );
 
-    const success = await deleteTransactions(selectedItems);
-    if (success) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    try {
+      await batchDeleteDisplayTransactions(selectedItems);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+        () => {}
+      );
       setSelectedIds(new Set());
       refetch();
       showToast({
         type: "success",
         title: "Deleted Successfully",
         message: `${selectedItems.length} transaction${selectedItems.length > 1 ? "s" : ""} deleted successfully`,
+      });
+    } catch (error) {
+      console.error("Failed to delete transactions:", error);
+      showToast({
+        type: "error",
+        title: "Delete Failed",
+        message: "Something went wrong. Please try again.",
       });
     }
   };
@@ -342,7 +334,7 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
 
   return (
     <>
-      <View className="flex-1 bg-background dark:bg-background-dark">
+      <View className="flex-1">
         {/* Header Section */}
         <PageHeader
           title="Transactions"
@@ -509,7 +501,6 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
                     onPress={handlePress}
                     onLongPress={handleLongPress}
                     index={index}
-                    onSwipeDelete={handleSwipeDelete}
                   />
                 );
               }
@@ -533,8 +524,6 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
                   onPress={handlePress}
                   onLongPress={handleLongPress}
                   index={index}
-                  // Delete Transfer should have different logic
-                  // onSwipeDelete={handleSwipeDelete}
                   onCategoryPress={handleCategoryPress}
                   onAmountPress={handleAmountPress}
                 />

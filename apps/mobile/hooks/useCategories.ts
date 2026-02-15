@@ -1,145 +1,75 @@
-import { Category, database, TransactionType } from "@astik/db";
-import { Q } from "@nozbe/watermelondb";
-import { useEffect, useState } from "react";
+/**
+ * Hook to get filtered category lists.
+ *
+ * Reads from the global CategoriesContext (single subscription) and
+ * applies in-memory filters. No own DB subscription is created.
+ */
+
+import { Category, TransactionType } from "@astik/db";
+import { useMemo } from "react";
+import { useAllCategories } from "../context/CategoriesContext";
 
 interface UseCategoriesResult {
-  categories: Category[];
-  expenseCategories: Category[];
-  incomeCategories: Category[];
-  isLoading: boolean;
-  error: Error | null;
-  getCategoryById: (id: string) => Category | undefined;
-  refetch: () => void;
+  readonly categories: readonly Category[];
+  readonly expenseCategories: readonly Category[];
+  readonly incomeCategories: readonly Category[];
+  readonly isLoading: boolean;
 }
 
 interface UseCategoriesOptions {
-  topLevelOnly?: boolean;
-  type?: TransactionType;
-  includeHidden?: boolean;
+  readonly topLevelOnly?: boolean;
+  readonly type?: TransactionType;
+  readonly includeHidden?: boolean;
 }
 
 /**
- * Hook to get categories reactively from WatermelonDB
+ * Hook to get filtered category lists from the global CategoriesContext.
+ *
+ * @example
+ * // Expense categories, top-level only (default)
+ * const { expenseCategories } = useCategories({ type: "EXPENSE" });
+ *
+ * // All categories including subcategories
+ * const { categories } = useCategories({ topLevelOnly: false });
  */
 export function useCategories(
   options: UseCategoriesOptions = {}
 ): UseCategoriesResult {
   const { topLevelOnly = true, type, includeHidden = false } = options;
+  const { categories: allCategories, isLoading } = useAllCategories();
 
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  const refetch = (): void => {
-    setRefreshKey((prev) => prev + 1);
-  };
-
-  useEffect(() => {
-    setIsLoading(true);
-    setError(null);
-
-    const categoriesCollection = database.get<Category>("categories");
-
-    const conditions = [
-      Q.where("deleted", false),
-      Q.where("is_internal", false),
-    ];
+  const filtered = useMemo(() => {
+    let result = allCategories.filter((c) => !c.isInternal);
 
     if (topLevelOnly) {
-      conditions.push(Q.where("level", 1));
+      result = result.filter((c) => c.level === 1);
     }
 
     if (type) {
-      conditions.push(Q.where("type", type));
+      result = result.filter((c) => c.type === type);
     }
 
     if (!includeHidden) {
-      conditions.push(Q.where("is_hidden", false));
+      result = result.filter((c) => !c.isHidden);
     }
 
-    const query = categoriesCollection.query(
-      Q.and(...conditions),
-      Q.sortBy("sort_order", "asc")
-    );
+    return result;
+  }, [allCategories, topLevelOnly, type, includeHidden]);
 
-    const subscription = query.observe().subscribe({
-      next: (result) => {
-        setCategories(result);
-        setIsLoading(false);
-      },
-      error: (err: unknown) => {
-        console.error("Error observing categories:", err);
-        setError(err instanceof Error ? err : new Error(String(err)));
-        setIsLoading(false);
-      },
-    });
+  const expenseCategories = useMemo(
+    () => filtered.filter((c) => c.isExpense),
+    [filtered]
+  );
 
-    return () => subscription.unsubscribe();
-  }, [topLevelOnly, type, includeHidden, refreshKey]);
-
-  // Filter expense and income categories
-  const expenseCategories = categories.filter((c) => c.isExpense);
-  const incomeCategories = categories.filter((c) => c.isIncome);
-
-  // Lookup function
-  const getCategoryById = (id: string): Category | undefined => {
-    return categories.find((c) => c.id === id);
-  };
+  const incomeCategories = useMemo(
+    () => filtered.filter((c) => c.isIncome),
+    [filtered]
+  );
 
   return {
-    categories,
+    categories: filtered,
     expenseCategories,
     incomeCategories,
     isLoading,
-    error,
-    getCategoryById,
-    refetch,
   };
-}
-
-export interface UseCategoryResult {
-  category: Category | null;
-  isLoading: boolean;
-  error: Error | null;
-}
-
-/**
- * Hook to get a single category by ID or systemName
- */
-export function useCategory(categoryId: string | null): UseCategoryResult {
-  const [category, setCategory] = useState<Category | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  useEffect(() => {
-    if (!categoryId) {
-      setCategory(null);
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    const categoriesCollection = database.get<Category>("categories");
-
-    const query = categoriesCollection.findAndObserve(categoryId);
-
-    const subscription = query.subscribe({
-      next: (result) => {
-        setCategory(result);
-        setIsLoading(false);
-      },
-      error: (err: unknown) => {
-        console.error("Error observing category:", err);
-        setError(err instanceof Error ? err : new Error(String(err)));
-        setIsLoading(false);
-      },
-    });
-
-    return () => subscription.unsubscribe();
-  }, [categoryId]);
-
-  return { category, isLoading, error };
 }

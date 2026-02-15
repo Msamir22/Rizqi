@@ -19,6 +19,7 @@ import "../global.css";
 
 import { ToastProvider } from "../components/ui/Toast";
 import { AuthProvider } from "../context/AuthContext";
+import { CategoriesProvider } from "../context/CategoriesContext";
 import { ServerStatusProvider } from "../context/ServerStatusContext";
 import { DatabaseProvider } from "../providers/DatabaseProvider";
 import { QueryProvider } from "../providers/QueryProvider";
@@ -54,16 +55,18 @@ export default function RootLayout(): React.ReactNode {
           <DatabaseProvider>
             <AuthProvider>
               <SyncProvider>
-                <ThemeProvider>
-                  <SafeAreaProvider>
-                    <ServerStatusProvider>
-                      <ToastProvider>
-                        <RootLayoutNav />
-                        <ServiceUnavailableBanner />
-                      </ToastProvider>
-                    </ServerStatusProvider>
-                  </SafeAreaProvider>
-                </ThemeProvider>
+                <CategoriesProvider>
+                  <ThemeProvider>
+                    <SafeAreaProvider>
+                      <ServerStatusProvider>
+                        <ToastProvider>
+                          <RootLayoutNav />
+                          <ServiceUnavailableBanner />
+                        </ToastProvider>
+                      </ServerStatusProvider>
+                    </SafeAreaProvider>
+                  </ThemeProvider>
+                </CategoriesProvider>
               </SyncProvider>
             </AuthProvider>
           </DatabaseProvider>

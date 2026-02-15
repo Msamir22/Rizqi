@@ -3,12 +3,21 @@
  * Full list of recurring payments with status filtering
  */
 
-import { database, RecurringPayment } from "@astik/db";
+import { CategoryIcon } from "@/components/common/CategoryIcon";
+import { getFrequencyLabel } from "@/components/modals/FrequencyPickerModal";
+import { PageHeader } from "@/components/navigation/PageHeader";
+import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
+import { palette } from "@/constants/colors";
+import { useCategoryLookup } from "@/context/CategoriesContext";
+import { useTheme } from "@/context/ThemeContext";
+import { useRecurringPayments } from "@/hooks/useRecurringPayments";
+import { getDueText } from "@/utils/dateHelpers";
+import { getPaymentIcon } from "@/utils/recurring-helpers";
+import type { RecurringPayment, RecurringStatus } from "@astik/db";
 import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
-import { Q } from "@nozbe/watermelondb";
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -17,72 +26,15 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { PageHeader } from "@/components/navigation/PageHeader";
-import { palette } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
 
 // =============================================================================
-// Types
-// =============================================================================
-
-type StatusFilter = "ACTIVE" | "PAUSED" | "COMPLETED";
-
-interface PaymentWithRelations extends RecurringPayment {
-  categoryName?: string;
-  accountName?: string;
-}
-
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-function getDaysUntil(date: Date): number {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const target = new Date(date);
-  target.setHours(0, 0, 0, 0);
-  return Math.ceil(
-    (target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-  );
-}
-
-function getDueText(date: Date): string {
-  const days = getDaysUntil(date);
-  if (days < 0) return `${Math.abs(days)}d overdue`;
-  if (days === 0) return "Due today";
-  if (days === 1) return "Due tomorrow";
-  return `Due in ${days} days`;
-}
-
-function getPaymentIcon(name: string): keyof typeof Ionicons.glyphMap {
-  const nameLower = name.toLowerCase();
-  if (nameLower.includes("netflix") || nameLower.includes("stream"))
-    return "play-circle";
-  if (nameLower.includes("spotify") || nameLower.includes("music"))
-    return "musical-notes";
-  if (nameLower.includes("gym") || nameLower.includes("fitness"))
-    return "barbell";
-  if (nameLower.includes("internet") || nameLower.includes("wifi"))
-    return "wifi";
-  if (nameLower.includes("electric") || nameLower.includes("power"))
-    return "flash";
-  if (nameLower.includes("water")) return "water";
-  if (nameLower.includes("rent") || nameLower.includes("house")) return "home";
-  if (nameLower.includes("salary") || nameLower.includes("income"))
-    return "cash";
-  if (nameLower.includes("phone") || nameLower.includes("mobile"))
-    return "phone-portrait";
-  return "receipt";
-}
-
-// =============================================================================
-// Components
+// Sub-Components
 // =============================================================================
 
 interface StatusTabsProps {
-  activeTab: StatusFilter;
-  onTabChange: (tab: StatusFilter) => void;
-  counts: Record<StatusFilter, number>;
+  readonly activeTab: RecurringStatus;
+  readonly onTabChange: (tab: RecurringStatus) => void;
+  readonly counts: Record<RecurringStatus, number>;
 }
 
 function StatusTabs({
@@ -90,15 +42,15 @@ function StatusTabs({
   onTabChange,
   counts,
 }: StatusTabsProps): React.JSX.Element {
-  const tabs: StatusFilter[] = ["ACTIVE", "PAUSED", "COMPLETED"];
+  const tabs: RecurringStatus[] = ["ACTIVE", "PAUSED", "COMPLETED"];
 
   return (
-    <View className="flex-row mb-5">
+    <View className="flex-row mb-5 gap-2">
       {tabs.map((tab) => (
         <TouchableOpacity
           key={tab}
           onPress={() => onTabChange(tab)}
-          className={`flex-1 py-3 rounded-2xl mr-2 last:mr-0 ${
+          className={`flex-1 py-2.5 rounded-2xl ${
             activeTab === tab
               ? "bg-nileGreen-500"
               : "bg-slate-200 dark:bg-slate-800"
@@ -129,8 +81,8 @@ function StatusTabs({
 }
 
 interface HeroSummaryProps {
-  next7Days: number;
-  thisMonth: number;
+  readonly next7Days: number;
+  readonly thisMonth: number;
 }
 
 function HeroSummary({
@@ -138,13 +90,18 @@ function HeroSummary({
   thisMonth,
 }: HeroSummaryProps): React.JSX.Element {
   return (
-    <View className="rounded-3xl border p-6 mb-6 bg-white/60 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700">
+    <View className="rounded-3xl border p-6 mb-6 bg-white/60 dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+      {/* Context label */}
+      <Text className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-3 text-center">
+        Upcoming Expenses
+      </Text>
+
       <View className="flex-row">
         <View className="flex-1 items-center border-r border-slate-200 dark:border-slate-700 pr-4">
           <Text className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">
             Next 7 days
           </Text>
-          <Text className="text-xl font-bold mt-1 text-slate-800 dark:text-white">
+          <Text className="text-xl font-bold mt-1 text-red-500">
             {formatCurrency({ amount: next7Days, currency: "EGP" })}
           </Text>
         </View>
@@ -152,7 +109,7 @@ function HeroSummary({
           <Text className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">
             This Month
           </Text>
-          <Text className="text-xl font-bold mt-1 text-slate-800 dark:text-white">
+          <Text className="text-xl font-bold mt-1 text-red-500">
             {formatCurrency({ amount: thisMonth, currency: "EGP" })}
           </Text>
         </View>
@@ -162,8 +119,8 @@ function HeroSummary({
 }
 
 interface PaymentCardProps {
-  payment: PaymentWithRelations;
-  onPress: () => void;
+  readonly payment: RecurringPayment;
+  readonly onPress: () => void;
 }
 
 function PaymentCard({
@@ -171,37 +128,50 @@ function PaymentCard({
   onPress,
 }: PaymentCardProps): React.JSX.Element {
   const { isDark } = useTheme();
-  const daysUntil = getDaysUntil(payment.nextDueDate);
-  const isOverdue = daysUntil < 0;
-  const isIncome = payment.type === "INCOME";
+  const categoryMap = useCategoryLookup();
+  const category = categoryMap.get(payment.categoryId);
 
   return (
     <TouchableOpacity
       onPress={onPress}
-      className="flex-row items-center p-4 rounded-2xl border mb-3 bg-white dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 shadow-sm"
+      className="flex-row items-center p-4 rounded-2xl border mb-3 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+      // eslint-disable-next-line react-native/no-inline-styles
+      style={{
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
+      }}
     >
       {/* Icon */}
       <View
         className={`w-12 h-12 rounded-2xl items-center justify-center mr-4 ${
-          isIncome ? "bg-nileGreen-500/10" : "bg-slate-100 dark:bg-slate-700/50"
+          payment.isIncome
+            ? "bg-nileGreen-500/10"
+            : "bg-slate-100 dark:bg-slate-700/50"
         }`}
       >
-        <Ionicons
-          name={getPaymentIcon(payment.name)}
-          size={24}
-          className={
-            isIncome
-              ? "text-nileGreen-500"
-              : "text-slate-600 dark:text-slate-300"
-          }
-          color={
-            isIncome
-              ? palette.nileGreen[500]
-              : isDark
-                ? palette.slate[300]
-                : palette.slate[600]
-          }
-        />
+        {category ? (
+          <CategoryIcon
+            iconName={category.iconConfig.iconName}
+            iconLibrary={category.iconConfig.iconLibrary}
+            color={category.iconConfig.iconColor}
+            size={20}
+          />
+        ) : (
+          <Ionicons
+            name={getPaymentIcon(payment.name)}
+            size={24}
+            color={
+              payment.isIncome
+                ? palette.nileGreen[500]
+                : isDark
+                  ? palette.slate[300]
+                  : palette.slate[600]
+            }
+          />
+        )}
       </View>
 
       {/* Info */}
@@ -212,25 +182,31 @@ function PaymentCard({
         >
           {payment.name}
         </Text>
-        <Text
-          className={`text-sm font-medium ${
-            isOverdue
-              ? "text-red-500/80 dark:text-red-400/80"
-              : "text-slate-500 dark:text-slate-400"
-          }`}
-        >
-          {getDueText(payment.nextDueDate)}
-        </Text>
+        <View className="flex-row items-center gap-2 mt-0.5">
+          <Text
+            className={`text-xs font-medium ${
+              payment.isOverdue
+                ? "text-red-500/80 dark:text-red-400/80"
+                : "text-slate-500 dark:text-slate-400"
+            }`}
+          >
+            {getDueText(payment.nextDueDate)}
+          </Text>
+          <View className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
+          <Text className="text-xs text-slate-400 dark:text-slate-500">
+            {getFrequencyLabel(payment.frequency)}
+          </Text>
+        </View>
       </View>
 
       {/* Amount */}
       <Text
         className={`text-base font-extrabold ${
-          isIncome ? "text-nileGreen-500" : "text-slate-800 dark:text-white"
+          payment.isIncome ? "text-nileGreen-500" : "text-red-500"
         }`}
       >
-        {isIncome ? "+" : ""}
-        {formatCurrency({ amount: payment.amount, currency: "EGP" })}
+        {payment.isIncome ? "+" : "-"}
+        {formatCurrency({ amount: payment.amount, currency: payment.currency })}
       </Text>
     </TouchableOpacity>
   );
@@ -241,80 +217,33 @@ function PaymentCard({
 // =============================================================================
 
 export default function RecurringPaymentsScreen(): React.JSX.Element {
-  const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
-  const [payments, setPayments] = useState<PaymentWithRelations[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<StatusFilter>("ACTIVE");
+  const {
+    filteredPayments,
+    counts,
+    next7DaysTotal,
+    totalDueThisMonth,
+    isLoading,
+    statusFilter,
+    setStatusFilter,
+  } = useRecurringPayments();
 
-  useEffect(() => {
-    const collection = database.get<RecurringPayment>("recurring_payments");
-    const subscription = collection
-      .query(Q.where("deleted", false), Q.sortBy("next_due_date", Q.asc))
-      .observe()
-      .subscribe({
-        next: (result) => {
-          setPayments(result as PaymentWithRelations[]);
-          setIsLoading(false);
-        },
-        error: (err) => {
-          console.error("Error loading recurring payments:", err);
-          setIsLoading(false);
-        },
-      });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  // Filter by status
-  const filteredPayments = payments.filter((p) => p.status === activeTab);
-
-  // Count by status
-  const counts: Record<StatusFilter, number> = {
-    ACTIVE: payments.filter((p) => p.status === "ACTIVE").length,
-    PAUSED: payments.filter((p) => p.status === "PAUSED").length,
-    COMPLETED: payments.filter((p) => p.status === "COMPLETED").length,
-  };
-
-  // Calculate summaries (only for active expenses)
-  const activePayments = payments.filter(
-    (p) => p.status === "ACTIVE" && p.type === "EXPENSE"
-  );
-  const today = new Date();
-  const next7Days = activePayments
-    .filter((p) => {
-      const days = getDaysUntil(p.nextDueDate);
-      return days >= 0 && days <= 7;
-    })
-    .reduce((sum, p) => sum + p.amount, 0);
-
-  const thisMonth = activePayments
-    .filter((p) => {
-      const dueDate = new Date(p.nextDueDate);
-      return (
-        dueDate.getMonth() === today.getMonth() &&
-        dueDate.getFullYear() === today.getFullYear()
-      );
-    })
-    .reduce((sum, p) => sum + p.amount, 0);
-
-  const handlePaymentPress = (payment: PaymentWithRelations): void => {
-    // TODO: Navigate to edit payment
-    console.log("Payment pressed:", payment.id);
+  const handlePaymentPress = (_payment: RecurringPayment): void => {
+    // TODO: Navigate to edit payment screen
   };
 
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
+    <View className="flex-1">
       <PageHeader title="My Bills" showBackButton={true} showDrawer={false} />
 
       <View className="flex-1 px-5 pt-4">
         {/* Hero Summary */}
-        <HeroSummary next7Days={next7Days} thisMonth={thisMonth} />
+        <HeroSummary next7Days={next7DaysTotal} thisMonth={totalDueThisMonth} />
 
         {/* Status Tabs */}
         <StatusTabs
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
+          activeTab={statusFilter}
+          onTabChange={setStatusFilter}
           counts={counts}
         />
 
@@ -324,18 +253,13 @@ export default function RecurringPaymentsScreen(): React.JSX.Element {
             <ActivityIndicator size="large" color={palette.nileGreen[500]} />
           </View>
         ) : filteredPayments.length === 0 ? (
-          <View className="flex-1 items-center justify-center">
-            <Ionicons
-              name="receipt-outline"
-              size={48}
-              color={isDark ? palette.slate[600] : palette.slate[300]}
-            />
-            <Text
-              className={`mt-3 text-base ${isDark ? "text-slate-500" : "text-slate-400"}`}
-            >
-              No {activeTab.toLowerCase()} payments
-            </Text>
-          </View>
+          <EmptyStateCard
+            onPress={() => router.push("/create-recurring-payment")}
+            icon="receipt-outline"
+            title={`No ${statusFilter.toLowerCase()} payments`}
+            description="Tap to add your first recurring payment"
+            height={120}
+          />
         ) : (
           <FlatList
             data={filteredPayments}
@@ -354,8 +278,16 @@ export default function RecurringPaymentsScreen(): React.JSX.Element {
         {/* FAB - Add New */}
         <TouchableOpacity
           onPress={() => router.push("/create-recurring-payment")}
-          className="absolute right-5 bg-nileGreen-500 w-14 h-14 rounded-full items-center justify-center shadow-lg"
-          style={{ bottom: insets.bottom + 20 }}
+          className="absolute right-5 bg-nileGreen-500 w-14 h-14 rounded-full items-center justify-center"
+          // eslint-disable-next-line react-native/no-inline-styles
+          style={{
+            bottom: insets.bottom + 20,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.15,
+            shadowRadius: 8,
+            elevation: 5,
+          }}
         >
           <Ionicons name="add" size={28} color="white" />
         </TouchableOpacity>
