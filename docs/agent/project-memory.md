@@ -21,7 +21,8 @@ worth with an offline-first approach.
 - 🔊 Voice transaction input
 - 📨 SMS auto-detection for bank transactions
 - 🪙 Gold/precious metals tracking with live rates
-- 💳 Multi-currency support (EGP, USD, EUR)
+- 💳 Multi-currency support (35 currencies, USD-base conversion, user-selectable
+  preferred currency)
 - 📊 Net worth dashboard
 - 🔄 Offline-first with cloud sync (WatermelonDB + Supabase)
 
@@ -121,8 +122,9 @@ Astik/
    installment payments
 5. **Transfers**: Move money between own accounts (not transactions, separate
    table)
-6. **Multi-currency**: One account = one currency, display totals in EGP using
-   live rates
+6. **Multi-currency**: One account = one currency. All values stored/converted
+   via USD as intermediary. Display in user's preferred currency via
+   `convertCurrency()` + `MarketRate.getRate()`
 7. **Gold valuation**: `current_value = weight × (purity/24) × live_gold_price`
 8. **Sync**: WatermelonDB ↔ Supabase with Last Write Wins conflict resolution
 
@@ -167,6 +169,10 @@ for asset transactions)
 - [x] ESLint styling rules & Pre-commit hooks (no-restricted-syntax)
 - [x] Concurrent sync fix (module-level lock + graceful error handling)
 - [x] NativeWind v4 shadow workaround documented & applied
+- [x] Multi-currency refactoring (USD-base, 35 currencies, preferred currency
+      picker)
+- [x] Currency picker component (search, MENA-first, settings + dashboard chip)
+- [x] Region-to-currency auto-detection via device locale
 
 ### 🔄 In Progress
 

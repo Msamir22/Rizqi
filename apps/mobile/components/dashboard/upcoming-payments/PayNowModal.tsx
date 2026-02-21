@@ -125,7 +125,7 @@ export function PayNowModal({
 
             {/* Amount Input — uses project TextField component */}
             <TextField
-              label="Amount (EGP)"
+              label={`Amount (${payment.currency})`}
               value={amount}
               onChangeText={handleAmountChange}
               keyboardType="decimal-pad"
@@ -208,7 +208,7 @@ export function PayNowModal({
                 <Text className="text-sm text-slate-600 dark:text-slate-300">
                   {formatCurrency({
                     amount: payment.amount,
-                    currency: "EGP",
+                    currency: payment.currency,
                   })}
                 </Text>
               </View>

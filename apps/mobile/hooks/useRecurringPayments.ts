@@ -13,11 +13,13 @@ import {
   RecurringPayment,
   RecurringStatus,
   TransactionType,
+  type CurrencyType,
 } from "@astik/db";
-import { convertToEGP } from "@astik/logic";
+import { convertCurrency } from "@astik/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMarketRates } from "./useMarketRates";
+import { usePreferredCurrency } from "./usePreferredCurrency";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -58,6 +60,7 @@ export function useRecurringPayments(
     status || "ACTIVE"
   );
   const { latestRates } = useMarketRates();
+  const { preferredCurrency } = usePreferredCurrency();
 
   // -------------------------------------------------------------------------
   // Observe recurring payments
@@ -111,13 +114,12 @@ export function useRecurringPayments(
     [allPayments]
   );
 
-  /** Convert a payment amount to EGP taking currency into account. */
-  const toEGP = useCallback(
-    (amount: number, currency: string): number => {
-      if (!latestRates) return amount;
-      return convertToEGP(amount, currency, latestRates);
+  /** Convert a payment amount to the user's preferred currency. */
+  const toPreferred = useCallback(
+    (amount: number, currency: CurrencyType): number => {
+      return convertCurrency(amount, currency, preferredCurrency, latestRates);
     },
-    [latestRates]
+    [latestRates, preferredCurrency]
   );
 
   const { next7DaysTotal, totalDueThisMonth, totalIncomeThisMonth } =
@@ -127,16 +129,16 @@ export function useRecurringPayments(
       );
       const activeIncome = allPayments.filter((p) => p.isActive && p.isIncome);
 
-      const dueNext7Days = getNext7DaysTotal(activeExpenses, toEGP);
-      const dueThisMonth = getThisMonthTotal(activeExpenses, toEGP);
-      const incomeThisMonth = getThisMonthTotal(activeIncome, toEGP);
+      const dueNext7Days = getNext7DaysTotal(activeExpenses, toPreferred);
+      const dueThisMonth = getThisMonthTotal(activeExpenses, toPreferred);
+      const incomeThisMonth = getThisMonthTotal(activeIncome, toPreferred);
 
       return {
         next7DaysTotal: dueNext7Days,
         totalDueThisMonth: dueThisMonth,
         totalIncomeThisMonth: incomeThisMonth,
       };
-    }, [allPayments, toEGP]);
+    }, [allPayments, toPreferred]);
 
   return {
     allPayments,
@@ -157,18 +159,18 @@ export function useRecurringPayments(
 
 function getNext7DaysTotal(
   activeExpenses: RecurringPayment[],
-  toEGP: (amount: number, currency: string) => number
+  toPreferred: (amount: number, currency: CurrencyType) => number
 ): number {
   return activeExpenses
     .filter((p) => p.daysUntilDue >= 0 && p.daysUntilDue <= 7)
-    .reduce((sum, p) => sum + toEGP(p.amount, p.currency), 0);
+    .reduce((sum, p) => sum + toPreferred(p.amount, p.currency), 0);
 }
 
 function getThisMonthTotal(
   payments: RecurringPayment[],
-  toEGP: (amount: number, currency: string) => number
+  toPreferred: (amount: number, currency: CurrencyType) => number
 ): number {
   return payments
     .filter((p) => p.isInThisMonth)
-    .reduce((sum, p) => sum + toEGP(p.amount, p.currency), 0);
+    .reduce((sum, p) => sum + toPreferred(p.amount, p.currency), 0);
 }

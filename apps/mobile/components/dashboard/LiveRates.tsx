@@ -1,4 +1,5 @@
-import { MarketRate } from "@astik/db";
+import type { CurrencyType, MarketRate } from "@astik/db";
+import { CURRENCY_INFO_MAP, getMetalPrice } from "@astik/logic";
 import { FontAwesome5, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import React from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
@@ -15,11 +16,12 @@ interface Rate {
 }
 
 interface LiveRatesProps {
-  latestRates: MarketRate | null;
-  previousDayRate: MarketRate | null;
-  isLoading: boolean;
-  lastUpdated: Date | null;
-  isStale: boolean;
+  readonly latestRates: MarketRate | null;
+  readonly previousDayRate: MarketRate | null;
+  readonly isLoading: boolean;
+  readonly lastUpdated: Date | null;
+  readonly isStale: boolean;
+  readonly preferredCurrency: CurrencyType;
 }
 
 // Pill style configurations using Tailwind classes
@@ -55,38 +57,60 @@ function calculateTrend(
 
 function buildRatesDisplay(
   latestRates: MarketRate | null,
-  previousDayRate: MarketRate | null
+  previousDayRate: MarketRate | null,
+  preferredCurrency: CurrencyType
 ): Rate[] {
   if (!latestRates) {
     return [];
   }
 
+  // Show how many units of the preferred currency per 1 USD
+  // e.g. EGP/USD = 47.50 means 1 USD buys 47.50 EGP
+  // When preferred IS USD, show EUR/USD as a meaningful reference pair
+  const displayCurrency: CurrencyType =
+    preferredCurrency === "USD" ? "EUR" : preferredCurrency;
+  const currencyRate = latestRates.getRate("USD", displayCurrency);
+  const previousRate = previousDayRate
+    ? previousDayRate.getRate("USD", displayCurrency)
+    : null;
+
+  const symbol =
+    CURRENCY_INFO_MAP[preferredCurrency]?.symbol ?? preferredCurrency;
+
+  const goldInPreferred = getMetalPrice("GOLD", latestRates, preferredCurrency);
+  const silverInPreferred = getMetalPrice(
+    "SILVER",
+    latestRates,
+    preferredCurrency
+  );
+
+  const prevGoldInPreferred = previousDayRate
+    ? getMetalPrice("GOLD", previousDayRate, preferredCurrency)
+    : null;
+  const prevSilverInPreferred = previousDayRate
+    ? getMetalPrice("SILVER", previousDayRate, preferredCurrency)
+    : null;
+
   return [
     {
       id: "1",
-      label: "USD/EGP",
-      value: latestRates.usdEgp.toFixed(2),
-      trend: calculateTrend(latestRates.usdEgp, previousDayRate?.usdEgp),
+      label: `${displayCurrency}/USD`,
+      value: currencyRate.toFixed(currencyRate >= 100 ? 2 : 4),
+      trend: calculateTrend(currencyRate, previousRate),
       type: "currency",
     },
     {
       id: "2",
       label: "Gold 24K",
-      value: `EGP ${Math.round(latestRates.goldEgpPerGram).toLocaleString()}/g`,
-      trend: calculateTrend(
-        latestRates.goldEgpPerGram,
-        previousDayRate?.goldEgpPerGram
-      ),
+      value: `${symbol} ${Math.round(goldInPreferred).toLocaleString()}/g`,
+      trend: calculateTrend(goldInPreferred, prevGoldInPreferred),
       type: "gold",
     },
     {
       id: "3",
       label: "Silver",
-      value: `EGP ${Math.round(latestRates.silverEgpPerGram).toLocaleString()}/g`,
-      trend: calculateTrend(
-        latestRates.silverEgpPerGram,
-        previousDayRate?.silverEgpPerGram
-      ),
+      value: `${symbol} ${silverInPreferred.toFixed(2)}/g`,
+      trend: calculateTrend(silverInPreferred, prevSilverInPreferred),
       type: "silver",
     },
   ];
@@ -97,11 +121,15 @@ function buildRatesDisplay(
  */
 function getPillIcon(
   type: Rate["type"],
-  color: string
+  color: string,
+  preferredCurrency: CurrencyType
 ): React.ReactElement | null {
+  const displayCurrency =
+    preferredCurrency === "USD" ? "EUR" : preferredCurrency;
+  const flag = CURRENCY_INFO_MAP[displayCurrency]?.flag ?? "🌐";
   switch (type) {
     case "currency":
-      return <Text className="text-sm">🇺🇸</Text>;
+      return <Text className="text-sm">{flag}</Text>;
     case "gold":
       return <FontAwesome5 name="coins" size={14} color={color} />;
     case "silver":
@@ -117,9 +145,14 @@ export function LiveRates({
   isLoading = false,
   lastUpdated,
   isStale,
+  preferredCurrency,
 }: LiveRatesProps): React.ReactElement {
   const { isDark } = useTheme();
-  const ratesDisplay = buildRatesDisplay(latestRates, previousDayRate);
+  const ratesDisplay = buildRatesDisplay(
+    latestRates,
+    previousDayRate,
+    preferredCurrency
+  );
 
   return (
     <View className="my-3">
@@ -166,7 +199,7 @@ export function LiveRates({
               className={`flex-row items-center rounded-full px-3 py-2 ${config.container}`}
             >
               <View className="mr-1.5">
-                {getPillIcon(rate.type, iconColor)}
+                {getPillIcon(rate.type, iconColor, preferredCurrency)}
               </View>
 
               <Text className={`mr-1 text-[13px] font-medium ${config.label}`}>

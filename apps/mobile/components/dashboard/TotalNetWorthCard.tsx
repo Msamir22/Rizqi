@@ -1,4 +1,5 @@
 import { palette } from "@/constants/colors";
+import { CurrencyType } from "@astik/db";
 import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -6,8 +7,9 @@ import { ActivityIndicator, Dimensions, Text, View } from "react-native";
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 
 interface Props {
-  totalEgp: number | null;
-  totalUsd: number | null;
+  totalNetWorth: number | null;
+  totalNetWorthUsd: number | null;
+  preferredCurrency: CurrencyType;
   monthlyPercentageChange: number | null;
   isLoading: boolean;
 }
@@ -15,8 +17,9 @@ interface Props {
 const { width } = Dimensions.get("window");
 
 export function TotalNetWorthCard({
-  totalEgp,
-  totalUsd,
+  totalNetWorth,
+  totalNetWorthUsd,
+  preferredCurrency,
   monthlyPercentageChange,
   isLoading,
 }: Props): React.JSX.Element {
@@ -26,6 +29,7 @@ export function TotalNetWorthCard({
   const arrowIcon = isPositive ? "arrow-up" : "arrow-down";
   const arrowColor = isPositive ? palette.nileGreen[400] : palette.red[400];
   const arrowRotation = isPositive ? "40deg" : "-40deg";
+  const isPreferredCurrencyUSD = preferredCurrency === "USD";
 
   // Format percentage for display
   const monthlyPercentageChangeFormatted =
@@ -93,7 +97,6 @@ export function TotalNetWorthCard({
           <Text className="text-sm font-medium tracking-wide text-slate-300 opacity-90">
             Total Net Worth
           </Text>
-
           {/* Main Amount (EGP) */}
           {isLoading ? (
             <View className="my-3">
@@ -101,26 +104,26 @@ export function TotalNetWorthCard({
             </View>
           ) : (
             <Text className="mt-1 text-[42px] font-extrabold tracking-tight text-white">
-              {totalEgp
+              {totalNetWorth
                 ? formatCurrency({
-                    amount: totalEgp,
-                    currency: "EGP",
+                    amount: totalNetWorth,
+                    currency: preferredCurrency,
                   })
                 : 0}
             </Text>
           )}
-
           {/* Secondary Amount (USD) */}
-          <Text className="text-base font-medium text-slate-100 opacity-80">
-            ≈
-            {totalUsd
-              ? formatCurrency({
-                  amount: totalUsd,
-                  currency: "USD",
-                })
-              : 0}
-          </Text>
-
+          {!isPreferredCurrencyUSD && (
+            <Text className="text-base font-medium text-slate-100 opacity-80">
+              ≈
+              {totalNetWorthUsd
+                ? formatCurrency({
+                    amount: totalNetWorthUsd,
+                    currency: "USD",
+                  })
+                : 0}
+            </Text>
+          )}
           {/* Monthly Percentage Change */}
           {monthlyPercentageChangeFormatted && (
             <View className="mt-2 flex-row items-center gap-1 rounded-full bg-white/10 px-3 py-1">

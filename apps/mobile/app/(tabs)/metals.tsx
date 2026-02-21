@@ -18,10 +18,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PageHeader } from "@/components/navigation/PageHeader";
 import { palette } from "@/constants/colors";
 import { useMarketRates } from "@/hooks/useMarketRates";
+import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 
-// 1. Total Value Card
-const MetalsValueCard = (): ReactElement => {
-  const totalEGP = 32450;
+const MetalsValueCard = ({
+  currencyCode,
+}: {
+  currencyCode: string;
+}): ReactElement => {
+  // TODO: Wire to real data — placeholder amounts for now
+  const totalAmount = 32450;
   const totalUSD = 649;
 
   return (
@@ -36,7 +41,7 @@ const MetalsValueCard = (): ReactElement => {
           Total Metals Value
         </Text>
         <Text className="text-4xl font-bold text-slate-800 dark:text-white">
-          EGP {totalEGP.toLocaleString()}
+          {currencyCode} {totalAmount.toLocaleString()}
         </Text>
         <Text className="text-base text-slate-500 dark:text-white/50">
           ≈ ${totalUSD} USD
@@ -138,17 +143,15 @@ const AddSectionButton = ({
 export default function MyMetalsScreen(): ReactElement {
   const insets = useSafeAreaInsets();
   const { latestRates } = useMarketRates();
+  const { preferredCurrency } = usePreferredCurrency();
   const [modalVisible, setModalVisible] = useState(false);
   const [addType, setAddType] = useState<"gold" | "silver">("gold");
 
   // Calculate prices based on latestRates
-  // goldEgpPerGram -> USD per ounce
-  // USD price = (EGP per gram / usdEgp) * 31.1035
-  const usdEgp = latestRates?.usdEgp || 50;
-  const GoldPrice = latestRates
-    ? (latestRates.goldEgpPerGram / usdEgp) * 31.1035
-    : 0;
-  const SilverPrice = latestRates ? latestRates.silverEgpPerGram / usdEgp : 0; // Silver usually shown per gram or ounce, here ticker says per gram for silver?
+  // goldUsdPerGram is already in USD per gram
+  // USD per ounce = USD per gram × 31.1035
+  const GoldPrice = latestRates ? latestRates.goldUsdPerGram * 31.1035 : 0;
+  const SilverPrice = latestRates ? latestRates.silverUsdPerGram : 0;
   // Wait, original ticker: Silver: ${SilverPrice.toFixed(2)}/g
 
   return (
@@ -158,7 +161,7 @@ export default function MyMetalsScreen(): ReactElement {
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
       >
-        <MetalsValueCard />
+        <MetalsValueCard currencyCode={preferredCurrency} />
 
         {/* Gold Holdings */}
         <View className="mb-8">
@@ -177,13 +180,13 @@ export default function MyMetalsScreen(): ReactElement {
           <HoldingItem
             badge="24K"
             weight="15.5g"
-            value="= EGP 65,875"
+            value={`= ${preferredCurrency} 65,875`}
             isGold={true}
           />
           <HoldingItem
             badge="21K"
             weight="8.2g"
-            value="= EGP 28,740"
+            value={`= ${preferredCurrency} 28,740`}
             isGold={true}
           />
 
@@ -211,7 +214,7 @@ export default function MyMetalsScreen(): ReactElement {
           <HoldingItem
             badge="Pure"
             weight="120g"
-            value="= EGP 6,240"
+            value={`= ${preferredCurrency} 6,240`}
             isGold={false}
           />
 

@@ -13,6 +13,7 @@ interface TransferCardProps {
   toAccountName: string;
   notes?: string;
   displayNetWorth: number;
+  currencyCode: CurrencyType;
   isSelectionMode: boolean;
   isSelected: boolean;
   onPress: (id: string) => void;
@@ -28,6 +29,7 @@ export function TransferCard({
   toAccountName,
   notes,
   displayNetWorth,
+  currencyCode,
   isSelectionMode,
   isSelected,
   index,
@@ -62,6 +64,7 @@ export function TransferCard({
       isIncome={false}
       details={notes}
       displayNetWorth={displayNetWorth}
+      currencyCode={currencyCode}
       date={date}
       index={index}
       onSwipeDelete={onSwipeDelete}

@@ -7,6 +7,12 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+/**
+ * API response shape when calling metals.dev with currency=USD.
+ * Each currency value represents "how much 1 unit of that currency is worth in USD".
+ * Example: EGP = 0.0210523309 means 1 EGP ≈ $0.021 USD.
+ * USD itself will always be 1 (not stored in the database).
+ */
 interface CurrenciesApiResponse {
   AED: number; // United Arab Emirates (Dirham)
   AUD: number; // Australia (Dollar)
@@ -14,7 +20,7 @@ interface CurrenciesApiResponse {
   BTC: number; // Bitcoin (Crypto)
   CAD: number; // Canada (Dollar)
   CHF: number; // Switzerland (Franc)
-  CNH: number; // China (Offshore Yuan)
+  CNH: number; // China (Offshore Yuan) — present in API, not stored
   CNY: number; // China (Yuan Renminbi)
   DKK: number; // Denmark (Krone)
   DZD: number; // Algeria (Dinar)
@@ -43,10 +49,13 @@ interface CurrenciesApiResponse {
   SGD: number; // Singapore (Dollar)
   TND: number; // Tunisia (Dinar)
   TRY: number; // Turkey (Lira)
-  USD: number; // United States (Dollar)
+  USD: number; // United States (Dollar) — always 1, not stored
   ZAR: number; // South Africa (Rand)
 }
 
+/**
+ * Metal prices in USD per gram when called with currency=USD&unit=g
+ */
 interface MetalsApiResponse {
   gold: number;
   silver: number;
@@ -67,49 +76,54 @@ interface MetalsDevApiResponse {
   };
 }
 
+/**
+ * Database row shape for the market_rates table (USD-based).
+ * Each currency column stores "value of 1 unit of that currency in USD".
+ * Metal columns store "USD per gram".
+ * Note: USD is implicit (always 1) and CNH is not stored.
+ */
 interface MarketRatesRow {
-  // Precious metal prices (EGP per gram)
-  gold_egp_per_gram: number;
-  silver_egp_per_gram: number;
-  platinum_egp_per_gram: number;
-  palladium_egp_per_gram: number;
-  // Currency exchange rates (to EGP)
-  usd_egp: number;
-  eur_egp: number;
-  gbp_egp: number;
-  aed_egp: number;
-  aud_egp: number;
-  bhd_egp: number;
-  btc_egp: number;
-  cad_egp: number;
-  chf_egp: number;
-  cnh_egp: number;
-  cny_egp: number;
-  dkk_egp: number;
-  dzd_egp: number;
-  hkd_egp: number;
-  inr_egp: number;
-  iqd_egp: number;
-  isk_egp: number;
-  jod_egp: number;
-  jpy_egp: number;
-  kpw_egp: number;
-  krw_egp: number;
-  kwd_egp: number;
-  lyd_egp: number;
-  mad_egp: number;
-  myr_egp: number;
-  nok_egp: number;
-  nzd_egp: number;
-  omr_egp: number;
-  qar_egp: number;
-  rub_egp: number;
-  sar_egp: number;
-  sek_egp: number;
-  sgd_egp: number;
-  tnd_egp: number;
-  try_egp: number;
-  zar_egp: number;
+  // Precious metal prices (USD per gram)
+  gold_usd_per_gram: number;
+  silver_usd_per_gram: number;
+  platinum_usd_per_gram: number;
+  palladium_usd_per_gram: number;
+  // Currency exchange rates (value of 1 unit in USD)
+  egp_usd: number;
+  eur_usd: number;
+  gbp_usd: number;
+  aed_usd: number;
+  aud_usd: number;
+  bhd_usd: number;
+  btc_usd: number;
+  cad_usd: number;
+  chf_usd: number;
+  cny_usd: number;
+  dkk_usd: number;
+  dzd_usd: number;
+  hkd_usd: number;
+  inr_usd: number;
+  iqd_usd: number;
+  isk_usd: number;
+  jod_usd: number;
+  jpy_usd: number;
+  kpw_usd: number;
+  krw_usd: number;
+  kwd_usd: number;
+  lyd_usd: number;
+  mad_usd: number;
+  myr_usd: number;
+  nok_usd: number;
+  nzd_usd: number;
+  omr_usd: number;
+  qar_usd: number;
+  rub_usd: number;
+  sar_usd: number;
+  sek_usd: number;
+  sgd_usd: number;
+  tnd_usd: number;
+  try_usd: number;
+  zar_usd: number;
   // Timestamps
   timestamp_metal: string;
   timestamp_currency: string;
@@ -129,8 +143,8 @@ Deno.serve(async (req) => {
       throw new Error("METALS.DEV_API_KEY is not configured");
     }
 
-    // Fetch from metals.dev API
-    const apiUrl = `https://api.metals.dev/v1/latest?api_key=${metalsApiKey}&currency=EGP&unit=g`;
+    // Fetch from metals.dev API with currency=USD (universal base)
+    const apiUrl = `https://api.metals.dev/v1/latest?api_key=${metalsApiKey}&currency=USD&unit=g`;
     const response = await fetch(apiUrl);
 
     if (!response.ok) {
@@ -145,50 +159,51 @@ Deno.serve(async (req) => {
       throw new Error(`metals.dev API returned status: ${data.status}`);
     }
 
-    // Extract values from the API response (precious metals and currencies only)
+    // Map API response to database row
+    // Each currency value = "how much 1 unit of that currency is worth in USD"
+    // USD is implicit (always 1) and CNH is dropped (CNY covers China)
     const marketRates: MarketRatesRow = {
-      // Precious metal prices (EGP per gram)
-      gold_egp_per_gram: data.metals.gold,
-      silver_egp_per_gram: data.metals.silver,
-      platinum_egp_per_gram: data.metals.platinum,
-      palladium_egp_per_gram: data.metals.palladium,
-      // Currency exchange rates (to EGP)
-      usd_egp: data.currencies.USD,
-      eur_egp: data.currencies.EUR,
-      gbp_egp: data.currencies.GBP,
-      aed_egp: data.currencies.AED,
-      aud_egp: data.currencies.AUD,
-      bhd_egp: data.currencies.BHD,
-      btc_egp: data.currencies.BTC,
-      cad_egp: data.currencies.CAD,
-      chf_egp: data.currencies.CHF,
-      cnh_egp: data.currencies.CNH,
-      cny_egp: data.currencies.CNY,
-      dkk_egp: data.currencies.DKK,
-      dzd_egp: data.currencies.DZD,
-      hkd_egp: data.currencies.HKD,
-      inr_egp: data.currencies.INR,
-      iqd_egp: data.currencies.IQD,
-      isk_egp: data.currencies.ISK,
-      jod_egp: data.currencies.JOD,
-      jpy_egp: data.currencies.JPY,
-      kpw_egp: data.currencies.KPW,
-      krw_egp: data.currencies.KRW,
-      kwd_egp: data.currencies.KWD,
-      lyd_egp: data.currencies.LYD,
-      mad_egp: data.currencies.MAD,
-      myr_egp: data.currencies.MYR,
-      nok_egp: data.currencies.NOK,
-      nzd_egp: data.currencies.NZD,
-      omr_egp: data.currencies.OMR,
-      qar_egp: data.currencies.QAR,
-      rub_egp: data.currencies.RUB,
-      sar_egp: data.currencies.SAR,
-      sek_egp: data.currencies.SEK,
-      sgd_egp: data.currencies.SGD,
-      tnd_egp: data.currencies.TND,
-      try_egp: data.currencies.TRY,
-      zar_egp: data.currencies.ZAR,
+      // Precious metal prices (USD per gram)
+      gold_usd_per_gram: data.metals.gold,
+      silver_usd_per_gram: data.metals.silver,
+      platinum_usd_per_gram: data.metals.platinum,
+      palladium_usd_per_gram: data.metals.palladium,
+      // Currency exchange rates (value of 1 unit in USD)
+      egp_usd: data.currencies.EGP,
+      eur_usd: data.currencies.EUR,
+      gbp_usd: data.currencies.GBP,
+      aed_usd: data.currencies.AED,
+      aud_usd: data.currencies.AUD,
+      bhd_usd: data.currencies.BHD,
+      btc_usd: data.currencies.BTC,
+      cad_usd: data.currencies.CAD,
+      chf_usd: data.currencies.CHF,
+      cny_usd: data.currencies.CNY,
+      dkk_usd: data.currencies.DKK,
+      dzd_usd: data.currencies.DZD,
+      hkd_usd: data.currencies.HKD,
+      inr_usd: data.currencies.INR,
+      iqd_usd: data.currencies.IQD,
+      isk_usd: data.currencies.ISK,
+      jod_usd: data.currencies.JOD,
+      jpy_usd: data.currencies.JPY,
+      kpw_usd: data.currencies.KPW,
+      krw_usd: data.currencies.KRW,
+      kwd_usd: data.currencies.KWD,
+      lyd_usd: data.currencies.LYD,
+      mad_usd: data.currencies.MAD,
+      myr_usd: data.currencies.MYR,
+      nok_usd: data.currencies.NOK,
+      nzd_usd: data.currencies.NZD,
+      omr_usd: data.currencies.OMR,
+      qar_usd: data.currencies.QAR,
+      rub_usd: data.currencies.RUB,
+      sar_usd: data.currencies.SAR,
+      sek_usd: data.currencies.SEK,
+      sgd_usd: data.currencies.SGD,
+      tnd_usd: data.currencies.TND,
+      try_usd: data.currencies.TRY,
+      zar_usd: data.currencies.ZAR,
       // Timestamps
       timestamp_metal: data.timestamps.metal,
       timestamp_currency: data.timestamps.currency,
@@ -222,15 +237,15 @@ Deno.serve(async (req) => {
         message: "Market rates updated successfully",
         data: {
           metals: {
-            gold: marketRates.gold_egp_per_gram,
-            silver: marketRates.silver_egp_per_gram,
-            platinum: marketRates.platinum_egp_per_gram,
-            palladium: marketRates.palladium_egp_per_gram,
+            gold: marketRates.gold_usd_per_gram,
+            silver: marketRates.silver_usd_per_gram,
+            platinum: marketRates.platinum_usd_per_gram,
+            palladium: marketRates.palladium_usd_per_gram,
           },
           currencies: {
-            usd: marketRates.usd_egp,
-            eur: marketRates.eur_egp,
-            gbp: marketRates.gbp_egp,
+            egp: marketRates.egp_usd,
+            eur: marketRates.eur_usd,
+            gbp: marketRates.gbp_usd,
           },
           timestamps: {
             metal: marketRates.timestamp_metal,

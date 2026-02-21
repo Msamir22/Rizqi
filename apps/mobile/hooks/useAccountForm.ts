@@ -4,6 +4,7 @@ import {
   validateAccountForm,
   ValidationErrors,
 } from "../validation/account-validation";
+import { usePreferredCurrency } from "./usePreferredCurrency";
 
 interface UseAccountFormResult {
   formData: AccountFormData;
@@ -22,10 +23,12 @@ interface UseAccountFormResult {
  * Custom hook to manage the account creation form state and validation.
  */
 export function useAccountForm(): UseAccountFormResult {
+  const { preferredCurrency } = usePreferredCurrency();
+
   const [formData, setFormData] = useState<AccountFormData>({
     name: "",
     accountType: "CASH",
-    currency: "EGP",
+    currency: preferredCurrency,
     balance: "",
     bankName: "",
     cardLast4: "",
@@ -78,7 +81,7 @@ export function useAccountForm(): UseAccountFormResult {
     setFormData({
       name: "",
       accountType: "CASH",
-      currency: "EGP",
+      currency: preferredCurrency,
       balance: "",
       bankName: "",
       cardLast4: "",

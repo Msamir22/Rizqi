@@ -1,5 +1,6 @@
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
+import type { CurrencyType } from "@astik/db";
 import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -33,6 +34,7 @@ interface BaseCardProps {
   counterparty?: string;
   details?: string;
   displayNetWorth: number;
+  currencyCode: CurrencyType;
   date: Date;
   index?: number;
   onSwipeDelete?: (id: string) => void;
@@ -56,6 +58,7 @@ export function BaseCard({
   isExpense,
   details,
   displayNetWorth,
+  currencyCode,
   date,
   onCategoryPress,
   onAmountPress,
@@ -199,7 +202,7 @@ export function BaseCard({
                 <Text className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
                   {formatCurrency({
                     amount: displayNetWorth,
-                    currency: "EGP",
+                    currency: currencyCode,
                   })}
                 </Text>
               </View>

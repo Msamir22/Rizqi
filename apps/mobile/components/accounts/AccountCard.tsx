@@ -1,6 +1,6 @@
 import { palette } from "@/constants/colors";
 import { Account, MarketRate } from "@astik/db";
-import { convertToEGP, formatCurrency } from "@astik/logic";
+import { convertCurrency, formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
@@ -31,15 +31,16 @@ export function AccountCard({
     }, [account.type]);
 
   const subtitle = useMemo(() => {
-    if (account.currency !== "EGP" && latestRates) {
-      const egpValue = convertToEGP(
+    if (account.currency !== "USD" && latestRates) {
+      const usdValue = convertCurrency(
         account.balance,
         account.currency,
+        "USD",
         latestRates
       );
       return `≈ ${formatCurrency({
-        amount: egpValue,
-        currency: "EGP",
+        amount: usdValue,
+        currency: "USD",
       })}`;
     }
 

@@ -14,6 +14,6 @@ export abstract class BaseDailySnapshotAssets extends Model {
 
   @readonly @date("created_at") createdAt!: Date;
   @date("snapshot_date") snapshotDate!: Date;
-  @field("total_assets_egp") totalAssetsEgp!: number;
+  @field("total_assets_usd") totalAssetsUsd!: number;
   @field("user_id") userId!: string;
 }

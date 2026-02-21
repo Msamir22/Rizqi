@@ -25,6 +25,7 @@ import {
   PeriodFilter,
   usePeriodSummary,
 } from "@/hooks/usePeriodSummary";
+import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 
 // =============================================================================
 // Constants
@@ -141,6 +142,7 @@ export function ThisMonth(): React.JSX.Element {
   const [selectedPeriod, setSelectedPeriod] =
     useState<PeriodFilter>("this_month");
   const { data, isLoading } = usePeriodSummary(selectedPeriod);
+  const { preferredCurrency } = usePreferredCurrency();
 
   const handleDetails = (): void => {
     router.push("/transactions");
@@ -192,7 +194,7 @@ export function ThisMonth(): React.JSX.Element {
               <Text className="text-sm font-semibold text-nileGreen-500">
                 {formatCurrency({
                   amount: data.totalIncome,
-                  currency: "EGP",
+                  currency: preferredCurrency,
                 })}{" "}
                 ↑
               </Text>
@@ -206,7 +208,7 @@ export function ThisMonth(): React.JSX.Element {
               <Text className="text-sm font-semibold text-red-500">
                 {formatCurrency({
                   amount: data.totalExpenses,
-                  currency: "EGP",
+                  currency: preferredCurrency,
                 })}{" "}
                 ↓
               </Text>
@@ -220,7 +222,7 @@ export function ThisMonth(): React.JSX.Element {
               <Text className="text-sm font-semibold text-gold-600">
                 {formatCurrency({
                   amount: data.savings,
-                  currency: "EGP",
+                  currency: preferredCurrency,
                 })}{" "}
                 ({data.savingsPercentage}%) ✓
               </Text>

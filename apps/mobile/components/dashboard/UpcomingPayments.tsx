@@ -6,21 +6,22 @@
  * The section does not render when there are no upcoming payments.
  */
 
+import { useToast } from "@/components/ui/Toast";
+import { palette } from "@/constants/colors";
+import { useRecurringPayments } from "@/hooks/useRecurringPayments";
 import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
-import { useToast } from "@/components/ui/Toast";
-import { palette } from "@/constants/colors";
-import { useRecurringPayments } from "@/hooks/useRecurringPayments";
 
+import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
+import type { RecurringPayment } from "@astik/db";
 import {
   FeaturedPaymentCard,
   MiniPaymentItem,
   PayNowModal,
 } from "./upcoming-payments";
-import type { RecurringPayment } from "@astik/db";
 
 // Constants
 
@@ -32,6 +33,7 @@ const TOAST_DURATION_MS = 3500;
 
 export function UpcomingPayments(): React.JSX.Element {
   const { showToast } = useToast();
+  const { preferredCurrency } = usePreferredCurrency();
   const {
     filteredPayments: payments,
     totalDueThisMonth,
@@ -56,7 +58,7 @@ export function UpcomingPayments(): React.JSX.Element {
       title: "Payment Recorded",
       message: `${selectedPayment?.name} - ${formatCurrency({
         amount,
-        currency: "EGP",
+        currency: preferredCurrency,
       })}`,
       duration: TOAST_DURATION_MS,
     });
@@ -134,7 +136,7 @@ export function UpcomingPayments(): React.JSX.Element {
             <Text className="text-base font-bold text-nileGreen-500">
               {formatCurrency({
                 amount: totalDueThisMonth,
-                currency: "EGP",
+                currency: preferredCurrency,
               })}
             </Text>
           </View>

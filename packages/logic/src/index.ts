@@ -8,6 +8,7 @@ export * from "./parsers/notification-parser";
 export * from "./parsers/voice-parser";
 export * from "./types";
 export * from "./utils/currency";
+export * from "./utils/currency-data";
 export * from "./utils/helpers";
 export * from "./utils/metal";
 export * from "./utils/purity-utils";

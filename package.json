@@ -37,6 +37,8 @@
     "fn:deploy:rates": "npx supabase functions deploy fetch-metal-rates --project-ref yulbcndyssdjicbpmlrk",
     "e2e": "maestro test apps/mobile/e2e/maestro/",
     "e2e:flow": "maestro test apps/mobile/e2e/maestro/",
+    "test": "npm test -w @astik/mobile",
+    "test:mobile": "npm test -w @astik/mobile",
     "prepare": "node -e \"if (process.env.CI !== 'true') { process.exit(1) }\" || husky"
   },
   "dependencies": {

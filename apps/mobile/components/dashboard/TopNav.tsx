@@ -11,9 +11,18 @@ const USER_NAME = "Mohamed";
 
 interface TopNavProps {
   onMenuPress?: () => void;
+  /** Optional: shows a currency chip button when provided */
+  currencyCode?: string;
+  currencyFlag?: string;
+  onCurrencyPress?: () => void;
 }
 
-export function TopNav({ onMenuPress }: TopNavProps): React.ReactElement {
+export function TopNav({
+  onMenuPress,
+  currencyCode,
+  currencyFlag,
+  onCurrencyPress,
+}: TopNavProps): React.ReactElement {
   const { theme } = useTheme();
 
   const getGreeting = (): string => {
@@ -70,7 +79,31 @@ export function TopNav({ onMenuPress }: TopNavProps): React.ReactElement {
         </View>
 
         {/* Right Side: Actions */}
-        <View className="flex-row items-center gap-3">
+        <View className="flex-row items-center gap-2">
+          {/* Currency Chip */}
+          {currencyCode && onCurrencyPress && (
+            <TouchableOpacity
+              onPress={onCurrencyPress}
+              accessibilityLabel="Change currency"
+              accessibilityRole="button"
+              style={{ backgroundColor: theme.surfaceHighlight }}
+              className="flex-row items-center gap-1 px-2.5 py-1.5 rounded-full"
+            >
+              <Text className="text-sm">{currencyFlag ?? "💱"}</Text>
+              <Text
+                style={{ color: theme.text.primary }}
+                className="text-xs font-bold"
+              >
+                {currencyCode}
+              </Text>
+              <Ionicons
+                name="chevron-down"
+                size={12}
+                color={theme.text.secondary}
+              />
+            </TouchableOpacity>
+          )}
+
           {/* Settings Button */}
           <TouchableOpacity
             style={{

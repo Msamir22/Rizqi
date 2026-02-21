@@ -14,12 +14,58 @@ export type BudgetPeriod = "WEEKLY" | "MONTHLY" | "CUSTOM";
 export type BudgetStatus = "ACTIVE" | "PAUSED";
 export type BudgetType = "CATEGORY" | "GLOBAL";
 export type CategoryNature = "WANT" | "NEED" | "MUST";
-export type CurrencyType = "AED" | "AUD" | "BHD" | "BTC" | "CAD" | "CHF" | "CNH" | "CNY" | "DKK" | "DZD" | "EGP" | "EUR" | "GBP" | "HKD" | "INR" | "IQD" | "ISK" | "JOD" | "JPY" | "KPW" | "KRW" | "KWD" | "LYD" | "MAD" | "MYR" | "NOK" | "NZD" | "OMR" | "QAR" | "RUB" | "SAR" | "SEK" | "SGD" | "TND" | "TRY" | "USD" | "ZAR";
-export type DebtStatus = "ACTIVE" | "PARTIALLY_PAID" | "SETTLED" | "WRITTEN_OFF";
+export type CurrencyType =
+  | "AED"
+  | "AUD"
+  | "BHD"
+  | "BTC"
+  | "CAD"
+  | "CHF"
+  | "CNY"
+  | "DKK"
+  | "DZD"
+  | "EGP"
+  | "EUR"
+  | "GBP"
+  | "HKD"
+  | "INR"
+  | "IQD"
+  | "ISK"
+  | "JOD"
+  | "JPY"
+  | "KPW"
+  | "KRW"
+  | "KWD"
+  | "LYD"
+  | "MAD"
+  | "MYR"
+  | "NOK"
+  | "NZD"
+  | "OMR"
+  | "QAR"
+  | "RUB"
+  | "SAR"
+  | "SEK"
+  | "SGD"
+  | "TND"
+  | "TRY"
+  | "USD"
+  | "ZAR";
+export type DebtStatus =
+  | "ACTIVE"
+  | "PARTIALLY_PAID"
+  | "SETTLED"
+  | "WRITTEN_OFF";
 export type DebtType = "LENT" | "BORROWED";
 export type MetalType = "GOLD" | "SILVER" | "PLATINUM" | "PALLADIUM";
 export type RecurringAction = "AUTO_CREATE" | "NOTIFY";
-export type RecurringFrequency = "DAILY" | "WEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY" | "CUSTOM";
+export type RecurringFrequency =
+  | "DAILY"
+  | "WEEKLY"
+  | "MONTHLY"
+  | "QUARTERLY"
+  | "YEARLY"
+  | "CUSTOM";
 export type RecurringStatus = "ACTIVE" | "PAUSED" | "COMPLETED";
 export type ThemePreference = "LIGHT" | "DARK" | "SYSTEM";
 export type TransactionSource = "MANUAL" | "VOICE" | "SMS" | "RECURRING";

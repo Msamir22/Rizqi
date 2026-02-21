@@ -8,13 +8,14 @@ import {
   getStartOfWeek,
   isSameDay,
 } from "@/utils/dateHelpers";
-import { database, Transaction, Transfer } from "@astik/db";
-import { convertToEGP } from "@astik/logic";
+import { database, Transaction, Transfer, type CurrencyType } from "@astik/db";
+import { convertCurrency } from "@astik/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
 import { useMarketRates } from "./useMarketRates";
 import { useNetWorth } from "./useNetWorth";
 import { PeriodFilter } from "./usePeriodSummary";
+import { usePreferredCurrency } from "./usePreferredCurrency";
 
 export type TransactionTypeFilter = "All" | "Income" | "Expense" | "Transfer";
 
@@ -123,6 +124,7 @@ export function useTransactionsGrouping(
   const { totalNetWorth, isLoading: isNetWorthLoading } = useNetWorth();
   const { latestRates } = useMarketRates();
   const [isDataLoading, setIsDataLoading] = useState(true);
+  const { preferredCurrency } = usePreferredCurrency();
 
   // 1. Fetch Transactions and Transfers
   useEffect(() => {
@@ -327,18 +329,17 @@ export function useTransactionsGrouping(
       return [];
     }
 
-    // Helper: convert a transaction amount to EGP using market rates
-    const toEGP = (amount: number, currency: string): number => {
-      if (!latestRates) return amount;
-      return convertToEGP(amount, currency, latestRates);
+    // Helper: convert a transaction amount to USD using market rates
+    const toPreferred = (amount: number, currency: CurrencyType): number => {
+      return convertCurrency(amount, currency, preferredCurrency, latestRates);
     };
 
     // Step A: Calculate Anchor Net Worth
     const getSignedAmount = (item: DisplayTransaction): number => {
       if (item._type === "transaction") {
-        const egpAmount = toEGP(item.amount, item.currency);
-        if (item.isIncome) return egpAmount;
-        if (item.isExpense) return -egpAmount;
+        const usdAmount = toPreferred(item.amount, item.currency);
+        if (item.isIncome) return usdAmount;
+        if (item.isExpense) return -usdAmount;
         return 0;
       }
       // Transfers don't affect net worth (money moves between accounts)
@@ -348,9 +349,9 @@ export function useTransactionsGrouping(
     let anchorNW = totalNetWorth;
 
     allTransactions.forEach((t) => {
-      const egpAmount = toEGP(t.amount, t.currency);
-      if (t.isIncome) anchorNW -= egpAmount;
-      if (t.isExpense) anchorNW += egpAmount;
+      const usdAmount = toPreferred(t.amount, t.currency);
+      if (t.isIncome) anchorNW -= usdAmount;
+      if (t.isExpense) anchorNW += usdAmount;
     });
 
     // Step B: Unwind Displayed Items with Net Worth
@@ -414,11 +415,11 @@ export function useTransactionsGrouping(
       if (currentGroup) {
         currentGroup.transactions.push(item);
         if (item._type === "transaction") {
-          const egpAmount = toEGP(item.amount, item.currency);
+          const usdAmount = toPreferred(item.amount, item.currency);
           if (item.isIncome) {
-            currentGroup.groupTotalIncome += egpAmount;
+            currentGroup.groupTotalIncome += usdAmount;
           } else if (item.isExpense) {
-            currentGroup.groupTotalExpense += egpAmount;
+            currentGroup.groupTotalExpense += usdAmount;
           }
         }
       }

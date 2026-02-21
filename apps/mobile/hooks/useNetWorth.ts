@@ -10,23 +10,25 @@ import {
   database,
 } from "@astik/db";
 import {
+  calculateAccountsTotalBalance,
   calculateNetWorth,
   calculateTotalAssets,
-  calculateTotalBalance,
+  convertCurrency,
   getSameDayLastMonth,
   NetWorthData,
 } from "@astik/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
 import { useMarketRates } from "./useMarketRates";
-
+import { usePreferredCurrency } from "./usePreferredCurrency";
 interface UseNetWorthResult {
-  totalNetWorth: number | null;
-  totalAccounts: number | null;
-  totalAssets: number | null;
-  isLoading: boolean;
-  error: Error | null;
-  refresh: () => void;
+  readonly totalNetWorth: number | null;
+  readonly totalNetWorthUsd: number | null;
+  readonly totalAccounts: number | null;
+  readonly totalAssets: number | null;
+  readonly isLoading: boolean;
+  readonly error: Error | null;
+  readonly refresh: () => void;
 }
 
 /**
@@ -39,6 +41,7 @@ export function useNetWorth(): UseNetWorthResult {
   const [error, setError] = useState<Error | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const { latestRates, isLoading: isRatesLoading } = useMarketRates();
+  const { preferredCurrency } = usePreferredCurrency();
 
   const refresh = (): void => {
     setRefreshKey((prev) => prev + 1);
@@ -79,23 +82,51 @@ export function useNetWorth(): UseNetWorthResult {
     return () => subscription.unsubscribe();
   }, [refreshKey]);
 
+  /** Convert a USD amount to the user's preferred currency. */
+  const toPreferred = useMemo(
+    () =>
+      (amount: number): number =>
+        convertCurrency(amount, "USD", preferredCurrency, latestRates),
+    [latestRates, preferredCurrency]
+  );
+
   // Calculate net worth when data changes
   const netWorthData = useMemo<NetWorthData | null>(() => {
     if (isLoading || isRatesLoading || !latestRates) {
       return null;
     }
 
-    // Calculate total accounts in EGP
-    const totalAccounts = calculateTotalBalance(accounts, latestRates);
+    // Calculate totals in USD (base currency)
+    const totalAccountsUsd = calculateAccountsTotalBalance(
+      accounts,
+      latestRates
+    );
+    const totalAssetsUsd = calculateTotalAssets(assetMetals, latestRates);
 
-    // Calculate total assets in EGP
-    const totalAssets = calculateTotalAssets(assetMetals, latestRates);
-
-    return calculateNetWorth(totalAccounts, totalAssets);
-  }, [accounts, assetMetals, latestRates, isLoading, isRatesLoading]);
+    // Convert to preferred currency for display
+    return calculateNetWorth(
+      toPreferred(totalAccountsUsd),
+      toPreferred(totalAssetsUsd)
+    );
+  }, [
+    accounts,
+    assetMetals,
+    latestRates,
+    isLoading,
+    isRatesLoading,
+    toPreferred,
+  ]);
 
   return {
     totalNetWorth: netWorthData?.totalNetWorth ?? null,
+    totalNetWorthUsd: netWorthData
+      ? convertCurrency(
+          netWorthData?.totalNetWorth ?? null,
+          preferredCurrency,
+          "USD",
+          latestRates
+        )
+      : null,
     totalAccounts: netWorthData?.totalAccounts ?? null,
     totalAssets: netWorthData?.totalAssets ?? null,
     isLoading: isLoading || isRatesLoading,

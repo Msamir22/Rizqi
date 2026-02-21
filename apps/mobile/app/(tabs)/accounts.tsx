@@ -1,7 +1,3 @@
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { ReactElement, useCallback, useMemo, useState } from "react";
-import { FlatList, Text, View } from "react-native";
 import {
   AccountCard,
   AccountTypeTabs,
@@ -12,6 +8,13 @@ import { Button, ButtonVariant } from "@/components/ui/Button";
 import { palette } from "@/constants/colors";
 import { useAccounts } from "@/hooks";
 import { useMarketRates } from "@/hooks/useMarketRates";
+import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
+import type { CurrencyType } from "@astik/db";
+import { formatCurrency } from "@astik/logic";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { ReactElement, useCallback, useMemo, useState } from "react";
+import { FlatList, Text, View } from "react-native";
 
 function AddAccountButton({
   onPress,
@@ -33,7 +36,13 @@ function AddAccountButton({
   );
 }
 
-function TotalBalanceCard({ balance }: { balance: number }): ReactElement {
+function TotalBalanceCard({
+  balance,
+  currencyCode,
+}: {
+  balance: number;
+  currencyCode: CurrencyType;
+}): ReactElement {
   return (
     <View className="p-6 rounded-3xl border-b-4 bg-white dark:bg-slate-800 border-nileGreen-600 dark:border-nileGreen-500 shadow-xl dark:shadow-none">
       <Text className="text-sm font-bold mb-1 text-slate-500 dark:text-slate-400 uppercase tracking-widest">
@@ -41,13 +50,10 @@ function TotalBalanceCard({ balance }: { balance: number }): ReactElement {
       </Text>
       <View className="flex-row items-baseline">
         <Text className="text-sm font-extrabold text-nileGreen-500 mr-1.5">
-          EGP
+          {currencyCode}
         </Text>
         <Text className="text-3xl font-black text-slate-900 dark:text-white">
-          {balance.toLocaleString("en-US", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}
+          {formatCurrency({ amount: balance, currency: currencyCode })}
         </Text>
       </View>
     </View>
@@ -59,8 +65,8 @@ export default function Accounts(): ReactElement {
   const { latestRates } = useMarketRates();
 
   const [selectedFilter, setSelectedFilter] = useState<FilterType>("ALL");
-  const { totalBalanceEgp, accounts } = useAccounts();
-
+  const { totalAccountsBalance, accounts } = useAccounts();
+  const { preferredCurrency } = usePreferredCurrency();
   const isEmpty = accounts.length === 0;
 
   const filteredAccounts = useMemo(() => {
@@ -115,7 +121,10 @@ export default function Accounts(): ReactElement {
       {/* Total Balance Card */}
       {!isEmpty && (
         <View className="px-5 pb-6">
-          <TotalBalanceCard balance={totalBalanceEgp} />
+          <TotalBalanceCard
+            balance={totalAccountsBalance}
+            currencyCode={preferredCurrency}
+          />
         </View>
       )}
 

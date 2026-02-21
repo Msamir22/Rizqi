@@ -4,17 +4,18 @@
  */
 
 import { Account, database } from "@astik/db";
-import { calculateTotalBalance } from "@astik/logic";
+import { calculateAccountsTotalBalance, convertCurrency } from "@astik/logic";
 import { Q } from "@nozbe/watermelondb";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMarketRates } from "./useMarketRates";
+import { usePreferredCurrency } from "./usePreferredCurrency";
 
 interface UseAccountsResult {
-  accounts: Account[];
-  isLoading: boolean;
-  error: Error | null;
-  totalBalanceEgp: number;
-  refetch: () => void;
+  readonly accounts: Account[];
+  readonly isLoading: boolean;
+  readonly error: Error | null;
+  readonly totalAccountsBalance: number;
+  readonly refetch: () => void;
 }
 
 /**
@@ -26,6 +27,7 @@ export function useAccounts(): UseAccountsResult {
   const [error, setError] = useState<Error | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const { latestRates } = useMarketRates();
+  const { preferredCurrency } = usePreferredCurrency();
 
   const refetch = (): void => {
     setRefreshKey((prev) => prev + 1);
@@ -56,13 +58,18 @@ export function useAccounts(): UseAccountsResult {
     return () => subscription.unsubscribe();
   }, [refreshKey]);
 
-  const totalBalanceEgp = calculateTotalBalance(accounts, latestRates);
+  const totalAccountsBalance = useMemo(() => {
+    if (!latestRates) return 0;
+    const totalUsd = calculateAccountsTotalBalance(accounts, latestRates);
+    if (preferredCurrency === "USD") return totalUsd;
+    return convertCurrency(totalUsd, "USD", preferredCurrency, latestRates);
+  }, [accounts, latestRates, preferredCurrency]);
 
   return {
     accounts,
     isLoading,
     error,
-    totalBalanceEgp,
+    totalAccountsBalance,
     refetch,
   };
 }

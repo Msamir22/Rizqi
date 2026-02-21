@@ -1,4 +1,5 @@
 import { palette } from "@/constants/colors";
+import type { CurrencyType } from "@astik/db";
 import React from "react";
 import { IconLibrary } from "../common/CategoryIcon";
 import { BaseCard } from "./BaseCard";
@@ -17,6 +18,7 @@ interface TransactionCardProps {
   categoryIconName: string;
   categoryIconLibrary: IconLibrary;
   displayNetWorth: number;
+  currencyCode: CurrencyType;
   isSelectionMode: boolean;
   isSelected: boolean;
   onPress: (id: string) => void;
@@ -36,6 +38,7 @@ export function TransactionCard({
   categoryIconName,
   categoryIconLibrary,
   displayNetWorth,
+  currencyCode,
   isSelectionMode,
   isSelected,
   onPress,
@@ -76,6 +79,7 @@ export function TransactionCard({
       isIncome={isIncome}
       details={note}
       displayNetWorth={displayNetWorth}
+      currencyCode={currencyCode}
       date={date}
       index={index}
       onSwipeDelete={onSwipeDelete}

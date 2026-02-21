@@ -14,6 +14,6 @@ export abstract class BaseDailySnapshotBalance extends Model {
 
   @readonly @date("created_at") createdAt!: Date;
   @date("snapshot_date") snapshotDate!: Date;
-  @field("total_accounts_egp") totalAccountsEgp!: number;
+  @field("total_accounts_usd") totalAccountsUsd!: number;
   @field("user_id") userId!: string;
 }

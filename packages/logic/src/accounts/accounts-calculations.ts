@@ -1,25 +1,24 @@
-import { Account, MarketRate } from "@astik/db";
+import type { Account, MarketRate } from "@astik/db";
+import { convertCurrency } from "../utils/currency";
 
-export function calculateTotalBalance(
+/**
+ * Calculate total balance across all accounts in USD.
+ * Converts each account's balance from its native currency to USD.
+ * If no market rates are available, only sums USD accounts.
+ */
+export function calculateAccountsTotalBalance(
   accounts: Account[],
-  latestMarketRates: MarketRate | null
+  latestMarketRates: MarketRate
 ): number {
-  // If market rates are available, calculate total balance using rates
-  return latestMarketRates
-    ? accounts.reduce((total, account) => {
-        switch (account.currency) {
-          case "EGP":
-            return total + account.balance;
-          case "USD":
-            return total + account.balance * latestMarketRates.usdEgp;
-          case "EUR":
-            return total + account.balance * latestMarketRates.eurEgp;
-          default:
-            return total;
-        }
-      }, 0)
-    : // If no market rates, only consider EGP accounts
-      accounts
-        .filter((account) => account.currency === "EGP")
-        .reduce((total, account) => total + account.balance, 0);
+  return accounts.reduce((total, account) => {
+    return (
+      total +
+      convertCurrency(
+        account.balance,
+        account.currency,
+        "USD",
+        latestMarketRates
+      )
+    );
+  }, 0);
 }

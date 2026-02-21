@@ -1,4 +1,4 @@
-import { CurrencyType } from "../types";
+import type { CurrencyType } from "../types";
 import { BaseMarketRate } from "./base/base-market-rate";
 
 export class MarketRate extends BaseMarketRate {
@@ -23,29 +23,53 @@ export class MarketRate extends BaseMarketRate {
     return `${Math.floor(seconds / 86400)}d ago`;
   }
 
+  /**
+   * Get the USD value for a given currency.
+   * Each stored rate represents "value of 1 unit of currency X in USD".
+   * USD itself has an implicit rate of 1.
+   *
+   * @param currency - The currency code to look up
+   * @returns The USD value of 1 unit of the given currency, or null if unavailable
+   */
+  private getUsdValue(currency: CurrencyType): number | null {
+    if (currency === "USD") return 1;
+
+    const key = `${currency.toLowerCase()}Usd` as keyof MarketRate;
+    const rate = this[key] as number;
+    if (typeof rate !== "number" || rate === 0) {
+      return null;
+    }
+    return rate;
+  }
+
+  /**
+   * Convert between any two supported currencies via USD base.
+   *
+   * Formula: amount_B = amount_A × (rate_A / rate_B)
+   * Where rate_X = value of 1 unit of X in USD.
+   *
+   * Example: Convert 100 EUR to JPY
+   *   eurUsd = 1.0479 (1 EUR = $1.0479)
+   *   jpyUsd = 0.0067 (1 JPY = $0.0067)
+   *   result = 100 × (1.0479 / 0.0067) ≈ 15,641 JPY
+   *
+   * Returns 1 if rates are unavailable (e.g., empty market_rates table)
+   * so the app shows unconverted amounts instead of crashing.
+   *
+   * @param fromCurrency - Source currency code
+   * @param toCurrency - Target currency code
+   * @returns The exchange rate to multiply the source amount by
+   */
   getRate(fromCurrency: CurrencyType, toCurrency: CurrencyType): number {
     if (fromCurrency === toCurrency) return 1;
 
-    if (fromCurrency === "EGP") {
-      // currently we only support currency conversion to egp
-      const key = `${toCurrency.toLowerCase()}Egp` as keyof MarketRate;
-      const rate = this[key] as number;
-      if (!rate) {
-        throw new Error(`Rate not found for ${fromCurrency} to ${toCurrency}`);
-      }
-      return rate;
+    const fromUsd = this.getUsdValue(fromCurrency);
+    const toUsd = this.getUsdValue(toCurrency);
+
+    if (fromUsd === null || toUsd === null) {
+      return 1;
     }
 
-    if (toCurrency === "EGP") {
-      // currently we only support currency conversion from egp
-      const key = `${fromCurrency.toLowerCase()}Egp` as keyof MarketRate;
-      const rate = this[key] as number;
-      if (!rate) {
-        throw new Error(`Rate not found for ${fromCurrency} to ${toCurrency}`);
-      }
-      return rate;
-    }
-
-    throw new Error(`Rate not found for ${fromCurrency} to ${toCurrency}`);
+    return fromUsd / toUsd;
   }
 }

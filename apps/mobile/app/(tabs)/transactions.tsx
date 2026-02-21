@@ -19,6 +19,7 @@ import {
   TransactionTypeFilter,
   useTransactionsGrouping,
 } from "@/hooks/useTransactionsGrouping";
+import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import { useSync } from "@/providers/SyncProvider";
 import { updateTransaction, updateTransfer } from "@/services";
 import { Ionicons } from "@expo/vector-icons";
@@ -62,6 +63,7 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
 
   // Sync Hook
   const { sync } = useSync();
+  const { preferredCurrency } = usePreferredCurrency();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefresh = async (): Promise<void> => {
@@ -492,6 +494,7 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
                 netWorth={netWorth || 0}
                 income={income}
                 expense={expense}
+                currencyCode={preferredCurrency}
               />
             )}
             onRefresh={handleRefresh}
@@ -508,6 +511,7 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
                     toAccountName={item.toAccountName}
                     notes={item.notes}
                     displayNetWorth={item.displayNetWorth}
+                    currencyCode={preferredCurrency}
                     isSelectionMode={isSelectionMode}
                     isSelected={selectedIds.has(item.id)}
                     onPress={handleTransferPress}
@@ -531,6 +535,7 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
                   categoryIconName={item.categoryIconName}
                   categoryIconLibrary={item.categoryIconLibrary as IconLibrary}
                   displayNetWorth={item.displayNetWorth}
+                  currencyCode={preferredCurrency}
                   isSelectionMode={isSelectionMode}
                   isSelected={selectedIds.has(item.id)}
                   onPress={handlePress}
