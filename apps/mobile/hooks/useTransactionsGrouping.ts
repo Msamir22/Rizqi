@@ -344,7 +344,7 @@ export function useTransactionsGrouping(
       return [];
     }
 
-    // Helper: convert a transaction amount to USD using market rates
+    // Helper: convert a transaction amount to preferred currency using market rates
     const toPreferred = (amount: number, currency: CurrencyType): number => {
       return convertCurrency(amount, currency, preferredCurrency, latestRates);
     };
@@ -352,9 +352,9 @@ export function useTransactionsGrouping(
     // Step A: Calculate Anchor Net Worth
     const getSignedAmount = (item: DisplayTransaction): number => {
       if (item._type === "transaction") {
-        const usdAmount = toPreferred(item.amount, item.currency);
-        if (item.isIncome) return usdAmount;
-        if (item.isExpense) return -usdAmount;
+        const preferredAmount = toPreferred(item.amount, item.currency);
+        if (item.isIncome) return preferredAmount;
+        if (item.isExpense) return -preferredAmount;
         return 0;
       }
       // Transfers don't affect net worth (money moves between accounts)
@@ -364,9 +364,9 @@ export function useTransactionsGrouping(
     let anchorNW = totalNetWorth;
 
     allTransactions.forEach((t) => {
-      const usdAmount = toPreferred(t.amount, t.currency);
-      if (t.isIncome) anchorNW -= usdAmount;
-      if (t.isExpense) anchorNW += usdAmount;
+      const preferredAmount = toPreferred(t.amount, t.currency);
+      if (t.isIncome) anchorNW -= preferredAmount;
+      if (t.isExpense) anchorNW += preferredAmount;
     });
 
     // Step B: Unwind Displayed Items with Net Worth
@@ -430,11 +430,11 @@ export function useTransactionsGrouping(
       if (currentGroup) {
         currentGroup.transactions.push(item);
         if (item._type === "transaction") {
-          const usdAmount = toPreferred(item.amount, item.currency);
+          const preferredAmount = toPreferred(item.amount, item.currency);
           if (item.isIncome) {
-            currentGroup.groupTotalIncome += usdAmount;
+            currentGroup.groupTotalIncome += preferredAmount;
           } else if (item.isExpense) {
-            currentGroup.groupTotalExpense += usdAmount;
+            currentGroup.groupTotalExpense += preferredAmount;
           }
         }
       }
@@ -448,6 +448,7 @@ export function useTransactionsGrouping(
     displayedItems,
     totalNetWorth,
     latestRates,
+    preferredCurrency,
     period,
     searchQuery,
   ]);

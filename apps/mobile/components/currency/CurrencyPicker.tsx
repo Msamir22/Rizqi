@@ -195,6 +195,7 @@ export function CurrencyPicker({
                 data={filteredCurrencies}
                 renderItem={renderItem}
                 keyExtractor={keyExtractor}
+                keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
                 ItemSeparatorComponent={() => (
                   <View className="h-[0.5px] bg-slate-100 dark:bg-white/5 ml-16" />

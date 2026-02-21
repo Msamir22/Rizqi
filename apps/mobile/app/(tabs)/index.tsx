@@ -48,7 +48,11 @@ export default function DashboardScreen(): React.JSX.Element {
     isLoading: netWorthLoading,
   } = useNetWorth();
   const { monthlyPercentageChange } = useMonthlyPercentageChange();
-  const { preferredCurrency, setPreferredCurrency } = usePreferredCurrency();
+  const {
+    preferredCurrency,
+    setPreferredCurrency,
+    isLoading: isCurrencyLoading,
+  } = usePreferredCurrency();
 
   const currencyInfo = CURRENCY_INFO_MAP[preferredCurrency];
 
@@ -85,6 +89,7 @@ export default function DashboardScreen(): React.JSX.Element {
             currencyCode={preferredCurrency}
             currencyFlag={currencyInfo?.flag}
             onCurrencyPress={() => setIsCurrencyPickerOpen(true)}
+            isCurrencyLoading={isCurrencyLoading}
           />
           <TotalNetWorthCard
             totalNetWorth={totalNetWorth}

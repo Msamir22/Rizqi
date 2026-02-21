@@ -2,12 +2,17 @@
  * usePeriodSummary Hook
  * Calculates income, expenses, and savings for a configurable time period
  * Used by the "This Month" dashboard section
+ *
+ * All transaction amounts are converted to the user's preferred currency
+ * before aggregation to handle mixed-currency transactions correctly.
  */
 
 import { database, Transaction } from "@astik/db";
-import { calculateMonthlyTotals, getYearMonthBoundaries } from "@astik/logic";
+import { convertCurrency, getYearMonthBoundaries } from "@astik/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState, useCallback } from "react";
+import { useMarketRates } from "./useMarketRates";
+import { usePreferredCurrency } from "./usePreferredCurrency";
 
 // =============================================================================
 // Types
@@ -174,6 +179,8 @@ export function usePeriodSummary(
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const { latestRates } = useMarketRates();
+  const { preferredCurrency } = usePreferredCurrency();
 
   const refetch = useCallback((): void => {
     setRefreshKey((prev) => prev + 1);
@@ -218,9 +225,29 @@ export function usePeriodSummary(
     return () => subscription.unsubscribe();
   }, [period, accountIdsString, refreshKey, accountIds]);
 
-  // Calculate summary
+  // Calculate summary — convert each transaction to preferred currency first
   const data = useMemo((): PeriodSummary => {
-    const totals = calculateMonthlyTotals(transactions);
+    // Sum amounts after converting each transaction to preferred currency
+    const totals = transactions.reduce(
+      (acc, t) => {
+        const convertedAmount = latestRates
+          ? convertCurrency(
+              t.amount,
+              t.currency,
+              preferredCurrency,
+              latestRates
+            )
+          : t.amount;
+
+        if (t.type === "EXPENSE") {
+          acc.totalExpenses += convertedAmount;
+        } else {
+          acc.totalIncome += convertedAmount;
+        }
+        return acc;
+      },
+      { totalExpenses: 0, totalIncome: 0 }
+    );
 
     const savings = totals.totalIncome - totals.totalExpenses;
     const savingsPercentage =
@@ -239,7 +266,7 @@ export function usePeriodSummary(
       savingsPercentage,
       spentPercentage,
     };
-  }, [transactions]);
+  }, [transactions, latestRates, preferredCurrency]);
 
   return { data, isLoading, error, refetch };
 }

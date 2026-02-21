@@ -70,9 +70,14 @@ export function usePreferredCurrency(): UsePreferredCurrencyResult {
 
   const preferredCurrency = useMemo<CurrencyType>(() => {
     if (profile?.preferredCurrency) {
-      return profile.preferredCurrency as CurrencyType;
+      const isSupported = SUPPORTED_CURRENCIES.some(
+        (c) => c.code === profile.preferredCurrency
+      );
+      if (isSupported) {
+        return profile.preferredCurrency as CurrencyType;
+      }
     }
-    // No profile yet — detect from device locale
+    // No profile or unsupported currency — detect from device locale
     return detectCurrencyFromDevice();
   }, [profile?.preferredCurrency]);
 

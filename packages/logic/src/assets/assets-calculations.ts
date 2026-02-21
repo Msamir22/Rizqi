@@ -1,4 +1,5 @@
 import type { AssetMetal, MarketRate } from "@astik/db";
+import { getMetalPriceUsd } from "../utils/metal";
 
 /**
  * Calculates the total USD value of the provided metal assets.
@@ -26,29 +27,4 @@ export function calculateTotalAssets(
     const value = metal.calculateValue(pricePerGram);
     return total + value;
   }, 0);
-}
-
-/**
- * Retrieve the USD price per gram for a specified metal type.
- *
- * @param metalType - The metal type ("GOLD", "SILVER", "PLATINUM", "PALLADIUM")
- * @param marketRates - MarketRate object providing per-gram USD prices for supported metals
- * @returns The price per gram in USD for the specified metal, or `0` if the metal type is unrecognized
- */
-function getMetalPriceUsd(
-  metalType: AssetMetal["metalType"],
-  marketRates: NonNullable<MarketRate>
-): number {
-  switch (metalType) {
-    case "GOLD":
-      return marketRates.goldUsdPerGram;
-    case "SILVER":
-      return marketRates.silverUsdPerGram;
-    case "PLATINUM":
-      return marketRates.platinumUsdPerGram;
-    case "PALLADIUM":
-      return marketRates.palladiumUsdPerGram;
-    default:
-      return 0;
-  }
 }

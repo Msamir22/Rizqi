@@ -130,7 +130,7 @@ export function useNetWorth(): UseNetWorthResult {
     totalNetWorth: netWorthData?.totalNetWorth ?? null,
     totalNetWorthUsd: netWorthData
       ? convertCurrency(
-          netWorthData?.totalNetWorth ?? null,
+          netWorthData.totalNetWorth,
           preferredCurrency,
           "USD",
           latestRates

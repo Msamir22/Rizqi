@@ -64,7 +64,7 @@ export function UpcomingPayments(): React.JSX.Element {
       title: "Payment Recorded",
       message: `${selectedPayment?.name} - ${formatCurrency({
         amount,
-        currency: preferredCurrency,
+        currency: selectedPayment?.currency ?? preferredCurrency,
       })}`,
       duration: TOAST_DURATION_MS,
     });

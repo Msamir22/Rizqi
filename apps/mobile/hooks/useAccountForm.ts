@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AccountFormData,
   validateAccountForm,
@@ -47,6 +47,14 @@ export function useAccountForm(): UseAccountFormResult {
   const [isTouched, setIsTouched] = useState<
     Partial<Record<keyof AccountFormData, boolean>>
   >({});
+
+  // Sync currency when preferredCurrency loads (async profile fetch)
+  // Only update if the user hasn't manually touched the currency field
+  useEffect(() => {
+    if (!isTouched.currency) {
+      setFormData((prev) => ({ ...prev, currency: preferredCurrency }));
+    }
+  }, [preferredCurrency, isTouched.currency]);
 
   /**
    * Updates a single field in the form and performs partial validation.
@@ -97,7 +105,7 @@ export function useAccountForm(): UseAccountFormResult {
     });
     setErrors({});
     setIsTouched({});
-  }, []);
+  }, [preferredCurrency]);
 
   const isValid = useMemo((): boolean => {
     const { isValid } = validateAccountForm(formData);

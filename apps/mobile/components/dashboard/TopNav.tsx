@@ -15,6 +15,8 @@ interface TopNavProps {
   currencyCode?: string;
   currencyFlag?: string;
   onCurrencyPress?: () => void;
+  /** When true, the currency chip is disabled (e.g., while the preference loads) */
+  isCurrencyLoading?: boolean;
 }
 
 /**
@@ -31,6 +33,7 @@ export function TopNav({
   currencyCode,
   currencyFlag,
   onCurrencyPress,
+  isCurrencyLoading = false,
 }: TopNavProps): React.ReactElement {
   const { theme } = useTheme();
 
@@ -93,10 +96,11 @@ export function TopNav({
           {currencyCode && onCurrencyPress && (
             <TouchableOpacity
               onPress={onCurrencyPress}
+              disabled={isCurrencyLoading}
               accessibilityLabel="Change currency"
               accessibilityRole="button"
               style={{ backgroundColor: theme.surfaceHighlight }}
-              className="flex-row items-center gap-1 px-2.5 py-1.5 rounded-full"
+              className={`flex-row items-center gap-1 px-2.5 py-1.5 rounded-full ${isCurrencyLoading ? "opacity-50" : ""}`}
             >
               <Text className="text-sm">{currencyFlag ?? "💱"}</Text>
               <Text

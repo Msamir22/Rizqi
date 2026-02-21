@@ -109,31 +109,27 @@ export function TotalNetWorthCard({
           <Text className="text-sm font-medium tracking-wide text-slate-300 opacity-90">
             Total Net Worth
           </Text>
-          {/* Main Amount (EGP) */}
+          {/* Main Amount */}
           {isLoading ? (
             <View className="my-3">
               <ActivityIndicator size="small" color="#FFF" />
             </View>
           ) : (
             <Text className="mt-1 text-[42px] font-extrabold tracking-tight text-white">
-              {totalNetWorth
-                ? formatCurrency({
-                    amount: totalNetWorth,
-                    currency: preferredCurrency,
-                  })
-                : 0}
+              {formatCurrency({
+                amount: totalNetWorth ?? 0,
+                currency: preferredCurrency,
+              })}
             </Text>
           )}
           {/* Secondary Amount (USD) */}
           {!isPreferredCurrencyUSD && (
             <Text className="text-base font-medium text-slate-100 opacity-80">
               ≈
-              {totalNetWorthUsd
-                ? formatCurrency({
-                    amount: totalNetWorthUsd,
-                    currency: "USD",
-                  })
-                : 0}
+              {formatCurrency({
+                amount: totalNetWorthUsd ?? 0,
+                currency: "USD",
+              })}
             </Text>
           )}
           {/* Monthly Percentage Change */}

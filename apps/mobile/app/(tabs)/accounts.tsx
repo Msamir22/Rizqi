@@ -62,14 +62,9 @@ function TotalBalanceCard({
       <Text className="text-sm font-bold mb-1 text-slate-500 dark:text-slate-400 uppercase tracking-widest">
         Total Balance
       </Text>
-      <View className="flex-row items-baseline">
-        <Text className="text-sm font-extrabold text-nileGreen-500 mr-1.5">
-          {currencyCode}
-        </Text>
-        <Text className="text-3xl font-black text-slate-900 dark:text-white">
-          {formatCurrency({ amount: balance, currency: currencyCode })}
-        </Text>
-      </View>
+      <Text className="text-3xl font-black text-slate-900 dark:text-white">
+        {formatCurrency({ amount: balance, currency: currencyCode })}
+      </Text>
     </View>
   );
 }
