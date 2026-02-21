@@ -8,7 +8,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@astik/db": "*"
+    "@astik/db": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.4.0"

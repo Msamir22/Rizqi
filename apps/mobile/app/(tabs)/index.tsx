@@ -58,9 +58,10 @@ export default function DashboardScreen(): React.JSX.Element {
 
   const handleCurrencySelect = useCallback(
     (currency: CurrencyType) => {
+      if (isCurrencyLoading) return;
       setPreferredCurrency(currency).catch(console.error);
     },
-    [setPreferredCurrency]
+    [setPreferredCurrency, isCurrencyLoading]
   );
 
   // Overall loading state
@@ -88,7 +89,9 @@ export default function DashboardScreen(): React.JSX.Element {
             onMenuPress={() => setIsDrawerOpen(true)}
             currencyCode={preferredCurrency}
             currencyFlag={currencyInfo?.flag}
-            onCurrencyPress={() => setIsCurrencyPickerOpen(true)}
+            onCurrencyPress={() =>
+              !isCurrencyLoading && setIsCurrencyPickerOpen(true)
+            }
             isCurrencyLoading={isCurrencyLoading}
           />
           <TotalNetWorthCard
@@ -120,7 +123,7 @@ export default function DashboardScreen(): React.JSX.Element {
         onClose={() => setIsDrawerOpen(false)}
       />
       <CurrencyPicker
-        visible={isCurrencyPickerOpen}
+        visible={!isCurrencyLoading && isCurrencyPickerOpen}
         selectedCurrency={preferredCurrency}
         onSelect={handleCurrencySelect}
         onClose={() => setIsCurrencyPickerOpen(false)}
