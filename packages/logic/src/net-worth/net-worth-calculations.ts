@@ -13,9 +13,13 @@ export interface NetWorthData {
 }
 
 /**
- * Calculate net worth from accounts and assets totals.
- * @param totalAccounts - Total accounts balance in the given currency
- * @param totalAssets - Total assets value in the given currency
+ * Compute net worth from account and asset totals.
+ *
+ * Values are denominated in USD by default and may be converted for display elsewhere.
+ *
+ * @param totalAccounts - Total account balances (denominated in USD by default)
+ * @param totalAssets - Total asset value (denominated in USD by default)
+ * @returns An object containing `totalAccounts`, `totalAssets`, `totalNetWorth` (their sum), and `calculatedAt` (timestamp of calculation)
  */
 export function calculateNetWorth(
   totalAccounts: number,

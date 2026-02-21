@@ -2,8 +2,10 @@ import type { CurrencyType, MarketRate, MetalType } from "@astik/db";
 import { convertCurrency } from "./currency";
 
 /**
- * Get the current price per gram for a metal type in USD.
- * Metal prices are stored in USD per gram.
+ * Retrieve the current price per gram for a specified metal in USD.
+ *
+ * @param marketRates - Market rates object containing USD-per-gram prices for supported metals
+ * @returns The price in USD per gram for the given metal, or `0` if the metal type is unrecognized
  */
 export function getMetalPriceUsd(
   metalType: MetalType,
@@ -24,13 +26,12 @@ export function getMetalPriceUsd(
 }
 
 /**
- * Get the current price per gram for a metal type in the target currency.
- * Converts from the stored USD price to the target currency.
+ * Retrieve the current price per gram for a metal in the specified currency.
  *
- * @param metalType - The type of metal
- * @param marketRates - Market rate data
- * @param targetCurrency - The currency to return the price in (defaults to "USD")
- * @returns Price per gram in the target currency
+ * @param metalType - The metal to get the price for
+ * @param marketRates - Market rate data containing USD-per-gram prices
+ * @param targetCurrency - Currency to return the price in (defaults to "USD")
+ * @returns Price per gram expressed in `targetCurrency`
  */
 export function getMetalPrice(
   metalType: MetalType,

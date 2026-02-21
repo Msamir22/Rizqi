@@ -10,6 +10,13 @@ import { GradientBackground } from "../components/ui/GradientBackground";
 import { useTheme } from "../context/ThemeContext";
 import { usePreferredCurrency } from "../hooks/usePreferredCurrency";
 
+/**
+ * Render the Settings screen for managing appearance, currency, and general preferences.
+ *
+ * The screen provides a theme toggle, a preferred currency selector (modal), navigation back, and access to profile and notification options.
+ *
+ * @returns A JSX element representing the Settings screen UI.
+ */
 export default function SettingsScreen(): React.JSX.Element {
   const { theme, mode, toggleTheme } = useTheme();
   const { preferredCurrency, setPreferredCurrency } = usePreferredCurrency();

@@ -16,6 +16,18 @@ interface Props {
 
 const { width } = Dimensions.get("window");
 
+/**
+ * Renders a styled "Total Net Worth" card showing the primary balance (formatted in the preferred currency), an optional USD equivalent, and an optional monthly percentage change badge.
+ *
+ * Displays a loading spinner in place of the primary amount when `isLoading` is true. Shows the USD approximation only when `preferredCurrency` is not `"USD"`. Shows a colored arrow badge with the monthly percentage change when `monthlyPercentageChange` is provided.
+ *
+ * @param totalNetWorth - Primary net worth amount to display; treated as zero when falsy.
+ * @param totalNetWorthUsd - USD equivalent used for the secondary approximate display.
+ * @param preferredCurrency - Currency to format and display the primary amount in.
+ * @param monthlyPercentageChange - Monthly percentage change displayed as a formatted badge (e.g., "+1.2%"); negative values produce a downward/red badge.
+ * @param isLoading - When true, replaces the primary amount with a loading indicator.
+ * @returns The JSX element for the Total Net Worth card.
+ */
 export function TotalNetWorthCard({
   totalNetWorth,
   totalNetWorthUsd,

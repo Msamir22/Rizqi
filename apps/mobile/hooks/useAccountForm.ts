@@ -20,7 +20,16 @@ interface UseAccountFormResult {
 }
 
 /**
- * Custom hook to manage the account creation form state and validation.
+ * Manages account creation form state, real-time and full validation, and field touch tracking.
+ *
+ * @returns An object containing:
+ * - `formData` — current form values for the account form
+ * - `errors` — current field-level validation errors
+ * - `updateField` — function to update a single field; performs partial validation for that field and marks it as touched
+ * - `validate` — function that runs full form validation, updates `errors`, and returns `true` if the form is valid
+ * - `resetForm` — function that resets the form to initial values
+ * - `isValid` — `true` if the current `formData` passes validation, `false` otherwise
+ * - `isTouched` — mapping of form fields to a boolean indicating whether each field has been interacted with
  */
 export function useAccountForm(): UseAccountFormResult {
   const { preferredCurrency } = usePreferredCurrency();

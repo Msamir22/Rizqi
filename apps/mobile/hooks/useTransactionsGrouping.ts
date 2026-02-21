@@ -112,6 +112,21 @@ export interface UseTransactionsGroupingResult {
   refetch: () => void;
 }
 
+/**
+ * Fetches, filters, enriches, and groups transactions and transfers for display over a selectable period.
+ *
+ * Fetching respects the selected transaction types and search query, enriches items with account/category
+ * display fields, computes per-item and per-group net worth values using current market rates and the preferred currency,
+ * and returns grouped data suitable for rendering along with loading state and a refetch trigger.
+ *
+ * @param period - Time range used to select and group transactions (e.g., today, this_week, this_month).
+ * @param selectedTypes - Array of transaction type filters (e.g., "All", "Income", "Expense", "Transfer") that control which items are included.
+ * @param searchQuery - Optional text used to filter displayed items by note, counterparty, category, or amount.
+ * @returns An object with:
+ *  - groupedData: an array of groups where each group has a title, a list of display-ready transactions/transfers, the group's starting net worth, and aggregated income/expense totals,
+ *  - isLoading: `true` while data or net-worth information is being loaded,
+ *  - refetch: a function that triggers a fresh fetch and reprocessing of displayed items.
+ */
 export function useTransactionsGrouping(
   period: GroupingPeriod,
   selectedTypes: TransactionTypeFilter[],

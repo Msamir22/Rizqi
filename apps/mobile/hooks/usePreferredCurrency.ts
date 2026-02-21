@@ -22,9 +22,9 @@ interface UsePreferredCurrencyResult {
 }
 
 /**
- * Detects the initial currency from the device locale.
- * Uses the OS-provided currencyCode (ISO 4217) from expo-localization.
- * Falls back to USD if the currency is null or unsupported.
+ * Determine the initial currency code from the device locale.
+ *
+ * @returns The device locale's ISO 4217 currency code if the app supports it, otherwise "USD".
  */
 function detectCurrencyFromDevice(): CurrencyType {
   const locales = getLocales();
@@ -36,6 +36,14 @@ function detectCurrencyFromDevice(): CurrencyType {
   return isSupported ? (currencyCode as CurrencyType) : DEFAULT_CURRENCY;
 }
 
+/**
+ * Exposes the user's preferred currency (from the Profile record or device locale) and a setter to persist changes.
+ *
+ * @returns An object containing:
+ * - `preferredCurrency`: the resolved currency taken from the Profile's `preferredCurrency` when available, otherwise detected from the device locale (defaults to USD if unavailable or unsupported).
+ * - `setPreferredCurrency`: a function that persists the provided currency to the current Profile; it does nothing if no Profile is available.
+ * - `isLoading`: `true` while the initial Profile observation is pending, `false` otherwise.
+ */
 export function usePreferredCurrency(): UsePreferredCurrencyResult {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);

@@ -23,8 +23,16 @@ export interface AssetBreakdownPercentage {
 }
 
 /**
- * Calculate raw asset breakdown values in USD.
- * Converts all account balances from their native currency to USD.
+ * Compute the portfolio breakdown (bank, cash, wallet, metals) with all values in USD.
+ *
+ * Converts each account balance from its native currency to USD using provided market rates,
+ * aggregates balances by account type, converts metal holdings to USD using per-gram USD prices,
+ * and computes the total as the sum of all categories.
+ *
+ * @param accounts - List of accounts whose balances will be converted and aggregated by type
+ * @param assetMetals - List of metal holdings; each will be valued in USD per gram
+ * @param marketRates - Market rate data used for currency conversion and metal pricing; if `null`, returns zeros for all categories
+ * @returns The computed AssetBreakdown containing `bank`, `cash`, `wallet`, `metals`, and `total`, all expressed in USD
  */
 export function calculateAssetBreakdown(
   accounts: Account[],

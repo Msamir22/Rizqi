@@ -2,9 +2,13 @@ import type { Account, MarketRate } from "@astik/db";
 import { convertCurrency } from "../utils/currency";
 
 /**
- * Calculate total balance across all accounts in USD.
- * Converts each account's balance from its native currency to USD.
- * If no market rates are available, only sums USD accounts.
+ * Compute the combined USD value of the provided accounts.
+ *
+ * Converts each account's balance from its currency to USD using the supplied market rates and returns the sum.
+ *
+ * @param accounts - The accounts whose balances will be converted and summed
+ * @param latestMarketRates - Market rates used for currency conversion to USD
+ * @returns The sum of all account balances converted to USD
  */
 export function calculateAccountsTotalBalance(
   accounts: Account[],

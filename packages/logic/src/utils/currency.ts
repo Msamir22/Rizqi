@@ -1,15 +1,17 @@
 import type { CurrencyType, MarketRate } from "@astik/db";
 
 /**
- * Convert an amount from one currency to another using market rates.
- * Uses USD as the universal intermediary:
- *   result = amount × (fromCurrencyUsdRate / toCurrencyUsdRate)
+ * Converts an amount from one currency to another.
+ *
+ * If `marketRates` is `null`, `amount` is `0`, or `fromCurrency` equals `toCurrency`,
+ * the original `amount` is returned unchanged. Otherwise the function uses `marketRates`
+ * to compute the converted value.
  *
  * @param amount - The amount in the source currency
  * @param fromCurrency - Source currency code
  * @param toCurrency - Target currency code
- * @param marketRates - Market rate data with USD-based exchange rates
- * @returns The converted amount in the target currency
+ * @param marketRates - Market rate data used to compute cross-currency conversion
+ * @returns The converted amount expressed in the target currency
  */
 export function convertCurrency(
   amount: number,

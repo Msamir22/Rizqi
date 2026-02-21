@@ -21,6 +21,12 @@ import { CURRENCY_INFO_MAP } from "@astik/logic";
 import React, { useCallback, useState } from "react";
 import { ActivityIndicator, ScrollView, View } from "react-native";
 
+/**
+ * Renders the main dashboard screen including total net worth, live market rates, top accounts,
+ * recent transactions, upcoming payments, and UI for selecting the preferred currency.
+ *
+ * @returns The dashboard screen React element.
+ */
 export default function DashboardScreen(): React.JSX.Element {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCurrencyPickerOpen, setIsCurrencyPickerOpen] = useState(false);

@@ -32,7 +32,16 @@ interface UseNetWorthResult {
 }
 
 /**
- * Hook to get user's net worth
+ * Provides reactive net worth totals and related metrics in the user's preferred currency.
+ *
+ * @returns An object containing:
+ * - `totalNetWorth`: the total net worth expressed in the preferred currency, or `null` if not available.
+ * - `totalNetWorthUsd`: the total net worth expressed in USD, or `null` if not available.
+ * - `totalAccounts`: the total accounts balance in the preferred currency, or `null` if not available.
+ * - `totalAssets`: the total assets value in the preferred currency, or `null` if not available.
+ * - `isLoading`: `true` while local data or market rates are still loading.
+ * - `error`: an `Error` instance if an observation failed, or `null` otherwise.
+ * - `refresh`: a function that triggers a data refresh when called.
  */
 export function useNetWorth(): UseNetWorthResult {
   const [accounts, setAccounts] = useState<Account[]>([]);

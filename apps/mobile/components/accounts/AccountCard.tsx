@@ -11,6 +11,16 @@ interface AccountCardProps {
   onPress?: () => void;
 }
 
+/**
+ * Render a tappable account summary card showing an icon, account name, contextual subtitle, and formatted balance.
+ *
+ * The subtitle shows an approximate USD value when the account currency is not USD and `latestRates` is provided; otherwise it shows a type-based label (e.g., "Bank Account", "Digital Wallet", "Physical money").
+ *
+ * @param account - The account to display (provides name, type, currency, balance, and formattedBalance).
+ * @param latestRates - Market rates used to convert the account balance to USD for the approximate subtitle; may be null to disable conversion.
+ * @param onPress - Optional press handler invoked when the card is tapped.
+ * @returns A JSX element representing the account card.
+ */
 export function AccountCard({
   account,
   latestRates,

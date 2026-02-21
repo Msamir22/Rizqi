@@ -55,6 +55,19 @@ function calculateTrend(
   return "flat";
 }
 
+/**
+ * Build the list of live rate items (currency pair, gold, silver) formatted for display.
+ *
+ * If `latestRates` is null, returns an empty array.
+ *
+ * @param latestRates - Most recent market rates used to compute current display values
+ * @param previousDayRate - Prior-day market rates used to determine trends; may be null
+ * @param preferredCurrency - User's preferred currency; when `"USD"` this function uses `"EUR"` as the displayed currency pair base
+ * @returns An array of three Rate entries:
+ *  - a currency pair entry labeled `<displayCurrency>/USD` with adaptive decimal precision,
+ *  - a "Gold 24K" entry showing the preferred-currency price per gram rounded and localized,
+ *  - a "Silver" entry showing the preferred-currency price per gram with two decimals.
+ */
 function buildRatesDisplay(
   latestRates: MarketRate | null,
   previousDayRate: MarketRate | null,
@@ -117,7 +130,15 @@ function buildRatesDisplay(
 }
 
 /**
- * Helper to get the correct icon for a rate pill
+ * Selects the React element used as the icon inside a rate pill.
+ *
+ * Uses the preferredCurrency to determine which flag to show for currency pills
+ * (treats `"USD"` as `"EUR"` for flag selection).
+ *
+ * @param type - The rate item type ("currency", "gold", or "silver")
+ * @param color - Color to apply to icon glyphs (ignored for flag text)
+ * @param preferredCurrency - The user's preferred currency used to pick a flag
+ * @returns A React element to render inside the pill (flag text for currency, coin icons for gold/silver), or `null` if the type is unrecognized
  */
 function getPillIcon(
   type: Rate["type"],
@@ -139,6 +160,14 @@ function getPillIcon(
   }
 }
 
+/**
+ * Render a horizontal list of live currency and precious-metal rates as pill-style UI.
+ *
+ * Displays loading and staleness indicators, adapts labels and values to `preferredCurrency`,
+ * and optionally shows a "Last updated" timestamp when `lastUpdated` is provided.
+ *
+ * @returns The React element rendering the live rates pills, status indicators, and timestamp.
+ */
 export function LiveRates({
   latestRates,
   previousDayRate,

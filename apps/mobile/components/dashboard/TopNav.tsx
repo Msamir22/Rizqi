@@ -17,6 +17,15 @@ interface TopNavProps {
   onCurrencyPress?: () => void;
 }
 
+/**
+ * Renders the top navigation bar with branding, a time-based greeting, and action controls.
+ *
+ * @param onMenuPress - Optional handler invoked when the hamburger menu is pressed.
+ * @param currencyCode - Optional currency code shown in a currency chip (e.g., "USD"); the chip is rendered only when this and `onCurrencyPress` are provided.
+ * @param currencyFlag - Optional emoji or short text shown before the currency code; defaults to "💱" when omitted.
+ * @param onCurrencyPress - Optional handler invoked when the currency chip is pressed.
+ * @returns The top navigation React element for use within a safe-area layout.
+ */
 export function TopNav({
   onMenuPress,
   currencyCode,

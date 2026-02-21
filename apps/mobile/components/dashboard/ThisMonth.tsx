@@ -136,7 +136,13 @@ function FilterChip({
 
 // =============================================================================
 // Main Component
-// =============================================================================
+/**
+ * Renders the "This Month" dashboard card showing a period summary with a ring gauge, income/expense/saved stats, and selectable period filter chips.
+ *
+ * Displays a loading indicator while the period summary is being fetched, updates contents when the selected period changes, and navigates to the transactions screen when the "Details" action is pressed.
+ *
+ * @returns A React element containing the period summary card with ring gauge, stats, divider, and horizontal filter chips.
+ */
 
 export function ThisMonth(): React.JSX.Element {
   const [selectedPeriod, setSelectedPeriod] =

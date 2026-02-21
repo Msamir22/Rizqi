@@ -140,6 +140,11 @@ const AddSectionButton = ({
   </TouchableOpacity>
 );
 
+/**
+ * Renders the My Metals screen with a portfolio summary, holdings lists for gold and silver, a live price ticker, and a modal to add new holdings.
+ *
+ * @returns The root React element for the My Metals screen.
+ */
 export default function MyMetalsScreen(): ReactElement {
   const insets = useSafeAreaInsets();
   const { latestRates } = useMarketRates();

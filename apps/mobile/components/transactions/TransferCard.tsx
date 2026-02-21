@@ -20,6 +20,11 @@ interface TransferCardProps {
   onLongPress: (id: string) => void;
 }
 
+/**
+ * Render a transaction card representing a transfer between two accounts.
+ *
+ * @returns A JSX element: a configured BaseCard that displays transfer details (title, amount, accounts, date, notes, selection state, and currency code).
+ */
 export function TransferCard({
   id,
   amount,

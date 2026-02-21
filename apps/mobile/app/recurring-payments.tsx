@@ -91,6 +91,16 @@ interface HeroSummaryProps {
   readonly currencyCode: CurrencyType;
 }
 
+/**
+ * Displays a compact summary of upcoming recurring payment amounts.
+ *
+ * Shows two labeled values — the total due in the next 7 days and the total due this month — formatted using the provided currency.
+ *
+ * @param next7Days - Total amount due within the next 7 days
+ * @param thisMonth - Total amount due for the current month
+ * @param currencyCode - Currency code used to format the displayed amounts
+ * @returns A React element containing the summary card with two formatted monetary values
+ */
 function HeroSummary({
   next7Days,
   thisMonth,
@@ -221,7 +231,11 @@ function PaymentCard({
 
 // =============================================================================
 // Main Screen
-// =============================================================================
+/**
+ * Displays the Recurring Payments screen with a hero summary, status tabs, payment list or empty state, and a floating add button.
+ *
+ * @returns A JSX element rendering the Recurring Payments screen.
+ */
 
 export default function RecurringPaymentsScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();

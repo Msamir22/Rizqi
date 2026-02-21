@@ -28,6 +28,22 @@ import { createTransaction } from "@/services/transaction-service";
 
 import type { PayNowModalProps } from "./types";
 
+/**
+ * Render a modal to confirm and execute a recurring payment.
+ *
+ * When visible and a `payment` is provided, displays inputs for amount and account selection,
+ * shows payment details, and allows the user to confirm or cancel the payment.
+ *
+ * On confirmation, creates a transaction linked to the recurring payment, updates the
+ * recurring payment's next due date, closes the modal, and calls `onSuccess` with the paid amount.
+ * If transaction creation fails, displays an error toast and keeps the modal open.
+ *
+ * @param payment - The recurring payment details to be paid; when falsy the component renders `null`.
+ * @param visible - Whether the modal is visible.
+ * @param onClose - Callback invoked to close the modal.
+ * @param onSuccess - Callback invoked after a successful payment with the numeric amount paid.
+ * @returns A React element for the modal when `payment` is present, or `null` otherwise.
+ */
 export function PayNowModal({
   payment,
   visible,

@@ -16,6 +16,13 @@ import { useRouter } from "expo-router";
 import { ReactElement, useCallback, useMemo, useState } from "react";
 import { FlatList, Text, View } from "react-native";
 
+/**
+ * Renders a button for creating a new account.
+ *
+ * @param onPress - Callback invoked when the button is pressed
+ * @param variant - Visual variant of the button (defaults to `"dashed"`)
+ * @returns A view containing an "Add New Account" button that invokes `onPress` when tapped
+ */
 function AddAccountButton({
   onPress,
   variant = "dashed",
@@ -36,6 +43,13 @@ function AddAccountButton({
   );
 }
 
+/**
+ * Render a styled card displaying the total account balance alongside its currency code.
+ *
+ * @param balance - The numeric amount to display as the total balance.
+ * @param currencyCode - The currency code used to label and format the displayed amount.
+ * @returns A React element containing a card with the "Total Balance" label, the currency code, and the formatted balance.
+ */
 function TotalBalanceCard({
   balance,
   currencyCode,
@@ -60,6 +74,14 @@ function TotalBalanceCard({
   );
 }
 
+/**
+ * Render the Accounts screen with total balance, filter tabs, and a list of accounts.
+ *
+ * Shows a currency-aware total balance and account type tabs only when accounts exist,
+ * provides actions to add a new account, and displays a contextual empty state when no accounts match the selected filter.
+ *
+ * @returns The React element representing the Accounts screen UI
+ */
 export default function Accounts(): ReactElement {
   const router = useRouter();
   const { latestRates } = useMarketRates();

@@ -19,7 +19,14 @@ interface UseAccountsResult {
 }
 
 /**
- * Hook to get all user accounts reactively
+ * Subscribes to non-deleted accounts and exposes the current list, load/error state, a computed total balance in the preferred currency, and a refetch trigger.
+ *
+ * @returns An object containing:
+ * - `accounts` — the current array of accounts observed from the database.
+ * - `isLoading` — `true` while the subscription is initializing or refreshing, `false` otherwise.
+ * - `error` — an `Error` if the subscription failed, or `null` when there is no error.
+ * - `totalAccountsBalance` — the accounts' total balance converted to the user's preferred currency using latest market rates; returns `0` when rates are unavailable.
+ * - `refetch` — a function that triggers the hook to re-run its subscription by incrementing an internal refresh key.
  */
 export function useAccounts(): UseAccountsResult {
   const [accounts, setAccounts] = useState<Account[]>([]);

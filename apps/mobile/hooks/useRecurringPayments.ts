@@ -47,7 +47,24 @@ export type { UseRecurringPaymentsOptions, UseRecurringPaymentsResult };
 
 // ---------------------------------------------------------------------------
 // Hook
-// ---------------------------------------------------------------------------
+/**
+ * Provides observed recurring payments and derived views, filters, counts, and currency-aware totals for UI consumption.
+ *
+ * @param options - Optional controls for the returned subset:
+ *   - limit: maximum number of items in `filteredPayments`
+ *   - status: initial status used for `statusFilter`
+ *   - type: transaction type to restrict `filteredPayments`
+ * @returns An object containing:
+ *   - `allPayments`: all observed recurring payments from the database
+ *   - `filteredPayments`: `allPayments` filtered by `statusFilter`, `limit`, and `type`
+ *   - `counts`: number of payments grouped by `RecurringStatus` (`ACTIVE`, `PAUSED`, `COMPLETED`)
+ *   - `next7DaysTotal`: sum of active expense amounts due within 0–7 days, converted to the user's preferred currency
+ *   - `totalDueThisMonth`: sum of active expense amounts due this month, converted to the user's preferred currency
+ *   - `totalIncomeThisMonth`: sum of active income amounts due this month, converted to the user's preferred currency
+ *   - `isLoading`: `true` while initial data is loading
+ *   - `statusFilter`: the currently selected `RecurringStatus` filter
+ *   - `setStatusFilter`: function to update `statusFilter`
+ */
 
 export function useRecurringPayments(
   options: UseRecurringPaymentsOptions = {}
@@ -155,7 +172,13 @@ export function useRecurringPayments(
 
 // ---------------------------------------------------------------------------
 // Pure helpers
-// ---------------------------------------------------------------------------
+/**
+ * Calculates the total amount, converted to the preferred currency, of active expense payments due within the next seven days.
+ *
+ * @param activeExpenses - Active expense recurring payments to consider
+ * @param toPreferred - Function that converts an amount from the payment's currency to the user's preferred currency
+ * @returns The sum, in the preferred currency, of amounts whose `daysUntilDue` is between 0 and 7 (inclusive)
+ */
 
 function getNext7DaysTotal(
   activeExpenses: RecurringPayment[],
@@ -166,6 +189,13 @@ function getNext7DaysTotal(
     .reduce((sum, p) => sum + toPreferred(p.amount, p.currency), 0);
 }
 
+/**
+ * Calculate the total amount due this month across the provided recurring payments, expressed in the user's preferred currency.
+ *
+ * @param payments - Recurring payments to include in the aggregation
+ * @param toPreferred - Function that converts an amount and its currency to the user's preferred currency
+ * @returns The sum of amounts for payments where `isInThisMonth` is true, converted to the preferred currency
+ */
 function getThisMonthTotal(
   payments: RecurringPayment[],
   toPreferred: (amount: number, currency: CurrencyType) => number

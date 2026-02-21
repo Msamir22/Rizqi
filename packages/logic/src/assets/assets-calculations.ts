@@ -1,13 +1,17 @@
 import type { AssetMetal, MarketRate } from "@astik/db";
 
 /**
- * Calculate total assets value in USD.
+ * Calculates the total USD value of the provided metal assets.
  *
- * Formula: weight_grams × purity_fraction × price_per_gram_usd
+ * Formula: weight_grams × purity_fraction × price_per_gram_usd.
  *
- * purity_fraction is already normalized (0.0-1.0):
- * - Gold: stored as karat/24 (e.g., 21K = 0.875)
- * - Silver/Platinum/Palladium: stored as fineness/1000 (e.g., 925 = 0.925)
+ * purity_fraction is expected normalized to the range 0.0–1.0:
+ * - Gold: stored as karat/24 (e.g., 21K → 0.875)
+ * - Silver/Platinum/Palladium: stored as fineness/1000 (e.g., 925 → 0.925)
+ *
+ * @param assetMetals - Array of asset metal holdings to value
+ * @param marketRates - Market rates providing current USD price per gram for supported metals
+ * @returns The sum of all asset metal values in USD
  */
 export function calculateTotalAssets(
   assetMetals: AssetMetal[],
@@ -25,7 +29,11 @@ export function calculateTotalAssets(
 }
 
 /**
- * Get the current price per gram for a metal type in USD
+ * Retrieve the USD price per gram for a specified metal type.
+ *
+ * @param metalType - The metal type ("GOLD", "SILVER", "PLATINUM", "PALLADIUM")
+ * @param marketRates - MarketRate object providing per-gram USD prices for supported metals
+ * @returns The price per gram in USD for the specified metal, or `0` if the metal type is unrecognized
  */
 function getMetalPriceUsd(
   metalType: AssetMetal["metalType"],

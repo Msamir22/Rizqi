@@ -31,6 +31,16 @@ interface CurrencyPickerProps {
   readonly onClose: () => void;
 }
 
+/**
+ * Renders a touchable row representing a currency with its flag, code, name, and symbol.
+ *
+ * Highlights the row and displays a trailing checkmark when selected.
+ *
+ * @param item - Currency metadata including `flag`, `code`, `name`, and `symbol`
+ * @param isSelected - Whether this row is the currently selected currency
+ * @param onPress - Called when the row is pressed
+ * @returns A React element for a selectable currency row
+ */
 function CurrencyRow({
   item,
   isSelected,
@@ -73,6 +83,20 @@ function CurrencyRow({
   );
 }
 
+/**
+ * Render a modal currency picker that lets the user search, browse, and choose a currency.
+ *
+ * Filters the supported currency list by code or name as the user types. When a currency is picked,
+ * `onSelect` is invoked with the chosen currency and the modal is closed; closing the modal (either
+ * via background tap or request) calls `onClose`. The internal search query is cleared whenever the
+ * picker is closed or a selection is made.
+ *
+ * @param visible - Whether the modal is visible
+ * @param selectedCurrency - Currently selected currency code shown as highlighted
+ * @param onSelect - Callback invoked with the selected currency code when a currency is chosen
+ * @param onClose - Callback invoked to close the modal
+ * @returns The React element for the currency picker modal
+ */
 export function CurrencyPicker({
   visible,
   selectedCurrency,

@@ -29,7 +29,13 @@ const PAYMENT_LIMIT = 5;
 const SIDE_PAYMENTS_COUNT = 3;
 const TOAST_DURATION_MS = 3500;
 
-// Main Component
+/**
+ * Render the "Upcoming Bills" section with a featured payment, side mini items, a total due row, and a Pay Now modal.
+ *
+ * Displays a loading indicator while payments are loading and renders nothing when there are no upcoming payments. When a payment is completed via the modal, a success toast is shown containing the payment name and formatted amount using the user's preferred currency.
+ *
+ * @returns The JSX element for the Upcoming Bills UI, or an empty fragment when there are no upcoming payments.
+ */
 
 export function UpcomingPayments(): React.JSX.Element {
   const { showToast } = useToast();
