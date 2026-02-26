@@ -15,9 +15,10 @@ import { useTheme } from "@/context/ThemeContext";
 import { PERIOD_LABELS } from "@/hooks/usePeriodSummary";
 import { batchDeleteDisplayTransactions } from "@/services/transaction-service";
 import {
-  GroupingPeriod,
-  TransactionTypeFilter,
   useTransactionsGrouping,
+  type DisplayTransaction,
+  type GroupingPeriod,
+  type TransactionTypeFilter,
 } from "@/hooks/useTransactionsGrouping";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import { useSync } from "@/providers/SyncProvider";
@@ -25,7 +26,7 @@ import { updateTransaction, updateTransfer } from "@/services";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   SectionList,
@@ -74,6 +75,57 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
   const { sync } = useSync();
   const { preferredCurrency } = usePreferredCurrency();
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // ── Performance: cached flat transaction lookup (O(1) instead of O(n) per handler) ──
+  const flatTransactionsMap = useMemo(() => {
+    const map = new Map<string, DisplayTransaction>();
+    for (const group of groupedData) {
+      for (const tx of group.transactions) {
+        map.set(tx.id, tx);
+      }
+    }
+    return map;
+  }, [groupedData]);
+
+  // ── Performance: memoized SectionList data & callbacks ──────────────
+  const sections = useMemo(
+    () =>
+      groupedData.map((g) => ({
+        title: g.title,
+        netWorth: g.groupNetWorth,
+        income: g.groupTotalIncome,
+        expense: g.groupTotalExpense,
+        data: g.transactions,
+      })),
+    [groupedData]
+  );
+
+  const sectionKeyExtractor = useCallback(
+    (item: DisplayTransaction) => item.id,
+    []
+  );
+
+  const renderSectionHeader = useCallback(
+    ({
+      section: { title, netWorth, income, expense },
+    }: {
+      section: {
+        title: string;
+        netWorth?: number;
+        income: number;
+        expense: number;
+      };
+    }) => (
+      <GroupHeader
+        title={title}
+        netWorth={netWorth || 0}
+        income={income}
+        expense={expense}
+        currencyCode={preferredCurrency}
+      />
+    ),
+    [preferredCurrency]
+  );
 
   const handleRefresh = async (): Promise<void> => {
     setIsRefreshing(true);
@@ -136,33 +188,41 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
   };
 
   // Selection Handlers
-  const handleLongPress = (id: string): void => {
-    const newSelected = new Set(selectedIds);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedIds(newSelected);
-  };
+  const handleLongPress = useCallback((id: string): void => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
 
-  const handlePress = (id: string): void => {
-    if (isSelectionMode) {
-      handleLongPress(id); // Toggle selection
-    } else {
-      // Navigate to edit — called from TransactionCard
-      router.push({ pathname: "/edit-transaction", params: { id } });
-    }
-  };
+  const handlePress = useCallback(
+    (id: string): void => {
+      if (isSelectionMode) {
+        handleLongPress(id); // Toggle selection
+      } else {
+        // Navigate to edit — called from TransactionCard
+        router.push({ pathname: "/edit-transaction", params: { id } });
+      }
+    },
+    [isSelectionMode, handleLongPress]
+  );
 
-  const handleTransferPress = (id: string): void => {
-    if (isSelectionMode) {
-      handleLongPress(id); // Toggle selection
-    } else {
-      // Navigate to edit — called from TransferCard
-      router.push({ pathname: "/edit-transfer", params: { id } });
-    }
-  };
+  const handleTransferPress = useCallback(
+    (id: string): void => {
+      if (isSelectionMode) {
+        handleLongPress(id); // Toggle selection
+      } else {
+        // Navigate to edit — called from TransferCard
+        router.push({ pathname: "/edit-transfer", params: { id } });
+      }
+    },
+    [isSelectionMode, handleLongPress]
+  );
 
   // Recurring Edit Modal State
   const [recurringEditModal, setRecurringEditModal] = useState<{
@@ -179,9 +239,7 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
     const { transactionId, action } = recurringEditModal;
     setRecurringEditModal((prev) => ({ ...prev, visible: false }));
 
-    const item = groupedData
-      .flatMap((g) => g.transactions)
-      .find((t) => t.id === transactionId);
+    const item = flatTransactionsMap.get(transactionId);
 
     if (!item) return;
 
@@ -234,79 +292,141 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
     }
   };
 
-  const handleCategoryPress = (id: string): void => {
-    const item = groupedData
-      .flatMap((g) => g.transactions)
-      .find((t) => t.id === id);
-    if (!item) return;
+  const handleCategoryPress = useCallback(
+    (id: string): void => {
+      const item = flatTransactionsMap.get(id);
+      if (!item) return;
 
-    if (item._type === "transaction") {
-      if (item.linkedRecurringId) {
-        setRecurringEditModal({
+      if (item._type === "transaction") {
+        if (item.linkedRecurringId) {
+          setRecurringEditModal({
+            visible: true,
+            transactionId: id,
+            action: "CATEGORY",
+          });
+          return;
+        }
+
+        setQuickEdit({
           visible: true,
+          type: "CATEGORY",
           transactionId: id,
-          action: "CATEGORY",
+          initialValue: item.categoryId,
+          transactionType: item.isIncome ? "INCOME" : "EXPENSE",
         });
-        return;
       }
+    },
+    [flatTransactionsMap]
+  );
 
-      setQuickEdit({
-        visible: true,
-        type: "CATEGORY",
-        transactionId: id,
-        initialValue: item.categoryId,
-        transactionType: item.isIncome ? "INCOME" : "EXPENSE",
-      });
-    }
-  };
+  const handleAmountPress = useCallback(
+    (id: string): void => {
+      const item = flatTransactionsMap.get(id);
+      if (!item) return;
 
-  const handleAmountPress = (id: string): void => {
-    const item = groupedData
-      .flatMap((g) => g.transactions)
-      .find((t) => t.id === id);
-    if (!item) return;
+      if (item._type === "transaction") {
+        if (item.linkedRecurringId) {
+          setRecurringEditModal({
+            visible: true,
+            transactionId: id,
+            action: "AMOUNT",
+          });
+          return;
+        }
 
-    if (item._type === "transaction") {
-      if (item.linkedRecurringId) {
-        setRecurringEditModal({
+        setQuickEdit({
           visible: true,
+          type: "AMOUNT",
           transactionId: id,
-          action: "AMOUNT",
+          initialValue: item.amount,
+          transactionType: item.isIncome ? "INCOME" : "EXPENSE",
+          currency: item.currency,
+          color: item.isIncome ? palette.nileGreen[500] : palette.red[500],
         });
-        return;
+      } else if (item._type === "transfer") {
+        setQuickEdit({
+          visible: true,
+          type: "AMOUNT",
+          transactionId: id,
+          initialValue: item.amount,
+          transactionType: "TRANSFER",
+          currency: item.currency,
+          color: palette.blue[500],
+        });
       }
+    },
+    [flatTransactionsMap]
+  );
 
-      setQuickEdit({
-        visible: true,
-        type: "AMOUNT",
-        transactionId: id,
-        initialValue: item.amount,
-        transactionType: item.isIncome ? "INCOME" : "EXPENSE",
-        currency: item.currency,
-        color: item.isIncome ? palette.nileGreen[500] : palette.red[500],
-      });
-    } else if (item._type === "transfer") {
-      setQuickEdit({
-        visible: true,
-        type: "AMOUNT",
-        transactionId: id,
-        initialValue: item.amount,
-        transactionType: "TRANSFER",
-        currency: item.currency,
-        color: palette.blue[500],
-      });
-    }
-  };
+  // ── renderItem declared after all handler deps are available ──
+  const renderItem = useCallback(
+    ({ item, index }: { item: DisplayTransaction; index: number }) => {
+      if (item._type === "transfer") {
+        return (
+          <TransferCard
+            id={item.id}
+            amount={item.amount}
+            currency={item.currency}
+            date={item.date}
+            fromAccountName={item.fromAccountName}
+            toAccountName={item.toAccountName}
+            notes={item.notes}
+            displayNetWorth={item.displayNetWorth}
+            currencyCode={preferredCurrency}
+            isSelectionMode={isSelectionMode}
+            isSelected={selectedIds.has(item.id)}
+            onPress={handleTransferPress}
+            onLongPress={handleLongPress}
+            index={index}
+          />
+        );
+      }
+      return (
+        <TransactionCard
+          id={item.id}
+          signedFormatedAmount={item.signedFormatedAmount}
+          date={item.date}
+          isExpense={item.isExpense}
+          isIncome={item.isIncome}
+          counterparty={item.counterparty}
+          note={item.note}
+          source={item.source}
+          accountName={item.accountName}
+          categoryName={item.categoryName}
+          categoryIconName={item.categoryIconName}
+          categoryIconLibrary={item.categoryIconLibrary as IconLibrary}
+          displayNetWorth={item.displayNetWorth}
+          currencyCode={preferredCurrency}
+          isSelectionMode={isSelectionMode}
+          isSelected={selectedIds.has(item.id)}
+          onPress={handlePress}
+          onLongPress={handleLongPress}
+          index={index}
+          onCategoryPress={handleCategoryPress}
+          onAmountPress={handleAmountPress}
+        />
+      );
+    },
+    [
+      preferredCurrency,
+      isSelectionMode,
+      selectedIds,
+      handleTransferPress,
+      handleLongPress,
+      handlePress,
+      handleCategoryPress,
+      handleAmountPress,
+    ]
+  );
 
-  const handleSelectAll = (): void => {
-    // Flatten all transactions to get IDs
-    const allIds = groupedData.flatMap((g) => g.transactions.map((t) => t.id));
+  const handleSelectAll = useCallback((): void => {
+    const allIds = Array.from(flatTransactionsMap.keys());
     if (selectedIds.size === allIds.length) {
       setSelectedIds(new Set()); // Deselect all
     } else {
       setSelectedIds(new Set(allIds));
     }
-  };
+  }, [flatTransactionsMap, selectedIds.size]);
 
   const handleDeleteSelected = (): void => {
     setDeleteModalVisible(true);
@@ -314,10 +434,9 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
 
   const confirmDelete = async (): Promise<void> => {
     const ids = Array.from(selectedIds);
-    const allTransactions = groupedData.flatMap((g) => g.transactions);
-    const selectedItems = allTransactions.filter((item) =>
-      ids.includes(item.id)
-    );
+    const selectedItems = ids
+      .map((id) => flatTransactionsMap.get(id))
+      .filter((item): item is DisplayTransaction => item !== undefined);
 
     try {
       await batchDeleteDisplayTransactions(selectedItems);
@@ -362,7 +481,7 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
             isSelectionMode
               ? {
                   count: selectedIds.size,
-                  totalCount: groupedData.flatMap((g) => g.transactions).length,
+                  totalCount: flatTransactionsMap.size,
                   onClear: () => setSelectedIds(new Set()),
                   onSelectAll: handleSelectAll,
                   onDelete: handleDeleteSelected,
@@ -487,75 +606,17 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
           </View>
         ) : (
           <SectionList
-            sections={groupedData.map((g) => ({
-              title: g.title,
-              netWorth: g.groupNetWorth,
-              income: g.groupTotalIncome,
-              expense: g.groupTotalExpense,
-              data: g.transactions,
-            }))}
-            keyExtractor={(item) => item.id}
-            renderSectionHeader={({
-              section: { title, netWorth, income, expense },
-            }) => (
-              <GroupHeader
-                title={title}
-                netWorth={netWorth || 0}
-                income={income}
-                expense={expense}
-                currencyCode={preferredCurrency}
-              />
-            )}
+            sections={sections}
+            keyExtractor={sectionKeyExtractor}
+            renderSectionHeader={renderSectionHeader}
             onRefresh={handleRefresh}
             refreshing={isRefreshing}
-            renderItem={({ item, index }) => {
-              if (item._type === "transfer") {
-                return (
-                  <TransferCard
-                    id={item.id}
-                    amount={item.amount}
-                    currency={item.currency}
-                    date={item.date}
-                    fromAccountName={item.fromAccountName}
-                    toAccountName={item.toAccountName}
-                    notes={item.notes}
-                    displayNetWorth={item.displayNetWorth}
-                    currencyCode={preferredCurrency}
-                    isSelectionMode={isSelectionMode}
-                    isSelected={selectedIds.has(item.id)}
-                    onPress={handleTransferPress}
-                    onLongPress={handleLongPress}
-                    index={index}
-                  />
-                );
-              }
-              return (
-                <TransactionCard
-                  id={item.id}
-                  signedFormatedAmount={item.signedFormatedAmount}
-                  date={item.date}
-                  isExpense={item.isExpense}
-                  isIncome={item.isIncome}
-                  counterparty={item.counterparty}
-                  note={item.note}
-                  source={item.source}
-                  accountName={item.accountName}
-                  categoryName={item.categoryName}
-                  categoryIconName={item.categoryIconName}
-                  categoryIconLibrary={item.categoryIconLibrary as IconLibrary}
-                  displayNetWorth={item.displayNetWorth}
-                  currencyCode={preferredCurrency}
-                  isSelectionMode={isSelectionMode}
-                  isSelected={selectedIds.has(item.id)}
-                  onPress={handlePress}
-                  onLongPress={handleLongPress}
-                  index={index}
-                  onCategoryPress={handleCategoryPress}
-                  onAmountPress={handleAmountPress}
-                />
-              );
-            }}
+            renderItem={renderItem}
             stickySectionHeadersEnabled={false}
+            removeClippedSubviews
+            maxToRenderPerBatch={15}
+            windowSize={7}
+            initialNumToRender={15}
           />
         )}
       </View>

@@ -140,6 +140,7 @@ export function useTransactionsGrouping(
   const { latestRates } = useMarketRates();
   const [isDataLoading, setIsDataLoading] = useState(true);
   const { preferredCurrency } = usePreferredCurrency();
+  const [refetchTrigger, setRefetchTrigger] = useState(0);
 
   // 1. Fetch Transactions and Transfers
   useEffect(() => {
@@ -336,7 +337,8 @@ export function useTransactionsGrouping(
       txSubscription.unsubscribe();
       transferSubscription.unsubscribe();
     };
-  }, [period, selectedTypes, searchQuery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [period, selectedTypes, searchQuery, refetchTrigger]);
 
   // 2. Calculate Grouped Data
   const groupedData = useMemo(() => {
@@ -459,8 +461,7 @@ export function useTransactionsGrouping(
     groupedData,
     isLoading,
     refetch: (): void => {
-      // Trigger refetch by forcing state update
-      setDisplayedItems([...displayedItems]);
+      setRefetchTrigger((prev) => prev + 1);
     },
   };
 }

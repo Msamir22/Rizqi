@@ -43,7 +43,12 @@ You **MUST** consider the user input before proceeding (if not empty).
    brain artifacts directory as `implementation_plan.md` so the plan is tracked
    across conversations. Use the artifact metadata type `implementation_plan`.
 
-5. **Stop and report**: Command ends after Phase 2 planning. Report branch,
+5. **Create reviewable artifact**: Create a reviewable copy of `plan.md` in the
+   agent's brain artifacts directory as `plan-{BRANCH_NAME}.md` so the user can
+   leave inline comments. Use `IsArtifact: true` with `ArtifactType: other`.
+   When calling `notify_user`, include this artifact path in `PathsToReview`.
+
+6. **Stop and report**: Command ends after Phase 2 planning. Report branch,
    IMPL_PLAN path, and generated artifacts.
 
 ## Phases

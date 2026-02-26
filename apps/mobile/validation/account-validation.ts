@@ -38,6 +38,11 @@ export const accountFormSchema = z.object({
     .optional()
     .or(z.literal(""))
     .refine((val) => !val || /^\d{4}$/.test(val), "Must be exactly 4 digits"),
+  smsSenderName: z
+    .string()
+    .max(100, "SMS sender name must be less than 100 characters")
+    .optional()
+    .or(z.literal("")),
 });
 
 export type AccountFormData = z.infer<typeof accountFormSchema>;

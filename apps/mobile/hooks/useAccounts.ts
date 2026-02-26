@@ -50,7 +50,7 @@ export function useAccounts(): UseAccountsResult {
     const query = accountsCollection.query(Q.where("deleted", false));
 
     // Subscribe to changes
-    const subscription = query.observe().subscribe({
+    const subscription = query.observeWithColumns(["balance"]).subscribe({
       next: (result) => {
         setAccounts(result);
         setIsLoading(false);
@@ -107,7 +107,7 @@ export function useTopAccounts(limit: number = 3): UseTopAccountsResult {
     );
 
     // Use observeWithColumns to react to balance changes, not just add/remove
-    const subscription = query.observe().subscribe({
+    const subscription = query.observeWithColumns(["balance"]).subscribe({
       next: (result) => {
         setAccounts(result);
         setIsLoading(false);

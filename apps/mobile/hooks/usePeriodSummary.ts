@@ -103,7 +103,7 @@ function getEndOfWeek(date: Date): Date {
   );
 }
 
-function getPeriodDateRange(period: PeriodFilter): {
+export function getPeriodDateRange(period: PeriodFilter): {
   startDate: number;
   endDate: number;
 } {

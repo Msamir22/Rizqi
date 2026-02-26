@@ -41,6 +41,7 @@ export function useAccountForm(): UseAccountFormResult {
     balance: "",
     bankName: "",
     cardLast4: "",
+    smsSenderName: "",
   });
 
   const [errors, setErrors] = useState<ValidationErrors>({});
@@ -102,6 +103,7 @@ export function useAccountForm(): UseAccountFormResult {
       balance: "",
       bankName: "",
       cardLast4: "",
+      smsSenderName: "",
     });
     setErrors({});
     setIsTouched({});

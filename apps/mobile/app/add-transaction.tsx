@@ -495,8 +495,9 @@ export default function AddTransaction(): React.ReactNode {
                 <EmptyStateCard
                   onPress={() => router.push("/add-account")}
                   icon="swap-horizontal-outline"
-                  title="Need one more account"
-                  description="Add another account to make transfers"
+                  title="Need more accounts"
+                  description={`Add account to make transfers.
+                  Tap here to add`}
                   height={160}
                   borderRadius={20}
                   className="w-full"

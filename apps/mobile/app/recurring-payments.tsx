@@ -22,7 +22,7 @@ import type {
 import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React from "react";
+import React, { useCallback } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -255,6 +255,15 @@ export default function RecurringPaymentsScreen(): React.JSX.Element {
     // TODO: Navigate to edit payment screen
   };
 
+  const renderPaymentItem = useCallback(
+    ({ item }: { item: RecurringPayment }) => (
+      <PaymentCard payment={item} onPress={() => handlePaymentPress(item)} />
+    ),
+    []
+  );
+
+  const keyExtractor = useCallback((item: RecurringPayment) => item.id, []);
+
   return (
     <View className="flex-1">
       <PageHeader title="My Bills" showBackButton={true} showDrawer={false} />
@@ -290,15 +299,13 @@ export default function RecurringPaymentsScreen(): React.JSX.Element {
         ) : (
           <FlatList
             data={filteredPayments}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <PaymentCard
-                payment={item}
-                onPress={() => handlePaymentPress(item)}
-              />
-            )}
+            keyExtractor={keyExtractor}
+            renderItem={renderPaymentItem}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
+            removeClippedSubviews
+            maxToRenderPerBatch={10}
+            windowSize={5}
           />
         )}
 

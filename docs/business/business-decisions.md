@@ -1242,7 +1242,57 @@ accidental data loss since financial data is sensitive.
 
 ---
 
-## 20. Next Steps
+## 20. SMS Transaction Sync
+
+### 20.1 Architecture
+
+SMS transaction detection uses a **unified native tier** via an Expo config
+plugin (`withSmsBroadcastReceiver.js`) that generates Kotlin files at prebuild:
+
+- **SmsBroadcastReceiver.kt** — catches `SMS_RECEIVED` in all app states
+- **SmsEventModule.kt** — emits `DeviceEventEmitter` events when app is alive
+- **SmsHeadlessTaskService.kt** — bridges to HeadlessJS when app is killed
+- **SmsEventPackage.kt** — registers the native module with React Native
+
+### 20.2 Detection Strategy
+
+| App State  | Mechanism                          | JS Entry Point                 |
+| ---------- | ---------------------------------- | ------------------------------ |
+| Foreground | BroadcastReceiver → SmsEventModule | `sms-live-listener-service.ts` |
+| Background | BroadcastReceiver → SmsEventModule | `sms-live-listener-service.ts` |
+| Killed     | BroadcastReceiver → HeadlessJS     | `sms-headless-task.ts`         |
+
+### 20.3 User Preferences
+
+- **Live SMS Detection** (opt-in, off by default): Toggle in Settings to enable
+  real-time detection of incoming financial SMS
+- **Auto-confirm** (opt-in, off by default): If enabled, detected transactions
+  are saved silently. If disabled, a notification with Confirm/Discard actions
+  is shown.
+
+### 20.4 Edge-Case Decisions
+
+- **10K+ inbox**: Batch processing with
+  `InteractionManager.runAfterInteractions` yield every 3 batches to prevent UI
+  freezing
+- **Force-close during scan**: `scanInProgress` flag in AsyncStorage; cleaned up
+  on next launch. No partial DB writes during scan phase.
+- **Permission revocation**: `useSmsPermission` hook rechecks on `AppState`
+  change to `"active"` to detect revocation via Android Settings
+- **Review page conflict**: Live-detected transactions are queued while the
+  review page is active; flushed on dismiss
+
+### 20.5 Account Resolution
+
+Uses a 3-step **Chain of Responsibility** in `sms-account-resolver.ts`:
+
+1. Match sender name + card last 4 digits from `bank_details`
+2. Match sender name only from `bank_details`
+3. Fall back to user's default account
+
+---
+
+## 21. Next Steps
 
 1. ✅ Business discovery complete
 2. ⏳ Generate SQL migration file

@@ -21,6 +21,7 @@ export type Database = {
           currency: Database["public"]["Enums"]["currency_type"];
           deleted: boolean;
           id: string;
+          is_default: boolean;
           name: string;
           type: Database["public"]["Enums"]["account_type"];
           updated_at: string;
@@ -32,6 +33,7 @@ export type Database = {
           currency?: Database["public"]["Enums"]["currency_type"];
           deleted?: boolean;
           id?: string;
+          is_default?: boolean;
           name: string;
           type: Database["public"]["Enums"]["account_type"];
           updated_at?: string;
@@ -43,6 +45,7 @@ export type Database = {
           currency?: Database["public"]["Enums"]["currency_type"];
           deleted?: boolean;
           id?: string;
+          is_default?: boolean;
           name?: string;
           type?: Database["public"]["Enums"]["account_type"];
           updated_at?: string;
@@ -755,6 +758,7 @@ export type Database = {
           linked_debt_id: string | null;
           linked_recurring_id: string | null;
           note: string | null;
+          sms_body_hash: string | null;
           source: Database["public"]["Enums"]["transaction_source"];
           type: Database["public"]["Enums"]["transaction_type"];
           updated_at: string;
@@ -775,6 +779,7 @@ export type Database = {
           linked_debt_id?: string | null;
           linked_recurring_id?: string | null;
           note?: string | null;
+          sms_body_hash?: string | null;
           source?: Database["public"]["Enums"]["transaction_source"];
           type: Database["public"]["Enums"]["transaction_type"];
           updated_at?: string;
@@ -795,6 +800,7 @@ export type Database = {
           linked_debt_id?: string | null;
           linked_recurring_id?: string | null;
           note?: string | null;
+          sms_body_hash?: string | null;
           source?: Database["public"]["Enums"]["transaction_source"];
           type?: Database["public"]["Enums"]["transaction_type"];
           updated_at?: string;

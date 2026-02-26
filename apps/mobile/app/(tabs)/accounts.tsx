@@ -14,7 +14,7 @@ import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { ReactElement, useCallback, useMemo, useState } from "react";
-import { FlatList, Text, View } from "react-native";
+import { FlatList, type ListRenderItem, Text, View } from "react-native";
 
 /**
  * Renders a button for creating a new account.
@@ -95,6 +95,25 @@ export default function Accounts(): ReactElement {
     router.push("/add-account");
   }, [router]);
 
+  const renderItem: ListRenderItem<(typeof filteredAccounts)[number]> =
+    useCallback(
+      ({ item }) => (
+        <AccountCard
+          account={item}
+          latestRates={latestRates}
+          onPress={() => {
+            // TODO: Navigate to account details
+          }}
+        />
+      ),
+      [latestRates]
+    );
+
+  const keyExtractor = useCallback(
+    (item: (typeof filteredAccounts)[number]) => item.id,
+    []
+  );
+
   const renderFooter = (): ReactElement => (
     <View>
       {filteredAccounts.length > 0 && (
@@ -155,20 +174,15 @@ export default function Accounts(): ReactElement {
 
       <FlatList
         data={filteredAccounts}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <AccountCard
-            account={item}
-            latestRates={latestRates}
-            onPress={() => {
-              // TODO: Navigate to account details
-            }}
-          />
-        )}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmpty}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1 }}
+        contentContainerClassName="flex-grow"
+        removeClippedSubviews
+        maxToRenderPerBatch={10}
+        windowSize={5}
       />
     </View>
   );

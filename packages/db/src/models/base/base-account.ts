@@ -31,6 +31,7 @@ export abstract class BaseAccount extends Model {
   @readonly @date("created_at") createdAt!: Date;
   @field("currency") currency!: CurrencyType;
   @field("deleted") deleted!: boolean;
+  @field("is_default") isDefault!: boolean;
   @field("name") name!: string;
   @field("type") type!: AccountType;
   @date("updated_at") updatedAt!: Date;

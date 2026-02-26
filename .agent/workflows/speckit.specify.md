@@ -222,7 +222,18 @@ Given that feature description, do this:
    d. **Update Checklist**: After each validation iteration, update the
    checklist file with current pass/fail status
 
-7. Report completion with branch name, spec file path, checklist results, and
+7. **Create reviewable artifact**: After writing the spec and completing
+   validation, create a reviewable copy of the spec in the agent's brain
+   artifacts directory so the user can leave inline comments. This is in
+   addition to the canonical spec file in `specs/`.
+   - Copy the spec content to the brain artifacts directory as
+     `spec-{BRANCH_NAME}.md` (e.g., `spec-007-sms-transaction-sync.md`).
+   - Use `IsArtifact: true` with `ArtifactType: other` and a descriptive
+     summary.
+   - When calling `notify_user`, include this artifact path in `PathsToReview`
+     so the user can comment on it.
+
+8. Report completion with branch name, spec file path, checklist results, and
    readiness for the next phase (`/speckit.clarify` or `/speckit.plan`).
 
 **NOTE:** The script creates and checks out the new branch and initializes the

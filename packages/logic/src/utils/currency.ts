@@ -81,12 +81,15 @@ export const formatCurrency = ({
   minimumFractionDigits?: number;
   maximumFractionDigits?: number;
 }): string => {
+  // Normalize -0 to 0 (IEEE 754 artifact from floating-point arithmetic)
+  const normalizedAmount = amount || 0;
+
   const formattedNumber = new Intl.NumberFormat("en-US", {
     style: "decimal",
     minimumFractionDigits,
     maximumFractionDigits,
     signDisplay,
-  }).format(amount);
+  }).format(normalizedAmount);
 
   const symbol = CURRENCY_SYMBOLS[currency] || currency;
 

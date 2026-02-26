@@ -66,7 +66,7 @@ interface BaseCardProps {
  * @param onAmountPress - Optional callback invoked with `id` when the amount area is pressed (shows edit affordance when provided and not in selection mode).
  * @returns The rendered transaction card element.
  */
-export function BaseCard({
+export const BaseCard = React.memo(function BaseCard({
   id,
   isSelectionMode,
   isSelected,
@@ -242,4 +242,4 @@ export function BaseCard({
       </View>
     </TouchableOpacity>
   );
-}
+});

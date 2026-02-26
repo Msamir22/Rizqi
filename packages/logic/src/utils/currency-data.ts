@@ -63,9 +63,6 @@ export const SUPPORTED_CURRENCIES: readonly CurrencyInfo[] = [
 
   // Africa
   { code: "ZAR", name: "South African Rand", symbol: "ZAR", flag: "🇿🇦" },
-
-  // Crypto
-  { code: "BTC", name: "Bitcoin", symbol: "₿", flag: "₿" },
 ] as const;
 
 /**

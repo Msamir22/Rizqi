@@ -25,7 +25,7 @@ interface TransferCardProps {
  *
  * @returns A JSX element: a configured BaseCard that displays transfer details (title, amount, accounts, date, notes, selection state, and currency code).
  */
-export function TransferCard({
+export const TransferCard = React.memo(function TransferCard({
   id,
   amount,
   currency,
@@ -77,4 +77,4 @@ export function TransferCard({
       onAmountPress={undefined}
     />
   );
-}
+});

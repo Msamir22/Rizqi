@@ -361,13 +361,13 @@ export async function batchDeleteDisplayTransactions(
       if (delta && delta !== 0) {
         softDeleteBatches.push(
           account.prepareUpdate((a) => {
-            a.balance += delta;
+            a.balance = a.balance + delta || 0;
           })
         );
       }
     }
 
     // Execute everything in a single atomic batch
-    await database.batch(...softDeleteBatches);
+    await database.batch(softDeleteBatches);
   });
 }

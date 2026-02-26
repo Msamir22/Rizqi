@@ -9,8 +9,10 @@ interface BankDetailsSectionProps {
   bankName: string;
   cardLast4: string;
   cardLast4Error?: string;
+  smsSenderName: string;
   onBankNameChange: (value: string) => void;
   onCardLast4Change: (value: string) => void;
+  onSmsSenderNameChange: (value: string) => void;
 }
 
 /**
@@ -23,8 +25,10 @@ export function BankDetailsSection({
   bankName,
   cardLast4,
   cardLast4Error,
+  smsSenderName,
   onBankNameChange,
   onCardLast4Change,
+  onSmsSenderNameChange,
 }: BankDetailsSectionProps): JSX.Element {
   if (!expanded) {
     return (
@@ -99,6 +103,21 @@ export function BankDetailsSection({
         />
         <Text className="mt-2 ml-2 text-[11px] font-bold text-slate-500 dark:text-slate-600">
           Found on your card: ****1234
+        </Text>
+      </View>
+
+      <View className="mb-6">
+        <TextField
+          label="SMS Sender Name"
+          placeholder="e.g., CIB, NBE, VFCash"
+          value={smsSenderName}
+          onChangeText={onSmsSenderNameChange}
+          maxLength={100}
+        />
+        <Text className="mt-2 ml-2 text-[11px] font-bold text-slate-500 dark:text-slate-600">
+          The name that appears as the SMS sender when your bank sends you
+          transaction notifications. This helps us automatically match SMS
+          transactions to this account.
         </Text>
       </View>
     </View>

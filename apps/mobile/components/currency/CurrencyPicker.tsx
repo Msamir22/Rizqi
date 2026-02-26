@@ -83,6 +83,10 @@ function CurrencyRow({
   );
 }
 
+function CurrencyListSeparator(): React.JSX.Element {
+  return <View className="h-[0.5px] bg-slate-100 dark:bg-white/5 ml-16" />;
+}
+
 /**
  * Render a modal currency picker that lets the user search, browse, and choose a currency.
  *
@@ -197,9 +201,10 @@ export function CurrencyPicker({
                 keyExtractor={keyExtractor}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
-                ItemSeparatorComponent={() => (
-                  <View className="h-[0.5px] bg-slate-100 dark:bg-white/5 ml-16" />
-                )}
+                ItemSeparatorComponent={CurrencyListSeparator}
+                removeClippedSubviews
+                maxToRenderPerBatch={15}
+                windowSize={7}
               />
             </View>
           </TouchableWithoutFeedback>

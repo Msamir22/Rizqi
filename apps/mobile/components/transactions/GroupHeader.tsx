@@ -18,7 +18,7 @@ interface GroupHeaderProps {
  * @param currencyCode - Currency to use when formatting income, expense, and net worth amounts
  * @returns A React element containing the group header UI with title, conditional income/expense badges, and the formatted balance
  */
-export function GroupHeader({
+export const GroupHeader = React.memo(function GroupHeader({
   title,
   netWorth,
   income,
@@ -84,4 +84,4 @@ export function GroupHeader({
       </View>
     </View>
   );
-}
+});

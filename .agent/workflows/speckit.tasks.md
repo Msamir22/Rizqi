@@ -69,7 +69,12 @@ You **MUST** consider the user input before proceeding (if not empty).
    brain artifacts directory as `task.md` so the task checklist is tracked
    across conversations. Use the artifact metadata type `task`.
 
-6. **Report**: Output path to generated tasks.md and summary:
+6. **Create reviewable artifact**: Create a reviewable copy of `tasks.md` in the
+   agent's brain artifacts directory as `tasks-{BRANCH_NAME}.md` so the user can
+   leave inline comments. Use `IsArtifact: true` with `ArtifactType: other`.
+   When calling `notify_user`, include this artifact path in `PathsToReview`.
+
+7. **Report**: Output path to generated tasks.md and summary:
    - Total task count
    - Task count per user story
    - Parallel opportunities identified

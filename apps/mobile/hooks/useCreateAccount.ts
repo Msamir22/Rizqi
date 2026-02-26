@@ -41,6 +41,15 @@ export function useCreateAccount(): UseCreateAccountResult {
 
       try {
         await database.write(async () => {
+          // Check if user already has accounts (for auto-default logic)
+          const existingAccounts = await database
+            .get<Account>("accounts")
+            .query()
+            .fetch();
+          const isFirstAccount =
+            existingAccounts.filter((a) => a.userId === userId && !a.deleted)
+              .length === 0;
+
           const account = await database
             .get<Account>("accounts")
             .create((acc) => {
@@ -50,6 +59,7 @@ export function useCreateAccount(): UseCreateAccountResult {
               acc.balance = parseFloat(data.balance);
               acc.currency = data.currency;
               acc.deleted = false;
+              acc.isDefault = isFirstAccount;
             });
 
           // Create BankDetails if account type is BANK
@@ -60,6 +70,7 @@ export function useCreateAccount(): UseCreateAccountResult {
                 details.accountId = account.id;
                 details.bankName = data.bankName?.trim() || undefined;
                 details.cardLast4 = data.cardLast4?.trim() || undefined;
+                details.smsSenderName = data.smsSenderName?.trim() || undefined;
                 details.deleted = false;
               });
           }

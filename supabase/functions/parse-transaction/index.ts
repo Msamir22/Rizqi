@@ -1,3 +1,9 @@
+/**
+ * @deprecated MARKED FOR DELETION — Replaced by `parse-voice` and `parse-sms` Edge Functions.
+ * New functions use Gemini 2.5 Flash-Lite instead of OpenAI GPT-4o-mini.
+ * Kept temporarily until new Edge Functions are validated.
+ */
+
 import "edge-runtime";
 import OpenAI from "openai";
 

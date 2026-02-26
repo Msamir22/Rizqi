@@ -58,6 +58,7 @@ function IconGridItem({
     <TouchableOpacity
       onPress={onSelect}
       className="m-1 items-center justify-center rounded-xl p-3"
+      // eslint-disable-next-line react-native/no-inline-styles
       style={{
         backgroundColor: isSelected
           ? `${previewColor}30`
@@ -101,6 +102,23 @@ export function IconPicker({
     [onSelect, onClose]
   );
 
+  const renderSearchItem = useCallback(
+    ({ item }: { item: IconOption }) => (
+      <IconGridItem
+        icon={item}
+        isSelected={selectedIcon === item.name}
+        previewColor={previewColor}
+        onSelect={() => handleSelect(item)}
+      />
+    ),
+    [selectedIcon, previewColor, handleSelect]
+  );
+
+  const searchKeyExtractor = useCallback(
+    (item: IconOption) => `${item.library}-${item.name}`,
+    []
+  );
+
   const renderGroupedIcons = (): React.ReactElement => (
     <ScrollView showsVerticalScrollIndicator={false}>
       {Object.entries(ICON_GROUPS).map(([groupName, icons]) => (
@@ -128,16 +146,13 @@ export function IconPicker({
     <FlatList
       data={filteredIcons}
       numColumns={5}
-      keyExtractor={(item) => `${item.library}-${item.name}`}
+      keyExtractor={searchKeyExtractor}
+      // eslint-disable-next-line react-native/no-inline-styles
       contentContainerStyle={{ paddingBottom: 20 }}
-      renderItem={({ item }) => (
-        <IconGridItem
-          icon={item}
-          isSelected={selectedIcon === item.name}
-          previewColor={previewColor}
-          onSelect={() => handleSelect(item)}
-        />
-      )}
+      renderItem={renderSearchItem}
+      removeClippedSubviews
+      maxToRenderPerBatch={20}
+      windowSize={5}
       ListEmptyComponent={
         <View className="items-center py-8">
           <Ionicons

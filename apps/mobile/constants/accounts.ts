@@ -9,12 +9,12 @@ export const ACCOUNT_TYPES = [
   },
   {
     id: "BANK" as AccountType,
-    label: "Bank",
+    label: "Bank Account",
     icon: "business-outline" as keyof typeof Ionicons.glyphMap,
   },
   {
     id: "DIGITAL_WALLET" as AccountType,
-    label: "E-Wallet",
+    label: "Digital Wallet",
     icon: "phone-portrait-outline" as keyof typeof Ionicons.glyphMap,
   },
 ] as const;

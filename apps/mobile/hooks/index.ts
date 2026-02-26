@@ -14,6 +14,7 @@ export { useCategories } from "./useCategories";
 export { useMonthlyPercentageChange, useNetWorth } from "./useNetWorth";
 export {
   usePeriodSummary,
+  getPeriodDateRange,
   PERIOD_LABELS,
   type PeriodFilter,
   type PeriodSummary,

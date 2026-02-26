@@ -221,7 +221,13 @@ Execution steps:
 
 7. Write the updated spec back to `FEATURE_SPEC`.
 
-8. Report completion (after questioning loop ends or early termination):
+8. **Update reviewable artifact**: If a reviewable artifact copy of the spec
+   exists in the agent's brain artifacts directory (as `spec-{BRANCH_NAME}.md`),
+   overwrite it with the updated spec content so the user always has a
+   commentable version of the latest spec. Include this path in `PathsToReview`
+   when calling `notify_user`.
+
+9. Report completion (after questioning loop ends or early termination):
    - Number of questions asked & answered.
    - Path to updated spec.
    - Sections touched (list names).

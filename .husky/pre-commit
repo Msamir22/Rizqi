@@ -1,6 +1,6 @@
 # Run local-only database sync before committing
 # Ensures WatermelonDB schema and types are up to date
-npm run db:sync-local
+npm run db:sync
 
 # Run lint-staged
 npx lint-staged

@@ -199,11 +199,13 @@ export default function AddAccount(): React.ReactNode {
               bankName={formData.bankName || ""}
               cardLast4={formData.cardLast4 || ""}
               cardLast4Error={errors.cardLast4}
+              smsSenderName={formData.smsSenderName || ""}
               onBankNameChange={(val) => updateField("bankName", val)}
               onCardLast4Change={(val) => {
                 const cleaned = val.replace(/\D/g, "").slice(0, 4);
                 updateField("cardLast4", cleaned);
               }}
+              onSmsSenderNameChange={(val) => updateField("smsSenderName", val)}
             />
           )}
         </View>

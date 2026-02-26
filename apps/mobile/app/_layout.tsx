@@ -9,7 +9,8 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
+import { AppState, Platform, type AppStateStatus } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -24,6 +25,19 @@ import { CategoriesProvider } from "../context/CategoriesContext";
 import { DatabaseProvider } from "../providers/DatabaseProvider";
 import { QueryProvider } from "../providers/QueryProvider";
 import { SyncProvider } from "../providers/SyncProvider";
+import { SmsScanProvider } from "../context/SmsScanContext";
+import { database } from "@astik/db";
+import { initializeNotifications } from "../services/notification-service";
+import {
+  initializeDetectionActionHandler,
+  isLiveDetectionEnabled,
+  handleDetectedSms,
+} from "../services/sms-live-detection-handler";
+import {
+  startSmsListener,
+  stopSmsListener,
+  onTransactionDetected,
+} from "../services/sms-live-listener-service";
 
 // Prevent splash screen from auto-hiding until fonts are loaded
 SplashScreen.preventAutoHideAsync().catch(console.error);
@@ -43,6 +57,54 @@ export default function RootLayout(): React.ReactNode {
     }
   }, [fontsLoaded, fontError]);
 
+  // Initialize notifications and live detection lifecycle
+  const cleanupRef = useRef<(() => void) | null>(null);
+
+  const startDetectionIfEnabled = useCallback(async (): Promise<void> => {
+    if (Platform.OS !== "android") {
+      return;
+    }
+    const enabled = await isLiveDetectionEnabled();
+    if (enabled) {
+      startSmsListener();
+    }
+  }, []);
+
+  useEffect(() => {
+    // Initialize notifications channel and action handler
+    initializeNotifications().catch(console.error);
+    const cleanupActions = initializeDetectionActionHandler(database);
+
+    // Subscribe to detected transactions from Tier 1 listener
+    const cleanupDetection = onTransactionDetected((parsed) => {
+      handleDetectedSms(parsed, database).catch(console.error);
+    });
+
+    // Start listener if preference enabled
+    startDetectionIfEnabled().catch(console.error);
+
+    // Listen for app state changes to restart listener
+    const appStateSubscription = AppState.addEventListener(
+      "change",
+      (nextState: AppStateStatus) => {
+        if (nextState === "active") {
+          startDetectionIfEnabled().catch(console.error);
+        }
+      }
+    );
+
+    cleanupRef.current = () => {
+      cleanupActions();
+      cleanupDetection();
+      stopSmsListener();
+      appStateSubscription.remove();
+    };
+
+    return () => {
+      cleanupRef.current?.();
+    };
+  }, [startDetectionIfEnabled]);
+
   // Don't render until fonts are loaded
   if (!fontsLoaded && !fontError) {
     return null;
@@ -56,13 +118,15 @@ export default function RootLayout(): React.ReactNode {
             <AuthProvider>
               <SyncProvider>
                 <CategoriesProvider>
-                  <ThemeProvider>
-                    <SafeAreaProvider>
-                      <ToastProvider>
-                        <RootLayoutNav />
-                      </ToastProvider>
-                    </SafeAreaProvider>
-                  </ThemeProvider>
+                  <SmsScanProvider>
+                    <ThemeProvider>
+                      <SafeAreaProvider>
+                        <ToastProvider>
+                          <RootLayoutNav />
+                        </ToastProvider>
+                      </SafeAreaProvider>
+                    </ThemeProvider>
+                  </SmsScanProvider>
                 </CategoriesProvider>
               </SyncProvider>
             </AuthProvider>
@@ -138,6 +202,18 @@ function RootLayoutNav(): React.ReactNode {
           name="create-recurring-payment"
           options={{
             presentation: "modal",
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="sms-scan"
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="sms-review"
+          options={{
             headerShown: false,
           }}
         />

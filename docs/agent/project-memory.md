@@ -173,6 +173,11 @@ for asset transactions)
       picker)
 - [x] Currency picker component (search, MENA-first, settings + dashboard chip)
 - [x] Region-to-currency auto-detection via device locale
+- [x] SMS transaction sync (regex parser, batch scanner, review flow)
+- [x] SMS live detection (native BroadcastReceiver via Expo config plugin,
+      DeviceEventEmitter, HeadlessJS, Confirm/Discard notifications)
+- [x] SMS edge-case handling (10K+ inbox yield, force-close guard, permission
+      revocation, review page conflict queueing)
 
 ### 🔄 In Progress
 
@@ -183,7 +188,6 @@ for asset transactions)
 
 - [ ] Local notifications (transaction confirmations, budget alerts)
 - [ ] Voice transaction input (full flow)
-- [ ] SMS auto-detection integration
 - [ ] Supabase sync implementation
 - [ ] Debt/recurring payment forms
 - [ ] Budget tracking UI

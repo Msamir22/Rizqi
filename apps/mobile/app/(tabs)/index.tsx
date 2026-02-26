@@ -20,6 +20,10 @@ import type { CurrencyType } from "@astik/db";
 import { CURRENCY_INFO_MAP } from "@astik/logic";
 import React, { useCallback, useState } from "react";
 import { ActivityIndicator, ScrollView, View } from "react-native";
+import { useRouter } from "expo-router";
+import { SmsPermissionPrompt } from "@/components/sms-sync/SmsPermissionPrompt";
+import { useSmsPermission } from "@/hooks/useSmsPermission";
+import { useSmsSync } from "@/hooks/useSmsSync";
 
 /**
  * Renders the main dashboard screen including total net worth, live market rates, top accounts,
@@ -55,6 +59,11 @@ export default function DashboardScreen(): React.JSX.Element {
   } = usePreferredCurrency();
 
   const currencyInfo = CURRENCY_INFO_MAP[preferredCurrency];
+
+  // SMS sync prompt
+  const router = useRouter();
+  const { shouldShowPrompt, dismissPrompt } = useSmsSync();
+  const { requestPermission } = useSmsPermission();
 
   const handleCurrencySelect = useCallback(
     (currency: CurrencyType) => {
@@ -127,6 +136,17 @@ export default function DashboardScreen(): React.JSX.Element {
         selectedCurrency={preferredCurrency}
         onSelect={handleCurrencySelect}
         onClose={() => setIsCurrencyPickerOpen(false)}
+      />
+      <SmsPermissionPrompt
+        visible={shouldShowPrompt}
+        onPermissionGranted={() => {
+          dismissPrompt().catch(() => {});
+          router.push("/sms-scan");
+        }}
+        onDismiss={() => {
+          dismissPrompt().catch(() => {});
+        }}
+        requestPermission={requestPermission}
       />
     </StarryBackground>
   );
