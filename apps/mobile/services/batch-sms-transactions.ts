@@ -334,7 +334,7 @@ export async function createAccountsFromSmsSetup(
     });
 
     // Map card name → new account ID for transaction routing
-    mapping[card.name] = account.id;
+    mapping[card.name.trim()] = account.id;
 
     if (card.isDefault) {
       defaultAccountId = account.id;
