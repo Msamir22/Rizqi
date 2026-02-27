@@ -343,7 +343,7 @@ export async function createAccountsFromSmsSetup(
 
   // Fallback: if no card was marked default, use the first created
   if (!defaultAccountId && cards.length > 0) {
-    defaultAccountId = mapping[cards[0].name];
+    defaultAccountId = mapping[cards[0].name.trim()];
   }
 
   if (!defaultAccountId) {
