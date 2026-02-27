@@ -3,7 +3,7 @@
  * Grouped bar chart showing income vs expenses over the last N months.
  */
 
-import { DEFAULT_DISPLAY_CURRENCY } from "./drilldown";
+import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { useMonthlyChartData } from "@/hooks/useAnalytics";
@@ -26,6 +26,7 @@ const PERIOD_OPTIONS: readonly PeriodFilter[] = ["6m", "12m"];
 
 export function MonthlyExpenseChart(): React.JSX.Element {
   const { isDark } = useTheme();
+  const { preferredCurrency } = usePreferredCurrency();
   const [period, setPeriod] = useState<PeriodFilter>("6m");
   const months = period === "6m" ? 6 : 12;
 
@@ -152,7 +153,7 @@ export function MonthlyExpenseChart(): React.JSX.Element {
           <Text className="text-sm font-bold text-nileGreen-500 mt-0.5">
             {formatCurrency({
               amount: totalIncome,
-              currency: DEFAULT_DISPLAY_CURRENCY,
+              currency: preferredCurrency,
             })}
           </Text>
         </View>
@@ -163,7 +164,7 @@ export function MonthlyExpenseChart(): React.JSX.Element {
           <Text className="text-sm font-bold text-red-500 dark:text-red-400 mt-0.5">
             {formatCurrency({
               amount: totalExpenses,
-              currency: DEFAULT_DISPLAY_CURRENCY,
+              currency: preferredCurrency,
             })}
           </Text>
         </View>
@@ -176,7 +177,7 @@ export function MonthlyExpenseChart(): React.JSX.Element {
           >
             {formatCurrency({
               amount: netSavings,
-              currency: DEFAULT_DISPLAY_CURRENCY,
+              currency: preferredCurrency,
             })}
           </Text>
         </View>

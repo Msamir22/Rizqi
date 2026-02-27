@@ -2,7 +2,7 @@
  * Core types for Astik application
  */
 
-import { CurrencyType, TransactionType } from "@astik/db";
+import { AccountType, CurrencyType, TransactionType } from "@astik/db";
 
 export interface ParsedVoiceTransaction {
   amount: number;
@@ -77,4 +77,11 @@ export interface ParsedSmsTransaction {
   readonly isAtmWithdrawal?: boolean;
   /** Last 4 digits of card extracted from SMS (for bank account matching) */
   readonly cardLast4?: string;
+}
+
+export interface ParsedSmsAccountSuggestion {
+  readonly name: string;
+  readonly currency: CurrencyType;
+  readonly accountType: AccountType;
+  readonly isDefault: boolean;
 }

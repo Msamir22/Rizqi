@@ -8,12 +8,12 @@ import {
   DrilldownBreadcrumbs,
   DrilldownCategoryItem,
   CHART_COLORS,
-  DEFAULT_DISPLAY_CURRENCY,
   type BreadcrumbItem,
   type CategoryData,
 } from "./drilldown";
 import { palette } from "@/constants/colors";
 import { useAllCategories } from "@/context/CategoriesContext";
+import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import { useTheme } from "@/context/ThemeContext";
 import { database, Transaction } from "@astik/db";
 import { formatCurrency, getYearMonthBoundaries } from "@astik/logic";
@@ -29,6 +29,7 @@ import { PieChart } from "react-native-gifted-charts";
 
 export function CategoryDrilldownCard(): React.JSX.Element {
   const { isDark } = useTheme();
+  const { preferredCurrency } = usePreferredCurrency();
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
 
@@ -256,7 +257,7 @@ export function CategoryDrilldownCard(): React.JSX.Element {
                   <Text className="text-sm font-bold text-slate-800 dark:text-white">
                     {formatCurrency({
                       amount: totalAmount,
-                      currency: DEFAULT_DISPLAY_CURRENCY,
+                      currency: preferredCurrency,
                     })}
                   </Text>
                 </View>

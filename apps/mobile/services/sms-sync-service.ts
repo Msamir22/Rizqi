@@ -15,18 +15,23 @@
  * @module sms-sync-service
  */
 
+import { database, Transaction } from "@astik/db";
 import {
-  type ParsedSmsTransaction,
-  type SmsMessage,
   computeSmsHash,
   isKnownFinancialSender,
+  ParsedSmsAccountSuggestion,
+  type ParsedSmsTransaction,
+  type SmsMessage,
 } from "@astik/logic";
-import { InteractionManager } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { readSmsInbox } from "./sms-reader-service";
-import { parseSmsWithAi, type SmsCandidate } from "./ai-sms-parser-service";
-import { database, Transaction } from "@astik/db";
 import { Q } from "@nozbe/watermelondb";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { InteractionManager } from "react-native";
+import {
+  parseSmsWithAi,
+  type ParseSmsContext,
+  type SmsCandidate,
+} from "./ai-sms-parser-service";
+import { readSmsInbox } from "./sms-reader-service";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -58,6 +63,7 @@ export interface SmsScanProgress {
 /** Result returned when scanning completes. */
 export interface SmsScanResult {
   readonly transactions: readonly ParsedSmsTransaction[];
+  readonly accountSuggestions: readonly ParsedSmsAccountSuggestion[];
   readonly totalScanned: number;
   readonly totalFound: number;
   readonly totalFilteredCandidates: number;
@@ -80,6 +86,8 @@ interface ScanOptions {
    * Defaults to 3.
    */
   readonly yieldInterval?: number;
+  /** Context to pass to AI for better account suggestions and parsing accuracy. */
+  readonly aiContext?: ParseSmsContext;
 }
 
 // ---------------------------------------------------------------------------
@@ -262,37 +270,42 @@ async function executeScanPipeline(
   // Track per-chunk durations for estimated time remaining calculation
   const chunkDurations: number[] = [];
 
-  const parsedTransactions = await parseSmsWithAi(candidates, (aiProgress) => {
-    // Accumulate chunk durations for rolling average
-    chunkDurations.push(aiProgress.chunkDurationMs);
+  const aiResult = await parseSmsWithAi(
+    candidates,
+    options?.aiContext,
+    (aiProgress) => {
+      // Accumulate chunk durations for rolling average
+      chunkDurations.push(aiProgress.chunkDurationMs);
 
-    // Calculate estimated remaining from rolling average of completed chunk durations
-    const remainingChunks = aiProgress.totalChunks - aiProgress.chunksCompleted;
-    let estimatedRemainingMs: number | undefined;
+      // Calculate estimated remaining from rolling average of completed chunk durations
+      const remainingChunks =
+        aiProgress.totalChunks - aiProgress.chunksCompleted;
+      let estimatedRemainingMs: number | undefined;
 
-    if (
-      chunkDurations.length >= 1 &&
-      aiProgress.totalChunks >= 2 &&
-      remainingChunks > 0
-    ) {
-      const avgChunkDurationMs =
-        chunkDurations.reduce((sum, d) => sum + d, 0) / chunkDurations.length;
-      estimatedRemainingMs = Math.round(avgChunkDurationMs * remainingChunks);
+      if (
+        chunkDurations.length >= 1 &&
+        aiProgress.totalChunks >= 2 &&
+        remainingChunks > 0
+      ) {
+        const avgChunkDurationMs =
+          chunkDurations.reduce((sum, d) => sum + d, 0) / chunkDurations.length;
+        estimatedRemainingMs = Math.round(avgChunkDurationMs * remainingChunks);
+      }
+
+      onProgress?.({
+        totalMessages,
+        messagesScanned: totalMessages,
+        transactionsFound: aiProgress.transactionsSoFar,
+        candidatesFound: candidates.length,
+        currentPhase: "ai-parsing",
+        currentSender: "",
+        aiChunksCompleted: aiProgress.chunksCompleted,
+        aiChunksTotal: aiProgress.totalChunks,
+        scanStartedAt: startTime,
+        estimatedRemainingMs,
+      });
     }
-
-    onProgress?.({
-      totalMessages,
-      messagesScanned: totalMessages,
-      transactionsFound: aiProgress.transactionsSoFar,
-      candidatesFound: candidates.length,
-      currentPhase: "ai-parsing",
-      currentSender: "",
-      aiChunksCompleted: aiProgress.chunksCompleted,
-      aiChunksTotal: aiProgress.totalChunks,
-      scanStartedAt: startTime,
-      estimatedRemainingMs,
-    });
-  });
+  );
 
   // ─── Step 4: Return results ───────────────────────────────────────────
   const durationMs = Date.now() - startTime;
@@ -300,7 +313,7 @@ async function executeScanPipeline(
   onProgress?.({
     totalMessages,
     messagesScanned: totalMessages,
-    transactionsFound: parsedTransactions.length,
+    transactionsFound: aiResult.transactions.length,
     candidatesFound: candidates.length,
     currentPhase: "complete",
     currentSender: "",
@@ -308,13 +321,14 @@ async function executeScanPipeline(
   });
 
   console.log(
-    `[sms-sync] AI parsing: ${parsedTransactions.length} transactions from ${candidates.length} candidates in ${durationMs}ms`
+    `[sms-sync] AI parsing: ${aiResult.transactions.length} transactions, ${aiResult.accountSuggestions.length} account suggestions from ${candidates.length} candidates in ${durationMs}ms`
   );
 
   return {
-    transactions: parsedTransactions,
+    transactions: aiResult.transactions,
+    accountSuggestions: aiResult.accountSuggestions,
     totalScanned: messagesScanned,
-    totalFound: parsedTransactions.length,
+    totalFound: aiResult.transactions.length,
     totalFilteredCandidates: candidates.length,
     durationMs,
   };

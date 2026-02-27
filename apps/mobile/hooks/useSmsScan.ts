@@ -11,13 +11,17 @@
  * @module useSmsScan
  */
 
-import { useCallback, useRef, useState } from "react";
-import type { ParsedSmsTransaction } from "@astik/logic";
+import type { ParseSmsContext } from "@/services/ai-sms-parser-service";
 import {
   scanAndParseSms,
   type SmsScanProgress,
   type SmsScanResult,
 } from "@/services/sms-sync-service";
+import type {
+  ParsedSmsAccountSuggestion,
+  ParsedSmsTransaction,
+} from "@astik/logic";
+import { useCallback, useRef, useState } from "react";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -34,6 +38,8 @@ export interface UseSmsScanResult {
   readonly result: SmsScanResult | null;
   /** Parsed transactions from the scan (shortcut to result.transactions) */
   readonly transactions: readonly ParsedSmsTransaction[];
+  /** AI-suggested accounts from the scan (shortcut to result.accountSuggestions) */
+  readonly accountSuggestions: readonly ParsedSmsAccountSuggestion[];
   /** Error message if scan failed */
   readonly error: string | null;
   /** Start scanning the SMS inbox */
@@ -47,6 +53,8 @@ interface StartScanOptions {
   readonly minDate?: number;
   /** Set of existing hashes for dedup. */
   readonly existingHashes?: ReadonlySet<string>;
+  /** Context to pass to AI for better account suggestions. */
+  readonly aiContext?: ParseSmsContext;
 }
 
 // ---------------------------------------------------------------------------
@@ -59,6 +67,9 @@ export function useSmsScan(): UseSmsScanResult {
   const [result, setResult] = useState<SmsScanResult | null>(null);
   const [transactions, setTransactions] = useState<
     readonly ParsedSmsTransaction[]
+  >([]);
+  const [accountSuggestions, setAccountSuggestions] = useState<
+    readonly ParsedSmsAccountSuggestion[]
   >([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,6 +87,7 @@ export function useSmsScan(): UseSmsScanResult {
       setProgress(null);
       setResult(null);
       setTransactions([]);
+      setAccountSuggestions([]);
       setError(null);
 
       try {
@@ -86,11 +98,13 @@ export function useSmsScan(): UseSmsScanResult {
           {
             minDate: options?.minDate,
             existingHashes: options?.existingHashes,
+            aiContext: options?.aiContext,
           }
         );
 
         setResult(scanResult);
         setTransactions(scanResult.transactions);
+        setAccountSuggestions(scanResult.accountSuggestions);
         setStatus("complete");
       } catch (err) {
         const message = err instanceof Error ? err.message : "SMS scan failed";
@@ -108,6 +122,7 @@ export function useSmsScan(): UseSmsScanResult {
     setProgress(null);
     setResult(null);
     setTransactions([]);
+    setAccountSuggestions([]);
     setError(null);
     isScanningRef.current = false;
   }, []);
@@ -117,6 +132,7 @@ export function useSmsScan(): UseSmsScanResult {
     progress,
     result,
     transactions,
+    accountSuggestions,
     error,
     startScan,
     reset,

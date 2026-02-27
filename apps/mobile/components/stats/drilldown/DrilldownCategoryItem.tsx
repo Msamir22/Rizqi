@@ -4,8 +4,9 @@
  * name, amount, percentage, and optional drill-in chevron.
  */
 
-import { CategoryData, DEFAULT_DISPLAY_CURRENCY } from "./types";
+import { type CategoryData } from "./types";
 import { palette } from "@/constants/colors";
+import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import { useTheme } from "@/context/ThemeContext";
 import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
@@ -32,6 +33,7 @@ export function DrilldownCategoryItem({
   hasChildren,
 }: DrilldownCategoryItemProps): React.JSX.Element {
   const { isDark } = useTheme();
+  const { preferredCurrency } = usePreferredCurrency();
 
   return (
     <TouchableOpacity
@@ -54,7 +56,7 @@ export function DrilldownCategoryItem({
       <Text className="text-sm font-semibold mr-2 text-slate-600 dark:text-slate-300">
         {formatCurrency({
           amount: category.amount,
-          currency: DEFAULT_DISPLAY_CURRENCY,
+          currency: preferredCurrency,
         })}
       </Text>
       <Text className="text-xs text-slate-400 dark:text-slate-500">

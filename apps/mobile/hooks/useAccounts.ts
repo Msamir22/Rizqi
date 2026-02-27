@@ -3,7 +3,7 @@
  * Reactive hook for account data from WatermelonDB
  */
 
-import { Account, database } from "@astik/db";
+import { Account, BankDetails, database } from "@astik/db";
 import { calculateAccountsTotalBalance, convertCurrency } from "@astik/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
@@ -16,6 +16,29 @@ interface UseAccountsResult {
   readonly error: Error | null;
   readonly totalAccountsBalance: number;
   readonly refetch: () => void;
+}
+
+/** A bank account paired with its eagerly-fetched bank details. */
+// TODO: make this type more stornger by excluding any getters & setters and methods
+export type BankAccountWithDetails = Account & {
+  readonly bankDetails: BankDetails | undefined;
+};
+
+interface UseBankAccountsResult {
+  readonly bankAccounts: readonly BankAccountWithDetails[];
+  readonly isLoading: boolean;
+  readonly error: Error | null;
+}
+
+export interface UseTopAccountsResult {
+  accounts: Account[];
+  isLoading: boolean;
+}
+
+export interface UseAccountResult {
+  account: Account | null;
+  isLoading: boolean;
+  error: Error | null;
 }
 
 /**
@@ -81,9 +104,71 @@ export function useAccounts(): UseAccountsResult {
   };
 }
 
-export interface UseTopAccountsResult {
-  accounts: Account[];
-  isLoading: boolean;
+/**
+ * Subscribes to non-deleted BANK accounts and eagerly fetches each
+ * account's first `BankDetails` child record.
+ *
+ * @returns An object containing:
+ * - `bankAccounts` — bank accounts with their bank details eagerly loaded.
+ * - `isLoading` — `true` while the subscription is initializing.
+ * - `error` — an `Error` if the subscription failed.
+ */
+export function useBankAccounts(): UseBankAccountsResult {
+  const [bankAccounts, setBankAccounts] = useState<BankAccountWithDetails[]>(
+    []
+  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    setIsLoading(true);
+    setError(null);
+
+    const accountsCollection = database.get<Account>("accounts");
+
+    const query = accountsCollection.query(
+      Q.where("deleted", false),
+      Q.where("type", "BANK")
+    );
+
+    const subscription = query.observe().subscribe({
+      next: (accounts) => {
+        const fetchDetails = async (): Promise<void> => {
+          try {
+            const withDetails = await Promise.all(
+              accounts.map(async (account) => {
+                const details = await account.bankDetails.fetch();
+                const firstDetail =
+                  details.length > 0 ? (details[0] as BankDetails) : undefined;
+                return {
+                  ...account,
+                  bankDetails: firstDetail,
+                };
+              })
+            );
+            setBankAccounts(withDetails as BankAccountWithDetails[]);
+          } catch (fetchErr: unknown) {
+            console.error("Error fetching bank details:", fetchErr);
+            setError(
+              fetchErr instanceof Error ? fetchErr : new Error(String(fetchErr))
+            );
+          } finally {
+            setIsLoading(false);
+          }
+        };
+        fetchDetails().catch(console.error);
+      },
+      error: (err: unknown) => {
+        console.error("Error observing bank accounts:", err);
+        setError(err instanceof Error ? err : new Error(String(err)));
+        setIsLoading(false);
+      },
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  return { bankAccounts, isLoading, error };
 }
 
 /**
@@ -122,12 +207,6 @@ export function useTopAccounts(limit: number = 3): UseTopAccountsResult {
   }, [limit]);
 
   return { accounts, isLoading };
-}
-
-export interface UseAccountResult {
-  account: Account | null;
-  isLoading: boolean;
-  error: Error | null;
 }
 
 /**

@@ -115,10 +115,10 @@ async function processNativeSmsEvent(event: NativeSmsEvent): Promise<void> {
       smsBodyHash: hash,
     };
 
-    const parsedTransactions = await parseSmsWithAi([candidate]);
+    const aiResult = await parseSmsWithAi([candidate]);
 
     // Step 4: Emit parsed transactions to all registered handlers
-    for (const parsed of parsedTransactions) {
+    for (const parsed of aiResult.transactions) {
       for (const handler of handlers) {
         handler(parsed);
       }

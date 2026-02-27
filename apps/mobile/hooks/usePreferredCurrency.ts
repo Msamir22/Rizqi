@@ -1,18 +1,9 @@
-/**
- * usePreferredCurrency Hook
- *
- * Observes the profile's preferred_currency field reactively.
- * Falls back to device locale currency detection, then USD.
- */
-
 import { useToast } from "@/components/ui/Toast";
+import { detectCurrencyFromDevice } from "@/utils/currency-detection";
 import { database, Profile, type CurrencyType } from "@astik/db";
 import { SUPPORTED_CURRENCIES } from "@astik/logic";
-import { getLocales } from "expo-localization";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
-
-const DEFAULT_CURRENCY: CurrencyType = "USD";
 
 interface UsePreferredCurrencyResult {
   /** The user's preferred display currency */
@@ -20,21 +11,6 @@ interface UsePreferredCurrencyResult {
   /** Update the preferred currency in the profile */
   readonly setPreferredCurrency: (currency: CurrencyType) => Promise<void>;
   readonly isLoading: boolean;
-}
-
-/**
- * Determine the initial currency code from the device locale.
- *
- * @returns The device locale's ISO 4217 currency code if the app supports it, otherwise "USD".
- */
-function detectCurrencyFromDevice(): CurrencyType {
-  const locales = getLocales();
-  const currencyCode = locales[0]?.currencyCode ?? null;
-
-  if (!currencyCode) return DEFAULT_CURRENCY;
-
-  const isSupported = SUPPORTED_CURRENCIES.some((c) => c.code === currencyCode);
-  return isSupported ? (currencyCode as CurrencyType) : DEFAULT_CURRENCY;
 }
 
 /**

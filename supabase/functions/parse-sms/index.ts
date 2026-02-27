@@ -79,92 +79,161 @@ INCOME categories:
 `;
 
 // ---------------------------------------------------------------------------
-// Gemini response JSON schema
+// Gemini response JSON schema factory
 // ---------------------------------------------------------------------------
-// TODO: instruct AI to return suggestions for accounts needs to be created based on the SMS content.
-// we should send an array of an existing accounts name  & currency to the AI to let it decide whether this user need to create an additional accounts
-// if the AI decides that the user need to create an additional accounts, it should return an array of account names to be created.
-// if the array of the accounts is empty, then it's a new user and the retruend array of account names is required and AI should return it based on the SMS content.
-// the shape of array should be like this : [{name: "account1", currency: "EGP"}, {name: "account2", currency: "USD"}, {name: "account3", currency: "EUR"}]
-const RESPONSE_SCHEMA = {
-  type: "object",
-  properties: {
-    transactions: {
-      type: "array",
-      description:
-        "Array of parsed transactions. Only include CLEARLY financial transactions.",
-      items: {
-        type: "object",
-        properties: {
-          messageId: {
-            type: "string",
-            description: "Original SMS message ID.",
+
+/** Default currency enum fallback when client doesn't provide supported currencies. */
+const DEFAULT_CURRENCY_ENUM: readonly string[] = [
+  "EGP",
+  "USD",
+  "EUR",
+  "GBP",
+  "SAR",
+  "AED",
+  "KWD",
+];
+
+/**
+ * Builds the Gemini response JSON schema with dynamic currency enum
+ * and account suggestions array.
+ *
+ * @param currencies - Supported currencies from the client (falls back to DEFAULT_CURRENCY_ENUM)
+ */
+function buildResponseSchema(
+  currencies: readonly string[]
+): Record<string, unknown> {
+  const currencyEnum =
+    currencies.length > 0 ? currencies : DEFAULT_CURRENCY_ENUM;
+
+  return {
+    type: "object",
+    properties: {
+      transactions: {
+        type: "array",
+        description:
+          "Array of parsed transactions. Only include CLEARLY financial transactions.",
+        items: {
+          type: "object",
+          properties: {
+            messageId: {
+              type: "string",
+              description: "Original SMS message ID.",
+            },
+            amount: {
+              type: "number",
+              description: "Transaction amount as positive number.",
+            },
+            currency: {
+              type: "string",
+              enum: currencyEnum,
+            },
+            type: {
+              type: "string",
+              enum: ["EXPENSE", "INCOME"],
+            },
+            counterparty: {
+              type: "string",
+              description:
+                "Counterparty name (merchant, vendor, person, or entity).",
+            },
+            date: {
+              type: "string",
+              description: "YYYY-MM-DD format.",
+            },
+            categorySystemName: {
+              type: "string",
+              description:
+                "Exactly ONE system_name from the category tree. Use a specific L2 ONLY when confident. If uncertain about which L2 fits, use the L1 parent instead. NEVER use *_other L2 categories (e.g. food_other, shopping_other) — use the L1 parent. Fall back to 'other' only as last resort.",
+            },
+            financialEntity: {
+              type: "string",
+              description:
+                "The bank/wallet/fintech name (e.g. CIB, NBE, Vodafone Cash).",
+            },
+            isAtmWithdrawal: {
+              type: "boolean",
+              description: "True for ATM/Bank cash withdrawals only.",
+            },
+            cardLast4: {
+              type: "string",
+              description: "Last 4 digits of card if mentioned.",
+            },
           },
-          amount: {
-            type: "number",
-            description: "Transaction amount as positive number.",
-          },
-          currency: {
-            type: "string",
-            // if the currency detected in the message is not supported, then we should ignore the message.
-            enum: ["EGP", "USD", "EUR", "GBP", "SAR", "AED", "KWD"], // should be dynamic based on the Supported Currencies.
-          },
-          type: {
-            type: "string",
-            enum: ["EXPENSE", "INCOME"],
-          },
-          // rename this to counterparty to be the same name as we have in the DB
-          merchant: {
-            type: "string",
-            description: "Merchant/counterparty name.",
-          },
-          date: {
-            type: "string",
-            description: "YYYY-MM-DD format.",
-          },
-          categorySystemName: {
-            type: "string",
-            description:
-              "Exactly ONE system_name from the category tree. Use a specific L2 ONLY when confident. If uncertain about which L2 fits, use the L1 parent instead. NEVER use *_other L2 categories (e.g. food_other, shopping_other) — use the L1 parent. Fall back to 'other' only as last resort.",
-          },
-          financialEntity: {
-            type: "string",
-            description:
-              "The bank/wallet/fintech name (e.g. CIB, NBE, Vodafone Cash).",
-          },
-          isAtmWithdrawal: {
-            type: "boolean",
-            description: "True for ATM/Bank cash withdrawals only.",
-          },
-          cardLast4: {
-            type: "string",
-            description: "Last 4 digits of card if mentioned.",
-          },
+          required: [
+            "messageId",
+            "amount",
+            "currency",
+            "type",
+            "counterparty",
+            "date",
+            "categorySystemName",
+          ],
         },
-        required: [
-          "messageId",
-          "amount",
-          "currency",
-          "type",
-          "merchant",
-          "date",
-          "categorySystemName",
-        ],
+      },
+      accountSuggestions: {
+        type: "array",
+        description:
+          "Suggested accounts to create based on SMS content. Use fuzzy matching (bidirectional substring by name AND exact currency match) against existing accounts to avoid duplicates. If existingAccounts is empty, return at least one suggestion. Mark the most common account as isDefault: true.",
+        items: {
+          type: "object",
+          properties: {
+            name: {
+              type: "string",
+              description:
+                "Account display name derived from financial entity (e.g. 'CIB Savings', 'Vodafone Cash').",
+            },
+            currency: {
+              type: "string",
+              description:
+                "ISO 4217 currency code from the supported currencies list.",
+              enum: currencyEnum,
+            },
+            accountType: {
+              type: "string",
+              description:
+                "Account type: CASH if the user has ATM/bank cash withdrawals, DIGITAL_WALLET for mobile wallets (e.g. Vodafone Cash, Fawry, Orange Money), BANK for all other bank accounts.",
+              enum: ["BANK", "CASH", "DIGITAL_WALLET"],
+            },
+            isDefault: {
+              type: "boolean",
+              description:
+                "True for the account with the highest message frequency. Exactly one suggestion must be default.",
+            },
+          },
+          required: ["name", "currency", "accountType", "isDefault"],
+        },
       },
     },
-  },
-  required: ["transactions"],
-};
+    required: ["transactions", "accountSuggestions"],
+  };
+}
 
-// ---------------------------------------------------------------------------
-// System prompt
-// ---------------------------------------------------------------------------
+/**
+ * Builds the system prompt with optional client-provided context.
+ *
+ * @param categoryTree - Category hierarchy (falls back to embedded CATEGORY_TREE)
+ * @param existingAccounts - User's current accounts for deduplication
+ */
+function buildSystemPrompt(
+  categoryTree: string,
+  existingAccounts?: ReadonlyArray<{
+    readonly name: string;
+    readonly currency: string;
+  }>
+): string {
+  let accountContext = "";
+  if (existingAccounts && existingAccounts.length > 0) {
+    accountContext = `\nEXISTING USER ACCOUNTS:\n${existingAccounts.map((a) => `- ${a.name} (${a.currency})`).join("\n")}\n\nUse fuzzy matching (bidirectional substring by name AND exact currency match) to check if a suggested account already exists. Do NOT suggest duplicates.\n`;
+  } else {
+    accountContext = `\nThe user has NO existing accounts. You MUST suggest at least one account based on the SMS content.\n`;
+  }
 
-const SYSTEM_PROMPT = `You are Astik AI, a financial SMS parser for an Egyptian personal finance app.
+  return `You are Astik AI, a financial SMS parser for an Egyptian personal finance app.
 
 YOUR TASK:
 Parse each SMS and extract structured transaction data.
 Only include messages that are CLEARLY financial transactions.
+Also suggest accounts the user should create based on the financial entities detected.
 
 INCLUDE ONLY:
 - Card purchases / POS payments
@@ -195,18 +264,29 @@ PARSING RULES:
 1. Amount: positive number, remove separators, handle Arabic numerals.
 2. Currency: the default currency is EGP, but it can be different based on the SMS content.
 3. Type: EXPENSE = money out, INCOME = money in.
-4. Merchant: counterparty name.
+4. Counterparty: the merchant, vendor, person, or entity name.
 5. Date: from SMS body or use provided date.
 6. Category: return EXACTLY ONE system_name from the tree below. Use a specific L2 when confident (e.g. groceries, restaurant). If uncertain which L2 fits, use the L1 parent (e.g. food_drinks, shopping). NEVER use *_other L2 categories (food_other, shopping_other, etc.) — always prefer the L1 parent. Only use 'other' as an absolute last resort.
 7. financialEntity: bank/wallet name from SMS content.
 8. isAtmWithdrawal: true only for ATM withdrawals.
 9. cardLast4: last 4 card digits if mentioned.
 
+ACCOUNT SUGGESTION RULES:
+- Suggest accounts based on distinct financial entities and currencies found in the messages.
+- Each suggestion must have a name (financial entity), currency, accountType, and isDefault flag.
+- accountType must be one of: BANK, CASH, DIGITAL_WALLET.
+  - Use CASH if the user has any ATM or bank counter cash withdrawal transactions.
+  - Use DIGITAL_WALLET for mobile wallet services (e.g. Vodafone Cash, Fawry, Orange Money, Etisalat Cash).
+  - Use BANK for all other bank accounts (savings, current, credit card, etc.).
+- Mark exactly ONE suggestion as isDefault: true (the one with the highest message frequency).
+- If existing accounts are provided, use fuzzy matching to avoid duplicates.
+${accountContext}
 CATEGORY TREE:
-${CATEGORY_TREE}
+${categoryTree}
 
 Handle Arabic naturally. InstaPay: \u062a\u062d\u0648\u064a\u0644 \u0627\u0644\u0649 = sent (EXPENSE), \u062a\u062d\u0648\u064a\u0644 \u0645\u0646 = received (INCOME).
 `;
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -219,8 +299,16 @@ interface SmsInput {
   readonly date: string;
 }
 
+interface ExistingAccount {
+  readonly name: string;
+  readonly currency: string;
+}
+
 interface ParseSmsRequest {
   readonly messages: ReadonlyArray<SmsInput>;
+  readonly existingAccounts?: ReadonlyArray<ExistingAccount>;
+  readonly categories?: string;
+  readonly supportedCurrencies?: ReadonlyArray<string>;
 }
 
 interface AiTransaction {
@@ -228,7 +316,7 @@ interface AiTransaction {
   readonly amount: number;
   readonly currency: string;
   readonly type: string;
-  readonly merchant: string;
+  readonly counterparty: string;
   readonly date: string;
   readonly categorySystemName: string;
   readonly financialEntity?: string;
@@ -236,8 +324,16 @@ interface AiTransaction {
   readonly cardLast4?: string;
 }
 
+interface AiAccountSuggestion {
+  readonly name: string;
+  readonly currency: string;
+  readonly accountType: "BANK" | "CASH" | "DIGITAL_WALLET";
+  readonly isDefault: boolean;
+}
+
 interface AiResponse {
   readonly transactions: ReadonlyArray<AiTransaction>;
+  readonly accountSuggestions?: ReadonlyArray<AiAccountSuggestion>;
 }
 
 // ---------------------------------------------------------------------------
@@ -289,8 +385,10 @@ function sleep(ms: number): Promise<void> {
  */
 async function processWithRetry(
   ai: GoogleGenAI,
-  messages: ReadonlyArray<SmsInput>
-): Promise<ReadonlyArray<AiTransaction>> {
+  messages: ReadonlyArray<SmsInput>,
+  systemPrompt: string,
+  responseSchema: Record<string, unknown>
+): Promise<AiResponse> {
   const userPrompt = `Parse the following ${messages.length} SMS messages into transactions:
 
 ${messages
@@ -320,18 +418,21 @@ Body: ${m.body}
         model: "gemini-2.5-flash-lite",
         contents: userPrompt,
         config: {
-          systemInstruction: SYSTEM_PROMPT,
+          systemInstruction: systemPrompt,
           responseMimeType: "application/json",
-          responseJsonSchema: RESPONSE_SCHEMA,
+          responseJsonSchema: responseSchema,
           temperature: 1,
         },
       });
 
       const text = response.text ?? "";
-      if (!text) return [];
+      if (!text) return { transactions: [], accountSuggestions: [] };
 
       const parsed: AiResponse = JSON.parse(text);
-      return parsed.transactions ?? [];
+      return {
+        transactions: parsed.transactions ?? [],
+        accountSuggestions: parsed.accountSuggestions ?? [],
+      };
     } catch (err: unknown) {
       lastError = err;
       const errMsg = err instanceof Error ? err.message : String(err);
@@ -352,7 +453,7 @@ Body: ${m.body}
   const finalMsg =
     lastError instanceof Error ? lastError.message : "Unknown error";
   console.error(`[parse-sms] All retries exhausted: ${finalMsg}`);
-  return [];
+  return { transactions: [], accountSuggestions: [] };
 }
 
 // ---------------------------------------------------------------------------
@@ -383,7 +484,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       return errorResponse("'messages' array is required");
     }
     if (body.messages.length === 0) {
-      return jsonResponse({ transactions: [] });
+      return jsonResponse({ transactions: [], accountSuggestions: [] });
     }
 
     // 3. Init Gemini
@@ -393,16 +494,30 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
     const ai = new GoogleGenAI({ apiKey });
 
-    // 4. Process all messages in a single Gemini call (with retry).
-    //    Client-side chunking ensures each call stays under the ~150s limit.
-    const transactions = await processWithRetry(ai, body.messages);
+    // 4. Build dynamic schema and prompt from client context.
+    const categoryTree = body.categories ?? CATEGORY_TREE;
+    const currencies = body.supportedCurrencies ?? [];
+    const responseSchema = buildResponseSchema(currencies);
+    const systemPrompt = buildSystemPrompt(categoryTree, body.existingAccounts);
 
-    console.log(
-      `[parse-sms] Parsed ${transactions.length} from ${body.messages.length} messages`
+    // 5. Process all messages in a single Gemini call (with retry).
+    //    Client-side chunking ensures each call stays under the ~150s limit.
+    const result = await processWithRetry(
+      ai,
+      body.messages,
+      systemPrompt,
+      responseSchema
     );
 
-    // 5. Return results
-    return jsonResponse({ transactions });
+    console.log(
+      `[parse-sms] Parsed ${result.transactions.length} transactions, ${result.accountSuggestions?.length ?? 0} account suggestions from ${body.messages.length} messages`
+    );
+
+    // 6. Return results
+    return jsonResponse({
+      transactions: result.transactions,
+      accountSuggestions: result.accountSuggestions ?? [],
+    });
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : "Unknown error occurred";

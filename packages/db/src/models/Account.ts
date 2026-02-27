@@ -8,4 +8,16 @@ export class Account extends BaseAccount {
       currency: this.currency,
     });
   }
+
+  get isBank(): boolean {
+    return this.type === "BANK";
+  }
+
+  get isCash(): boolean {
+    return this.type === "CASH";
+  }
+
+  get isDigitalWallet(): boolean {
+    return this.type === "DIGITAL_WALLET";
+  }
 }

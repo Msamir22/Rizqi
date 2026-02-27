@@ -14,6 +14,11 @@
  * @module SmsScanContext
  */
 
+import type { SenderAccountMap } from "@/services/batch-sms-transactions";
+import type {
+  ParsedSmsAccountSuggestion,
+  ParsedSmsTransaction,
+} from "@astik/logic";
 import React, {
   createContext,
   useCallback,
@@ -21,8 +26,6 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import type { ParsedSmsTransaction } from "@astik/logic";
-import type { SenderAccountMap } from "@/services/batch-sms-transactions";
 
 export type SmsScanMode = "incremental" | "full";
 
@@ -35,6 +38,12 @@ interface SmsScanContextValue {
   readonly transactions: readonly ParsedSmsTransaction[];
   /** Set parsed transactions (called by scan page on completion) */
   readonly setTransactions: (txns: readonly ParsedSmsTransaction[]) => void;
+  /** AI-suggested accounts from the scan pipeline */
+  readonly accountSuggestions: readonly ParsedSmsAccountSuggestion[];
+  /** Set AI-suggested accounts (called by scan page on completion) */
+  readonly setAccountSuggestions: (
+    suggestions: readonly ParsedSmsAccountSuggestion[]
+  ) => void;
   /** Clear transactions (called after save or discard) */
   readonly clearTransactions: () => void;
   /** Sender config ID → account ID mapping (set by account setup step) */
@@ -71,6 +80,9 @@ export function SmsScanProvider({
   const [transactions, setTransactionsState] = useState<
     readonly ParsedSmsTransaction[]
   >([]);
+  const [accountSuggestions, setAccountSuggestionsState] = useState<
+    readonly ParsedSmsAccountSuggestion[]
+  >([]);
   const [senderAccountMap, setSenderAccountMapState] =
     useState<SenderAccountMap>({});
   const [defaultAccountId, setDefaultAccountIdState] = useState<string | null>(
@@ -85,8 +97,16 @@ export function SmsScanProvider({
     []
   );
 
+  const setAccountSuggestions = useCallback(
+    (suggestions: readonly ParsedSmsAccountSuggestion[]) => {
+      setAccountSuggestionsState(suggestions);
+    },
+    []
+  );
+
   const clearTransactions = useCallback(() => {
     setTransactionsState([]);
+    setAccountSuggestionsState([]);
     setSenderAccountMapState({});
     setDefaultAccountIdState(null);
   }, []);
@@ -107,6 +127,8 @@ export function SmsScanProvider({
     () => ({
       transactions,
       setTransactions,
+      accountSuggestions,
+      setAccountSuggestions,
       clearTransactions,
       senderAccountMap,
       setSenderAccountMap,
@@ -118,6 +140,8 @@ export function SmsScanProvider({
     [
       transactions,
       setTransactions,
+      accountSuggestions,
+      setAccountSuggestions,
       clearTransactions,
       senderAccountMap,
       setSenderAccountMap,

@@ -4,19 +4,6 @@
  * Resolves which account an incoming SMS transaction belongs to by
  * matching against the `bank_details` table in WatermelonDB.
  *
- * Architecture & Design Rationale:
- * - Pattern: Chain of Responsibility (3-step resolution)
- * - Why: Multiple resolution strategies tried in priority order.
- *   Each step is independent and handles the optional nature of
- *   bank_details gracefully — if no records exist, falls to default.
- * - SOLID: OCP — new resolution strategies can be inserted without
- *   modifying existing ones. SRP — only resolves accounts, no DB writes.
- *
- * Resolution chain:
- * 1. Sender name + card last 4 digits → highest confidence (1.0)
- * 2. Sender name only → medium confidence (0.7)
- * 3. Default account from user Settings → fallback (0.3)
- *
  * @module sms-account-resolver
  */
 
@@ -28,15 +15,10 @@ import { getDefaultAccountId } from "./sender-account-mapping";
 // Types
 // ---------------------------------------------------------------------------
 
-/** Match type indicating how the account was resolved */
-type MatchType = "sender_and_card" | "sender_only" | "default";
-
 /** Result of account resolution */
 export interface ResolvedAccount {
   readonly accountId: string;
   readonly accountName: string;
-  readonly matchType: MatchType;
-  readonly confidence: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -85,26 +67,67 @@ function extractCardLast4(smsBody: string): string | null {
  * in how carrier/bank SMS sender names appear.
  *
  * @param smsSenderAddress  - The sender address from the SMS
- * @param bankSenderName    - The sms_sender_name from bank_details
+ * @param { bankSmsSenderName, bankName, accountName } - The sms_sender_name , bankName from bank_details & accountName
  * @returns Whether the sender matches
  */
 function isSenderMatch(
   smsSenderAddress: string,
-  bankSenderName: string
+  {
+    bankSmsSenderName,
+    bankName,
+    accountName,
+  }: {
+    bankSmsSenderName?: string;
+    bankName?: string;
+    accountName?: string;
+  }
 ): boolean {
+  if (!bankSmsSenderName && !bankName && !accountName) {
+    return false;
+  }
+
   const normalizedSender = smsSenderAddress.toLowerCase().trim();
-  const normalizedBank = bankSenderName.toLowerCase().trim();
+  const normalizedBankSmsSenderName = bankSmsSenderName?.toLowerCase().trim();
+  const normalizedBankName = bankName?.toLowerCase().trim();
+  const normalizedAccountName = accountName?.toLowerCase().trim();
 
   // Direct equality
-  if (normalizedSender === normalizedBank) {
+  if (
+    normalizedSender === normalizedBankSmsSenderName ||
+    normalizedSender === normalizedBankName ||
+    normalizedSender === normalizedAccountName
+  ) {
     return true;
   }
 
-  // Substring match (sender contains bank name or vice versa)
-  return (
-    normalizedSender.includes(normalizedBank) ||
-    normalizedBank.includes(normalizedSender)
-  );
+  if (normalizedBankSmsSenderName) {
+    if (
+      normalizedSender.includes(normalizedBankSmsSenderName) ||
+      normalizedBankSmsSenderName.includes(normalizedSender)
+    ) {
+      return true;
+    }
+  }
+
+  if (normalizedBankName) {
+    if (
+      normalizedSender.includes(normalizedBankName) ||
+      normalizedBankName.includes(normalizedSender)
+    ) {
+      return true;
+    }
+  }
+
+  if (normalizedAccountName) {
+    if (
+      normalizedSender.includes(normalizedAccountName) ||
+      normalizedAccountName.includes(normalizedSender)
+    ) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -135,7 +158,10 @@ export async function resolveAccountForSms(
     .query(
       Q.and(
         Q.where("deleted", Q.notEq(true)),
-        Q.where("sms_sender_name", Q.notEq(null))
+        Q.or(
+          Q.where("sms_sender_name", Q.notEq(null)),
+          Q.where("card_last_4", Q.notEq(null))
+        )
       )
     )
     .fetch();
@@ -143,57 +169,25 @@ export async function resolveAccountForSms(
   // Extract card last 4 from SMS body for Step 1 matching
   const cardFromSms = extractCardLast4(smsBody);
 
-  // Track best sender-only match for Step 2 fallback
-  let senderOnlyCandidate: {
-    readonly bankDetail: BankDetails;
-  } | null = null;
-
   for (const detail of bankDetails) {
-    const senderName = (detail as unknown as { sms_sender_name: string })
-      .sms_sender_name;
-    if (!senderName) {
+    const account = await detail.account.fetch();
+    // Skip soft-deleted accounts in the primary matching path
+    if (!account || account.deleted) {
       continue;
     }
+    const isCardMatch = cardFromSms && cardFromSms === detail.cardLast4;
 
-    if (!isSenderMatch(senderAddress, senderName)) {
-      continue;
-    }
-
-    // Sender matches — now try card matching (Step 1)
-    const cardOnRecord = (detail as unknown as { card_last_4: string | null })
-      .card_last_4;
-
-    if (cardFromSms && cardOnRecord && cardFromSms === cardOnRecord) {
-      // Step 1: Exact match — sender + card both match
-      const account = await fetchAccount(db, detail.accountId);
-      if (account) {
-        return {
-          accountId: detail.accountId,
-          accountName: account.name,
-          matchType: "sender_and_card",
-          confidence: 1.0,
-        };
-      }
-    }
-
-    // Save as sender-only candidate for Step 2
-    if (!senderOnlyCandidate) {
-      senderOnlyCandidate = { bankDetail: detail };
-    }
-  }
-
-  // Step 2: Sender-only match (no card verification)
-  if (senderOnlyCandidate) {
-    const account = await fetchAccount(
-      db,
-      senderOnlyCandidate.bankDetail.accountId
-    );
-    if (account) {
-      return {
-        accountId: senderOnlyCandidate.bankDetail.accountId,
+    if (
+      isCardMatch ||
+      isSenderMatch(senderAddress, {
+        bankSmsSenderName: detail.smsSenderName,
+        bankName: detail.bankName,
         accountName: account.name,
-        matchType: "sender_only",
-        confidence: 0.7,
+      })
+    ) {
+      return {
+        accountId: account.id,
+        accountName: account.name,
       };
     }
   }
@@ -206,8 +200,6 @@ export async function resolveAccountForSms(
       return {
         accountId: defaultAccountId,
         accountName: account.name,
-        matchType: "default",
-        confidence: 0.3,
       };
     }
   }
@@ -230,10 +222,10 @@ async function fetchAccount(
 ): Promise<Account | null> {
   try {
     const account = await db.get<Account>("accounts").find(accountId);
-    const isDeleted = (account as unknown as { deleted: boolean }).deleted;
-    if (isDeleted) {
+    if (account.deleted) {
       return null;
     }
+
     return account;
   } catch {
     // Account not found

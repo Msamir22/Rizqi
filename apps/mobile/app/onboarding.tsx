@@ -18,6 +18,10 @@ import Carousel, { ICarouselInstance } from "react-native-reanimated-carousel";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
+import { ensureCashAccount } from "@/services/account-service";
+import { getCurrentUserId } from "@/services/supabase";
+
+import { SHOW_CASH_TOAST_KEY } from "@/constants/storage-keys";
 
 const { width: PAGE_WIDTH, height: PAGE_HEIGHT } = Dimensions.get("window");
 
@@ -71,6 +75,22 @@ export default function OnboardingScreen(): React.JSX.Element {
   const handleFinish = async (): Promise<void> => {
     try {
       await AsyncStorage.setItem("hasOnboarded", "true");
+
+      // Fire-and-forget: create Cash account for the new user.
+      // Errors are swallowed — index.tsx retries on next launch (FR-005).
+      const userId = await getCurrentUserId();
+      if (userId) {
+        ensureCashAccount(userId)
+          .then((result) => {
+            if (result.created) {
+              AsyncStorage.setItem(SHOW_CASH_TOAST_KEY, "true").catch(
+                console.error
+              );
+            }
+          })
+          .catch(console.error);
+      }
+
       router.replace("/(tabs)");
     } catch (error) {
       console.error("Failed to save onboarding status", error);

@@ -231,6 +231,7 @@ export function SmsTransactionReview({
         const userId = await getCurrentUserId();
         if (!userId || cancelled) return;
 
+        // TODO: Replace matchAllTransactions with the resolveAccountForSms
         const [matches, accounts] = await Promise.all([
           matchAllTransactions(transactions, userId),
           fetchAccountsWithDetails(userId),

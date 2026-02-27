@@ -11,7 +11,7 @@
  */
 
 import "edge-runtime";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, type ContentListUnion } from "@google/genai";
 import { createClient } from "@supabase/supabase-js";
 
 // ---------------------------------------------------------------------------
@@ -71,7 +71,44 @@ const RESPONSE_SCHEMA = {
           currency: {
             type: "string",
             description: "ISO 4217 currency code. Default to EGP if unclear.",
-            enum: ["EGP", "USD", "EUR", "GBP", "SAR", "AED", "KWD"],
+            // TODO: this enum should be dynamic based on the supported currencies
+            enum: [
+              "EGP",
+              "SAR",
+              "AED",
+              "KWD",
+              "QAR",
+              "BHD",
+              "OMR",
+              "JOD",
+              "IQD",
+              "LYD",
+              "TND",
+              "MAD",
+              "DZD",
+              "USD",
+              "EUR",
+              "GBP",
+              "JPY",
+              "CHF",
+              "CNY",
+              "INR",
+              "KRW",
+              "KPW",
+              "SGD",
+              "HKD",
+              "MYR",
+              "AUD",
+              "NZD",
+              "CAD",
+              "SEK",
+              "NOK",
+              "DKK",
+              "ISK",
+              "TRY",
+              "RUB",
+              "ZAR",
+            ],
           },
           type: {
             type: "string",
@@ -79,10 +116,10 @@ const RESPONSE_SCHEMA = {
               "Transaction type: EXPENSE for spending, INCOME for receiving money.",
             enum: ["EXPENSE", "INCOME"],
           },
-          merchant: {
+          counterparty: {
             type: "string",
             description:
-              "The merchant, vendor, person, or counterparty name. Translate to English if originally in Arabic.",
+              "The counterparty name (merchant, vendor, person, or entity). Translate to English if originally in Arabic.",
           },
           categorySystemName: {
             type: "string",
@@ -99,7 +136,7 @@ const RESPONSE_SCHEMA = {
           "amount",
           "currency",
           "type",
-          "merchant",
+          "counterparty",
           "categorySystemName",
           "description",
         ],
@@ -124,14 +161,14 @@ PARSING RULES:
 2. Amount: Extract numerical amounts. Handle spoken numbers in Arabic or English.
 3. Currency: Default to EGP unless another currency is explicitly mentioned.
 4. Type: EXPENSE for spending (bought, paid, etc.), INCOME for receiving (salary, gift, received, etc.).
-5. Merchant: The entity or person involved. Translate Arabic names to English where reasonable.
+5. Counterparty: The entity or person involved. Translate Arabic names to English where reasonable.
 6. Category: Assign the MOST SPECIFIC L2 category from the tree below. Fall back to L1 or "uncategorized".
 7. Description: A brief English summary of the transaction.
 
 EXAMPLES:
-- "اشتريت قهوة من ستاربكس بـ ٨٠ جنيه" → { amount: 80, currency: "EGP", type: "EXPENSE", merchant: "Starbucks", categorySystemName: "coffee_tea", description: "Coffee from Starbucks" }
-- "Paid 200 pounds for Uber" → { amount: 200, currency: "EGP", type: "EXPENSE", merchant: "Uber", categorySystemName: "private_transport", description: "Uber ride" }
-- "I received my salary, 15000" → { amount: 15000, currency: "EGP", type: "INCOME", merchant: "Employer", categorySystemName: "salary", description: "Monthly salary" }
+- "اشتريت قهوة من ستاربكس بـ ٨٠ جنيه" → { amount: 80, currency: "EGP", type: "EXPENSE", counterparty: "Starbucks", categorySystemName: "coffee_tea", description: "Coffee from Starbucks" }
+- "Paid 200 pounds for Uber" → { amount: 200, currency: "EGP", type: "EXPENSE", counterparty: "Uber", categorySystemName: "private_transport", description: "Uber ride" }
+- "I received my salary, 15000" → { amount: 15000, currency: "EGP", type: "INCOME", counterparty: "Employer", categorySystemName: "salary", description: "Monthly salary" }
 
 CATEGORY TREE:
 ${CATEGORY_TREE}
@@ -149,7 +186,7 @@ interface VoiceTransaction {
   readonly amount: number;
   readonly currency: string;
   readonly type: string;
-  readonly merchant: string;
+  readonly counterparty: string;
   readonly categorySystemName: string;
   readonly description: string;
 }
@@ -288,7 +325,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const ai = new GoogleGenAI({ apiKey });
 
     // 4. Build content parts
-    let contents: unknown;
+    let contents: ContentListUnion;
 
     if (audioBytes) {
       // Multimodal: audio + text prompt

@@ -22,3 +22,19 @@ export function getSameDayLastMonth(): string {
 
   return lastMonth.toISOString().split("T")[0];
 }
+
+/**
+ * Case-insensitive bidirectional substring check.
+ * Returns true if either string contains the other.
+ *
+ * Examples:
+ *   isSubstringMatch("QNB", "QNB EGYPT")  → true ("QNB EGYPT" contains "QNB")
+ *   isSubstringMatch("Bank CIB", "CIB")   → true ("Bank CIB" contains "CIB")
+ *   isSubstringMatch("Vodafone", "QNB")    → false
+ */
+export function isSubstringMatch(a: string, b: string): boolean {
+  const aLower = a.toLowerCase().trim();
+  const bLower = b.toLowerCase().trim();
+  if (aLower.length === 0 || bLower.length === 0) return false;
+  return aLower.includes(bLower) || bLower.includes(aLower);
+}

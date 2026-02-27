@@ -2,21 +2,11 @@
  * Shared types and constants for the Category Drilldown components.
  */
 
-import type { CurrencyType } from "@astik/db";
 import { palette } from "@/constants/colors";
 
 // =============================================================================
 // Constants
 // =============================================================================
-
-/**
- * Default display currency for aggregated stats.
- *
- * TODO: Replace with multi-currency aggregation once market rate conversion
- * is integrated into the stats flow. Currently all amounts are displayed
- * in the primary currency without conversion.
- */
-export const DEFAULT_DISPLAY_CURRENCY: CurrencyType = "EGP";
 
 /** Rotating palette for chart segments and category indicators. */
 export const CHART_COLORS: readonly string[] = [

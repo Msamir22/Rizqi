@@ -3,7 +3,7 @@
  * Compact insights card showing average monthly spend and month-over-month change.
  */
 
-import { DEFAULT_DISPLAY_CURRENCY } from "./drilldown";
+import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import { palette } from "@/constants/colors";
 import { useMonthlySummaries } from "@/hooks/useAnalytics";
 import { formatCurrency } from "@astik/logic";
@@ -24,6 +24,7 @@ const SUMMARY_MONTHS = 3;
 
 export function QuickStats(): React.JSX.Element {
   const { data: summaries, isLoading } = useMonthlySummaries(SUMMARY_MONTHS);
+  const { preferredCurrency } = usePreferredCurrency();
 
   const currentMonth = summaries[0];
   const lastMonth = summaries[1];
@@ -61,7 +62,7 @@ export function QuickStats(): React.JSX.Element {
             <Text className="text-base font-bold mt-1 text-slate-800 dark:text-white">
               {formatCurrency({
                 amount: avgExpense,
-                currency: DEFAULT_DISPLAY_CURRENCY,
+                currency: preferredCurrency,
               })}
             </Text>
           </View>

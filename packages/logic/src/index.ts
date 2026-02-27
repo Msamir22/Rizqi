@@ -10,6 +10,8 @@ export * from "./parsers";
 export * from "./types";
 export * from "./utils/currency";
 export * from "./utils/currency-data";
+export * from "./utils/build-category-tree";
+
 export * from "./utils/helpers";
 export * from "./utils/metal";
 export * from "./utils/purity-utils";

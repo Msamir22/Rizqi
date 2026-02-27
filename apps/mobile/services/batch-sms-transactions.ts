@@ -30,8 +30,10 @@ import {
   Transfer,
   type Category,
 } from "@astik/db";
+import type { AccountCardState } from "@/utils/build-initial-account-state";
 import type { ParsedSmsTransaction } from "@astik/logic";
 import { Q, type Model } from "@nozbe/watermelondb";
+import { findCashAccount } from "./account-service";
 import { getCurrentUserId } from "./supabase";
 
 // ---------------------------------------------------------------------------
@@ -41,6 +43,8 @@ import { getCurrentUserId } from "./supabase";
 interface BatchSaveResult {
   readonly savedCount: number;
   readonly failedCount: number;
+  readonly skippedAtmCount: number;
+  readonly atmSkipReason?: string;
   readonly errors: readonly string[];
 }
 
@@ -52,6 +56,8 @@ interface BatchSaveResult {
  * Build a Map from category system_name → category.id.
  * Fetches all categories once to avoid N+1 lookups.
  */
+
+// TODO: is this is the right place for this function?
 async function buildCategoryMap(): Promise<ReadonlyMap<string, string>> {
   const categories = await database
     .get<Category>("categories")
@@ -68,50 +74,6 @@ async function buildCategoryMap(): Promise<ReadonlyMap<string, string>> {
 }
 
 // ---------------------------------------------------------------------------
-// Cash account helper
-// ---------------------------------------------------------------------------
-
-/**
- * Find or create a "Cash" account for the current user.
- * Used as the destination for ATM withdrawals / cash-outs.
- *
- * Architecture: Lazy creation — only creates on first ATM withdrawal,
- * avoiding unnecessary account clutter for users who never use ATMs.
- */
-async function findOrCreateCashAccount(userId: string): Promise<string> {
-  const accountsCollection = database.get<Account>("accounts");
-
-  // Look for existing Cash account
-  const existing = await accountsCollection
-    .query(
-      Q.where("type", "CASH"),
-      Q.where("user_id", userId),
-      Q.where("deleted", Q.notEq(true))
-    )
-    .fetch();
-
-  if (existing.length > 0) {
-    return existing[0].id;
-  }
-
-  // Auto-create a Cash account
-  let createdId = "";
-  await database.write(async () => {
-    const created = await accountsCollection.create((acc) => {
-      acc.userId = userId;
-      acc.name = "Cash";
-      acc.type = "CASH";
-      acc.currency = "EGP";
-      acc.balance = 0;
-      acc.deleted = false;
-    });
-    createdId = created.id;
-  });
-
-  return createdId;
-}
-
-// ---------------------------------------------------------------------------
 // Balance delta accumulator
 // ---------------------------------------------------------------------------
 
@@ -119,6 +81,7 @@ async function findOrCreateCashAccount(userId: string): Promise<string> {
  * Accumulate a signed balance delta for a given account ID.
  * If the account already has a delta, the new value is added.
  */
+// TODO: Move this to a utility file.
 function accumulateBalanceDelta(
   deltas: Map<string, number>,
   accountId: string,
@@ -165,7 +128,7 @@ export async function batchCreateSmsTransactions(
   defaultAccountId: string
 ): Promise<BatchSaveResult> {
   if (transactions.length === 0) {
-    return { savedCount: 0, failedCount: 0, errors: [] };
+    return { savedCount: 0, failedCount: 0, skippedAtmCount: 0, errors: [] };
   }
 
   // ── Pre-batch lookups (outside the write block) ──────────────────────
@@ -175,6 +138,7 @@ export async function batchCreateSmsTransactions(
     return {
       savedCount: 0,
       failedCount: transactions.length,
+      skippedAtmCount: 0,
       errors: ["User not authenticated"],
     };
   }
@@ -182,12 +146,11 @@ export async function batchCreateSmsTransactions(
   const categoryMap = await buildCategoryMap();
   const errors: string[] = [];
 
-  // Check if any ATM withdrawals exist — lazy-load cash account only if needed
+  // Look up existing Cash account for ATM withdrawal routing (no lazy creation)
   const hasAtmWithdrawals = transactions.some((tx) => tx.isAtmWithdrawal);
-  let cashAccountId: string | null = null;
-  if (hasAtmWithdrawals) {
-    cashAccountId = await findOrCreateCashAccount(userId);
-  }
+  const cashAccountId = hasAtmWithdrawals
+    ? await findCashAccount(userId)
+    : null;
 
   // ── Prepare all operations in-memory ─────────────────────────────────
 
@@ -198,6 +161,7 @@ export async function batchCreateSmsTransactions(
   const preparedOps: Model[] = [];
   const balanceDeltas = new Map<string, number>();
   let savedCount = 0;
+  let skippedAtmCount = 0;
   let failedCount = 0;
 
   for (const tx of transactions) {
@@ -207,7 +171,13 @@ export async function batchCreateSmsTransactions(
       defaultAccountId;
 
     // ── ATM Withdrawal: prepare as Transfer (bank → cash) ──
-    if (tx.isAtmWithdrawal && cashAccountId) {
+    if (tx.isAtmWithdrawal) {
+      // Skip ATM withdrawals if no Cash account exists (FR-007)
+      if (!cashAccountId) {
+        skippedAtmCount++;
+        continue;
+      }
+
       preparedOps.push(
         transfersCollection.prepareCreate((t) => {
           t.userId = userId;
@@ -310,5 +280,75 @@ export async function batchCreateSmsTransactions(
     });
   }
 
-  return { savedCount, failedCount, errors };
+  const atmSkipReason =
+    skippedAtmCount > 0
+      ? `${skippedAtmCount} ATM withdrawal(s) skipped — no Cash account found.`
+      : undefined;
+
+  return { savedCount, failedCount, skippedAtmCount, atmSkipReason, errors };
+}
+
+// ---------------------------------------------------------------------------
+// Account creation from SMS setup
+// ---------------------------------------------------------------------------
+
+/** Result of creating accounts from the SMS setup wizard. */
+export interface AccountSetupResult {
+  /** Mapping from financial entity name → created/existing account ID */
+  readonly senderAccountMap: SenderAccountMap;
+  /** The default account ID (from the card marked isDefault) */
+  readonly defaultAccountId: string;
+}
+
+/**
+ * Create WatermelonDB accounts from SMS setup cards and build the
+ * sender→account mapping needed for transaction routing.
+ *
+ * @param cards - Account cards from the setup wizard
+ * @param autoLinkedMapping - Pre-built mapping for existing account matches
+ * @returns Sender→account mapping + default account ID
+ * @throws Error if user is not authenticated
+ */
+export async function createAccountsFromSmsSetup(
+  cards: readonly AccountCardState[],
+  autoLinkedMapping: Readonly<Record<string, string>>
+): Promise<AccountSetupResult> {
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    throw new Error("User not authenticated");
+  }
+
+  const mapping: Record<string, string> = { ...autoLinkedMapping };
+  let defaultAccountId = "";
+
+  for (const card of cards) {
+    const account = await database.write(async () => {
+      return database.get<Account>("accounts").create((acc) => {
+        acc.userId = userId;
+        acc.name = card.name.trim();
+        acc.type = card.accountType;
+        acc.balance = 0;
+        acc.currency = card.currency;
+        acc.deleted = false;
+      });
+    });
+
+    // Map card name → new account ID for transaction routing
+    mapping[card.name.trim()] = account.id;
+
+    if (card.isDefault) {
+      defaultAccountId = account.id;
+    }
+  }
+
+  // Fallback: if no card was marked default, use the first created
+  if (!defaultAccountId && cards.length > 0) {
+    defaultAccountId = mapping[cards[0].name.trim()];
+  }
+
+  if (!defaultAccountId) {
+    throw new Error("No default account could be determined");
+  }
+
+  return { senderAccountMap: mapping, defaultAccountId };
 }
