@@ -19,18 +19,11 @@
  * @module build-category-tree
  */
 
+import { Category } from "@astik/db";
+
 // ---------------------------------------------------------------------------
 // Types (minimal shape required — decoupled from WatermelonDB model)
 // ---------------------------------------------------------------------------
-
-/** Minimal category shape needed to build the tree. */
-export interface CategoryTreeEntry {
-  readonly id: string;
-  readonly systemName: string;
-  readonly level: number;
-  readonly type?: string | undefined;
-  readonly parentId?: string | undefined;
-}
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -45,14 +38,12 @@ export interface CategoryTreeEntry {
  * @param categories - Flat array of all non-deleted categories (any order).
  * @returns Formatted category tree string ready for the AI system prompt.
  */
-export function buildCategoryTree(
-  categories: readonly CategoryTreeEntry[]
-): string {
+export function buildCategoryTree(categories: readonly Category[]): string {
   const l1Categories = categories.filter((c) => c.level === 1);
   const l2Categories = categories.filter((c) => c.level === 2);
 
   // Index L2s by parentId for O(1) child lookups
-  const childrenByParentId = new Map<string, CategoryTreeEntry[]>();
+  const childrenByParentId = new Map<string, Category[]>();
   for (const child of l2Categories) {
     if (child.parentId) {
       const siblings = childrenByParentId.get(child.parentId) ?? [];
