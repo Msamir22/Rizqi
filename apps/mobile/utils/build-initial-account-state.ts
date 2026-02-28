@@ -222,7 +222,15 @@ export async function buildInitialAccountState(
   const senderGroups = groupTransactionsBySender(transactions);
   const existingAccountMapping =
     await matchGroupsToExistingAccounts(senderGroups);
-  const cards = buildDeterministicSuggestions(senderGroups);
+
+  // Exclude senders already linked to existing accounts so we don't
+  // generate duplicate "new account" cards for them.
+  const unmatchedGroups = new Map(
+    [...senderGroups.entries()].filter(
+      ([, group]) => existingAccountMapping[group.senderAddress] === undefined
+    )
+  );
+  const cards = buildDeterministicSuggestions(unmatchedGroups);
 
   return { cards, existingAccountMapping };
 }
