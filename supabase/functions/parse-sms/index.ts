@@ -94,8 +94,7 @@ const DEFAULT_CURRENCY_ENUM: readonly string[] = [
 ];
 
 /**
- * Builds the Gemini response JSON schema with dynamic currency enum
- * and account suggestions array.
+ * Builds the Gemini response JSON schema with dynamic currency enum.
  *
  * @param currencies - Supported currencies from the client (falls back to DEFAULT_CURRENCY_ENUM)
  */
@@ -158,6 +157,11 @@ function buildResponseSchema(
               type: "string",
               description: "Last 4 digits of card if mentioned.",
             },
+            confidenceScore: {
+              type: "number",
+              description:
+                "Your confidence in the accuracy of this extraction (0.0 to 1.0). 1.0 = all fields are perfectly clear in the SMS. 0.5 = some fields required guessing. 0.0 = mostly guessing.",
+            },
           },
           required: [
             "messageId",
@@ -167,73 +171,26 @@ function buildResponseSchema(
             "counterparty",
             "date",
             "categorySystemName",
+            "confidenceScore",
           ],
         },
       },
-      accountSuggestions: {
-        type: "array",
-        description:
-          "Suggested accounts to create based on SMS content. Use fuzzy matching (bidirectional substring by name AND exact currency match) against existing accounts to avoid duplicates. If existingAccounts is empty, return at least one suggestion. Mark the most common account as isDefault: true.",
-        items: {
-          type: "object",
-          properties: {
-            name: {
-              type: "string",
-              description:
-                "Account display name derived from financial entity (e.g. 'CIB Savings', 'Vodafone Cash').",
-            },
-            currency: {
-              type: "string",
-              description:
-                "ISO 4217 currency code from the supported currencies list.",
-              enum: currencyEnum,
-            },
-            accountType: {
-              type: "string",
-              description:
-                "Account type: CASH if the user has ATM/bank cash withdrawals, DIGITAL_WALLET for mobile wallets (e.g. Vodafone Cash, Fawry, Orange Money), BANK for all other bank accounts.",
-              enum: ["BANK", "CASH", "DIGITAL_WALLET"],
-            },
-            isDefault: {
-              type: "boolean",
-              description:
-                "True for the account with the highest message frequency. Exactly one suggestion must be default.",
-            },
-          },
-          required: ["name", "currency", "accountType", "isDefault"],
-        },
-      },
     },
-    required: ["transactions", "accountSuggestions"],
+    required: ["transactions"],
   };
 }
 
 /**
- * Builds the system prompt with optional client-provided context.
+ * Builds the system prompt for Gemini SMS parsing.
  *
  * @param categoryTree - Category hierarchy (falls back to embedded CATEGORY_TREE)
- * @param existingAccounts - User's current accounts for deduplication
  */
-function buildSystemPrompt(
-  categoryTree: string,
-  existingAccounts?: ReadonlyArray<{
-    readonly name: string;
-    readonly currency: string;
-  }>
-): string {
-  let accountContext = "";
-  if (existingAccounts && existingAccounts.length > 0) {
-    accountContext = `\nEXISTING USER ACCOUNTS:\n${existingAccounts.map((a) => `- ${a.name} (${a.currency})`).join("\n")}\n\nUse fuzzy matching (bidirectional substring by name AND exact currency match) to check if a suggested account already exists. Do NOT suggest duplicates.\n`;
-  } else {
-    accountContext = `\nThe user has NO existing accounts. You MUST suggest at least one account based on the SMS content.\n`;
-  }
-
+function buildSystemPrompt(categoryTree: string): string {
   return `You are Astik AI, a financial SMS parser for an Egyptian personal finance app.
 
 YOUR TASK:
 Parse each SMS and extract structured transaction data.
 Only include messages that are CLEARLY financial transactions.
-Also suggest accounts the user should create based on the financial entities detected.
 
 INCLUDE ONLY:
 - Card purchases / POS payments
@@ -264,23 +221,26 @@ PARSING RULES:
 1. Amount: positive number, remove separators, handle Arabic numerals.
 2. Currency: the default currency is EGP, but it can be different based on the SMS content.
 3. Type: EXPENSE = money out, INCOME = money in.
-4. Counterparty: the merchant, vendor, person, or entity name.
+4. Counterparty: the merchant, vendor, person, or entity the user transacted WITH.
+   Counterparty MUST NEVER be the same as the financialEntity.
+   The financialEntity is the bank/wallet that SENT the SMS.
+   If no distinct counterparty can be extracted, set counterparty to empty string "".
 5. Date: from SMS body or use provided date.
-6. Category: return EXACTLY ONE system_name from the tree below. Use a specific L2 when confident (e.g. groceries, restaurant). If uncertain which L2 fits, use the L1 parent (e.g. food_drinks, shopping). NEVER use *_other L2 categories (food_other, shopping_other, etc.) — always prefer the L1 parent. Only use 'other' as an absolute last resort.
+6. Category: return EXACTLY ONE system_name from the CATEGORY TREE below.
+   You MUST NOT invent, combine, or modify category names.
+   Valid values are ONLY the exact strings listed in the tree.
+   Use a specific L2 when confident (e.g. groceries, restaurant).
+   If uncertain which L2 fits, use the L1 parent (e.g. food_drinks, shopping).
+   NEVER use *_other L2 categories (food_other, shopping_other, etc.) — always prefer the L1 parent.
+   Only use 'other' as an absolute last resort.
 7. financialEntity: bank/wallet name from SMS content.
 8. isAtmWithdrawal: true only for ATM withdrawals.
 9. cardLast4: last 4 card digits if mentioned.
+10. confidenceScore: your confidence in the accuracy of this extraction (0.0 to 1.0).
+    1.0 = all fields are perfectly clear in the SMS.
+    0.5 = some fields required guessing (e.g., category, counterparty).
+    Below 0.3 = most fields are uncertain — consider skipping instead.
 
-ACCOUNT SUGGESTION RULES:
-- Suggest accounts based on distinct financial entities and currencies found in the messages.
-- Each suggestion must have a name (financial entity), currency, accountType, and isDefault flag.
-- accountType must be one of: BANK, CASH, DIGITAL_WALLET.
-  - Use CASH if the user has any ATM or bank counter cash withdrawal transactions.
-  - Use DIGITAL_WALLET for mobile wallet services (e.g. Vodafone Cash, Fawry, Orange Money, Etisalat Cash).
-  - Use BANK for all other bank accounts (savings, current, credit card, etc.).
-- Mark exactly ONE suggestion as isDefault: true (the one with the highest message frequency).
-- If existing accounts are provided, use fuzzy matching to avoid duplicates.
-${accountContext}
 CATEGORY TREE:
 ${categoryTree}
 
@@ -299,14 +259,8 @@ interface SmsInput {
   readonly date: string;
 }
 
-interface ExistingAccount {
-  readonly name: string;
-  readonly currency: string;
-}
-
 interface ParseSmsRequest {
   readonly messages: ReadonlyArray<SmsInput>;
-  readonly existingAccounts?: ReadonlyArray<ExistingAccount>;
   readonly categories?: string;
   readonly supportedCurrencies?: ReadonlyArray<string>;
 }
@@ -322,18 +276,11 @@ interface AiTransaction {
   readonly financialEntity?: string;
   readonly isAtmWithdrawal?: boolean;
   readonly cardLast4?: string;
-}
-
-interface AiAccountSuggestion {
-  readonly name: string;
-  readonly currency: string;
-  readonly accountType: "BANK" | "CASH" | "DIGITAL_WALLET";
-  readonly isDefault: boolean;
+  readonly confidenceScore: number;
 }
 
 interface AiResponse {
   readonly transactions: ReadonlyArray<AiTransaction>;
-  readonly accountSuggestions?: ReadonlyArray<AiAccountSuggestion>;
 }
 
 // ---------------------------------------------------------------------------
@@ -426,12 +373,11 @@ Body: ${m.body}
       });
 
       const text = response.text ?? "";
-      if (!text) return { transactions: [], accountSuggestions: [] };
+      if (!text) return { transactions: [] };
 
       const parsed: AiResponse = JSON.parse(text);
       return {
         transactions: parsed.transactions ?? [],
-        accountSuggestions: parsed.accountSuggestions ?? [],
       };
     } catch (err: unknown) {
       lastError = err;
@@ -453,7 +399,7 @@ Body: ${m.body}
   const finalMsg =
     lastError instanceof Error ? lastError.message : "Unknown error";
   console.error(`[parse-sms] All retries exhausted: ${finalMsg}`);
-  return { transactions: [], accountSuggestions: [] };
+  return { transactions: [] };
 }
 
 // ---------------------------------------------------------------------------
@@ -484,7 +430,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       return errorResponse("'messages' array is required");
     }
     if (body.messages.length === 0) {
-      return jsonResponse({ transactions: [], accountSuggestions: [] });
+      return jsonResponse({ transactions: [] });
     }
 
     // 3. Init Gemini
@@ -498,7 +444,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const categoryTree = body.categories ?? CATEGORY_TREE;
     const currencies = body.supportedCurrencies ?? [];
     const responseSchema = buildResponseSchema(currencies);
-    const systemPrompt = buildSystemPrompt(categoryTree, body.existingAccounts);
+    const systemPrompt = buildSystemPrompt(categoryTree);
 
     // 5. Process all messages in a single Gemini call (with retry).
     //    Client-side chunking ensures each call stays under the ~150s limit.
@@ -510,13 +456,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
     );
 
     console.log(
-      `[parse-sms] Parsed ${result.transactions.length} transactions, ${result.accountSuggestions?.length ?? 0} account suggestions from ${body.messages.length} messages`
+      `[parse-sms] Parsed ${result.transactions.length} transactions from ${body.messages.length} messages`
     );
 
     // 6. Return results
     return jsonResponse({
       transactions: result.transactions,
-      accountSuggestions: result.accountSuggestions ?? [],
     });
   } catch (error: unknown) {
     const message =
