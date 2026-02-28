@@ -12,13 +12,9 @@
 
 import { supabase } from "./supabase";
 
-import type { AccountType, CurrencyType, TransactionType } from "@astik/db";
-import { SUPPORTED_CURRENCIES } from "@astik/logic";
-import type {
-  ParsedSmsAccountSuggestion,
-  ParsedSmsTransaction,
-  SmsMessage,
-} from "@astik/logic/src/types";
+import type { Category, CurrencyType, TransactionType } from "@astik/db";
+import { SUPPORTED_CURRENCIES, buildCategoryTree } from "@astik/logic";
+import type { ParsedSmsTransaction, SmsMessage } from "@astik/logic/src/types";
 
 // ---------------------------------------------------------------------------
 // Types — AI response shape
@@ -38,29 +34,19 @@ interface AiSmsTransaction {
   readonly isAtmWithdrawal?: boolean;
   /** Last 4 digits of the card found in the SMS body. */
   readonly cardLast4?: string;
+  /** AI self-assessed confidence in the accuracy of this extraction (0.0–1.0). */
+  readonly confidenceScore: number;
 }
 
-/** Account suggestion returned by the AI. */
-export interface AiAccountSuggestion {
-  readonly name: string;
-  readonly currency: string;
-  readonly accountType: string;
-  readonly isDefault: boolean;
-}
-
-/** Composite result from AI parsing including both transactions and account suggestions. */
+/** Result from AI parsing */
 export interface AiParseResult {
   readonly transactions: readonly ParsedSmsTransaction[];
-  readonly accountSuggestions: readonly ParsedSmsAccountSuggestion[];
 }
 
 /** Context sent alongside SMS messages to the Edge Function. */
 export interface ParseSmsContext {
-  readonly existingAccounts?: ReadonlyArray<{
-    readonly name: string;
-    readonly currency: string;
-  }>;
-  readonly categories: string;
+  /** Raw category entries from DB — used to build both the AI tree string and the validation set. */
+  readonly categories: readonly Category[];
   readonly supportedCurrencies: readonly string[];
 }
 
@@ -90,12 +76,6 @@ const VALID_TYPES: ReadonlySet<string> = new Set<TransactionType>([
   "INCOME",
 ]);
 
-const VALID_ACCOUNT_TYPES: ReadonlySet<string> = new Set<AccountType>([
-  "BANK",
-  "CASH",
-  "DIGITAL_WALLET",
-]);
-
 /**
  * Client-side chunk size — messages per Edge Function call.
  * Each chunk should complete well within the Supabase ~150s wall-time limit.
@@ -123,26 +103,6 @@ const INTER_CHUNK_DELAY_MS = 2000;
 // ---------------------------------------------------------------------------
 
 /**
- * Get incoming account suggestions from an array,
- * deduplicating by lowercase name + currency (keeps first seen).
- */
-function getAccountSuggestions(
-  incoming: readonly AiAccountSuggestion[]
-): AiAccountSuggestion[] {
-  // Deduplicate account suggestions across chunks by name+currency
-  const suggestionMap = new Map<string, AiAccountSuggestion>();
-
-  for (const suggestion of incoming) {
-    const key = `${suggestion.name.toLowerCase()}|${suggestion.currency}`;
-    if (!suggestionMap.has(key)) {
-      suggestionMap.set(key, suggestion);
-    }
-  }
-
-  return Array.from(suggestionMap.values());
-}
-
-/**
  * Runtime type guard for a single AI transaction object.
  * Validates that all required properties exist with correct types.
  */
@@ -158,42 +118,24 @@ function isValidAiTransaction(value: unknown): value is AiSmsTransaction {
     typeof obj.type === "string" &&
     typeof obj.counterparty === "string" &&
     typeof obj.date === "string" &&
-    typeof obj.categorySystemName === "string"
-  );
-}
-
-function isValidAiAccountSuggestion(
-  value: unknown
-): value is AiAccountSuggestion {
-  if (typeof value !== "object" || value === null) return false;
-
-  const obj = value as Record<string, unknown>;
-
-  return (
-    typeof obj.name === "string" &&
-    typeof obj.currency === "string" &&
-    typeof obj.accountType === "string" &&
-    typeof obj.isDefault === "boolean"
+    typeof obj.categorySystemName === "string" &&
+    typeof obj.confidenceScore === "number"
   );
 }
 
 /**
- * Parsed edge function response: transactions + account suggestions.
+ * Parsed edge function response.
  */
 interface ChunkAiResult {
   readonly transactions: readonly AiSmsTransaction[];
-  readonly accountSuggestions: readonly AiAccountSuggestion[];
 }
 
 /**
  * Safely parse and validate the Edge Function response.
- * Returns empty transactions and suggestions if the response shape is unexpected.
+ * Returns empty transactions if the response shape is unexpected.
  */
 function parseAiResponse(data: unknown): ChunkAiResult {
-  const emptyResult: ChunkAiResult = {
-    transactions: [],
-    accountSuggestions: [],
-  };
+  const emptyResult: ChunkAiResult = { transactions: [] };
 
   if (typeof data !== "object" || data === null) {
     console.warn(
@@ -220,15 +162,7 @@ function parseAiResponse(data: unknown): ChunkAiResult {
     );
   }
 
-  // Parse account suggestions (optional, treat missing/invalid as empty)
-  const rawSuggestions = Array.isArray(obj.accountSuggestions)
-    ? obj.accountSuggestions
-    : [];
-  const suggestions: AiAccountSuggestion[] = rawSuggestions.filter(
-    isValidAiAccountSuggestion
-  );
-
-  return { transactions, accountSuggestions: suggestions };
+  return { transactions };
 }
 
 function normalizeCurrency(raw: string): CurrencyType {
@@ -251,10 +185,19 @@ function normalizeType(raw: string): TransactionType {
   return "EXPENSE" as TransactionType;
 }
 
-/** Safely coerce an AI string to AccountType, defaulting to BANK. */
-function normalizeAccountType(value: string | undefined): AccountType {
-  if (value && VALID_ACCOUNT_TYPES.has(value)) return value as AccountType;
-  return "BANK";
+/**
+ * Validate and normalize an AI-returned category system_name.
+ * Falls back to "other" if the AI returned an unknown category.
+ */
+function validateCategory(
+  raw: string,
+  validCategories: ReadonlySet<string>
+): string {
+  if (validCategories.has(raw)) return raw;
+  console.warn(
+    `[ai-sms-parser] Unknown category "${raw}" from AI, falling back to "other"`
+  );
+  return "other";
 }
 
 function parseDate(dateStr: string, fallbackMs: number): Date {
@@ -270,7 +213,8 @@ function parseDate(dateStr: string, fallbackMs: number): Date {
  */
 function mapAiTransactions(
   aiTransactions: readonly AiSmsTransaction[],
-  candidateMap: ReadonlyMap<string, SmsCandidate>
+  candidateMap: ReadonlyMap<string, SmsCandidate>,
+  validCategoryNames: ReadonlySet<string>
 ): ParsedSmsTransaction[] {
   const results: ParsedSmsTransaction[] = [];
 
@@ -285,20 +229,30 @@ function mapAiTransactions(
       continue;
     }
 
+    // Counterparty guard: must never equal the financial entity
+    const counterparty =
+      aiTx.financialEntity &&
+      aiTx.counterparty.toLowerCase().trim() ===
+        aiTx.financialEntity.toLowerCase().trim()
+        ? ""
+        : aiTx.counterparty;
+
     results.push({
       amount: Math.abs(aiTx.amount),
       currency,
       type: normalizeType(aiTx.type),
-      counterparty: aiTx.counterparty,
+      counterparty,
       date: parseDate(aiTx.date, candidate.message.date),
       smsBodyHash: candidate.smsBodyHash,
       senderAddress: candidate.message.address,
       // Prefer financialEntity (extracted bank name) over raw sender address
       senderDisplayName: aiTx.financialEntity || candidate.message.address,
-      categorySystemName: aiTx.categorySystemName || "other",
+      categorySystemName: validateCategory(
+        aiTx.categorySystemName,
+        validCategoryNames
+      ),
       rawSmsBody: candidate.message.body,
-      // TODO: ensure the AI return confidence score.
-      confidence: 0.85,
+      confidence: Math.min(1, Math.max(0, aiTx.confidenceScore)),
       financialEntity: aiTx.financialEntity,
       isAtmWithdrawal: aiTx.isAtmWithdrawal ?? false,
       cardLast4: aiTx.cardLast4,
@@ -308,40 +262,21 @@ function mapAiTransactions(
   return results;
 }
 
-function mapAiAccountSuggestions(
-  aiSuggestions: readonly AiAccountSuggestion[]
-): ParsedSmsAccountSuggestion[] {
-  return aiSuggestions.map((aiSuggestion) => ({
-    name: aiSuggestion.name,
-    currency: normalizeCurrency(aiSuggestion.currency),
-    accountType: normalizeAccountType(aiSuggestion.accountType),
-    isDefault: aiSuggestion.isDefault,
-  }));
-}
-
 /**
  * Send a single chunk of messages to the Edge Function.
- * Returns validated AI transactions and account suggestions, or empty results on failure.
+ * Returns validated AI transactions, or empty results on failure.
  */
 async function invokeParseChunk(
   messagesPayload: readonly MessagePayload[],
-  context?: ParseSmsContext
+  context: ParseSmsContext
 ): Promise<ChunkAiResult> {
-  const emptyResult: ChunkAiResult = {
-    transactions: [],
-    accountSuggestions: [],
-  };
+  const emptyResult: ChunkAiResult = { transactions: [] };
 
   const response = await supabase.functions.invoke("parse-sms", {
     body: {
       messages: messagesPayload,
-      ...(context?.existingAccounts && {
-        existingAccounts: context.existingAccounts,
-      }),
-      ...(context?.categories && { categories: context.categories }),
-      ...(context?.supportedCurrencies && {
-        supportedCurrencies: context.supportedCurrencies,
-      }),
+      categories: buildCategoryTree(context.categories),
+      supportedCurrencies: context.supportedCurrencies,
     },
   });
 
@@ -395,21 +330,23 @@ interface ChunkWork {
  * results from successful chunks are still returned.
  *
  * @param candidates - SMS messages that passed the keyword filter
+ * @param context - Client context (categories, currencies)
  * @param onProgress - Optional callback invoked after each chunk completes
- * @param context - Optional client context (existing accounts, categories, currencies)
- * @returns Parsed transactions and AI account suggestions
- * @throws Never — returns empty arrays on total failure
+ * @returns Parsed transactions only (account suggestions derived separately)
+ * @throws Never — returns empty array on total failure
  */
 export async function parseSmsWithAi(
   candidates: readonly SmsCandidate[],
-  context?: ParseSmsContext,
+  context: ParseSmsContext,
   onProgress?: (progress: AiParseProgress) => void
 ): Promise<AiParseResult> {
-  const emptyResult: AiParseResult = {
-    transactions: [],
-    accountSuggestions: [],
-  };
+  const emptyResult: AiParseResult = { transactions: [] };
   if (candidates.length === 0) return emptyResult;
+
+  // Build validation set once for the entire parse session
+  const validCategoryNames = new Set(
+    context.categories.map((c) => c.systemName)
+  );
 
   try {
     // Build the lookup map: messageId → candidate
@@ -441,7 +378,6 @@ export async function parseSmsWithAi(
     const allResults: ParsedSmsTransaction[] = [];
 
     let chunkIndex = 0;
-    let accountSuggestions: AiAccountSuggestion[] = [];
     while (chunkIndex < chunkQueue.length) {
       // Delay between chunks to avoid Gemini rate limits (skip for first chunk)
       if (chunkIndex > 0) {
@@ -494,14 +430,12 @@ export async function parseSmsWithAi(
       }
 
       // Chunk succeeded (or it's a retry that returned no results — we accept that)
-      const mapped = mapAiTransactions(chunkResult.transactions, candidateMap);
+      const mapped = mapAiTransactions(
+        chunkResult.transactions,
+        candidateMap,
+        validCategoryNames
+      );
       allResults.push(...mapped);
-
-      // Merge account suggestions across chunks (deduplicate by name+currency, keep first seen)
-      accountSuggestions = getAccountSuggestions([
-        ...accountSuggestions,
-        ...chunkResult.accountSuggestions,
-      ]);
 
       chunksCompleted++;
 
@@ -515,10 +449,7 @@ export async function parseSmsWithAi(
       chunkIndex++;
     }
 
-    return {
-      transactions: allResults,
-      accountSuggestions: mapAiAccountSuggestions(accountSuggestions),
-    };
+    return { transactions: allResults };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[ai-sms-parser] Unexpected error:", message);
