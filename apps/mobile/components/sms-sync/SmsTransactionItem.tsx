@@ -68,6 +68,9 @@ function formatCategoryName(systemName: string): string {
     .join(" ");
 }
 
+/** Confidence threshold — scores at or below this trigger a "Needs Review" tag. */
+const CONFIDENCE_REVIEW_THRESHOLD = 0.5;
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -81,6 +84,7 @@ export function SmsTransactionItem({
 }: SmsTransactionItemProps): React.JSX.Element {
   const [isExpanded, setIsExpanded] = useState(false);
   const isExpense = transaction.type === "EXPENSE";
+  const needsReview = transaction.confidence <= CONFIDENCE_REVIEW_THRESHOLD;
 
   const handleToggleExpand = useCallback(() => {
     setIsExpanded((prev) => !prev);
@@ -126,6 +130,13 @@ export function SmsTransactionItem({
                 <View className="bg-amber-500/20 px-1.5 py-0.5 rounded ml-2">
                   <Text className="text-[10px] font-bold text-amber-400">
                     ATM
+                  </Text>
+                </View>
+              )}
+              {needsReview && (
+                <View className="bg-amber-500/20 px-1.5 py-0.5 rounded ml-2">
+                  <Text className="text-[10px] font-bold text-amber-400">
+                    Needs Review
                   </Text>
                 </View>
               )}

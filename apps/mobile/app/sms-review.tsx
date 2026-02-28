@@ -54,7 +54,6 @@ export default function SmsReviewScreen(): React.JSX.Element {
   const router = useRouter();
   const {
     transactions,
-    accountSuggestions,
     clearTransactions,
     setSenderAccountMap,
     setDefaultAccountId,
@@ -223,7 +222,6 @@ export default function SmsReviewScreen(): React.JSX.Element {
     return (
       <AccountSetupStep
         transactions={transactions}
-        accountSuggestions={accountSuggestions}
         existingAccounts={existingAccounts}
         onComplete={handleSetupComplete}
       />

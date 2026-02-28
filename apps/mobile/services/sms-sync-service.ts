@@ -19,7 +19,6 @@ import { database, Transaction } from "@astik/db";
 import {
   computeSmsHash,
   isKnownFinancialSender,
-  ParsedSmsAccountSuggestion,
   type ParsedSmsTransaction,
   type SmsMessage,
 } from "@astik/logic";
@@ -63,7 +62,6 @@ export interface SmsScanProgress {
 /** Result returned when scanning completes. */
 export interface SmsScanResult {
   readonly transactions: readonly ParsedSmsTransaction[];
-  readonly accountSuggestions: readonly ParsedSmsAccountSuggestion[];
   readonly totalScanned: number;
   readonly totalFound: number;
   readonly totalFilteredCandidates: number;
@@ -321,12 +319,11 @@ async function executeScanPipeline(
   });
 
   console.log(
-    `[sms-sync] AI parsing: ${aiResult.transactions.length} transactions, ${aiResult.accountSuggestions.length} account suggestions from ${candidates.length} candidates in ${durationMs}ms`
+    `[sms-sync] AI parsing: ${aiResult.transactions.length} transactions from ${candidates.length} candidates in ${durationMs}ms`
   );
 
   return {
     transactions: aiResult.transactions,
-    accountSuggestions: aiResult.accountSuggestions,
     totalScanned: messagesScanned,
     totalFound: aiResult.transactions.length,
     totalFilteredCandidates: candidates.length,

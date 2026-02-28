@@ -21,13 +21,20 @@ import {
   type ParsedSmsTransaction,
   computeSmsHash,
   isLikelyFinancialSms,
+  SUPPORTED_CURRENCIES,
 } from "@astik/logic";
 import {
   DeviceEventEmitter,
   type EmitterSubscription,
   Platform,
 } from "react-native";
-import { parseSmsWithAi, type SmsCandidate } from "./ai-sms-parser-service";
+import {
+  parseSmsWithAi,
+  type SmsCandidate,
+  type ParseSmsContext,
+} from "./ai-sms-parser-service";
+import { database, type Category } from "@astik/db";
+import { Q } from "@nozbe/watermelondb";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -115,7 +122,18 @@ async function processNativeSmsEvent(event: NativeSmsEvent): Promise<void> {
       smsBodyHash: hash,
     };
 
-    const aiResult = await parseSmsWithAi([candidate]);
+    // Load categories from DB for AI context
+    const categories = await database
+      .get<Category>("categories")
+      .query(Q.where("deleted", Q.notEq(true)))
+      .fetch();
+
+    const context: ParseSmsContext = {
+      categories,
+      supportedCurrencies: SUPPORTED_CURRENCIES.map((c) => c.code),
+    };
+
+    const aiResult = await parseSmsWithAi([candidate], context);
 
     // Step 4: Emit parsed transactions to all registered handlers
     for (const parsed of aiResult.transactions) {

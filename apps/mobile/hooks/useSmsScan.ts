@@ -17,10 +17,7 @@ import {
   type SmsScanProgress,
   type SmsScanResult,
 } from "@/services/sms-sync-service";
-import type {
-  ParsedSmsAccountSuggestion,
-  ParsedSmsTransaction,
-} from "@astik/logic";
+import type { ParsedSmsTransaction } from "@astik/logic";
 import { useCallback, useRef, useState } from "react";
 
 // ---------------------------------------------------------------------------
@@ -38,8 +35,6 @@ export interface UseSmsScanResult {
   readonly result: SmsScanResult | null;
   /** Parsed transactions from the scan (shortcut to result.transactions) */
   readonly transactions: readonly ParsedSmsTransaction[];
-  /** AI-suggested accounts from the scan (shortcut to result.accountSuggestions) */
-  readonly accountSuggestions: readonly ParsedSmsAccountSuggestion[];
   /** Error message if scan failed */
   readonly error: string | null;
   /** Start scanning the SMS inbox */
@@ -68,9 +63,6 @@ export function useSmsScan(): UseSmsScanResult {
   const [transactions, setTransactions] = useState<
     readonly ParsedSmsTransaction[]
   >([]);
-  const [accountSuggestions, setAccountSuggestions] = useState<
-    readonly ParsedSmsAccountSuggestion[]
-  >([]);
   const [error, setError] = useState<string | null>(null);
 
   // Guard against concurrent scans
@@ -87,7 +79,6 @@ export function useSmsScan(): UseSmsScanResult {
       setProgress(null);
       setResult(null);
       setTransactions([]);
-      setAccountSuggestions([]);
       setError(null);
 
       try {
@@ -104,7 +95,6 @@ export function useSmsScan(): UseSmsScanResult {
 
         setResult(scanResult);
         setTransactions(scanResult.transactions);
-        setAccountSuggestions(scanResult.accountSuggestions);
         setStatus("complete");
       } catch (err) {
         const message = err instanceof Error ? err.message : "SMS scan failed";
@@ -122,7 +112,6 @@ export function useSmsScan(): UseSmsScanResult {
     setProgress(null);
     setResult(null);
     setTransactions([]);
-    setAccountSuggestions([]);
     setError(null);
     isScanningRef.current = false;
   }, []);
@@ -132,7 +121,6 @@ export function useSmsScan(): UseSmsScanResult {
     progress,
     result,
     transactions,
-    accountSuggestions,
     error,
     startScan,
     reset,

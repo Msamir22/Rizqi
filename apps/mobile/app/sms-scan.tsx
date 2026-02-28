@@ -14,17 +14,12 @@
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import {
-  SUPPORTED_CURRENCIES,
-  buildCategoryTree,
-  type ParsedSmsTransaction,
-} from "@astik/logic";
+import { SUPPORTED_CURRENCIES, type ParsedSmsTransaction } from "@astik/logic";
 import { SmsScanProgress } from "@/components/sms-sync/SmsScanProgress";
 import { useSmsScan } from "@/hooks/useSmsScan";
 import { useSmsScanContext } from "@/context/SmsScanContext";
 import { useSmsSync } from "@/hooks/useSmsSync";
 import { loadExistingSmsHashes } from "@/services/sms-sync-service";
-import { useAccounts } from "@/hooks/useAccounts";
 import { useAllCategories } from "@/context/CategoriesContext";
 import type { ParseSmsContext } from "@/services/ai-sms-parser-service";
 
@@ -72,39 +67,22 @@ function getTopCategories(
  */
 export default function SmsScanScreen(): React.JSX.Element {
   const router = useRouter();
-  const {
-    status,
-    progress,
-    result,
-    transactions,
-    accountSuggestions,
-    error,
-    startScan,
-  } = useSmsScan();
+  const { status, progress, result, transactions, error, startScan } =
+    useSmsScan();
 
-  const {
-    setTransactions,
-    setAccountSuggestions: setCtxAccountSuggestions,
-    scanMode,
-  } = useSmsScanContext();
+  const { setTransactions, scanMode } = useSmsScanContext();
   const { lastSyncTimestamp } = useSmsSync();
-  const { accounts: existingAccounts, isLoading: isAccountsLoading } =
-    useAccounts();
   const { categories: allCategories, isLoading: isCategoriesLoading } =
     useAllCategories();
-  const isAiContextReady = !isAccountsLoading && !isCategoriesLoading;
+  const isAiContextReady = !isCategoriesLoading;
 
   // Build AI context from existing user data
   const aiContext = useMemo(
     (): ParseSmsContext => ({
-      existingAccounts: existingAccounts.map((acc) => ({
-        name: acc.name,
-        currency: acc.currency,
-      })),
-      categories: buildCategoryTree(allCategories),
+      categories: allCategories,
       supportedCurrencies: SUPPORTED_CURRENCIES.map((c) => c.code),
     }),
-    [existingAccounts, allCategories]
+    [allCategories]
   );
 
   // Shared scan initiation logic (used by both auto-start and retry)
@@ -142,7 +120,6 @@ export default function SmsScanScreen(): React.JSX.Element {
   const handleReviewPress = (): void => {
     if (transactions.length > 0) {
       setTransactions(transactions);
-      setCtxAccountSuggestions(accountSuggestions);
       router.push("/sms-review");
     }
   };

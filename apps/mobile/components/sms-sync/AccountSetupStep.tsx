@@ -27,17 +27,14 @@ import {
   createAccountsFromSmsSetup,
   type AccountSetupResult,
 } from "@/services/batch-sms-transactions";
-import { database, type Account } from "@astik/db";
+import type { Account } from "@astik/db";
 import {
   buildInitialAccountState,
   generateAccountCardKey,
   type AccountCardState,
   type InitialAccountState,
 } from "@/utils/build-initial-account-state";
-import type {
-  ParsedSmsAccountSuggestion,
-  ParsedSmsTransaction,
-} from "@astik/logic";
+import type { ParsedSmsTransaction } from "@astik/logic";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -47,7 +44,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 interface AccountSetupStepProps {
   readonly transactions: readonly ParsedSmsTransaction[];
-  readonly accountSuggestions: readonly ParsedSmsAccountSuggestion[];
   readonly existingAccounts: readonly Account[];
   /** Called when setup completes (accounts created) or user skips */
   readonly onComplete: (result: AccountSetupResult) => void;
@@ -74,7 +70,6 @@ function toCardData(card: AccountCardState): AccountCardData {
 
 export function AccountSetupStep({
   transactions,
-  accountSuggestions,
   existingAccounts,
   onComplete,
 }: AccountSetupStepProps): React.JSX.Element {
@@ -93,11 +88,7 @@ export function AccountSetupStep({
     let cancelled = false;
 
     async function init(): Promise<void> {
-      const state = await buildInitialAccountState(
-        transactions,
-        accountSuggestions,
-        database
-      );
+      const state = await buildInitialAccountState(transactions);
       if (!cancelled) {
         setInitialState(state);
         setAccountCards([...state.cards]);
@@ -109,7 +100,7 @@ export function AccountSetupStep({
     return () => {
       cancelled = true;
     };
-  }, [transactions, accountSuggestions]);
+  }, [transactions]);
 
   const autoLinkedMapping = useMemo(
     () => initialState?.existingAccountMapping ?? {},
