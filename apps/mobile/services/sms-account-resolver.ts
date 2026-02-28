@@ -7,8 +7,8 @@
  * @module sms-account-resolver
  */
 
-import { Q, type Database } from "@nozbe/watermelondb";
-import type { BankDetails, Account } from "@astik/db";
+import { Q } from "@nozbe/watermelondb";
+import { database, type BankDetails, type Account } from "@astik/db";
 import { getDefaultAccountId } from "./sender-account-mapping";
 
 // ---------------------------------------------------------------------------
@@ -144,16 +144,14 @@ function isSenderMatch(
  *
  * @param senderAddress - The SMS sender address (e.g., "CIB", "NBE")
  * @param smsBody       - The raw SMS body text
- * @param db            - WatermelonDB database instance
  * @returns Resolved account with match details, or null if no match
  */
 export async function resolveAccountForSms(
   senderAddress: string,
-  smsBody: string,
-  db: Database
+  smsBody: string
 ): Promise<ResolvedAccount | null> {
   // Step 1 & 2: Query bank_details with non-null sms_sender_name
-  const bankDetails = await db
+  const bankDetails = await database
     .get<BankDetails>("bank_details")
     .query(
       Q.and(
@@ -195,7 +193,7 @@ export async function resolveAccountForSms(
   // Step 3: Default account fallback
   const defaultAccountId = await getDefaultAccountId();
   if (defaultAccountId) {
-    const account = await fetchAccount(db, defaultAccountId);
+    const account = await fetchAccount(defaultAccountId);
     if (account) {
       return {
         accountId: defaultAccountId,
@@ -216,12 +214,9 @@ export async function resolveAccountForSms(
  * Fetch an account by ID from WatermelonDB.
  * Returns null if the account doesn't exist or is deleted.
  */
-async function fetchAccount(
-  db: Database,
-  accountId: string
-): Promise<Account | null> {
+async function fetchAccount(accountId: string): Promise<Account | null> {
   try {
-    const account = await db.get<Account>("accounts").find(accountId);
+    const account = await database.get<Account>("accounts").find(accountId);
     if (account.deleted) {
       return null;
     }

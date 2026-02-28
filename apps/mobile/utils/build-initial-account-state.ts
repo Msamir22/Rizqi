@@ -12,8 +12,11 @@
 
 import { resolveAccountForSms } from "@/services/sms-account-resolver";
 import type { AccountType, CurrencyType } from "@astik/db";
-import { ParsedSmsAccountSuggestion, ParsedSmsTransaction } from "@astik/logic";
-import { Database } from "@nozbe/watermelondb";
+import {
+  type ParsedSmsTransaction,
+  isKnownFinancialSender,
+  type BankInfo,
+} from "@astik/logic";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -114,16 +117,14 @@ function groupTransactionsBySender(
  * @returns Mapping of senderAddress → matched existing account ID
  */
 async function matchGroupsToExistingAccounts(
-  groups: ReadonlyMap<string, GroupedTransactionsBySender>,
-  db: Database
+  groups: ReadonlyMap<string, GroupedTransactionsBySender>
 ): Promise<Record<string, string>> {
   const mapping: Record<string, string> = {};
 
   for (const group of groups.values()) {
     const matched = await resolveAccountForSms(
       group.senderAddress,
-      group.smsBody,
-      db
+      group.smsBody
     );
 
     if (matched) {
@@ -135,36 +136,69 @@ async function matchGroupsToExistingAccounts(
 }
 
 /**
- * Convert AI account suggestions into account card state,
- * ensuring exactly one card is marked as default.
- *
- * @param suggestions - AI-suggested accounts to create
- * @returns Account card state array
+ * Map a bank registry InstitutionType to an AccountType.
+ * "bank" → BANK; wallet/payment/bnpl → DIGITAL_WALLET.
  */
-function suggestionsToCards(
-  suggestions: readonly ParsedSmsAccountSuggestion[]
+function mapRegistryType(type: BankInfo["type"]): AccountType {
+  if (type === "bank") return "BANK";
+  return "DIGITAL_WALLET";
+}
+
+/** Max number of deterministic account suggestions to show. */
+const MAX_SUGGESTIONS = 5;
+
+/**
+ * Build deterministic account suggestions from transaction sender addresses
+ * matched against the Egyptian bank registry.
+ *
+ * Deduplicates by shortName + currency (keeps the most frequent match),
+ * marks the most frequent suggestion as default, and caps at {@link MAX_SUGGESTIONS}.
+ *
+ * @param groups - Sender groups from {@link groupTransactionsBySender}
+ * @returns Account card state array (deterministic, no AI).
+ */
+function buildDeterministicSuggestions(
+  groups: ReadonlyMap<string, GroupedTransactionsBySender>
 ): AccountCardState[] {
-  if (suggestions.length === 0) return [];
+  // Deduplicate by shortName|currency, keeping the highest transaction count
+  const deduped = new Map<
+    string,
+    { info: BankInfo; currency: CurrencyType; count: number }
+  >();
 
-  const cards: AccountCardState[] = suggestions.map((s) => ({
-    key: generateAccountCardKey(),
-    name: s.name,
-    accountType: s.accountType,
-    currency: s.currency,
-    isDefault: s.isDefault,
-  }));
+  for (const group of groups.values()) {
+    const bankInfo = isKnownFinancialSender(group.senderAddress);
+    if (!bankInfo) continue;
 
-  // Ensure exactly one default
-  const firstDefaultIndex = cards.findIndex((c) => c.isDefault);
-  if (firstDefaultIndex === -1) {
-    cards[0] = { ...cards[0], isDefault: true };
-  } else {
-    for (let i = 0; i < cards.length; i++) {
-      cards[i] = { ...cards[i], isDefault: i === firstDefaultIndex };
+    const key = `${bankInfo.shortName.toLowerCase()}|${group.currency}`;
+    const existing = deduped.get(key);
+
+    // Same bank may appear under multiple sender IDs (e.g. "cib" and "cibeg").
+    // Keep only the entry with the highest transaction count so that the
+    // frequency-based default selection (most-used bank = default) stays accurate.
+    if (!existing || group.count > existing.count) {
+      deduped.set(key, {
+        info: bankInfo,
+        currency: group.currency,
+        count: group.count,
+      });
     }
   }
 
-  return cards;
+  if (deduped.size === 0) return [];
+
+  // Sort by count descending, limit to MAX_SUGGESTIONS
+  const sorted = [...deduped.values()]
+    .sort((a, b) => b.count - a.count)
+    .slice(0, MAX_SUGGESTIONS);
+
+  return sorted.map((entry, index) => ({
+    key: generateAccountCardKey(),
+    name: entry.info.shortName,
+    accountType: mapRegistryType(entry.info.type),
+    currency: entry.currency,
+    isDefault: index === 0, // Most frequent = default
+  }));
 }
 
 // ---------------------------------------------------------------------------
@@ -177,24 +211,18 @@ function suggestionsToCards(
  * Composes three pure steps:
  * 1. {@link groupTransactionsBySender} — deduplicate by entity+currency
  * 2. {@link matchGroupsToExistingAccounts} — auto-link to existing accounts
- * 3. {@link suggestionsToCards} — map AI suggestions to editable card state
+ * 3. {@link buildDeterministicSuggestions} — derive suggestions from bank registry
  *
  * @param transactions - Parsed SMS transactions from AI
- * @param existingAccounts - User's existing bank accounts with details
- * @param aiSuggestions - AI-suggested accounts to create
  * @returns Account cards + auto-linked mapping
  */
 export async function buildInitialAccountState(
-  transactions: readonly ParsedSmsTransaction[],
-  aiSuggestions: readonly ParsedSmsAccountSuggestion[],
-  db: Database
+  transactions: readonly ParsedSmsTransaction[]
 ): Promise<InitialAccountState> {
   const senderGroups = groupTransactionsBySender(transactions);
-  const existingAccountMapping = await matchGroupsToExistingAccounts(
-    senderGroups,
-    db
-  );
-  const cards = suggestionsToCards(aiSuggestions);
+  const existingAccountMapping =
+    await matchGroupsToExistingAccounts(senderGroups);
+  const cards = buildDeterministicSuggestions(senderGroups);
 
   return { cards, existingAccountMapping };
 }
