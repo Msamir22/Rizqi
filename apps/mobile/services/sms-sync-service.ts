@@ -108,19 +108,19 @@ const NON_TRANSACTIONAL_PATTERNS: readonly RegExp[] = [
   // OTP / verification codes (English & Arabic)
   /\bOTP[:\s]/i,
   /\bverification\s*code/i,
-  /\bرقم\s*(سري|مؤقت|التحقق)/i,
+  /(?<!\p{Script=Arabic})رقم\s*(?:سري|مؤقت|التحقق)(?!\p{Script=Arabic})/iu,
   // Password / PIN reset
   /\binvalid\s*(IPN\s*)?PIN/i,
   /\bpassword\s*reset/i,
-  /\bإعادة\s*انشاء\s*رقم\s*سري/i,
+  /(?<!\p{Script=Arabic})إعادة\s*انشاء\s*رقم\s*سري(?!\p{Script=Arabic})/iu,
   // Promotional / marketing (Arabic telecom promos)
-  /\bافتح\s*محفظة/,
-  /\bكاش\s*باك\s*مضمون/,
-  /\bإستمتع\s*ب/,
+  /(?<!\p{Script=Arabic})افتح\s*محفظة(?!\p{Script=Arabic})/u,
+  /(?<!\p{Script=Arabic})كاش\s*باك\s*مضمون(?!\p{Script=Arabic})/u,
+  /(?<!\p{Script=Arabic})إستمتع\s*ب(?!\p{Script=Arabic})/u,
   // Account activation notices
-  /\bتنشيط\s*حسابكم/,
+  /(?<!\p{Script=Arabic})تنشيط\s*حسابكم(?!\p{Script=Arabic})/u,
   // Survey / feedback links
-  /\bتقييم\s*خبرتك/i,
+  /(?<!\p{Script=Arabic})تقييم\s*خبرتك(?!\p{Script=Arabic})/iu,
   /\bsurvey\b/i,
 ];
 

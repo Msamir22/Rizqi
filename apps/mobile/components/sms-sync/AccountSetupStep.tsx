@@ -107,14 +107,22 @@ export function AccountSetupStep({
     let cancelled = false;
 
     async function init(): Promise<void> {
-      const state = await buildInitialAccountState(transactions);
-      if (!cancelled) {
-        setInitialState(state);
-        setAccountCards([...state.cards]);
+      try {
+        const state = await buildInitialAccountState(transactions);
+        if (!cancelled) {
+          setInitialState(state);
+          setAccountCards([...state.cards]);
+        }
+      } catch {
+        // Fallback to empty state so the UI isn't stuck on the skeleton
+        if (!cancelled) {
+          setInitialState({ cards: [], existingAccountMapping: {} });
+          setAccountCards([]);
+        }
       }
     }
 
-    init().catch(console.error);
+    init().catch(() => {});
 
     return () => {
       cancelled = true;

@@ -94,13 +94,7 @@ export default function SmsReviewScreen(): React.JSX.Element {
   const [autoSkipDone, setAutoSkipDone] = useState(false);
 
   useEffect(() => {
-    if (
-      autoSkipDone ||
-      step !== "setup" ||
-      transactions.length === 0 ||
-      existingAccounts.length === 0 // Wait for accounts to load from DB
-    )
-      return;
+    if (autoSkipDone || step !== "setup" || transactions.length === 0) return;
 
     buildInitialAccountState(transactions)
       .then((state) => {
@@ -108,7 +102,8 @@ export default function SmsReviewScreen(): React.JSX.Element {
         // auto-advance to review step using the existing mapping.
         if (
           state.cards.length === 0 &&
-          Object.keys(state.existingAccountMapping).length > 0
+          Object.keys(state.existingAccountMapping).length > 0 &&
+          existingAccounts.length > 0
         ) {
           const defaultAccount = existingAccounts.find((acc) => acc.isDefault);
           if (defaultAccount) {

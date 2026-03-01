@@ -13,7 +13,7 @@ WHERE id IN (
     SELECT id,
            ROW_NUMBER() OVER (
              PARTITION BY user_id, sms_body_hash
-             ORDER BY created_at ASC
+             ORDER BY deleted ASC, created_at ASC, id ASC
            ) AS rn
     FROM transactions
     WHERE sms_body_hash IS NOT NULL
@@ -28,7 +28,7 @@ WHERE id IN (
     SELECT id,
            ROW_NUMBER() OVER (
              PARTITION BY user_id, sms_body_hash
-             ORDER BY created_at ASC
+             ORDER BY deleted ASC, created_at ASC, id ASC
            ) AS rn
     FROM transfers
     WHERE sms_body_hash IS NOT NULL
