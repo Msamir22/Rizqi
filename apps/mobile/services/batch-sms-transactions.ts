@@ -184,16 +184,10 @@ export async function batchCreateSmsTransactions(
           t.fromAccountId = accountId;
           t.toAccountId = cashAccountId;
           t.amount = Math.abs(tx.amount);
-          t.currency = tx.currency as
-            | "EGP"
-            | "USD"
-            | "EUR"
-            | "GBP"
-            | "SAR"
-            | "AED"
-            | "KWD";
+          t.currency = tx.currency;
           t.date = new Date(tx.date);
-          t.notes = `[SMS ATM] from ${tx.senderDisplayName}`;
+          t.notes = `ATM Withdrawal`;
+          t.smsBodyHash = tx.smsBodyHash;
           t.deleted = false;
         })
       );

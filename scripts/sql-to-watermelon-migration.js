@@ -595,6 +595,44 @@ function findLatestMigration() {
 }
 
 // =============================================================================
+// IDEMPOTENCY CHECK
+// =============================================================================
+
+/**
+ * Check whether every schema change from the SQL file is already represented
+ * in the existing migrations.ts content.
+ *
+ * For ADD COLUMN: checks that `table: "tableName"` and `name: "colName"` both
+ * appear within the same `addColumns(...)` block.
+ *
+ * For CREATE TABLE: checks that `name: "tableName"` appears within a
+ * `createTable(...)` block.
+ *
+ * @param {string} content - The current migrations.ts file content
+ * @param {Record<string, Array<{name: string}>>} addColumnsData
+ * @param {Record<string, Array<{name: string}>>} createTablesData
+ * @returns {boolean} true if ALL changes are already present
+ */
+function isAlreadyMigrated(content, addColumnsData, createTablesData) {
+  // Check addColumns — every table+column pair must exist
+  for (const [table, columns] of Object.entries(addColumnsData)) {
+    // The table must appear in an addColumns block
+    if (!content.includes(`table: "${table}"`)) return false;
+    for (const col of columns) {
+      // The column name must appear somewhere in migrations.ts
+      if (!content.includes(`name: "${col.name}"`)) return false;
+    }
+  }
+
+  // Check createTables — table name must exist in a createTable block
+  for (const table of Object.keys(createTablesData)) {
+    if (!content.includes(`name: "${table}"`)) return false;
+  }
+
+  return true;
+}
+
+// =============================================================================
 // MAIN
 // =============================================================================
 
@@ -638,6 +676,22 @@ function main() {
       "   This is normal for migrations that only update data or create functions."
     );
     return;
+  }
+
+  // ── Idempotency: skip if these changes are already in migrations.ts ──
+  if (fs.existsSync(MIGRATIONS_TS_PATH)) {
+    const existingContent = fs.readFileSync(MIGRATIONS_TS_PATH, "utf-8");
+    const alreadyApplied = isAlreadyMigrated(
+      existingContent,
+      addColumnsData,
+      createTables
+    );
+    if (alreadyApplied) {
+      console.log(
+        "\n✅ Migration already present in migrations.ts — skipping."
+      );
+      return;
+    }
   }
 
   // Summary

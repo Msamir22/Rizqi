@@ -16,10 +16,11 @@
 import { palette } from "@/constants/colors";
 import type { SmsScanProgress as SmsScanProgressData } from "@/services/sms-sync-service";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useState } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import Animated, { FadeIn, FadeInDown, ZoomIn } from "react-native-reanimated";
 import Svg, { Circle } from "react-native-svg";
+import { useCategories } from "@/hooks/useCategories";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -91,36 +92,43 @@ export function SmsScanProgress({
       </View>
 
       {/* ── State Content ─────────────────────────────────────── */}
-      <View className="flex-1 px-4">
-        {status === "scanning" && <ScanningState progress={progress} />}
+      {status === "scanning" ? (
+        <ScrollView
+          className="flex-1 px-4"
+          showsVerticalScrollIndicator={false}
+        >
+          <ScanningState progress={progress} />
+        </ScrollView>
+      ) : (
+        <View className="flex-1 px-4">
+          {status === "complete" && transactionsFound > 0 && (
+            <SuccessState
+              transactionsFound={transactionsFound}
+              totalScanned={totalScanned}
+              durationMs={durationMs}
+              topCategories={topCategories}
+              onReviewPress={onReviewPress}
+              onBackPress={onBackPress}
+            />
+          )}
 
-        {status === "complete" && transactionsFound > 0 && (
-          <SuccessState
-            transactionsFound={transactionsFound}
-            totalScanned={totalScanned}
-            durationMs={durationMs}
-            topCategories={topCategories}
-            onReviewPress={onReviewPress}
-            onBackPress={onBackPress}
-          />
-        )}
+          {status === "complete" && transactionsFound === 0 && (
+            <EmptyState totalScanned={totalScanned} onBackPress={onBackPress} />
+          )}
 
-        {status === "complete" && transactionsFound === 0 && (
-          <EmptyState totalScanned={totalScanned} onBackPress={onBackPress} />
-        )}
-
-        {status === "error" && (
-          <ErrorState
-            error={error}
-            onRetryPress={onRetryPress}
-            onBackPress={onBackPress}
-          />
-        )}
-      </View>
+          {status === "error" && (
+            <ErrorState
+              error={error}
+              onRetryPress={onRetryPress}
+              onBackPress={onBackPress}
+            />
+          )}
+        </View>
+      )}
 
       {/* ── Bottom action (scanning state only) ───────────────── */}
       {status === "scanning" && (
-        <View className="px-4 pb-6">
+        <View className="px-4 pb-2">
           <ScanHintText progress={progress} />
           <TouchableOpacity
             onPress={onBackPress}
@@ -403,7 +411,9 @@ function ScanHintText({
   }
 
   return (
-    <Text className="text-xs text-slate-500 text-center mb-3">{hint}</Text>
+    <Text className="text-xs text-slate-500 text-center mt-4 mb-[10px]">
+      {hint}
+    </Text>
   );
 }
 
@@ -427,6 +437,16 @@ function SuccessState({
   readonly onBackPress: () => void;
 }): React.JSX.Element {
   const durationLabel = formatDuration(durationMs);
+
+  // Build systemName → displayName map from DB categories
+  const { categories: allCategories } = useCategories({ topLevelOnly: false });
+  const categoryNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const cat of allCategories) {
+      map.set(cat.systemName, cat.displayName);
+    }
+    return map;
+  }, [allCategories]);
 
   return (
     <Animated.View entering={ZoomIn.springify()} className="flex-1">
@@ -476,13 +496,17 @@ function SuccessState({
 
       {/* ── Category Chips ──────────────────────────────────── */}
       {topCategories.length > 0 && (
-        <Animated.View entering={FadeInDown.delay(300)} className="mt-5">
+        <Animated.View entering={FadeInDown.delay(300)} className="mt-5 ml-2">
           <Text className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
             Identified Categories
           </Text>
           <View className="flex-row flex-wrap gap-2">
             {topCategories.map((cat) => (
-              <CategoryChip key={cat} name={cat} />
+              <CategoryChip
+                key={cat}
+                name={cat}
+                categoryNameMap={categoryNameMap}
+              />
             ))}
           </View>
         </Animated.View>
@@ -821,9 +845,15 @@ function SummaryRow({
 }
 
 /** Category chip in the success state */
-function CategoryChip({ name }: { readonly name: string }): React.JSX.Element {
+function CategoryChip({
+  name,
+  categoryNameMap,
+}: {
+  readonly name: string;
+  readonly categoryNameMap: ReadonlyMap<string, string>;
+}): React.JSX.Element {
   // Resolve systemName to a display-friendly label
-  const displayName = formatCategoryName(name);
+  const displayName = formatCategoryName(name, categoryNameMap);
   const icon = getCategoryIcon(name);
 
   return (
@@ -862,31 +892,12 @@ function formatDuration(ms: number): string {
 }
 
 /** Converts a systemName like "food_drinks" to "Food & Drinks" */
-function formatCategoryName(systemName: string): string {
-  const KNOWN_NAMES: Record<string, string> = {
-    food_drinks: "Food & Drinks",
-    food_restaurants: "Restaurants",
-    food_groceries: "Groceries",
-    food_coffee: "Coffee",
-    shopping: "Shopping",
-    shopping_clothing: "Clothing",
-    shopping_electronics: "Electronics",
-    transport: "Transport",
-    transport_fuel: "Fuel",
-    transport_ride: "Rides",
-    transport_public: "Public Transit",
-    bills_utilities: "Bills & Utilities",
-    entertainment: "Entertainment",
-    health_medical: "Health",
-    education: "Education",
-    personal_care: "Personal Care",
-    gifts_donations: "Gifts",
-    income: "Income",
-    income_salary: "Salary",
-    transfer: "Transfer",
-  };
-
-  if (KNOWN_NAMES[systemName]) return KNOWN_NAMES[systemName];
+function formatCategoryName(
+  systemName: string,
+  categoryNameMap: ReadonlyMap<string, string>
+): string {
+  const dbName = categoryNameMap.get(systemName);
+  if (dbName) return dbName;
 
   // Fallback: capitalize and replace underscores
   return systemName

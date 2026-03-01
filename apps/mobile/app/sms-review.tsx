@@ -32,6 +32,7 @@ import {
   flushQueuedTransactions,
   setReviewingActive,
 } from "@/services/sms-live-detection-handler";
+import { buildInitialAccountState } from "@/utils/build-initial-account-state";
 import { database } from "@astik/db";
 import type { ParsedSmsTransaction } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
@@ -88,6 +89,41 @@ export default function SmsReviewScreen(): React.JSX.Element {
     },
     [setSenderAccountMap, setDefaultAccountId]
   );
+
+  // ── Auto-skip setup when all accounts are already matched ───────────
+  const [autoSkipDone, setAutoSkipDone] = useState(false);
+
+  useEffect(() => {
+    if (
+      autoSkipDone ||
+      step !== "setup" ||
+      transactions.length === 0 ||
+      existingAccounts.length === 0 // Wait for accounts to load from DB
+    )
+      return;
+
+    buildInitialAccountState(transactions)
+      .then((state) => {
+        // If no new cards needed (all senders matched existing accounts),
+        // auto-advance to review step using the existing mapping.
+        if (
+          state.cards.length === 0 &&
+          Object.keys(state.existingAccountMapping).length > 0
+        ) {
+          const defaultAccount = existingAccounts.find((acc) => acc.isDefault);
+          if (defaultAccount) {
+            handleSetupComplete({
+              senderAccountMap: state.existingAccountMapping,
+              defaultAccountId: defaultAccount.id,
+            });
+          }
+        }
+        setAutoSkipDone(true);
+      })
+      .catch(() => {
+        setAutoSkipDone(true);
+      });
+  }, [autoSkipDone, step, transactions, existingAccounts, handleSetupComplete]);
 
   // ── Save ────────────────────────────────────────────────────────────
 
@@ -213,11 +249,23 @@ export default function SmsReviewScreen(): React.JSX.Element {
   // ── Step 1: Account Setup ───────────────────────────────────────────
 
   if (step === "setup") {
+    // Wait for auto-skip check to complete before rendering anything
+    if (!autoSkipDone) {
+      return (
+        <SafeAreaView className="flex-1 bg-background dark:bg-background-dark" />
+      );
+    }
+
     return (
       <AccountSetupStep
         transactions={transactions}
         existingAccounts={existingAccounts}
         onComplete={handleSetupComplete}
+        onBack={() => router.back()}
+        onCancel={() => {
+          clearTransactions();
+          router.replace("/(tabs)");
+        }}
       />
     );
   }
@@ -228,19 +276,23 @@ export default function SmsReviewScreen(): React.JSX.Element {
     <SafeAreaView className="flex-1 bg-background dark:bg-background-dark">
       {/* Header */}
       <View className="flex-row items-center justify-between px-5 pt-2 pb-3">
-        <TouchableOpacity
-          onPress={() => setStep("setup")}
-          className="flex-row items-center"
-        >
-          <Ionicons
-            name="arrow-back"
-            size={18}
-            color={palette.nileGreen[500]}
-          />
-          <Text className="text-sm text-nileGreen-500 font-medium ml-1.5">
-            Back to Setup
-          </Text>
-        </TouchableOpacity>
+        {autoSkipDone ? (
+          <View className="w-[100px]" />
+        ) : (
+          <TouchableOpacity
+            onPress={() => setStep("setup")}
+            className="flex-row items-center"
+          >
+            <Ionicons
+              name="arrow-back"
+              size={18}
+              color={palette.nileGreen[500]}
+            />
+            <Text className="text-sm text-nileGreen-500 font-medium ml-1.5">
+              Back to Setup
+            </Text>
+          </TouchableOpacity>
+        )}
 
         <Text className="text-lg font-bold text-slate-900 dark:text-white">
           Review

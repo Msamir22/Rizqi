@@ -39,7 +39,7 @@ import { ConfirmationModal } from "@/components/modals/ConfirmationModal";
  * @returns A JSX element representing the Settings screen UI.
  */
 export default function SettingsScreen(): React.JSX.Element {
-  const { theme, mode, toggleTheme } = useTheme();
+  const { theme, isDark, toggleTheme } = useTheme();
   const { preferredCurrency, setPreferredCurrency } = usePreferredCurrency();
   const [isCurrencyPickerVisible, setIsCurrencyPickerVisible] = useState(false);
   const {
@@ -150,7 +150,7 @@ export default function SettingsScreen(): React.JSX.Element {
             <View className="flex-row items-center gap-3">
               <View className="w-8 dark:bg-[#6366f1] bg-[#fb923c] h-8 rounded-lg justify-center items-center">
                 <Ionicons
-                  name={mode === "dark" ? "moon" : "sunny"}
+                  name={isDark ? "moon" : "sunny"}
                   size={20}
                   color="#FFF"
                 />
@@ -160,10 +160,10 @@ export default function SettingsScreen(): React.JSX.Element {
               </Text>
             </View>
             <Switch
-              value={mode === "dark"}
+              value={isDark}
               onValueChange={toggleTheme}
               trackColor={{ false: "#767577", true: palette.nileGreen[500] }}
-              thumbColor={mode === "dark" ? "#FFF" : "#f4f3f4"}
+              thumbColor={isDark ? "#FFF" : "#f4f3f4"}
             />
           </View>
         </View>
