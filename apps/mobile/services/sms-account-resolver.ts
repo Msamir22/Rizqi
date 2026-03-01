@@ -8,7 +8,13 @@
  */
 
 import { Q } from "@nozbe/watermelondb";
-import { database, type BankDetails, type Account } from "@astik/db";
+import {
+  database,
+  type BankDetails,
+  type Account,
+  type CurrencyType,
+} from "@astik/db";
+import { isKnownFinancialSender } from "@astik/logic";
 import { getDefaultAccountId } from "./sender-account-mapping";
 
 // ---------------------------------------------------------------------------
@@ -138,19 +144,22 @@ function isSenderMatch(
  * Resolve which account an incoming SMS transaction belongs to.
  *
  * Resolution chain (highest confidence → lowest):
- * 1. SMS sender + card last 4 digits match a bank_details record → 1.0
- * 2. SMS sender alone matches a bank_details record → 0.7
- * 3. Default account from user Settings → 0.3
+ * 1. SMS sender + card last 4 digits match a bank_details record
+ * 2. SMS sender alone matches a bank_details record
+ * 3. Account name+currency match via bank registry lookup
+ * 4. Default account from user Settings
  *
  * @param senderAddress - The SMS sender address (e.g., "CIB", "NBE")
  * @param smsBody       - The raw SMS body text
+ * @param currency      - Optional transaction currency for name+currency matching
  * @returns Resolved account with match details, or null if no match
  */
 export async function resolveAccountForSms(
   senderAddress: string,
-  smsBody: string
+  smsBody: string,
+  currency?: CurrencyType
 ): Promise<ResolvedAccount | null> {
-  // Step 1 & 2: Query bank_details with non-null sms_sender_name
+  // Step 1 & 2: Query bank_details with non-null sms_sender_name or card_last_4
   const bankDetails = await database
     .get<BankDetails>("bank_details")
     .query(
@@ -190,7 +199,35 @@ export async function resolveAccountForSms(
     }
   }
 
-  // Step 3: Default account fallback
+  // Step 3: Name+currency match via bank registry
+  if (currency) {
+    const bankInfo = isKnownFinancialSender(senderAddress);
+    if (bankInfo) {
+      const normalizedBankName = bankInfo.shortName.toLowerCase().trim();
+
+      const allAccounts = await database
+        .get<Account>("accounts")
+        .query(Q.where("deleted", Q.notEq(true)), Q.where("currency", currency))
+        .fetch();
+
+      for (const account of allAccounts) {
+        const existingName = account.name.toLowerCase().trim();
+        if (
+          existingName === normalizedBankName ||
+          // Word boundary match: "CIB" matches "CIB Egypt" but not "NCIB"
+          new RegExp(`\\b${normalizedBankName}\\b`).test(existingName) ||
+          new RegExp(`\\b${existingName}\\b`).test(normalizedBankName)
+        ) {
+          return {
+            accountId: account.id,
+            accountName: account.name,
+          };
+        }
+      }
+    }
+  }
+
+  // Step 4: Default account fallback
   const defaultAccountId = await getDefaultAccountId();
   if (defaultAccountId) {
     const account = await fetchAccount(defaultAccountId);

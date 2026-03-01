@@ -204,7 +204,8 @@ export async function handleDetectedSms(
     // Step 1: Resolve account using senderAddress + rawSmsBody
     const resolved = await resolveAccountForSms(
       parsed.senderAddress,
-      parsed.rawSmsBody
+      parsed.rawSmsBody,
+      parsed.currency
     );
 
     if (!resolved) {

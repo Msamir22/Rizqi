@@ -162,6 +162,11 @@ function buildResponseSchema(
               description:
                 "Your confidence in the accuracy of this extraction (0.0 to 1.0). 1.0 = all fields are perfectly clear in the SMS. 0.5 = some fields required guessing. 0.0 = mostly guessing.",
             },
+            isTrusted: {
+              type: "boolean",
+              description:
+                "True if you are confident this is a REAL completed transaction (money actually moved). False if the message is ambiguous, promotional with amounts, or you are not 100% sure it represents actual money movement.",
+            },
           },
           required: [
             "messageId",
@@ -172,6 +177,7 @@ function buildResponseSchema(
             "date",
             "categorySystemName",
             "confidenceScore",
+            "isTrusted",
           ],
         },
       },
@@ -190,7 +196,27 @@ function buildSystemPrompt(categoryTree: string): string {
 
 YOUR TASK:
 Parse each SMS and extract structured transaction data.
-Only include messages that are CLEARLY financial transactions.
+Only include messages that are CLEARLY completed financial transactions where money has ACTUALLY moved.
+
+TRANSACTION CRITERIA — A real transaction SMS MUST have ALL of these:
+1. ACTUAL MONEY MOVEMENT: Money was debited, credited, sent, received, withdrawn, or paid. The SMS confirms a completed action, not a future/conditional one.
+2. SPECIFIC AMOUNT: A concrete amount that was actually transacted (not a promotional offer, reward, or incentive amount).
+3. PAST TENSE / CONFIRMATION: The message confirms something that already happened (e.g., "تم خصم", "تم تحويل", "paid", "debited", "credited", "received").
+4. BANK/WALLET NOTIFICATION: The SMS is a system notification from a bank, wallet, or payment provider about an actual account activity.
+
+RED FLAGS — Do NOT include if ANY of these are true:
+- The message uses FUTURE/CONDITIONAL language ("enjoy", "get", "استمتع", "هتاخد", "افتح", "ارجع")
+- The amount is a PROMOTIONAL OFFER, cashback incentive, or reward (e.g., "enjoy up to 100 EGP cashback")
+- The message is INVITING the user to do something (open a wallet, visit a branch, subscribe)
+- The message mentions a DATE IN THE FUTURE as a deadline ("before 2026-02-19")
+- There is NO confirmation of actual money movement — just an offer or advertisement
+- The message is about account activation, deactivation, or security (OTP, PIN reset)
+
+EXAMPLES OF NON-TRANSACTIONS (DO NOT INCLUDE):
+- "افتح محفظة فودافون كاش وإستمتع بكاش باك مضمون لحد 100 جنيه" → promotional offer, NOT a transaction
+- "ارجع افتح محفظة وإستمتع ب 200 جنيه" → incentive to open wallet, NOT a transaction
+- "زور أقرب فرع لتنشيط حسابكم" → account activation request, NOT a transaction
+- "الرقم المؤقت لإعادة انشاء رقم سري جديد هو 98764" → PIN/OTP reset, NOT a transaction
 
 INCLUDE ONLY:
 - Card purchases / POS payments
@@ -205,7 +231,7 @@ INCLUDE ONLY:
 
 DO NOT INCLUDE:
 - OTP / verification codes
-- Marketing / promotional SMS
+- Marketing / promotional SMS (even if they mention amounts)
 - Balance inquiry responses
 - Telecom recharges / top-ups / data bundles
 - SIM subscriptions
@@ -213,9 +239,16 @@ DO NOT INCLUDE:
 - Card activation / deactivation notices
 - Password reset or security alerts
 - App download links
+- Cashback offers / incentive messages
+- Account activation requests
 - Any message where you are uncertain
 
 WHEN IN DOUBT, SKIP. Precision > recall.
+
+isTrusted FIELD:
+- Set isTrusted to true ONLY when you are highly confident this is a real, completed transaction with actual money movement.
+- Set isTrusted to false when: the message is ambiguous, you're unsure if money actually moved, the amount could be promotional, or the SMS format is unusual.
+- When in doubt, set isTrusted to false — the user will review these.
 
 PARSING RULES:
 1. Amount: positive number, remove separators, handle Arabic numerals.
@@ -245,6 +278,7 @@ CATEGORY TREE:
 ${categoryTree}
 
 Handle Arabic naturally. InstaPay: \u062a\u062d\u0648\u064a\u0644 \u0627\u0644\u0649 = sent (EXPENSE), \u062a\u062d\u0648\u064a\u0644 \u0645\u0646 = received (INCOME).
+If the message contains "IPN transfer" and you can't extract the counterparty from the message, set counterparty to "Instapay".
 `;
 }
 
@@ -277,6 +311,7 @@ interface AiTransaction {
   readonly isAtmWithdrawal?: boolean;
   readonly cardLast4?: string;
   readonly confidenceScore: number;
+  readonly isTrusted: boolean;
 }
 
 interface AiResponse {
@@ -362,13 +397,13 @@ Body: ${m.body}
       }
 
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash-lite",
+        model: "gemini-2.5-flash",
         contents: userPrompt,
         config: {
           systemInstruction: systemPrompt,
           responseMimeType: "application/json",
           responseJsonSchema: responseSchema,
-          temperature: 1,
+          temperature: 0,
         },
       });
 

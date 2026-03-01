@@ -124,7 +124,8 @@ async function matchGroupsToExistingAccounts(
   for (const group of groups.values()) {
     const matched = await resolveAccountForSms(
       group.senderAddress,
-      group.smsBody
+      group.smsBody,
+      group.currency
     );
 
     if (matched) {
@@ -208,10 +209,12 @@ function buildDeterministicSuggestions(
 /**
  * Build the initial account setup state for the SMS review wizard.
  *
- * Composes three pure steps:
+ * Composes three steps:
  * 1. {@link groupTransactionsBySender} — deduplicate by entity+currency
  * 2. {@link matchGroupsToExistingAccounts} — auto-link to existing accounts
+ *    (bank_details match, name+currency match, or default fallback)
  * 3. {@link buildDeterministicSuggestions} — derive suggestions from bank registry
+ *    for senders that could not be matched
  *
  * @param transactions - Parsed SMS transactions from AI
  * @returns Account cards + auto-linked mapping

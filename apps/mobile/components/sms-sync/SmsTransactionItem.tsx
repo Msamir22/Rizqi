@@ -65,7 +65,7 @@ function formatCategoryName(systemName: string): string {
 }
 
 /** Confidence threshold — scores at or below this trigger a "Needs Review" tag. */
-const CONFIDENCE_REVIEW_THRESHOLD = 0.5;
+const CONFIDENCE_REVIEW_THRESHOLD = 0.8;
 
 // ---------------------------------------------------------------------------
 // Component

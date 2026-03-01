@@ -856,6 +856,7 @@ export type Database = {
           from_account_id: string;
           id: string;
           notes: string | null;
+          sms_body_hash: string | null;
           to_account_id: string;
           updated_at: string;
           user_id: string;
@@ -871,6 +872,7 @@ export type Database = {
           from_account_id: string;
           id?: string;
           notes?: string | null;
+          sms_body_hash?: string | null;
           to_account_id: string;
           updated_at?: string;
           user_id: string;
@@ -886,6 +888,7 @@ export type Database = {
           from_account_id?: string;
           id?: string;
           notes?: string | null;
+          sms_body_hash?: string | null;
           to_account_id?: string;
           updated_at?: string;
           user_id?: string;

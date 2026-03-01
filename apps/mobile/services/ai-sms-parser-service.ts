@@ -36,6 +36,8 @@ interface AiSmsTransaction {
   readonly cardLast4?: string;
   /** AI self-assessed confidence in the accuracy of this extraction (0.0–1.0). */
   readonly confidenceScore: number;
+  /** True if the AI is highly confident this is a real completed transaction. */
+  readonly isTrusted: boolean;
 }
 
 /** Result from AI parsing */
@@ -128,6 +130,8 @@ function isValidAiTransaction(value: unknown): value is AiSmsTransaction {
  */
 interface ChunkAiResult {
   readonly transactions: readonly AiSmsTransaction[];
+  /** True if the Edge Function call failed (not a legitimate empty result). */
+  readonly hasError: boolean;
 }
 
 /**
@@ -135,7 +139,7 @@ interface ChunkAiResult {
  * Returns empty transactions if the response shape is unexpected.
  */
 function parseAiResponse(data: unknown): ChunkAiResult {
-  const emptyResult: ChunkAiResult = { transactions: [] };
+  const emptyResult: ChunkAiResult = { transactions: [], hasError: false };
 
   if (typeof data !== "object" || data === null) {
     console.warn(
@@ -162,7 +166,7 @@ function parseAiResponse(data: unknown): ChunkAiResult {
     );
   }
 
-  return { transactions };
+  return { transactions, hasError: false };
 }
 
 function normalizeCurrency(raw: string): CurrencyType {
@@ -229,6 +233,15 @@ function mapAiTransactions(
       continue;
     }
 
+    // Filter out untrusted transactions (promotional offers, ambiguous messages)
+    if (!aiTx.isTrusted) {
+      console.info(
+        `[ai-sms-parser] Untrusted transaction from ${aiTx.financialEntity ?? candidate.message.address}, ` +
+          `amount: ${aiTx.amount} ${aiTx.currency}, skipping`
+      );
+      continue;
+    }
+
     // Counterparty guard: must never equal the financial entity
     const counterparty =
       aiTx.financialEntity &&
@@ -270,7 +283,7 @@ async function invokeParseChunk(
   messagesPayload: readonly MessagePayload[],
   context: ParseSmsContext
 ): Promise<ChunkAiResult> {
-  const emptyResult: ChunkAiResult = { transactions: [] };
+  const errorResult: ChunkAiResult = { transactions: [], hasError: true };
 
   const response = await supabase.functions.invoke("parse-sms", {
     body: {
@@ -286,7 +299,7 @@ async function invokeParseChunk(
         ? response.error.message
         : String(response.error);
     console.error("[ai-sms-parser] Chunk error:", errorMsg);
-    return emptyResult;
+    return errorResult;
   }
 
   return parseAiResponse(response.data);
@@ -395,9 +408,9 @@ export async function parseSmsWithAi(
       );
       const chunkDurationMs = Date.now() - chunkStartMs;
 
-      // Check if the chunk failed (invokeParseChunk returns empty on error)
+      // Only retry-with-split on actual errors, not legitimate empty results
       if (
-        chunkResult.transactions.length === 0 &&
+        chunkResult.hasError &&
         currentChunk.messages.length > 0 &&
         !currentChunk.isRetry &&
         currentChunk.messages.length > MIN_CHUNK_SIZE_FOR_SPLIT

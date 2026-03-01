@@ -15,7 +15,7 @@
  * @module sms-sync-service
  */
 
-import { database, Transaction } from "@astik/db";
+import { database, Transaction, Transfer } from "@astik/db";
 import {
   computeSmsHash,
   isKnownFinancialSender,
@@ -99,20 +99,73 @@ const SCAN_IN_PROGRESS_KEY = "@astik/sms_scan_in_progress";
 /** Default to 3 months ago for both initial and full resync. */
 const THREE_MONTHS_MS = 90 * 24 * 60 * 60 * 1000;
 
+/**
+ * Regex patterns that identify non-transactional SMS from financial senders.
+ * These messages should be filtered out before sending to the AI parser
+ * to reduce cost and avoid false positives.
+ */
+const NON_TRANSACTIONAL_PATTERNS: readonly RegExp[] = [
+  // OTP / verification codes (English & Arabic)
+  /\bOTP[:\s]/i,
+  /\bverification\s*code/i,
+  /(?<!\p{Script=Arabic})رقم\s*(?:سري|مؤقت|التحقق)(?!\p{Script=Arabic})/iu,
+  // Password / PIN reset
+  /\binvalid\s*(IPN\s*)?PIN/i,
+  /\bpassword\s*reset/i,
+  /(?<!\p{Script=Arabic})إعادة\s*انشاء\s*رقم\s*سري(?!\p{Script=Arabic})/iu,
+  // Promotional / marketing (Arabic telecom promos)
+  /(?<!\p{Script=Arabic})افتح\s*محفظة(?!\p{Script=Arabic})/u,
+  /(?<!\p{Script=Arabic})كاش\s*باك\s*مضمون(?!\p{Script=Arabic})/u,
+  /(?<!\p{Script=Arabic})إستمتع\s*ب(?!\p{Script=Arabic})/u,
+  // Account activation notices
+  /(?<!\p{Script=Arabic})تنشيط\s*حسابكم(?!\p{Script=Arabic})/u,
+  // Survey / feedback links
+  /(?<!\p{Script=Arabic})تقييم\s*خبرتك(?!\p{Script=Arabic})/iu,
+  /\bsurvey\b/i,
+];
+
+/**
+ * Check whether an SMS body matches known non-transactional patterns
+ * (OTPs, promotions, PIN resets, etc.) that should be excluded
+ * from AI parsing.
+ */
+function isNonTransactionalSms(body: string): boolean {
+  return NON_TRANSACTIONAL_PATTERNS.some((pattern) => pattern.test(body));
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
 /**
- * Query all existing SMS body hashes from the transactions table.
+ * Extract sms_body_hash strings from raw query rows into a Set.
+ * Shared by both the transactions and transfers queries below.
+ */
+function collectHashes(
+  rows: ReadonlyArray<Record<string, unknown>>,
+  target: Set<string>
+): void {
+  for (const row of rows) {
+    const hash = row.sms_body_hash;
+    if (typeof hash === "string") {
+      target.add(hash);
+    }
+  }
+}
+
+/**
+ * Query all existing SMS body hashes from the transactions AND transfers tables.
  * Used for deduplication — prevents re-parsing SMS messages that
- * have already been saved.
+ * have already been saved as either a transaction or a transfer (e.g., ATM withdrawal).
  *
  * Uses Q.unsafeSqlQuery + unsafeFetchRaw to SELECT only the hash column,
  * avoiding both full-row fetch and model hydration overhead.
  */
 export async function loadExistingSmsHashes(): Promise<ReadonlySet<string>> {
-  const rows = await database
+  const hashes = new Set<string>();
+
+  // ── Transactions ──────────────────────────────────────────────────────
+  const txRows = await database
     .get<Transaction>("transactions")
     .query(
       Q.unsafeSqlQuery(
@@ -120,18 +173,28 @@ export async function loadExistingSmsHashes(): Promise<ReadonlySet<string>> {
          WHERE source = 'SMS'
            AND sms_body_hash IS NOT NULL
            AND deleted != 1
-           AND _status IS NOT 'deleted'`
+           AND _status != 'deleted'`
       )
     )
     .unsafeFetchRaw();
 
-  const hashes = new Set<string>();
-  for (const row of rows) {
-    const hash = (row as Record<string, unknown>).sms_body_hash;
-    if (typeof hash === "string") {
-      hashes.add(hash);
-    }
-  }
+  collectHashes(txRows as Array<Record<string, unknown>>, hashes);
+
+  // ── Transfers (ATM withdrawals, etc.) ─────────────────────────────────
+  const tfRows = await database
+    .get<Transfer>("transfers")
+    .query(
+      Q.unsafeSqlQuery(
+        `SELECT sms_body_hash FROM transfers
+         WHERE sms_body_hash IS NOT NULL
+           AND deleted != 1
+           AND _status != 'deleted'`
+      )
+    )
+    .unsafeFetchRaw();
+
+  collectHashes(tfRows as Array<Record<string, unknown>>, hashes);
+
   return hashes;
 }
 
@@ -217,6 +280,11 @@ async function executeScanPipeline(
 
       // Filter by known Egyptian bank/fintech sender names
       if (!isKnownFinancialSender(sms.address)) {
+        continue;
+      }
+
+      // Skip OTPs, promotions, PIN resets, etc.
+      if (isNonTransactionalSms(sms.body)) {
         continue;
       }
 

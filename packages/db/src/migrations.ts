@@ -149,5 +149,16 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 12,
+      steps: [
+        addColumns({
+          table: "transfers",
+          columns: [
+            { name: "sms_body_hash", type: "string", isOptional: true },
+          ],
+        }),
+      ],
+    },
   ],
 });

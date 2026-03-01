@@ -33,6 +33,7 @@ export abstract class BaseTransfer extends Model {
   @field("exchange_rate") exchangeRate?: number;
   @field("from_account_id") fromAccountId!: string;
   @field("notes") notes?: string;
+  @field("sms_body_hash") smsBodyHash?: string;
   @field("to_account_id") toAccountId!: string;
   @date("updated_at") updatedAt!: Date;
   @field("user_id") userId!: string;

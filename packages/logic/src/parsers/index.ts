@@ -7,7 +7,7 @@
  * @module parsers/index
  */
 
-export { computeSmsHash } from "./sms-hash";
+export { computeSmsHash, normalizeSmsBody } from "./sms-hash";
 export { mapSmsToCategory } from "./sms-category-mapper";
 export { RegexSmsParser } from "./regex-sms-parser";
 export { isLikelyFinancialSms } from "./sms-keyword-filter";

@@ -21,6 +21,7 @@ import type {
   AccountCardData,
   ChannelMapping,
 } from "@/components/sms-sync/types";
+import { palette } from "@/constants/colors";
 import { useToast } from "@/components/ui/Toast";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import {
@@ -35,7 +36,16 @@ import {
   type InitialAccountState,
 } from "@/utils/build-initial-account-state";
 import type { ParsedSmsTransaction } from "@astik/logic";
+import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Text, TouchableOpacity, View } from "react-native";
+import Animated, {
+  FadeIn,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // ---------------------------------------------------------------------------
@@ -47,6 +57,10 @@ interface AccountSetupStepProps {
   readonly existingAccounts: readonly Account[];
   /** Called when setup completes (accounts created) or user skips */
   readonly onComplete: (result: AccountSetupResult) => void;
+  /** Called when user taps the back arrow — returns to SuccessState */
+  readonly onBack: () => void;
+  /** Called when user taps the cancel icon — discards all and exits flow */
+  readonly onCancel: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -72,6 +86,8 @@ export function AccountSetupStep({
   transactions,
   existingAccounts,
   onComplete,
+  onBack,
+  onCancel,
 }: AccountSetupStepProps): React.JSX.Element {
   const { showToast } = useToast();
   const { preferredCurrency } = usePreferredCurrency();
@@ -84,18 +100,34 @@ export function AccountSetupStep({
   const [channelMappings] = useState<ChannelMapping[]>([]);
   const [isCreatingAccounts, setIsCreatingAccounts] = useState(false);
 
+  // Derived loading state: true until initial account suggestions are ready
+  const isLoading = initialState === null;
+
   useEffect(() => {
     let cancelled = false;
 
     async function init(): Promise<void> {
-      const state = await buildInitialAccountState(transactions);
-      if (!cancelled) {
-        setInitialState(state);
-        setAccountCards([...state.cards]);
+      try {
+        const state = await buildInitialAccountState(transactions);
+        if (!cancelled) {
+          setInitialState(state);
+          setAccountCards([...state.cards]);
+        }
+      } catch {
+        // Fallback to empty state so the UI isn't stuck on the skeleton
+        if (!cancelled) {
+          setInitialState({ cards: [], existingAccountMapping: {} });
+          setAccountCards([]);
+          showToast({
+            type: "warning",
+            title: "Could not load suggestions",
+            message: "Add accounts manually below.",
+          });
+        }
       }
     }
 
-    init().catch(console.error);
+    init().catch(() => {});
 
     return () => {
       cancelled = true;
@@ -217,21 +249,90 @@ export function AccountSetupStep({
 
   return (
     <SafeAreaView className="flex-1 bg-background dark:bg-background-dark">
-      <SenderAccountMapper
-        accounts={cardData}
-        onUpdateAccount={handleUpdateAccount}
-        onRemoveAccount={handleRemoveAccount}
-        onAddAccount={handleAddAccount}
-        onSetDefault={handleSetDefault}
-        channels={channelMappings}
-        onUpdateChannel={handleUpdateChannel}
-        onSubmit={() => {
-          handleSubmit().catch(console.error);
-        }}
-        isSubmitting={isCreatingAccounts}
-        canSkip={canSkip}
-        onSkip={handleSkip}
-      />
+      {/* ── Header ───────────────────────────────────────────── */}
+      <View className="flex-row items-center justify-between px-4 pt-2 pb-3">
+        <TouchableOpacity
+          onPress={onBack}
+          activeOpacity={0.7}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          className="w-10 h-10 items-center justify-center"
+        >
+          <Ionicons name="chevron-back" size={24} color={palette.slate[400]} />
+        </TouchableOpacity>
+        <Text className="flex-1 text-center text-base font-bold text-slate-800 dark:text-white">
+          Account Setup
+        </Text>
+        <TouchableOpacity
+          onPress={onCancel}
+          activeOpacity={0.7}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          className="w-10 h-10 items-center justify-center"
+        >
+          <Ionicons name="close" size={24} color={palette.slate[400]} />
+        </TouchableOpacity>
+      </View>
+
+      {/* ── Loading Skeleton ─────────────────────────────────── */}
+      {isLoading ? (
+        <AccountSetupSkeleton />
+      ) : (
+        <SenderAccountMapper
+          accounts={cardData}
+          onUpdateAccount={handleUpdateAccount}
+          onRemoveAccount={handleRemoveAccount}
+          onAddAccount={handleAddAccount}
+          onSetDefault={handleSetDefault}
+          channels={channelMappings}
+          onUpdateChannel={handleUpdateChannel}
+          onSubmit={() => {
+            handleSubmit().catch(console.error);
+          }}
+          isSubmitting={isCreatingAccounts}
+          canSkip={canSkip}
+          onSkip={handleSkip}
+        />
+      )}
     </SafeAreaView>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Skeleton Loader
+// ---------------------------------------------------------------------------
+
+/** Number of skeleton cards to show while account data loads. */
+const SKELETON_CARD_COUNT = 3;
+
+/** Pulsing placeholder cards shown during the initial async load. */
+function AccountSetupSkeleton(): React.JSX.Element {
+  const opacity = useSharedValue(1);
+
+  useEffect(() => {
+    opacity.value = withRepeat(withTiming(0.4, { duration: 800 }), -1, true);
+  }, [opacity]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  return (
+    <Animated.View entering={FadeIn.duration(300)} className="flex-1 px-4 pt-4">
+      {Array.from({ length: SKELETON_CARD_COUNT }).map((_, i) => (
+        <Animated.View
+          key={`skeleton-${String(i)}`}
+          style={animatedStyle}
+          className="bg-slate-200 dark:bg-slate-800 rounded-2xl h-24 mb-3"
+        />
+      ))}
+
+      {/* Disabled CTA placeholder */}
+      <View className="mt-4">
+        <View className="w-full py-4 rounded-2xl bg-slate-300 dark:bg-slate-700 items-center opacity-50">
+          <Text className="text-slate-500 dark:text-slate-400 text-sm font-semibold">
+            Create accounts & review
+          </Text>
+        </View>
+      </View>
+    </Animated.View>
   );
 }
