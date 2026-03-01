@@ -599,34 +599,41 @@ function findLatestMigration() {
 // =============================================================================
 
 /**
- * Check whether every schema change from the SQL file is already represented
- * in the existing migrations.ts content.
- *
- * For ADD COLUMN: checks that `table: "tableName"` and `name: "colName"` both
- * appear within the same `addColumns(...)` block.
- *
- * For CREATE TABLE: checks that `name: "tableName"` appears within a
- * `createTable(...)` block.
- *
- * @param {string} content - The current migrations.ts file content
- * @param {Record<string, Array<{name: string}>>} addColumnsData
- * @param {Record<string, Array<{name: string}>>} createTablesData
- * @returns {boolean} true if ALL changes are already present
+ * Check whether a specific column addition already exists within an
+ * addColumns block for the given table in the migrations content.
  */
+function hasAddColumnInTable(content, table, colName) {
+  const blocks = [...content.matchAll(/addColumns\(\s*\{([\s\S]*?)\}\s*\)/g)];
+  return blocks.some(([, block]) => {
+    return (
+      new RegExp(`table:\\s*"${table}"`).test(block) &&
+      new RegExp(`name:\\s*"${colName}"`).test(block)
+    );
+  });
+}
+
+/**
+ * Check whether a createTable block for the given table already exists
+ * in the migrations content.
+ */
+function hasCreateTable(content, table) {
+  const blocks = [...content.matchAll(/createTable\(\s*\{([\s\S]*?)\}\s*\)/g)];
+  return blocks.some(([, block]) =>
+    new RegExp(`name:\\s*"${table}"`).test(block)
+  );
+}
+
 function isAlreadyMigrated(content, addColumnsData, createTablesData) {
-  // Check addColumns — every table+column pair must exist
+  // Check addColumns — every table+column pair must exist in the SAME block
   for (const [table, columns] of Object.entries(addColumnsData)) {
-    // The table must appear in an addColumns block
-    if (!content.includes(`table: "${table}"`)) return false;
     for (const col of columns) {
-      // The column name must appear somewhere in migrations.ts
-      if (!content.includes(`name: "${col.name}"`)) return false;
+      if (!hasAddColumnInTable(content, table, col.name)) return false;
     }
   }
 
   // Check createTables — table name must exist in a createTable block
   for (const table of Object.keys(createTablesData)) {
-    if (!content.includes(`name: "${table}"`)) return false;
+    if (!hasCreateTable(content, table)) return false;
   }
 
   return true;
