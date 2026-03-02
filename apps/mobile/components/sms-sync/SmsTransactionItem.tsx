@@ -9,9 +9,16 @@
  * - Tap-to-expand for original SMS body
  *
  * Architecture & Design Rationale:
- * - Pattern: Presentational Component
- * - Why: Receives all data + callbacks via props — easy to test/snapshot
+ * - Pattern: Presentational Component + React.memo
+ * - Why: Memoized to prevent re-renders when sibling items change.
+ *   With 150+ items the parent re-renders frequently (modal open/close,
+ *   selection toggle) and every un-memoized item re-renders too.
  * - SOLID: SRP — only renders a single transaction row
+ *
+ * Performance notes:
+ * - No layout animations (LinearTransition) — too expensive at 150+ items
+ * - Callbacks receive `index` so the parent can use stable useCallback refs
+ *   instead of inline arrows that break React.memo
  *
  * @module SmsTransactionItem
  */
@@ -19,13 +26,9 @@
 import { palette } from "@/constants/colors";
 import { formatCurrency, ParsedSmsTransaction } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useCallback, useState } from "react";
-import { Pressable, Text, View } from "react-native";
-import Animated, {
-  FadeIn,
-  FadeOut,
-  LinearTransition,
-} from "react-native-reanimated";
+import React, { memo, useCallback, useState } from "react";
+import { Text, TouchableOpacity, View } from "react-native";
+import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -34,14 +37,16 @@ import Animated, {
 interface SmsTransactionItemProps {
   /** The parsed transaction data */
   readonly transaction: ParsedSmsTransaction;
+  /** The original index in the flat transactions array */
+  readonly index: number;
   /** Whether this item is selected for saving */
   readonly isSelected: boolean;
   /** Matched account name (or empty if unmatched) */
   readonly accountName: string;
-  /** Toggle selection */
-  readonly onToggleSelect: () => void;
-  /** Called when user taps the item to edit it */
-  readonly onPress: () => void;
+  /** Toggle selection — receives index so parent can use a stable ref */
+  readonly onToggleSelect: (index: number) => void;
+  /** Called when user taps the item to edit — receives index */
+  readonly onPress: (index: number) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -71,8 +76,9 @@ const CONFIDENCE_REVIEW_THRESHOLD = 0.8;
 // Component
 // ---------------------------------------------------------------------------
 
-export function SmsTransactionItem({
+function SmsTransactionItemInner({
   transaction,
+  index,
   isSelected,
   accountName,
   onToggleSelect,
@@ -86,18 +92,28 @@ export function SmsTransactionItem({
     setIsExpanded((prev) => !prev);
   }, []);
 
+  const handlePress = useCallback(() => {
+    onPress(index);
+  }, [onPress, index]);
+
+  const handleToggle = useCallback(() => {
+    onToggleSelect(index);
+  }, [onToggleSelect, index]);
+
   return (
-    <Animated.View
-      layout={LinearTransition.springify()}
-      className="bg-slate-800/60 rounded-2xl mb-3 overflow-hidden"
-    >
-      <Pressable
-        onPress={onPress}
-        onLongPress={handleToggleExpand}
+    <View className="bg-slate-800/60 rounded-2xl mb-3 overflow-hidden">
+      <TouchableOpacity
+        onPress={handlePress}
         className="flex-row items-center p-4"
+        activeOpacity={0.7}
       >
         {/* Checkbox */}
-        <Pressable onPress={onToggleSelect} hitSlop={8} className="mr-3">
+        <TouchableOpacity
+          onPress={handleToggle}
+          hitSlop={8}
+          className="mr-3"
+          activeOpacity={0.7}
+        >
           <View
             className={`w-6 h-6 rounded-lg items-center justify-center border-2 ${
               isSelected
@@ -109,7 +125,7 @@ export function SmsTransactionItem({
               <Ionicons name="checkmark" size={16} color="white" />
             )}
           </View>
-        </Pressable>
+        </TouchableOpacity>
 
         {/* Content */}
         <View className="flex-1 mr-3">
@@ -175,16 +191,21 @@ export function SmsTransactionItem({
                 <Text className="text-xs text-blue-300">{accountName}</Text>
               </View>
             ) : null}
-            <View className="flex-row items-center ml-auto">
+            <TouchableOpacity
+              onPress={handleToggleExpand}
+              hitSlop={14}
+              className="flex-row items-center ml-auto p-1"
+              activeOpacity={0.7}
+            >
               <Ionicons
                 name={isExpanded ? "chevron-up" : "chevron-down"}
-                size={14}
+                size={16}
                 color={palette.slate[500]}
               />
-            </View>
+            </TouchableOpacity>
           </View>
         </View>
-      </Pressable>
+      </TouchableOpacity>
 
       {/* Expanded: original SMS body */}
       {isExpanded && (
@@ -203,6 +224,9 @@ export function SmsTransactionItem({
           </View>
         </Animated.View>
       )}
-    </Animated.View>
+    </View>
   );
 }
+
+/** Memoized to avoid re-rendering all 150+ items on every parent state change. */
+export const SmsTransactionItem = memo(SmsTransactionItemInner);

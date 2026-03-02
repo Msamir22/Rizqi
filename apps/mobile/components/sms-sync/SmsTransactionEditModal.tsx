@@ -31,6 +31,7 @@ import { palette } from "@/constants/colors";
 import type { ParsedSmsTransaction } from "@astik/logic";
 import type { TransactionType } from "@astik/db";
 import type { AccountWithBankDetails } from "@/services/sms-account-matcher";
+import { validateTransactionForm } from "@/validation/transaction-validation";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -111,6 +112,7 @@ export function SmsTransactionEditModal({
   const [selectedAccountName, setSelectedAccountName] =
     useState(currentAccountName);
   const [isAccountPickerOpen, setIsAccountPickerOpen] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // Reset local state when transaction changes
   useEffect(() => {
@@ -124,9 +126,26 @@ export function SmsTransactionEditModal({
 
   const handleSave = useCallback(() => {
     const parsedAmount = parseFloat(amount);
+
+    // Validate using shared validation
+    const { isValid, errors } = validateTransactionForm(txType, {
+      amount,
+      accountId: selectedAccountId,
+      categoryId: transaction.categorySystemName,
+    });
+
+    if (!isValid) {
+      // Show the first validation error
+      const firstError = Object.values(errors).find(Boolean);
+      setValidationError(firstError ?? "Please fix the form errors.");
+      return;
+    }
+
+    setValidationError(null);
+
     const edits: Record<string, unknown> = {};
 
-    if (!isNaN(parsedAmount) && parsedAmount !== transaction.amount) {
+    if (parsedAmount !== transaction.amount) {
       edits.amount = parsedAmount;
     }
     if (counterparty !== (transaction.counterparty || "")) {
@@ -161,7 +180,7 @@ export function SmsTransactionEditModal({
   return (
     <Modal
       visible={visible}
-      animationType="slide"
+      animationType="fade"
       transparent
       onRequestClose={onClose}
     >
@@ -203,6 +222,15 @@ export function SmsTransactionEditModal({
               </TouchableOpacity>
             </View>
           </View>
+
+          {/* Validation error */}
+          {validationError && (
+            <View className="mx-5 mb-3 p-3 bg-red-500/15 rounded-xl border border-red-500/30">
+              <Text className="text-xs text-red-400 font-medium">
+                {validationError}
+              </Text>
+            </View>
+          )}
 
           <ScrollView
             className="px-5 pb-8"

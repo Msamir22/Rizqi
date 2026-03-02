@@ -1,0 +1,270 @@
+/**
+ * CurrencyPickerStep Component
+ *
+ * Full-screen onboarding step that lets the user pick their currency.
+ * Always shown during onboarding — the user's selection is the sole
+ * source of truth for which currency to create the cash wallet in.
+ *
+ * The most likely currency (inferred from the device timezone) is
+ * sorted to the top and pre-selected for convenience.
+ *
+ * Architecture & Design Rationale:
+ * - Pattern: Presentational Component
+ * - Why: Pure UI — receives callbacks via props, no side effects
+ * - SOLID: SRP — only renders currency list and forwards selection
+ *
+ * @module CurrencyPickerStep
+ */
+
+import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
+import { detectCurrencyFromTimezone } from "@/utils/currency-detection";
+import type { CurrencyType } from "@astik/db";
+import { CurrencyInfo, SUPPORTED_CURRENCIES } from "@astik/logic";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useCallback, useMemo, useState } from "react";
+import {
+  FlatList,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+interface CurrencyPickerStepProps {
+  /** Called when the user taps "Continue" with the selected currency code. */
+  readonly onCurrencySelected: (currency: CurrencyType) => void;
+  /** Called when the user taps "Skip" — no cash account will be created. */
+  readonly onSkip: () => void;
+}
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+/** Fallback pre-selected currency when timezone detection fails (target market). */
+const FALLBACK_CURRENCY: CurrencyType = "EGP";
+
+/**
+ * Fixed item height for getItemLayout optimisation.
+ * py-4 (32) + h-10 flag (40) = 72px content + mb-2 (8) margin = 80px per row.
+ */
+const CURRENCY_ITEM_HEIGHT = 80;
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
+export function CurrencyPickerStep({
+  onCurrencySelected,
+  onSkip,
+}: CurrencyPickerStepProps): React.JSX.Element {
+  const insets = useSafeAreaInsets();
+  const { theme, isDark } = useTheme();
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Detect suggested currency from timezone (one-time on mount)
+  const suggestedCurrency = useMemo(
+    (): CurrencyType => detectCurrencyFromTimezone() ?? FALLBACK_CURRENCY,
+    []
+  );
+
+  const [selectedCode, setSelectedCode] =
+    useState<CurrencyType>(suggestedCurrency);
+
+  // Sort currencies: suggested first, then rest in original order
+  const sortedCurrencies = useMemo((): readonly CurrencyInfo[] => {
+    const suggested = SUPPORTED_CURRENCIES.find(
+      (c) => c.code === suggestedCurrency
+    );
+    if (!suggested) return SUPPORTED_CURRENCIES;
+
+    const rest = SUPPORTED_CURRENCIES.filter(
+      (c) => c.code !== suggestedCurrency
+    );
+    return [suggested, ...rest];
+  }, [suggestedCurrency]);
+
+  // Filter currencies based on search query
+  const filteredCurrencies = useMemo((): readonly CurrencyInfo[] => {
+    if (!searchQuery.trim()) return sortedCurrencies;
+
+    const query = searchQuery.toLowerCase().trim();
+    return sortedCurrencies.filter(
+      (c) =>
+        c.name.toLowerCase().includes(query) ||
+        c.code.toLowerCase().includes(query)
+    );
+  }, [searchQuery, sortedCurrencies]);
+
+  const handleSelect = useCallback((code: CurrencyType): void => {
+    setSelectedCode(code);
+  }, []);
+
+  const handleContinue = useCallback((): void => {
+    onCurrencySelected(selectedCode);
+  }, [onCurrencySelected, selectedCode]);
+
+  const renderCurrencyItem = useCallback(
+    ({
+      item,
+      index,
+    }: {
+      item: CurrencyInfo;
+      index: number;
+    }): React.JSX.Element => {
+      const isSelected = item.code === selectedCode;
+      const isSuggested =
+        index === 0 && item.code === suggestedCurrency && !searchQuery;
+
+      return (
+        <TouchableOpacity
+          onPress={() => handleSelect(item.code)}
+          className={`flex-row items-center py-4 px-4 mx-4 rounded-xl mb-2 ${
+            isSelected
+              ? "border-2 border-nileGreen-500 bg-emerald-500/[0.05] dark:bg-emerald-500/10"
+              : "border border-transparent bg-black/[0.03] dark:bg-white/5"
+          }`}
+          activeOpacity={0.7}
+        >
+          {/* Flag */}
+          <View className="w-10 h-10 rounded-full items-center justify-center bg-slate-700/30 mr-3">
+            <Text className="text-xl">{item.flag}</Text>
+          </View>
+
+          {/* Name & Code */}
+          <View className="flex-1">
+            <View className="flex-row items-center gap-2">
+              <Text className="text-base font-semibold text-text-primary dark:text-text-primary-dark">
+                {item.name}
+              </Text>
+              {isSuggested && (
+                <View className="px-2 py-0.5 rounded-full bg-nileGreen-500/20">
+                  <Text className="text-[10px] font-bold text-nileGreen-500">
+                    Suggested
+                  </Text>
+                </View>
+              )}
+            </View>
+            <Text className="text-xs text-text-secondary dark:text-text-secondary-dark mt-0.5">
+              {item.code}
+            </Text>
+          </View>
+
+          {/* Radio indicator */}
+          <View
+            className={`w-6 h-6 rounded-full items-center justify-center border-2 ${
+              isSelected ? "border-nileGreen-500" : "border-slate-500"
+            }`}
+          >
+            {isSelected && (
+              <View className="w-3 h-3 rounded-full bg-nileGreen-500" />
+            )}
+          </View>
+        </TouchableOpacity>
+      );
+    },
+    [selectedCode, handleSelect, suggestedCurrency, searchQuery]
+  );
+
+  const keyExtractor = useCallback(
+    (item: CurrencyInfo): string => item.code,
+    []
+  );
+
+  return (
+    <View className="flex-1 bg-background dark:bg-background-dark">
+      {/* Background Gradient for Dark Mode */}
+      {isDark && (
+        <LinearGradient
+          colors={theme.backgroundGradient}
+          style={StyleSheet.absoluteFill}
+        />
+      )}
+
+      {/* Header with Skip */}
+      <View className="px-6 pb-4" style={{ paddingTop: insets.top + 16 }}>
+        <View className="flex-row items-center justify-between mb-2">
+          <Text className="text-3xl font-bold text-text-primary dark:text-text-primary-dark">
+            Choose Your Currency
+          </Text>
+          <TouchableOpacity onPress={onSkip} activeOpacity={0.7}>
+            <Text className="text-base text-text-secondary dark:text-text-secondary-dark">
+              Skip
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <Text className="text-sm text-text-secondary dark:text-text-secondary-dark leading-5">
+          We&apos;ll create a wallet and show all amounts in this currency. You
+          can change it later in settings.
+        </Text>
+      </View>
+
+      {/* Search bar */}
+      <View className="mx-6 mb-4">
+        <View className="flex-row items-center px-4 py-3 rounded-xl bg-black/5 dark:bg-white/[0.08]">
+          <Ionicons
+            name="search"
+            size={18}
+            color={isDark ? palette.slate[400] : palette.slate[500]}
+          />
+          <TextInput
+            className="flex-1 ml-2 text-base text-text-primary dark:text-text-primary-dark"
+            placeholder="Search currency"
+            placeholderTextColor={
+              isDark ? palette.slate[500] : palette.slate[400]
+            }
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+        </View>
+      </View>
+
+      {/* Currency list */}
+      <FlatList
+        data={filteredCurrencies}
+        renderItem={renderCurrencyItem}
+        keyExtractor={keyExtractor}
+        getItemLayout={(
+          _data,
+          index
+        ): { length: number; offset: number; index: number } => ({
+          length: CURRENCY_ITEM_HEIGHT,
+          offset: CURRENCY_ITEM_HEIGHT * index,
+          index,
+        })}
+        showsVerticalScrollIndicator={false}
+        className="flex-1"
+        keyboardShouldPersistTaps="handled"
+      />
+
+      {/* Continue button */}
+      <View className="px-6" style={{ paddingBottom: insets.bottom + 16 }}>
+        <TouchableOpacity
+          onPress={handleContinue}
+          className="rounded-2xl py-[18px] bg-nileGreen-500 items-center justify-center"
+          // eslint-disable-next-line react-native/no-inline-styles
+          style={{
+            elevation: 4,
+            shadowColor: palette.nileGreen[500],
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+          }}
+          activeOpacity={0.8}
+        >
+          <Text className="text-white font-semibold text-lg">Continue</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}

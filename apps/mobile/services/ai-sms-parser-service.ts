@@ -169,14 +169,14 @@ function parseAiResponse(data: unknown): ChunkAiResult {
   return { transactions, hasError: false };
 }
 
-function normalizeCurrency(raw: string): CurrencyType {
+function normalizeCurrency(raw: string): CurrencyType | null {
   const upper = raw.toUpperCase();
   if (VALID_CURRENCIES.has(upper)) {
     return upper as CurrencyType;
   }
 
-  // It's okay to default to EGP since the SMS parsing functionality will only be available for Egypt as a start.
-  return "EGP";
+  // Unknown currency — return null so callers can skip or handle appropriately.
+  return null;
 }
 
 function normalizeType(raw: string): TransactionType {
@@ -229,6 +229,14 @@ function mapAiTransactions(
     if (!candidate) {
       console.warn(
         `[ai-sms-parser] Unknown messageId: ${aiTx.messageId}, skipping`
+      );
+      continue;
+    }
+
+    // Filter out transactions with unsupported currencies
+    if (!currency) {
+      console.warn(
+        `[ai-sms-parser] Unsupported currency "${aiTx.currency}" for messageId: ${aiTx.messageId}, skipping`
       );
       continue;
     }

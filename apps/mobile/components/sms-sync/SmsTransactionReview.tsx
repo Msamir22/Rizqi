@@ -39,7 +39,13 @@ import {
 import { getCurrentUserId } from "@/services/supabase";
 import type { ParsedSmsTransaction } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -197,6 +203,9 @@ export function SmsTransactionReview({
   const [selectedIndices, setSelectedIndices] = useState<ReadonlySet<number>>(
     () => new Set(transactions.map((_, i) => i)) // All selected by default
   );
+
+  const selectedIndicesRef = useRef(selectedIndices);
+  selectedIndicesRef.current = selectedIndices;
 
   // ── Category correction state ─────────────────────────────────────
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -392,20 +401,19 @@ export function SmsTransactionReview({
       return (
         <SmsTransactionItem
           transaction={tx}
-          isSelected={selectedIndices.has(item.originalIndex)}
+          index={item.originalIndex}
+          isSelected={selectedIndicesRef.current.has(item.originalIndex)}
           accountName={
             transactionOverrides.get(item.originalIndex)?.accountName ??
             accountMatches.get(item.originalIndex)?.accountName ??
             ""
           }
-          onToggleSelect={() => handleToggleItem(item.originalIndex)}
-          onPress={() => handleOpenEditModal(item.originalIndex)}
+          onToggleSelect={handleToggleItem}
+          onPress={handleOpenEditModal}
         />
       );
     },
     [
-      filteredTransactions,
-      selectedIndices,
       accountMatches,
       transactionOverrides,
       handleToggleItem,
@@ -560,6 +568,7 @@ export function SmsTransactionReview({
           data={listItems}
           renderItem={renderItem}
           keyExtractor={keyExtractor}
+          extraData={selectedIndices}
           contentContainerClassName="px-4 pb-32"
           showsVerticalScrollIndicator={false}
           removeClippedSubviews

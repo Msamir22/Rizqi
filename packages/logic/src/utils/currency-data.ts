@@ -74,3 +74,85 @@ export const CURRENCY_INFO_MAP: Readonly<
   CurrencyType,
   CurrencyInfo | undefined
 >;
+
+// ---------------------------------------------------------------------------
+// Timezone → Currency lookup (IANA timezone → ISO 4217)
+// ---------------------------------------------------------------------------
+
+/**
+ * Maps IANA timezone identifiers to their primary ISO 4217 currency code.
+ *
+ * Used to **suggest** (sort to top, pre-select) the most likely currency
+ * in the onboarding picker. Not used for auto-detection or account creation.
+ *
+ * Only includes timezones whose countries have currencies in SUPPORTED_CURRENCIES.
+ */
+export const TIMEZONE_TO_CURRENCY: Readonly<Record<string, CurrencyType>> = {
+  // Middle East & North Africa (target market)
+  "Africa/Cairo": "EGP",
+  "Asia/Riyadh": "SAR",
+  "Asia/Dubai": "AED",
+  "Asia/Kuwait": "KWD",
+  "Asia/Qatar": "QAR",
+  "Asia/Bahrain": "BHD",
+  "Asia/Muscat": "OMR",
+  "Asia/Amman": "JOD",
+  "Asia/Baghdad": "IQD",
+  "Africa/Tripoli": "LYD",
+  "Africa/Tunis": "TND",
+  "Africa/Casablanca": "MAD",
+  "Africa/Algiers": "DZD",
+
+  // Major global
+  "America/New_York": "USD",
+  "America/Chicago": "USD",
+  "America/Denver": "USD",
+  "America/Los_Angeles": "USD",
+  "America/Anchorage": "USD",
+  "Pacific/Honolulu": "USD",
+  "Europe/London": "GBP",
+  "Asia/Tokyo": "JPY",
+  "Europe/Zurich": "CHF",
+
+  // Eurozone
+  "Europe/Berlin": "EUR",
+  "Europe/Paris": "EUR",
+  "Europe/Rome": "EUR",
+  "Europe/Madrid": "EUR",
+  "Europe/Amsterdam": "EUR",
+  "Europe/Brussels": "EUR",
+  "Europe/Vienna": "EUR",
+  "Europe/Lisbon": "EUR",
+  "Europe/Helsinki": "EUR",
+  "Europe/Dublin": "EUR",
+  "Europe/Athens": "EUR",
+  "Europe/Luxembourg": "EUR",
+
+  // Asia-Pacific
+  "Asia/Shanghai": "CNY",
+  "Asia/Kolkata": "INR",
+  "Asia/Seoul": "KRW",
+  "Asia/Pyongyang": "KPW",
+  "Asia/Singapore": "SGD",
+  "Asia/Hong_Kong": "HKD",
+  "Asia/Kuala_Lumpur": "MYR",
+  "Australia/Sydney": "AUD",
+  "Australia/Melbourne": "AUD",
+  "Australia/Perth": "AUD",
+  "Pacific/Auckland": "NZD",
+
+  // Americas
+  "America/Toronto": "CAD",
+  "America/Vancouver": "CAD",
+
+  // Europe (non-EUR)
+  "Europe/Stockholm": "SEK",
+  "Europe/Oslo": "NOK",
+  "Europe/Copenhagen": "DKK",
+  "Atlantic/Reykjavik": "ISK",
+  "Europe/Istanbul": "TRY",
+  "Europe/Moscow": "RUB",
+
+  // Africa
+  "Africa/Johannesburg": "ZAR",
+};

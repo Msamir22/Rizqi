@@ -1,5 +1,8 @@
 import { useToast } from "@/components/ui/Toast";
-import { detectCurrencyFromDevice } from "@/utils/currency-detection";
+import {
+  DEFAULT_CURRENCY,
+  detectCurrencyFromTimezone,
+} from "@/utils/currency-detection";
 import { database, Profile, type CurrencyType } from "@astik/db";
 import { SUPPORTED_CURRENCIES } from "@astik/logic";
 import { Q } from "@nozbe/watermelondb";
@@ -55,8 +58,9 @@ export function usePreferredCurrency(): UsePreferredCurrencyResult {
         return profile.preferredCurrency as CurrencyType;
       }
     }
-    // No profile or unsupported currency — detect from device locale
-    return detectCurrencyFromDevice();
+    // No profile or unsupported currency — detect from device timezone.
+    // Falls back to DEFAULT_CURRENCY (USD) if detection returns null.
+    return detectCurrencyFromTimezone() ?? DEFAULT_CURRENCY;
   }, [profile?.preferredCurrency]);
 
   const setPreferredCurrency = async (

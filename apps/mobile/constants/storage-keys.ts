@@ -1,11 +1,11 @@
 /**
- * Storage Keys
+ * AsyncStorage key constants.
  *
- * Shared AsyncStorage key constants used across the application.
- * Centralizes key strings to prevent duplication and typos.
+ * Centralises every key used across the app so that readers/writers
+ * are always in sync and typos become compile-time errors.
  *
  * @module storage-keys
  */
 
-/** Key used to flag that a toast should be shown for Cash account creation. */
-export const SHOW_CASH_TOAST_KEY = "showCashAccountToast";
+/** Set to `"true"` after the user completes onboarding. */
+export const HAS_ONBOARDED_KEY = "hasOnboarded";

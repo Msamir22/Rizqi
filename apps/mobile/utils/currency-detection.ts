@@ -1,33 +1,39 @@
 /**
  * Currency Detection Utility
  *
- * Detects the user's preferred currency from the device locale.
- * Extracted from usePreferredCurrency hook for use in non-hook contexts
- * (e.g., service functions).
+ * Detects the user's likely currency from the device timezone.
+ * Used for:
+ * - Suggesting a currency in the onboarding picker (sorted to top)
+ * - Display fallback in usePreferredCurrency
+ *
+ * Not used for account creation — the user always makes the final
+ * choice via the currency picker during onboarding.
  *
  * @module currency-detection
  */
 
 import type { CurrencyType } from "@astik/db";
-import { SUPPORTED_CURRENCIES } from "@astik/logic";
-import { getLocales } from "expo-localization";
+import { TIMEZONE_TO_CURRENCY } from "@astik/logic";
+import { getCalendars } from "expo-localization";
 
-const DEFAULT_CURRENCY: CurrencyType = "USD";
+export const DEFAULT_CURRENCY: CurrencyType = "USD";
 
 /**
- * Determine the currency code from the device locale.
+ * Detect the user's likely currency from the device timezone.
  *
- * Reads the first locale's ISO 4217 currency code and checks
- * it against the app's supported currencies list.
+ * Reads the IANA timezone from `getCalendars()` (expo-localization,
+ * no permissions required) and maps it via `TIMEZONE_TO_CURRENCY`.
  *
- * @returns The device locale's currency code if supported, otherwise "USD".
+ * This is the most reliable cross-platform signal because
+ * the timezone is independent of the language/locale setting.
+ *
+ * @returns The timezone-inferred currency code, or `null` if unmapped.
  */
-export function detectCurrencyFromDevice(): CurrencyType {
-  const locales = getLocales();
-  const currencyCode = locales[0]?.currencyCode ?? null;
+export function detectCurrencyFromTimezone(): CurrencyType | null {
+  const calendars = getCalendars();
+  const timezone = calendars[0]?.timeZone ?? null;
 
-  if (!currencyCode) return DEFAULT_CURRENCY;
+  if (!timezone) return null;
 
-  const isSupported = SUPPORTED_CURRENCIES.some((c) => c.code === currencyCode);
-  return isSupported ? (currencyCode as CurrencyType) : DEFAULT_CURRENCY;
+  return TIMEZONE_TO_CURRENCY[timezone] ?? null;
 }

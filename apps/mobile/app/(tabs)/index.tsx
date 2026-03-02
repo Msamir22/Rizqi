@@ -1,3 +1,4 @@
+import { CurrencyPicker } from "@/components/currency/CurrencyPicker";
 import { AccountsSection } from "@/components/dashboard/AccountsSection";
 import { LiveRates } from "@/components/dashboard/LiveRates";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
@@ -8,8 +9,6 @@ import { UpcomingPayments } from "@/components/dashboard/UpcomingPayments";
 import { AppDrawer } from "@/components/navigation/AppDrawer";
 import { SmsPermissionPrompt } from "@/components/sms-sync/SmsPermissionPrompt";
 import { StarryBackground } from "@/components/ui/StarryBackground";
-import { useToast } from "@/components/ui/Toast";
-import { CurrencyPicker } from "@/components/currency/CurrencyPicker";
 import { palette } from "@/constants/colors";
 import { TAB_BAR_HEIGHT } from "@/constants/ui";
 import { useTopAccounts } from "@/hooks/useAccounts";
@@ -22,13 +21,9 @@ import { useRecentTransactions } from "@/hooks/useTransactions";
 import { useDatabaseReady } from "@/providers/DatabaseProvider";
 import type { CurrencyType } from "@astik/db";
 import { CURRENCY_INFO_MAP } from "@astik/logic";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { ActivityIndicator, ScrollView, View } from "react-native";
-
-import { SHOW_CASH_TOAST_KEY } from "@/constants/storage-keys";
-const CASH_TOAST_DURATION_MS = 4000;
 
 /**
  * Renders the main dashboard screen including total net worth, live market rates, top accounts,
@@ -62,7 +57,6 @@ export default function DashboardScreen(): React.JSX.Element {
     setPreferredCurrency,
     isLoading: isCurrencyLoading,
   } = usePreferredCurrency();
-  const { showToast } = useToast();
 
   const currencyInfo = CURRENCY_INFO_MAP[preferredCurrency];
 
@@ -70,23 +64,6 @@ export default function DashboardScreen(): React.JSX.Element {
   const router = useRouter();
   const { shouldShowPrompt, dismissPrompt } = useSmsSync();
   const { requestPermission } = useSmsPermission();
-
-  // ── Cash account toast (one-time after auto-creation) ────────────────
-  useEffect(() => {
-    AsyncStorage.getItem(SHOW_CASH_TOAST_KEY)
-      .then((value) => {
-        if (value === "true") {
-          showToast({
-            type: "success",
-            title: "💰 Cash wallet ready!",
-            message: "Because who leaves the house without pocket money?",
-            duration: CASH_TOAST_DURATION_MS,
-          });
-          AsyncStorage.removeItem(SHOW_CASH_TOAST_KEY).catch(console.error);
-        }
-      })
-      .catch(console.error);
-  }, [showToast]);
 
   const handleCurrencySelect = useCallback(
     (currency: CurrencyType) => {

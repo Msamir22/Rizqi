@@ -1,19 +1,26 @@
+/**
+ * App Entry Point
+ *
+ * Handles initial app state: authentication, onboarding check,
+ * and routing to the appropriate screen based on onboarding status.
+ *
+ * @module Index
+ */
+
+import { palette } from "@/constants/colors";
+import { HAS_ONBOARDED_KEY } from "@/constants/storage-keys";
+import { ensureAuthenticated } from "@/services/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Redirect } from "expo-router";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
-import { palette } from "@/constants/colors";
-import { ensureCashAccount } from "@/services/account-service";
-import { ensureAuthenticated, getCurrentUserId } from "@/services/supabase";
-
-import { SHOW_CASH_TOAST_KEY } from "@/constants/storage-keys";
 
 export default function Index(): React.ReactNode {
   const [isReady, setIsReady] = useState(false);
   const [hasOnboarded, setHasOnboarded] = useState(false);
 
   useEffect(() => {
-    initializeApp();
+    initializeApp().catch(console.error);
   }, []);
 
   const initializeApp = async (): Promise<void> => {
@@ -22,24 +29,9 @@ export default function Index(): React.ReactNode {
       await ensureAuthenticated();
 
       // 2. Check onboarding status
-      const value = await AsyncStorage.getItem("hasOnboarded");
+      const value = await AsyncStorage.getItem(HAS_ONBOARDED_KEY);
       if (value === "true") {
         setHasOnboarded(true);
-
-        // 3. Retry fallback: ensure Cash account exists (FR-005/FR-008).
-        // Runs silently on every launch for onboarded users — idempotent.
-        const userId = await getCurrentUserId();
-        if (userId) {
-          ensureCashAccount(userId)
-            .then((result) => {
-              if (result.created) {
-                AsyncStorage.setItem(SHOW_CASH_TOAST_KEY, "true").catch(
-                  console.error
-                );
-              }
-            })
-            .catch(console.error);
-        }
       }
     } catch (e) {
       console.error("App initialization error:", e);

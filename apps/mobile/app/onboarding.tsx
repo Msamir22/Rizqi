@@ -1,3 +1,24 @@
+/**
+ * Onboarding Screen
+ *
+ * Multi-phase onboarding flow:
+ * 1. Carousel — feature tour with 3 slides
+ * 2. CurrencyPickerStep — user selects their currency (skippable)
+ * 3. WalletCreationStep — creates cash account (only if currency was selected)
+ *
+ * Architecture & Design Rationale:
+ * - Pattern: State Machine (phase-based routing)
+ * - Why: Each phase is an independent screen with clear transitions
+ * - SOLID: SRP — each phase component handles its own concerns
+ *
+ * @module OnboardingScreen
+ */
+
+import { palette } from "@/constants/colors";
+import { HAS_ONBOARDED_KEY } from "@/constants/storage-keys";
+import { useTheme } from "@/context/ThemeContext";
+import { getCurrentUserId } from "@/services/supabase";
+import type { CurrencyType } from "@astik/db";
 import {
   FontAwesome5,
   Ionicons,
@@ -6,7 +27,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Dimensions,
   StyleSheet,
@@ -16,16 +37,32 @@ import {
 } from "react-native";
 import Carousel, { ICarouselInstance } from "react-native-reanimated-carousel";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { palette } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
-import { ensureCashAccount } from "@/services/account-service";
-import { getCurrentUserId } from "@/services/supabase";
 
-import { SHOW_CASH_TOAST_KEY } from "@/constants/storage-keys";
+import { CurrencyPickerStep } from "@/components/onboarding/CurrencyPickerStep";
+import { WalletCreationStep } from "@/components/onboarding/WalletCreationStep";
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+/** Determines which screen to render during onboarding. */
+type OnboardingPhase = "carousel" | "currency-picker" | "wallet-creation";
+
+interface OnboardingSlide {
+  readonly id: string;
+  readonly title: string;
+  readonly description: string;
+  readonly icon: (color: string) => React.JSX.Element;
+  readonly isSpecial?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
 
 const { width: PAGE_WIDTH, height: PAGE_HEIGHT } = Dimensions.get("window");
 
-const ONBOARDING_DATA = [
+const ONBOARDING_DATA: OnboardingSlide[] = [
   {
     id: "1",
     title: "Track Your Net Worth",
@@ -52,88 +89,157 @@ const ONBOARDING_DATA = [
     icon: (color: string) => (
       <View
         className="w-[120px] h-[120px] rounded-full elevation-[10] items-center justify-center shadow-[0_10px_20px]"
+        // eslint-disable-next-line react-native/no-inline-styles
         style={{
           backgroundColor: color,
           shadowColor: color,
           shadowOpacity: 0.5,
         }}
       >
-        <FontAwesome5 name="microphone" size={50} color="#FFF" />
+        <FontAwesome5 name="microphone" size={50} color="white" />
       </View>
     ),
     isSpecial: true,
   },
 ];
 
-export default function OnboardingScreen(): React.JSX.Element {
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
+export default function OnboardingScreen(): React.JSX.Element | null {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme, isDark } = useTheme();
   const carouselRef = useRef<ICarouselInstance>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const handleFinish = async (): Promise<void> => {
+  // Phase state machine
+  const [phase, setPhase] = useState<OnboardingPhase>("carousel");
+  const [selectedCurrency, setSelectedCurrency] = useState<CurrencyType | null>(
+    null
+  );
+  const [userId, setUserId] = useState<string | null>(null);
+
+  /**
+   * Called when the carousel finishes (user taps "Get Started" or "Skip").
+   * Always transitions to the currency picker.
+   */
+  const handleCarouselFinish = useCallback(async (): Promise<void> => {
     try {
-      await AsyncStorage.setItem("hasOnboarded", "true");
+      await AsyncStorage.setItem(HAS_ONBOARDED_KEY, "true");
 
-      // Fire-and-forget: create Cash account for the new user.
-      // Errors are swallowed — index.tsx retries on next launch (FR-005).
-      const userId = await getCurrentUserId();
-      if (userId) {
-        ensureCashAccount(userId)
-          .then((result) => {
-            if (result.created) {
-              AsyncStorage.setItem(SHOW_CASH_TOAST_KEY, "true").catch(
-                console.error
-              );
-            }
-          })
-          .catch(console.error);
+      // Resolve user ID for potential wallet creation
+      const uid = await getCurrentUserId();
+      if (!uid) {
+        console.warn("No authenticated user, skipping wallet creation");
+        router.replace("/(tabs)");
+        return;
       }
+      setUserId(uid);
 
-      router.replace("/(tabs)");
+      // Always show currency picker — user makes the choice
+      setPhase("currency-picker");
     } catch (error) {
       console.error("Failed to save onboarding status", error);
+      router.replace("/(tabs)");
     }
-  };
+  }, [router]);
 
-  const handleNext = (): void => {
+  /** Called when user selects a currency and taps "Continue". */
+  const handleCurrencySelected = useCallback((currency: CurrencyType): void => {
+    setSelectedCurrency(currency);
+    setPhase("wallet-creation");
+  }, []);
+
+  /** Called when user skips the currency picker — no wallet created. */
+  const handleCurrencyPickerSkip = useCallback((): void => {
+    router.replace("/(tabs)");
+  }, [router]);
+
+  /** Navigate to main app (used by both success and error paths). */
+  const handleGoToApp = useCallback((): void => {
+    router.replace("/(tabs)");
+  }, [router]);
+
+  const handleNext = useCallback((): void => {
     if (currentIndex === ONBOARDING_DATA.length - 1) {
-      handleFinish();
+      handleCarouselFinish().catch(console.error);
     } else {
       carouselRef.current?.next();
     }
-  };
+  }, [currentIndex, handleCarouselFinish]);
 
-  const renderItem = ({
-    item,
-  }: {
-    item: (typeof ONBOARDING_DATA)[number];
-    index: number;
-  }): React.JSX.Element => {
-    const iconColor = item.isSpecial
-      ? palette.nileGreen[500]
-      : isDark
+  const renderCarouselItem = useCallback(
+    ({ item }: { item: OnboardingSlide; index: number }): React.JSX.Element => {
+      const iconColor = item.isSpecial
         ? palette.nileGreen[500]
-        : palette.nileGreen[600];
+        : isDark
+          ? palette.nileGreen[500]
+          : palette.nileGreen[600];
+
+      return (
+        <View className="flex-1 items-center justify-center px-8">
+          <View className="mb-12 h-[150px] justify-center">
+            {item.icon(iconColor)}
+          </View>
+
+          <View className="items-center gap-4">
+            <Text className="font-bold text-[28px] mb-2 text-center text-text-primary dark:text-text-primary-dark">
+              {item.title}
+            </Text>
+            <Text className="text-center text-text-secondary dark:text-text-secondary-dark text-base max-w-[85%]">
+              {item.description}
+            </Text>
+          </View>
+        </View>
+      );
+    },
+    [isDark]
+  );
+
+  // Redirect to app if wallet-creation phase reached without userId.
+  // Navigation must happen in an effect, not during render.
+  useEffect(() => {
+    if (phase === "wallet-creation" && selectedCurrency && !userId) {
+      console.error(
+        "[onboarding] No userId available for wallet creation, skipping to app"
+      );
+      router.replace("/(tabs)");
+    }
+  }, [phase, selectedCurrency, userId, router]);
+
+  // -----------------------------------------------------------------------
+  // Phase: Currency Picker
+  // -----------------------------------------------------------------------
+  if (phase === "currency-picker") {
+    return (
+      <CurrencyPickerStep
+        onCurrencySelected={handleCurrencySelected}
+        onSkip={handleCurrencyPickerSkip}
+      />
+    );
+  }
+
+  // -----------------------------------------------------------------------
+  // Phase: Wallet Creation
+  // -----------------------------------------------------------------------
+  if (phase === "wallet-creation" && selectedCurrency) {
+    if (!userId) return null;
 
     return (
-      <View className="flex-1 items-center justify-center px-8">
-        <View className="mb-12 h-[150px] justify-center">
-          {item.icon(iconColor)}
-        </View>
-
-        <View className="items-center gap-4">
-          <Text className="font-bold text-[28px] mb-2 text-center text-text-primary dark:text-text-primary-dark">
-            {item.title}
-          </Text>
-          <Text className="text-center text-text-secondary dark:text-text-secondary-dark text-base max-w-[85%]">
-            {item.description}
-          </Text>
-        </View>
-      </View>
+      <WalletCreationStep
+        userId={userId}
+        currency={selectedCurrency}
+        onComplete={handleGoToApp}
+        onError={handleGoToApp}
+      />
     );
-  };
+  }
+
+  // -----------------------------------------------------------------------
+  // Phase: Carousel (default)
+  // -----------------------------------------------------------------------
 
   return (
     <View className="flex-1">
@@ -148,7 +254,9 @@ export default function OnboardingScreen(): React.JSX.Element {
       {/* Skip Button */}
       <TouchableOpacity
         className="absolute p-2 right-6 z-10"
-        onPress={handleFinish}
+        onPress={() => {
+          handleCarouselFinish().catch(console.error);
+        }}
         style={{ top: insets.top + 16 }}
       >
         <Text className="text-text-secondary dark:text-text-secondary-dark text-base">
@@ -166,7 +274,7 @@ export default function OnboardingScreen(): React.JSX.Element {
         data={ONBOARDING_DATA}
         scrollAnimationDuration={500}
         onSnapToItem={(index) => setCurrentIndex(index)}
-        renderItem={renderItem}
+        renderItem={renderCarouselItem}
         style={{ marginTop: insets.top + 40 }}
       />
 
@@ -179,17 +287,12 @@ export default function OnboardingScreen(): React.JSX.Element {
         <View className="flex-row gap-2">
           {ONBOARDING_DATA.map((_, index) => (
             <View
-              className="h-2 rounded"
-              key={index}
-              style={{
-                backgroundColor:
-                  currentIndex === index
-                    ? palette.nileGreen[500]
-                    : isDark
-                      ? "rgba(255,255,255,0.2)"
-                      : "rgba(0,0,0,0.1)",
-                width: currentIndex === index ? 24 : 8,
-              }}
+              className={`h-2 rounded ${
+                currentIndex === index
+                  ? "w-6 bg-nileGreen-500"
+                  : "w-2 bg-black/10 dark:bg-white/20"
+              }`}
+              key={`dot-${ONBOARDING_DATA[index].id}`}
             />
           ))}
         </View>
@@ -197,8 +300,16 @@ export default function OnboardingScreen(): React.JSX.Element {
         {/* Action Button */}
         <TouchableOpacity
           onPress={handleNext}
-          className="rounded-2xl py-[18px] elevation-[4] shadow-[0_4px_8px_#10B981] bg-nileGreen-500 w-full flex-row items-center justify-center"
-          style={{ shadowOpacity: 0.3 }}
+          className="rounded-2xl py-[18px] bg-nileGreen-500 w-full flex-row items-center justify-center"
+          // eslint-disable-next-line react-native/no-inline-styles
+          style={{
+            elevation: 4,
+            shadowColor: palette.nileGreen[500],
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+          }}
+          activeOpacity={0.8}
         >
           <Text className="text-white font-semibold text-lg">
             {currentIndex === ONBOARDING_DATA.length - 1
