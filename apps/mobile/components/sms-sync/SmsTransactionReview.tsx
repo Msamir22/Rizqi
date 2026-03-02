@@ -39,7 +39,13 @@ import {
 import { getCurrentUserId } from "@/services/supabase";
 import type { ParsedSmsTransaction } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -197,6 +203,11 @@ export function SmsTransactionReview({
   const [selectedIndices, setSelectedIndices] = useState<ReadonlySet<number>>(
     () => new Set(transactions.map((_, i) => i)) // All selected by default
   );
+
+  const selectedIndicesRef = useRef(selectedIndices);
+  useEffect(() => {
+    selectedIndicesRef.current = selectedIndices;
+  }, [selectedIndices]);
 
   // ── Category correction state ─────────────────────────────────────
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -393,7 +404,7 @@ export function SmsTransactionReview({
         <SmsTransactionItem
           transaction={tx}
           index={item.originalIndex}
-          isSelected={selectedIndices.has(item.originalIndex)}
+          isSelected={selectedIndicesRef.current.has(item.originalIndex)}
           accountName={
             transactionOverrides.get(item.originalIndex)?.accountName ??
             accountMatches.get(item.originalIndex)?.accountName ??
@@ -409,7 +420,6 @@ export function SmsTransactionReview({
       transactionOverrides,
       handleToggleItem,
       handleOpenEditModal,
-      selectedIndices,
     ]
   );
 
