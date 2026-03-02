@@ -107,7 +107,7 @@ const ONBOARDING_DATA: OnboardingSlide[] = [
 // Component
 // ---------------------------------------------------------------------------
 
-export default function OnboardingScreen(): React.JSX.Element {
+export default function OnboardingScreen(): React.JSX.Element | null {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme, isDark } = useTheme();
@@ -225,7 +225,7 @@ export default function OnboardingScreen(): React.JSX.Element {
   // Phase: Wallet Creation
   // -----------------------------------------------------------------------
   if (phase === "wallet-creation" && selectedCurrency) {
-    if (!userId) return <></>;
+    if (!userId) return null;
 
     return (
       <WalletCreationStep

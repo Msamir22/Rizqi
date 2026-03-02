@@ -137,11 +137,16 @@ export async function ensureCashAccount(
  */
 export async function findCashAccount(userId: string): Promise<string | null> {
   try {
+    const normalizedUserId = userId.trim();
+    if (!normalizedUserId) {
+      return null;
+    }
+
     const accountsCollection = database.get<Account>("accounts");
     const existing = await accountsCollection
       .query(
         Q.where("type", CASH_ACCOUNT_TYPE),
-        Q.where("user_id", userId),
+        Q.where("user_id", normalizedUserId),
         Q.where("deleted", Q.notEq(true)),
         Q.sortBy("created_at", Q.asc)
       )
