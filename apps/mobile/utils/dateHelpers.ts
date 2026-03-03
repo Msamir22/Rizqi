@@ -38,6 +38,14 @@ const DAYS = [
   "Saturday",
 ];
 
+const DEFAULT_DATE_LOCALE = "en-EG";
+const LOCAL_DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
+  weekday: "short",
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+};
+
 export type DateFormat = "MMM d, yyyy" | "EEEE, MMM d" | "MMM d" | "MMMM yyyy";
 
 export function getStartOfDay(d: number | Date): number {
@@ -162,13 +170,11 @@ export function formatDate(date: Date, format: DateFormat): string {
 }
 
 /** Format a Date as a readable string */
-export function formatToLocalDateString(date: Date): string {
-  return date.toLocaleDateString("en-EG", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+export function formatToLocalDateString(
+  date: Date,
+  locale: string = DEFAULT_DATE_LOCALE
+): string {
+  return date.toLocaleDateString(locale, LOCAL_DATE_FORMAT_OPTIONS);
 }
 
 export function formatTimeAgo(date: Date): string {

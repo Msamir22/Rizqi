@@ -52,7 +52,10 @@ export default function SmsReviewScreen(): React.JSX.Element {
 
     return () => {
       setReviewingActive(false);
-      flushQueuedTransactions().catch(() => {});
+      flushQueuedTransactions().catch((err) => {
+        // Non-critical: queued transactions will be processed on next app launch
+        console.warn("[sms-review] Failed to flush queued transactions:", err);
+      });
     };
   }, []);
 

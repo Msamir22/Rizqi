@@ -160,6 +160,11 @@ export function SmsTransactionEditModal({
     transaction.categoryId
   );
 
+  const selectedCategoryDisplayName = useMemo((): string => {
+    const found = rootCategories.find((c) => c.id === selectedCategoryId);
+    return found?.displayName ?? transaction.categoryDisplayName;
+  }, [selectedCategoryId, rootCategories, transaction.categoryDisplayName]);
+
   const [newAccountError, setNewAccountError] = useState<string | null>(null);
 
   // Merge real accounts + pending accounts for the dropdown
@@ -571,7 +576,7 @@ export function SmsTransactionEditModal({
                 className={`bg-slate-800/60 rounded-xl px-4 py-3 flex-row items-center justify-between border ${formErrors.categoryId ? "border-red-500/60" : "border-slate-700/50"}`}
               >
                 <Text className="text-base text-white font-semibold">
-                  {transaction.categoryDisplayName}
+                  {selectedCategoryDisplayName}
                 </Text>
                 <Ionicons
                   name="chevron-forward"
