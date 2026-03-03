@@ -28,7 +28,6 @@ import {
   database,
   Transaction,
   Transfer,
-  type Category,
   type CurrencyType,
 } from "@astik/db";
 import type { ParsedSmsTransaction } from "@astik/logic";
@@ -44,31 +43,6 @@ interface BatchSaveResult {
   readonly savedCount: number;
   readonly failedCount: number;
   readonly errors: readonly string[];
-}
-
-// ---------------------------------------------------------------------------
-// Category resolution cache
-// ---------------------------------------------------------------------------
-
-/**
- * Build a Map from category system_name → category.id.
- * Fetches all categories once to avoid N+1 lookups.
- */
-
-// TODO: is this is the right place for this function?
-async function buildCategoryMap(): Promise<ReadonlyMap<string, string>> {
-  const categories = await database
-    .get<Category>("categories")
-    .query(Q.where("deleted", Q.notEq(true)))
-    .fetch();
-
-  const map = new Map<string, string>();
-  for (const cat of categories) {
-    if (cat.systemName) {
-      map.set(cat.systemName, cat.id);
-    }
-  }
-  return map;
 }
 
 // ---------------------------------------------------------------------------
@@ -130,7 +104,6 @@ export async function batchCreateSmsTransactions(
     };
   }
 
-  const categoryMap = await buildCategoryMap();
   const errors: string[] = [];
 
   // Ensure Cash accounts exist for ATM withdrawal routing
@@ -212,22 +185,7 @@ export async function batchCreateSmsTransactions(
       continue;
     }
 
-    // ── Regular transaction ──
-    const categoryId = categoryMap.get(tx.categorySystemName);
-    const resolvedCategoryId =
-      categoryId ??
-      categoryMap.get("other") ??
-      categoryMap.get("general") ??
-      categoryMap.get("uncategorized");
-
-    if (!resolvedCategoryId) {
-      errors.push(
-        `No category found for "${tx.categorySystemName}" (${tx.counterparty})`
-      );
-      failedCount++;
-      continue;
-    }
-
+    // ── Regular transaction ─
     preparedOps.push(
       transactionsCollection.prepareCreate((record) => {
         record.userId = userId;
@@ -235,7 +193,7 @@ export async function batchCreateSmsTransactions(
         record.amount = Math.abs(tx.amount);
         record.currency = tx.currency;
         record.type = tx.type;
-        record.categoryId = resolvedCategoryId;
+        record.categoryId = tx.categoryId;
         record.counterparty = tx.counterparty || undefined;
         record.note = "";
         record.date = tx.date;

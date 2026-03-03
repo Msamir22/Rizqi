@@ -43,8 +43,8 @@ interface PendingAccount {
   readonly currency: CurrencyType;
   /** Always BANK for SMS-created accounts */
   readonly type: "BANK";
-  /** SMS sender address (for bank_details.sms_sender_name) */
-  readonly senderAddress: string;
+  /** SMS sender display name (for bank_details.sms_sender_name) */
+  readonly senderDisplayName: string;
   /** Card last 4 digits from SMS body (for bank_details.card_last_4) */
   readonly cardLast4?: string;
 }
@@ -162,7 +162,7 @@ async function persistPendingAccounts(
         .get<BankDetails>("bank_details")
         .prepareCreate((record) => {
           record.accountId = account.id;
-          record.smsSenderName = pending.senderAddress;
+          record.smsSenderName = pending.senderDisplayName;
           if (pending.cardLast4) {
             record.cardLast4 = pending.cardLast4;
           }

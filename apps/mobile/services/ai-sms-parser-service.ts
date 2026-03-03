@@ -28,8 +28,6 @@ interface AiSmsTransaction {
   readonly counterparty: string;
   readonly date: string;
   readonly categorySystemName: string;
-  /** Bank/wallet/fintech name extracted from message content (not sender name). */
-  readonly financialEntity?: string;
   /** True for ATM cash withdrawal transactions. */
   readonly isAtmWithdrawal?: boolean;
   /** Last 4 digits of the card found in the SMS body. */
@@ -51,6 +49,11 @@ export interface ParseSmsContext {
   readonly categories: readonly Category[];
   readonly supportedCurrencies: readonly string[];
 }
+
+type CategoryMap = Map<
+  Category["systemName"],
+  { name: Category["displayName"]; id: Category["id"] }
+>;
 
 // ---------------------------------------------------------------------------
 // Input type — candidate SMS for AI processing
@@ -193,15 +196,23 @@ function normalizeType(raw: string): TransactionType {
  * Validate and normalize an AI-returned category system_name.
  * Falls back to "other" if the AI returned an unknown category.
  */
-function validateCategory(
-  raw: string,
-  validCategories: ReadonlySet<string>
-): string {
-  if (validCategories.has(raw)) return raw;
+function parseCategory(
+  categorySystemName: string,
+  validCategories: CategoryMap
+): { name: Category["displayName"]; id: Category["id"] } {
+  if (validCategories.has(categorySystemName))
+    return (
+      // Other category is guaranteed to exist
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      validCategories.get(categorySystemName) || validCategories.get("other")!
+    );
   console.warn(
-    `[ai-sms-parser] Unknown category "${raw}" from AI, falling back to "other"`
+    `[ai-sms-parser] Unknown category "${categorySystemName}" from AI, falling back to "other"`
   );
-  return "other";
+
+  // Other category is guaranteed to exist
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  return validCategories.get("other")!;
 }
 
 function parseDate(dateStr: string, fallbackMs: number): Date {
@@ -218,7 +229,7 @@ function parseDate(dateStr: string, fallbackMs: number): Date {
 function mapAiTransactions(
   aiTransactions: readonly AiSmsTransaction[],
   candidateMap: ReadonlyMap<string, SmsCandidate>,
-  validCategoryNames: ReadonlySet<string>
+  validCategoryMap: CategoryMap
 ): ParsedSmsTransaction[] {
   const results: ParsedSmsTransaction[] = [];
 
@@ -244,7 +255,7 @@ function mapAiTransactions(
     // Filter out untrusted transactions (promotional offers, ambiguous messages)
     if (!aiTx.isTrusted) {
       console.info(
-        `[ai-sms-parser] Untrusted transaction from ${aiTx.financialEntity ?? candidate.message.address}, ` +
+        `[ai-sms-parser] Untrusted transaction from ${candidate.message.address}, ` +
           `amount: ${aiTx.amount} ${aiTx.currency}, skipping`
       );
       continue;
@@ -252,11 +263,13 @@ function mapAiTransactions(
 
     // Counterparty guard: must never equal the financial entity
     const counterparty =
-      aiTx.financialEntity &&
+      candidate.message.address &&
       aiTx.counterparty.toLowerCase().trim() ===
-        aiTx.financialEntity.toLowerCase().trim()
+        candidate.message.address.toLowerCase().trim()
         ? ""
         : aiTx.counterparty;
+
+    const category = parseCategory(aiTx.categorySystemName, validCategoryMap);
 
     results.push({
       amount: Math.abs(aiTx.amount),
@@ -265,16 +278,11 @@ function mapAiTransactions(
       counterparty,
       date: parseDate(aiTx.date, candidate.message.date),
       smsBodyHash: candidate.smsBodyHash,
-      senderAddress: candidate.message.address,
-      // Prefer financialEntity (extracted bank name) over raw sender address
-      senderDisplayName: aiTx.financialEntity || candidate.message.address,
-      categorySystemName: validateCategory(
-        aiTx.categorySystemName,
-        validCategoryNames
-      ),
+      senderDisplayName: candidate.message.address,
+      categoryId: category.id,
+      categoryDisplayName: category.name,
       rawSmsBody: candidate.message.body,
       confidence: Math.min(1, Math.max(0, aiTx.confidenceScore)),
-      financialEntity: aiTx.financialEntity,
       isAtmWithdrawal: aiTx.isAtmWithdrawal ?? false,
       cardLast4: aiTx.cardLast4,
     });
@@ -365,8 +373,11 @@ export async function parseSmsWithAi(
   if (candidates.length === 0) return emptyResult;
 
   // Build validation set once for the entire parse session
-  const validCategoryNames = new Set(
-    context.categories.map((c) => c.systemName)
+  const validCategoryMap: CategoryMap = new Map(
+    context.categories.map((c) => [
+      c.systemName,
+      { name: c.displayName, id: c.id },
+    ])
   );
 
   try {
@@ -454,7 +465,7 @@ export async function parseSmsWithAi(
       const mapped = mapAiTransactions(
         chunkResult.transactions,
         candidateMap,
-        validCategoryNames
+        validCategoryMap
       );
       allResults.push(...mapped);
 

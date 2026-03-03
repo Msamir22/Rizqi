@@ -2,7 +2,13 @@
  * Core types for Astik application
  */
 
-import { AccountType, CurrencyType, TransactionType } from "@astik/db";
+import {
+  AccountType,
+  Category,
+  CurrencyType,
+  Transaction,
+  TransactionType,
+} from "@astik/db";
 
 export interface ParsedVoiceTransaction {
   amount: number;
@@ -61,18 +67,14 @@ export interface ParsedSmsTransaction {
   readonly counterparty: string;
   readonly date: Date;
   readonly smsBodyHash: string;
-  readonly senderAddress: string;
   readonly senderDisplayName: string;
-  /** Stable sender config ID for account mapping (e.g., "cib", "nbe"). Optional — AI path uses senderAddress instead. */
-  readonly senderConfigId?: string;
-  readonly categorySystemName: string;
+  readonly categoryId: Category["id"];
+  readonly categoryDisplayName: Category["displayName"];
   readonly rawSmsBody: string;
   /** Parsing confidence score (0–1) */
   readonly confidence: number;
   /** AI-extracted merchant name (may differ from counterparty) */
-  readonly merchant?: string;
-  /** AI-extracted bank/wallet/fintech name from message content */
-  readonly financialEntity?: string;
+  readonly merchant?: Transaction["counterparty"];
   /** True if this is an ATM/Bank cash withdrawal (should be saved as transfer) */
   readonly isAtmWithdrawal?: boolean;
   /** Last 4 digits of card extracted from SMS (for bank account matching) */

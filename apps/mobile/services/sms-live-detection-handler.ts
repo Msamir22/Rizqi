@@ -17,16 +17,14 @@
  * @module sms-live-detection-handler
  */
 
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { type Database, Q } from "@nozbe/watermelondb";
 import type { ParsedSmsTransaction } from "@astik/logic";
-import type { Category } from "@astik/db";
-import { resolveAccountForSms } from "./sms-account-resolver";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
-  showTransactionNotification,
-  registerNotificationActionHandler,
   ACTION_CONFIRM,
+  registerNotificationActionHandler,
+  showTransactionNotification,
 } from "./notification-service";
+import { resolveAccountForSms } from "./sms-account-resolver";
 import { createTransaction } from "./transaction-service";
 
 // ---------------------------------------------------------------------------
@@ -87,50 +85,6 @@ export async function setLiveDetectionEnabled(enabled: boolean): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Category resolution
-// ---------------------------------------------------------------------------
-
-/**
- * Build a Map from category system_name → category.id.
- * Reuses the same pattern as batch-sms-transactions.ts.
- */
-async function buildCategoryMap(
-  db: Database
-): Promise<ReadonlyMap<string, string>> {
-  const categories = await db
-    .get<Category>("categories")
-    .query(Q.where("deleted", Q.notEq(true)))
-    .fetch();
-
-  const map = new Map<string, string>();
-  for (const cat of categories) {
-    const systemName = (cat as unknown as { system_name: string }).system_name;
-    if (systemName) {
-      map.set(systemName, cat.id);
-    }
-  }
-  return map;
-}
-
-/**
- * Resolve a category system name to a category ID.
- * Falls back to "other" → "general" → "uncategorized" if not found.
- */
-async function resolveCategoryId(
-  db: Database,
-  categorySystemName: string
-): Promise<string | null> {
-  const categoryMap = await buildCategoryMap(db);
-  return (
-    categoryMap.get(categorySystemName) ??
-    categoryMap.get("other") ??
-    categoryMap.get("general") ??
-    categoryMap.get("uncategorized") ??
-    null
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Transaction saving
 // ---------------------------------------------------------------------------
 
@@ -139,22 +93,12 @@ async function resolveCategoryId(
  */
 async function saveDetectedTransaction(
   parsed: ParsedSmsTransaction,
-  accountId: string,
-  db: Database
+  accountId: string
 ): Promise<void> {
-  const categoryId = await resolveCategoryId(db, parsed.categorySystemName);
-
-  if (!categoryId) {
-    console.error(
-      `[sms-detection] No category found for "${parsed.categorySystemName}"`
-    );
-    return;
-  }
-
   await createTransaction({
     amount: parsed.amount,
     currency: parsed.currency,
-    categoryId,
+    categoryId: parsed.categoryId,
     counterparty: parsed.counterparty || undefined,
     accountId,
     note: `[SMS] ${parsed.merchant ?? parsed.senderDisplayName}`,
@@ -185,11 +129,9 @@ async function saveDetectedTransaction(
  * 5. If no account resolved → show notification asking to configure
  *
  * @param parsed - The AI-parsed SMS transaction
- * @param db     - WatermelonDB database instance
  */
 export async function handleDetectedSms(
-  parsed: ParsedSmsTransaction,
-  db: Database
+  parsed: ParsedSmsTransaction
 ): Promise<void> {
   // T046: Queue if the user is on the review page
   if (reviewingActive) {
@@ -201,9 +143,9 @@ export async function handleDetectedSms(
   }
 
   try {
-    // Step 1: Resolve account using senderAddress + rawSmsBody
+    // Step 1: Resolve account using senderDisplayName + rawSmsBody
     const resolved = await resolveAccountForSms(
-      parsed.senderAddress,
+      parsed.senderDisplayName,
       parsed.rawSmsBody,
       parsed.currency
     );
@@ -222,7 +164,7 @@ export async function handleDetectedSms(
 
     if (autoConfirm) {
       // Step 3: Auto-confirm — save directly
-      await saveDetectedTransaction(parsed, resolved.accountId, db);
+      await saveDetectedTransaction(parsed, resolved.accountId);
     } else {
       // Step 4: Ask me — show notification
       await showTransactionNotification(
@@ -246,16 +188,14 @@ export async function handleDetectedSms(
  * transaction notification, the transaction is saved to the database.
  * "Discard" simply dismisses the notification (no-op).
  *
- * @param db - WatermelonDB database instance
  * @returns Cleanup function to unsubscribe
  */
-export function initializeDetectionActionHandler(db: Database): () => void {
+export function initializeDetectionActionHandler(): () => void {
   return registerNotificationActionHandler(async (actionId, payload) => {
     if (actionId === ACTION_CONFIRM && payload.resolvedAccountId) {
       await saveDetectedTransaction(
         payload.transactionData,
-        payload.resolvedAccountId,
-        db
+        payload.resolvedAccountId
       );
     }
     // ACTION_DISCARD is a no-op — notification is auto-dismissed
@@ -281,10 +221,9 @@ export function setReviewingActive(active: boolean): void {
  * Process any transactions that were queued while the review page
  * was active. Call this after the review page is dismissed.
  *
- * @param db - WatermelonDB database instance
  * @returns The number of transactions that were flushed
  */
-export async function flushQueuedTransactions(db: Database): Promise<number> {
+export async function flushQueuedTransactions(): Promise<number> {
   if (transactionQueue.length === 0) {
     return 0;
   }
@@ -293,7 +232,7 @@ export async function flushQueuedTransactions(db: Database): Promise<number> {
   console.log(`[sms-detection] Flushing ${queued.length} queued transactions`);
 
   for (const parsed of queued) {
-    await handleDetectedSms(parsed, db);
+    await handleDetectedSms(parsed);
   }
 
   return queued.length;

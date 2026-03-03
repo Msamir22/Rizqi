@@ -29,7 +29,7 @@ interface AiVoiceTransaction {
 }
 
 interface ParseVoiceResponse {
-  readonly transactions: ReadonlyArray<AiVoiceTransaction>;
+  readonly transactions: readonly AiVoiceTransaction[];
   readonly error?: string;
 }
 
@@ -88,7 +88,7 @@ function normalizeType(raw: string): TransactionType {
 export async function parseVoiceWithAi(
   options: { audioUri: string } | { textQuery: string },
   languageHint?: "ar" | "en"
-): Promise<ReadonlyArray<ParsedSmsTransaction>> {
+): Promise<readonly ParsedSmsTransaction[]> {
   try {
     let response: {
       data: ParseVoiceResponse | null;
@@ -148,9 +148,10 @@ export async function parseVoiceWithAi(
         merchant: aiTx.merchant,
         date: now, // Voice transactions default to current time
         smsBodyHash: "", // Not applicable for voice
-        senderAddress: "voice-input",
-        senderDisplayName: aiTx.merchant,
-        categorySystemName: aiTx.categorySystemName || "uncategorized",
+        senderDisplayName: "voice-input",
+        // Voice parser has no DB access — use empty categoryId (must be resolved by consumer)
+        categoryId: "",
+        categoryDisplayName: aiTx.categorySystemName || "uncategorized",
         rawSmsBody: aiTx.description || "",
         confidence: 0.8, // Voice AI confidence baseline
       })

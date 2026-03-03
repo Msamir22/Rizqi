@@ -138,6 +138,8 @@ function isPromotionalSms(smsBody: string): boolean {
  * 3. Extract structured data using named capture groups
  * 4. Map to the best category via keyword analysis
  */
+
+// TODO: Remove, Legacy code
 export class RegexSmsParser implements SmsParserStrategy {
   /**
    * Parse an SMS body into a structured transaction.
@@ -213,10 +215,10 @@ export class RegexSmsParser implements SmsParserStrategy {
       counterparty: extractCounterparty(groups),
       date: extractDate(groups),
       smsBodyHash: "", // Hash is computed asynchronously by the sync service
-      senderAddress: sender,
-      senderDisplayName: config.displayName,
-      senderConfigId: config.id,
-      categorySystemName,
+      senderDisplayName: sender,
+      // Deprecated parser has no DB access — categoryId must be resolved by consumer
+      categoryId: "",
+      categoryDisplayName: categorySystemName,
       rawSmsBody: smsBody,
       confidence: 0.85, // Regex-based parsing has moderate confidence
     };

@@ -20,17 +20,21 @@
  * @module SmsTransactionReview
  */
 
-import { CategorySelectorModal } from "@/components/modals/CategorySelectorModal";
 import { PeriodFilterModal } from "@/components/modals/PeriodFilterModal";
 import { TypeFilterModal } from "@/components/modals/TypeFilterModal";
-import { palette } from "@/constants/colors";
 import { useToast } from "@/components/ui/Toast";
+import { palette } from "@/constants/colors";
 import { useCategories } from "@/hooks/useCategories";
+import { useMarketRates } from "@/hooks/useMarketRates";
 import { PERIOD_LABELS, getPeriodDateRange } from "@/hooks/usePeriodSummary";
 import type {
   GroupingPeriod,
   TransactionTypeFilter,
 } from "@/hooks/useTransactionsGrouping";
+import {
+  type PendingAccount,
+  persistPendingAccounts,
+} from "@/services/pending-account-service";
 import {
   type AccountMatch,
   type AccountWithBankDetails,
@@ -38,7 +42,6 @@ import {
   matchTransactionsBatched,
 } from "@/services/sms-account-matcher";
 import { getCurrentUserId } from "@/services/supabase";
-import { useMarketRates } from "@/hooks/useMarketRates";
 import type { ParsedSmsTransaction } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import React, {
@@ -63,10 +66,6 @@ import {
   type TransactionEdits,
 } from "./SmsTransactionEditModal";
 import { SmsTransactionItem } from "./SmsTransactionItem";
-import {
-  type PendingAccount,
-  persistPendingAccounts,
-} from "@/services/pending-account-service";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -216,9 +215,6 @@ export function SmsTransactionReview({
   const selectedIndicesRef = useRef(selectedIndices);
   selectedIndicesRef.current = selectedIndices;
 
-  // ── Category correction state ─────────────────────────────────────
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-
   // ── Unified transaction overrides ─────────────────────────────────
   // Stores all user edits (amount, counterparty, type, category, account)
   // keyed by original transaction index.
@@ -257,8 +253,6 @@ export function SmsTransactionReview({
   const [editModalIndex, setEditModalIndex] = useState<number | null>(null);
 
   const { categories: rootCategories } = useCategories();
-  // All categories (including L2) for UUID → systemName resolution
-  const { categories: allCategories } = useCategories({ topLevelOnly: false });
 
   // Run batched account matching on mount (progressive rendering)
   useEffect(() => {
@@ -307,14 +301,10 @@ export function SmsTransactionReview({
       if (!overrides) return tx;
       return {
         ...tx,
-        ...(overrides.amount !== undefined && { amount: overrides.amount }),
-        ...(overrides.counterparty !== undefined && {
-          counterparty: overrides.counterparty,
-        }),
-        ...(overrides.type !== undefined && { type: overrides.type }),
-        ...(overrides.categorySystemName !== undefined && {
-          categorySystemName: overrides.categorySystemName,
-        }),
+        amount: overrides.amount,
+        counterparty: overrides.counterparty,
+        type: overrides.type,
+        categoryId: overrides.categoryId,
       };
     });
   }, [transactions, transactionOverrides]);
@@ -365,10 +355,6 @@ export function SmsTransactionReview({
     });
   }, []);
 
-  const handleEditCategory = useCallback((index: number) => {
-    setEditingIndex(index);
-  }, []);
-
   const handleOpenEditModal = useCallback((index: number) => {
     setEditModalIndex(index);
   }, []);
@@ -388,24 +374,6 @@ export function SmsTransactionReview({
       setEditModalIndex(null);
     },
     [editModalIndex]
-  );
-
-  const handleCategorySelected = useCallback(
-    (categoryId: string) => {
-      if (editingIndex !== null) {
-        // Resolve UUID → systemName using the categories list
-        const category = allCategories.find((c) => c.id === categoryId);
-        const resolved = category?.systemName ?? categoryId;
-        setTransactionOverrides((prev) => {
-          const next = new Map(prev);
-          const existing = next.get(editingIndex) ?? {};
-          next.set(editingIndex, { ...existing, categorySystemName: resolved });
-          return next;
-        });
-      }
-      setEditingIndex(null);
-    },
-    [editingIndex, allCategories]
   );
 
   const handleSave = useCallback(async () => {
@@ -559,18 +527,6 @@ export function SmsTransactionReview({
   );
 
   const keyExtractor = useCallback((item: ReviewListItem) => item.key, []);
-
-  const editingTx =
-    editingIndex !== null ? effectiveTransactions[editingIndex] : null;
-
-  // Resolve the editing transaction's categorySystemName → UUID for the picker
-  const editingCategoryUuid = useMemo(() => {
-    if (!editingTx) return "";
-    const found = allCategories.find(
-      (c) => c.systemName === editingTx.categorySystemName
-    );
-    return found?.id ?? "";
-  }, [editingTx, allCategories]);
 
   return (
     <View className="flex-1">
@@ -769,18 +725,6 @@ export function SmsTransactionReview({
         onClose={() => setTypeModalVisible(false)}
       />
 
-      {/* ── Category selector modal ─────────────────────────────── */}
-      {editingTx !== null && (
-        <CategorySelectorModal
-          visible={editingIndex !== null}
-          rootCategories={rootCategories as never}
-          selectedId={editingCategoryUuid}
-          type={editingTx.type}
-          onSelect={handleCategorySelected}
-          onClose={() => setEditingIndex(null)}
-        />
-      )}
-
       {/* ── Inline edit modal ──────────────────────────────────── */}
       {editModalIndex !== null && effectiveTransactions[editModalIndex] && (
         <SmsTransactionEditModal
@@ -797,14 +741,12 @@ export function SmsTransactionReview({
             ""
           }
           accounts={userAccounts}
+          rootCategories={rootCategories}
           pendingAccounts={pendingAccounts}
           latestRates={latestRates}
           onSave={handleEditModalSave}
           onCreatePendingAccount={handleCreatePendingAccount}
           onClose={() => setEditModalIndex(null)}
-          onEditCategory={() => {
-            handleEditCategory(editModalIndex);
-          }}
         />
       )}
     </View>

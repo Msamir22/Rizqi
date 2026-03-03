@@ -144,11 +144,6 @@ function buildResponseSchema(
               description:
                 "Exactly ONE system_name from the category tree. Use a specific L2 ONLY when confident. If uncertain about which L2 fits, use the L1 parent instead. NEVER use *_other L2 categories (e.g. food_other, shopping_other) — use the L1 parent. Fall back to 'other' only as last resort.",
             },
-            financialEntity: {
-              type: "string",
-              description:
-                "The bank/wallet/fintech name (e.g. CIB, NBE, Vodafone Cash).",
-            },
             isAtmWithdrawal: {
               type: "boolean",
               description: "True for ATM/Bank cash withdrawals only.",
@@ -255,8 +250,8 @@ PARSING RULES:
 2. Currency: the default currency is EGP, but it can be different based on the SMS content.
 3. Type: EXPENSE = money out, INCOME = money in.
 4. Counterparty: the merchant, vendor, person, or entity the user transacted WITH.
-   Counterparty MUST NEVER be the same as the financialEntity.
-   The financialEntity is the bank/wallet that SENT the SMS.
+   Counterparty MUST NEVER be the same as the sender.
+   The sender is the bank/wallet that SENT the SMS.
    If no distinct counterparty can be extracted, set counterparty to empty string "".
 5. Date: from SMS body or use provided date.
 6. Category: return EXACTLY ONE system_name from the CATEGORY TREE below.
@@ -266,10 +261,9 @@ PARSING RULES:
    If uncertain which L2 fits, use the L1 parent (e.g. food_drinks, shopping).
    NEVER use *_other L2 categories (food_other, shopping_other, etc.) — always prefer the L1 parent.
    Only use 'other' as an absolute last resort.
-7. financialEntity: bank/wallet name from SMS content.
-8. isAtmWithdrawal: true only for ATM withdrawals.
-9. cardLast4: last 4 card digits if mentioned.
-10. confidenceScore: your confidence in the accuracy of this extraction (0.0 to 1.0).
+7. isAtmWithdrawal: true only for ATM withdrawals.
+8. cardLast4: last 4 card digits if mentioned.
+9. confidenceScore: your confidence in the accuracy of this extraction (0.0 to 1.0).
     1.0 = all fields are perfectly clear in the SMS.
     0.5 = some fields required guessing (e.g., category, counterparty).
     Below 0.3 = most fields are uncertain — consider skipping instead.
@@ -307,7 +301,6 @@ interface AiTransaction {
   readonly counterparty: string;
   readonly date: string;
   readonly categorySystemName: string;
-  readonly financialEntity?: string;
   readonly isAtmWithdrawal?: boolean;
   readonly cardLast4?: string;
   readonly confidenceScore: number;

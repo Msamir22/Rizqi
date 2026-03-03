@@ -4,7 +4,7 @@
  * Single source of truth for all SMS → Account matching logic.
  * Both live detection (`resolveAccountForSms`) and batch review-page matching
  * delegate to `matchAccountCore` — a pure function implementing a 5-step
- * resolution chain using `senderAddress` only (no `financialEntity`).
+ * resolution chain using `senderDisplayName`.
  *
  * Resolution chain (highest confidence → lowest):
  * 1. Card last 4 + sender match against bank_details
@@ -71,7 +71,7 @@ interface AccountWithBankDetails {
  * Both live detection and batch matching map their data into this shape.
  */
 interface MatchInput {
-  readonly senderAddress: string;
+  readonly senderDisplayName: string;
   readonly cardLast4?: string;
   readonly currency?: CurrencyType;
 }
@@ -135,12 +135,12 @@ function extractCardLast4(smsBody: string): string | null {
  * Uses case-insensitive bidirectional substring matching to handle
  * variations in how carrier/bank SMS sender names appear.
  *
- * @param smsSenderAddress - The sender address from the SMS
+ * @param smsSenderDisplayName - The sender address from the SMS
  * @param fields - The comparison targets from bank_details and account
  * @returns Whether the sender matches
  */
 function isSenderMatch(
-  smsSenderAddress: string,
+  smsSenderDisplayName: string,
   {
     bankSmsSenderName,
     bankName,
@@ -155,7 +155,7 @@ function isSenderMatch(
     return false;
   }
 
-  const normalizedSender = smsSenderAddress.toLowerCase().trim();
+  const normalizedSender = smsSenderDisplayName.toLowerCase().trim();
   if (!normalizedSender) {
     return false;
   }
@@ -266,13 +266,13 @@ async function fetchAccountsWithDetails(
 
 /**
  * Pure function implementing the 5-step account resolution chain.
- * Uses `senderAddress` only — no `financialEntity`.
+ * Uses `senderDisplayName` only.
  *
  * This is the single source of truth used by both:
  * - `resolveAccountForSms` (live detection, single SMS)
  * - `matchTransactionsBatched` (review page, batch processing)
  *
- * @param input - The match criteria (senderAddress, cardLast4, currency)
+ * @param input - The match criteria (senderDisplayName, cardLast4, currency)
  * @param accounts - Pre-fetched accounts with bank details
  * @returns The best match, or a "none" match if nothing fits
  */
@@ -280,7 +280,7 @@ function matchAccountCore(
   input: MatchInput,
   accounts: readonly AccountWithBankDetails[]
 ): AccountMatch {
-  const { senderAddress, cardLast4, currency } = input;
+  const { senderDisplayName, cardLast4, currency } = input;
 
   // Step 1: Card last 4 + sender match (highest confidence)
   if (cardLast4) {
@@ -288,7 +288,7 @@ function matchAccountCore(
       if (acc.cardLast4 && acc.cardLast4 === cardLast4) {
         // Card match found — verify sender also matches for highest confidence
         if (
-          isSenderMatch(senderAddress, {
+          isSenderMatch(senderDisplayName, {
             bankSmsSenderName: acc.smsSenderName,
             bankName: acc.bankName,
             accountName: acc.name,
@@ -318,7 +318,7 @@ function matchAccountCore(
   // Step 2: Sender match alone against bank_details / account name
   for (const acc of accounts) {
     if (
-      isSenderMatch(senderAddress, {
+      isSenderMatch(senderDisplayName, {
         bankSmsSenderName: acc.smsSenderName,
         bankName: acc.bankName,
         accountName: acc.name,
@@ -334,7 +334,7 @@ function matchAccountCore(
 
   // Step 3: Name + currency match via bank registry
   if (currency) {
-    const bankInfo = isKnownFinancialSender(senderAddress);
+    const bankInfo = isKnownFinancialSender(senderDisplayName);
     if (bankInfo) {
       const normalizedBankName = bankInfo.shortName.toLowerCase().trim();
 
@@ -403,7 +403,7 @@ function matchTransaction(
   accounts: readonly AccountWithBankDetails[]
 ): AccountMatch {
   const input: MatchInput = {
-    senderAddress: transaction.senderAddress,
+    senderDisplayName: transaction.senderDisplayName,
     cardLast4: transaction.cardLast4 ?? undefined,
     currency: transaction.currency ?? undefined,
   };

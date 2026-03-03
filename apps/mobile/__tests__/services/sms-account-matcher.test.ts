@@ -54,7 +54,7 @@ describe("sms-account-matcher - matchAccountCore", () => {
 
   it("Step 1: Matches based on card last 4 AND sender match (highest confidence)", () => {
     const input: MatchInput = {
-      senderAddress: "CIB-EGYPT", // Matches "CIB" bidirectionally
+      senderDisplayName: "CIB-EGYPT", // Matches "CIB" bidirectionally
       cardLast4: "1234",
     };
     const result = matchAccountCore(input, accounts);
@@ -64,7 +64,7 @@ describe("sms-account-matcher - matchAccountCore", () => {
 
   it("Step 1b: Matches based on card last 4 alone if sender doesn't match", () => {
     const input: MatchInput = {
-      senderAddress: "UNKNOWN SENDER xyz",
+      senderDisplayName: "UNKNOWN SENDER xyz",
       cardLast4: "1234", // Matches accBank1
     };
     const result = matchAccountCore(input, accounts);
@@ -74,7 +74,7 @@ describe("sms-account-matcher - matchAccountCore", () => {
 
   it("Step 2: Matches based on sender alone (bank_details / account name)", () => {
     const input: MatchInput = {
-      senderAddress: "NBE",
+      senderDisplayName: "NBE",
       // No card last 4
     };
     const result = matchAccountCore(input, accounts);
@@ -84,7 +84,7 @@ describe("sms-account-matcher - matchAccountCore", () => {
 
   it("Step 3: Matches based on bank registry name and currency", () => {
     const input: MatchInput = {
-      senderAddress: "BANQUEMISR", // Known financial sender mapped to "Banque Misr"
+      senderDisplayName: "BANQUEMISR", // Known financial sender mapped to "Banque Misr"
       currency: "EGP",
     };
     const result = matchAccountCore(input, accounts);
@@ -94,7 +94,7 @@ describe("sms-account-matcher - matchAccountCore", () => {
 
   it("Step 4: Falls back to default account if NO other match and not a known bank", () => {
     const input: MatchInput = {
-      senderAddress: "RANDOM_STORE",
+      senderDisplayName: "RANDOM_STORE",
       currency: "EGP",
     };
     const result = matchAccountCore(input, accounts);
@@ -106,7 +106,7 @@ describe("sms-account-matcher - matchAccountCore", () => {
     // Remove the default account and ensure they are sorted by createdAt ASC like fetchAccountsWithDetails does
     const accountsNoDefault = [accBank3, accBank1];
     const input: MatchInput = {
-      senderAddress: "RANDOM_STORE",
+      senderDisplayName: "RANDOM_STORE",
     };
     const result = matchAccountCore(input, accountsNoDefault);
     // accBank1 and accBank3 are both BANK type, but sorted by createdAt ASC.
@@ -128,7 +128,7 @@ describe("sms-account-matcher - matchAccountCore", () => {
     ];
 
     const input: MatchInput = {
-      senderAddress: "UNKNOWN",
+      senderDisplayName: "UNKNOWN",
     };
     const result = matchAccountCore(input, fallbackAccounts);
     expect(result.matchReason).toBe("none");

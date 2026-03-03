@@ -38,14 +38,15 @@ function getTopCategories(
   if (transactions.length === 0) return [];
   const frequency = new Map<string, number>();
   for (const tx of transactions) {
-    if (tx.categorySystemName) {
+    if (tx.categoryDisplayName) {
       frequency.set(
-        tx.categorySystemName,
-        (frequency.get(tx.categorySystemName) ?? 0) + 1
+        tx.categoryDisplayName,
+        (frequency.get(tx.categoryDisplayName) ?? 0) + 1
       );
     }
   }
-  return [...frequency.entries()]
+  // Exclude "other" category from top categories
+  return [...frequency.entries().filter(([name]) => name !== "other")]
     .sort((a, b) => b[1] - a[1])
     .slice(0, limit)
     .map(([name]) => name);

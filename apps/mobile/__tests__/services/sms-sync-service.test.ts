@@ -178,10 +178,9 @@ function createParsedTransaction(
     counterparty: "TestShop",
     date: new Date(),
     smsBodyHash: "",
-    senderAddress: "NBE",
     senderDisplayName: "NBE",
-    senderConfigId: "nbe",
-    categorySystemName: "bank_fees",
+    categoryId: "cat-bank-fees-id",
+    categoryDisplayName: "bank_fees",
     rawSmsBody: "Purchase of EGP 100.00 at TestShop",
     confidence: 0.85,
     ...overrides,
@@ -250,7 +249,7 @@ describe("sms-sync-service", () => {
       const parsed2 = createParsedTransaction({
         amount: 500,
         type: "EXPENSE",
-        senderAddress: "VF",
+        senderDisplayName: "VF",
         rawSmsBody: sms2.body,
       });
       mockParseSmsWithAi.mockResolvedValue({

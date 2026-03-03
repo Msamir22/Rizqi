@@ -68,14 +68,6 @@ function formatDate(date: Date): string {
   });
 }
 
-/** Clean category system name for display: "food_dining" → "Food Dining" */
-function formatCategoryName(systemName: string): string {
-  return systemName
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
-
 /** Confidence threshold — scores at or below this trigger a "Needs Review" tag. */
 const CONFIDENCE_REVIEW_THRESHOLD = 0.8;
 
@@ -139,7 +131,7 @@ function SmsTransactionItemInner({
 
         {/* Content */}
         <View className="flex-1 mr-3">
-          {/* Top row: sender (financialEntity) + amount */}
+          {/* Top row: sender (senderDisplayName) + amount */}
           <View className="flex-row items-center justify-between mb-1">
             <View className="flex-row items-center flex-shrink">
               <Text
@@ -200,7 +192,7 @@ function SmsTransactionItemInner({
           <View className="flex-row items-center flex-wrap gap-1.5">
             <View className="bg-slate-700/60 px-2.5 py-1 rounded-lg">
               <Text className="text-xs text-slate-300">
-                {formatCategoryName(transaction.categorySystemName)}
+                {transaction.categoryDisplayName}
               </Text>
             </View>
             {accountName ? (
