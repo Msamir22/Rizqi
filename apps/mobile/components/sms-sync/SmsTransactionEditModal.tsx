@@ -217,6 +217,10 @@ export function SmsTransactionEditModal({
   const isAtmWithdrawal = transaction.isAtmWithdrawal === true;
 
   // Reset local state when transaction changes
+  // Reset local state when a DIFFERENT transaction is opened or the external
+  // account match changes. bankAccountOptions is intentionally excluded:
+  // it recalculates whenever pendingAccounts changes, which would wipe
+  // the user's in-progress edits after creating a "+ New" account.
   useEffect(() => {
     setAmount(transaction.amount.toString());
     setCounterparty(transaction.counterparty || "");
@@ -239,7 +243,8 @@ export function SmsTransactionEditModal({
     setNewAccountName(transaction.senderDisplayName);
     setNewAccountError(null);
     setValidationError(null);
-  }, [transaction, currentAccountId, currentAccountName, bankAccountOptions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [transaction, currentAccountId, currentAccountName]);
 
   // ── "+ New" handlers ──────────────────────────────────────────────
 
