@@ -24,7 +24,13 @@
  * @module sms-account-matcher
  */
 
-import { Account, BankDetails, database, type CurrencyType } from "@astik/db";
+import {
+  Account,
+  AccountType,
+  BankDetails,
+  database,
+  type CurrencyType,
+} from "@astik/db";
 import { ParsedSmsTransaction, isKnownFinancialSender } from "@astik/logic";
 import { Q } from "@nozbe/watermelondb";
 
@@ -54,7 +60,7 @@ interface AccountWithBankDetails {
   readonly currency: CurrencyType;
   readonly isDefault: boolean;
   readonly createdAt: Date;
-  readonly type: string;
+  readonly type: AccountType;
   readonly smsSenderName?: string;
   readonly bankName?: string;
   readonly cardLast4?: string;
@@ -71,7 +77,7 @@ interface MatchInput {
 }
 
 /** Optional filter for `fetchAccountsWithDetails`. */
-type AccountTypeFilter = "BANK" | "CASH" | undefined;
+type AccountTypeFilter = AccountType | undefined;
 
 // ---------------------------------------------------------------------------
 // Constants

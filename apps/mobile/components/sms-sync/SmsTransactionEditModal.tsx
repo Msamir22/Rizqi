@@ -22,14 +22,15 @@
  */
 
 import { palette } from "@/constants/colors";
-import type { AccountWithBankDetails } from "@/services/sms-account-matcher";
 import type { PendingAccount } from "@/services/pending-account-service";
+import type { AccountWithBankDetails } from "@/services/sms-account-matcher";
+import { validateTransactionForm } from "@/validation/transaction-validation";
+import type { AccountType, MarketRate, TransactionType } from "@astik/db";
 import {
   convertCurrency,
   formatCurrency,
   type ParsedSmsTransaction,
 } from "@astik/logic";
-import type { TransactionType, MarketRate } from "@astik/db";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -42,7 +43,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { validateTransactionForm } from "@/validation/transaction-validation";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -89,7 +89,7 @@ interface AccountOption {
   readonly name: string;
   readonly currency: string;
   readonly isPending: boolean;
-  readonly type?: string;
+  readonly type?: AccountType;
 }
 
 // ---------------------------------------------------------------------------
@@ -813,4 +813,4 @@ export function SmsTransactionEditModal({
   );
 }
 
-export type { TransactionEdits, SmsTransactionEditModalProps };
+export type { SmsTransactionEditModalProps, TransactionEdits };
