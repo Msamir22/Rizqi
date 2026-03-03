@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env sh
 # Only run db:sync-local when migration-related files changed
 remote="$1"
 url="$2"

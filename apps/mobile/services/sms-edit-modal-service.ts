@@ -64,13 +64,14 @@ function isDuplicateAccount(
   accounts: readonly AccountWithBankDetails[],
   pendingAccounts: readonly PendingAccount[]
 ): boolean {
-  const normalized = name.trim().toLowerCase();
+  const normalize = (value: string): string => value.trim().toLowerCase();
+  const normalized = normalize(name);
   if (!normalized) return false;
   const existsInAccounts = accounts.some(
-    (acc) => acc.name.toLowerCase() === normalized && acc.currency === currency
+    (acc) => normalize(acc.name) === normalized && acc.currency === currency
   );
   const existsInPending = pendingAccounts.some(
-    (pa) => pa.name.toLowerCase() === normalized && pa.currency === currency
+    (pa) => normalize(pa.name) === normalized && pa.currency === currency
   );
   return existsInAccounts || existsInPending;
 }

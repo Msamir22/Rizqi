@@ -55,7 +55,7 @@ interface PendingAccount {
 interface PersistResult {
   /** Maps PendingAccount.tempId → real WatermelonDB Account.id */
   readonly tempToRealIdMap: ReadonlyMap<string, string>;
-  /** Number of accounts + bank_details created */
+  /** Number of Account records created */
   readonly createdCount: number;
   /** Errors encountered during creation */
   readonly errors: readonly string[];

@@ -261,6 +261,7 @@ export function SmsTransactionEditModal({
     const isCreatingNewAccount = isCreatingNew || !hasBankAccounts;
     let resolvedAccountId: string;
     let resolvedAccountName: string;
+    let pendingAccountToCreate: PendingAccount | null = null;
 
     if (isCreatingNewAccount) {
       const trimmedName = newAccountName.trim();
@@ -285,14 +286,13 @@ export function SmsTransactionEditModal({
       }
 
       const tempId = generatePendingTempId();
-      const pending = buildPendingAccount(tempId, {
+      pendingAccountToCreate = buildPendingAccount(tempId, {
         name: trimmedName,
         currency: transaction.currency,
         senderDisplayName: transaction.senderDisplayName,
         cardLast4: transaction.cardLast4 ?? undefined,
       });
 
-      onCreatePendingAccount(pending);
       resolvedAccountId = tempId;
       resolvedAccountName = trimmedName;
     } else {
@@ -313,6 +313,11 @@ export function SmsTransactionEditModal({
     }
 
     setFormErrors({});
+
+    // Only add pending account after validation passes
+    if (pendingAccountToCreate) {
+      onCreatePendingAccount(pendingAccountToCreate);
+    }
 
     const edits = buildTransactionEdits({
       accountId: resolvedAccountId,

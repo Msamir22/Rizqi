@@ -148,11 +148,28 @@ async function prepareSavePayload(
         }
 
         // Step 5: Remap temp IDs → real IDs
+        const referencedPendingIds = new Set(
+          referencedPending.map((p) => p.tempId)
+        );
         for (const [idx, tempId] of originalIndexToAccountId) {
           const realId = persistResult.tempToRealIdMap.get(tempId);
           if (realId) {
             originalIndexToAccountId.set(idx, realId);
           }
+        }
+
+        // Fail fast if any referenced pending ID is still unresolved
+        const hasUnresolved = Array.from(
+          originalIndexToAccountId.values()
+        ).some((id) => referencedPendingIds.has(id));
+
+        if (hasUnresolved) {
+          return {
+            success: false,
+            reason: "persist_error",
+            message:
+              "One or more pending accounts could not be resolved to persisted IDs.",
+          };
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -166,7 +183,18 @@ async function prepareSavePayload(
   }
 
   // Step 6: Build the final selected array + sequential index map
-  const selected = selectedOriginalIndices.map((i) => effectiveTransactions[i]);
+  const selected: ParsedSmsTransaction[] = [];
+  for (const i of selectedOriginalIndices) {
+    const transaction = effectiveTransactions[i];
+    if (!transaction) {
+      return {
+        success: false,
+        reason: "persist_error",
+        message: `Selected transaction index ${i} is out of bounds.`,
+      };
+    }
+    selected.push(transaction);
+  }
   const transactionAccountMap = new Map<number, string>();
   selectedOriginalIndices.forEach((origIdx, seqIdx) => {
     const accountId = originalIndexToAccountId.get(origIdx);

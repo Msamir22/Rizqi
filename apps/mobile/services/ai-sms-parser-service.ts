@@ -200,7 +200,7 @@ function parseCategory(
   const fallbackCategory = validCategories.get("other");
   if (fallbackCategory) return fallbackCategory;
   console.warn(
-    `[ai-sms-parser] Unknown category "${categorySystemName}" from AI, falling back to "other"`
+    `[ai-sms-parser] Unknown category "${categorySystemName}" from AI and no "other" fallback category exists`
   );
 
   return null;

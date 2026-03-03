@@ -282,12 +282,14 @@ export function SmsTransactionReview({
           },
           accounts
         );
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
+      } catch (err: unknown) {
+        if (cancelled) return;
+        console.warn("[SmsTransactionReview] Account matching failed:", err);
         showToast({
           type: "warning",
           title: "Account Matching Failed",
-          message: `Some transactions may not have an account assigned: ${message}`,
+          message:
+            "Some transactions may not have an account assigned. You can assign them manually.",
           duration: 4000,
         });
       }

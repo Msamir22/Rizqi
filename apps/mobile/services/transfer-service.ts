@@ -25,6 +25,8 @@ export interface TransferData {
 // SMS ATM Transfer
 // ---------------------------------------------------------------------------
 
+const ATM_WITHDRAWAL_NOTE_PREFIX = "ATM Withdrawal" as const;
+
 /**
  * Input for creating an ATM withdrawal transfer from a live-detected SMS.
  *
@@ -87,16 +89,24 @@ export async function createSmsAtmTransfer(
     };
   }
 
-  await createTransfer({
-    fromAccountId: input.bankAccountId,
-    toAccountId: cashResult.accountId,
-    amount: input.amount,
-    currency: input.currency,
-    date: input.date,
-    notes: `ATM Withdrawal${input.senderDisplayName ? ` — ${input.senderDisplayName}` : ""}`,
-  });
+  try {
+    await createTransfer({
+      fromAccountId: input.bankAccountId,
+      toAccountId: cashResult.accountId,
+      amount: input.amount,
+      currency: input.currency,
+      date: input.date,
+      notes: `${ATM_WITHDRAWAL_NOTE_PREFIX}${input.senderDisplayName ? ` — ${input.senderDisplayName}` : ""}`,
+    });
 
-  return { success: true };
+    return { success: true };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return {
+      success: false,
+      error: `Failed to create ATM transfer: ${errorMessage}`,
+    };
+  }
 }
 
 /**
