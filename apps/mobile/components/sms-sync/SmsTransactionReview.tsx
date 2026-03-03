@@ -24,6 +24,7 @@ import { PeriodFilterModal } from "@/components/modals/PeriodFilterModal";
 import { TypeFilterModal } from "@/components/modals/TypeFilterModal";
 import { useToast } from "@/components/ui/Toast";
 import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
 import { useCategories } from "@/hooks/useCategories";
 import { useMarketRates } from "@/hooks/useMarketRates";
 import { PERIOD_LABELS, getPeriodDateRange } from "@/hooks/usePeriodSummary";
@@ -32,13 +33,13 @@ import type {
   TransactionTypeFilter,
 } from "@/hooks/useTransactionsGrouping";
 import type { PendingAccount } from "@/services/pending-account-service";
-import { prepareSavePayload } from "@/services/sms-review-save-service";
 import {
   type AccountMatch,
   type AccountWithBankDetails,
   fetchAccountsWithDetails,
   matchTransactionsBatched,
 } from "@/services/sms-account-matcher";
+import { prepareSavePayload } from "@/services/sms-review-save-service";
 import { getCurrentUserId } from "@/services/supabase";
 import type { ParsedSmsTransaction } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
@@ -56,7 +57,6 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  useColorScheme,
 } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import {
@@ -192,14 +192,12 @@ export function SmsTransactionReview({
   onDiscard,
   isSaving,
 }: SmsTransactionReviewProps): React.JSX.Element {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
+  const { isDark } = useTheme();
 
   // ── Filter state ──────────────────────────────────────────────────
   const [period, setPeriod] = useState<GroupingPeriod>("all_time");
   const [selectedTypes, setSelectedTypes] = useState<TransactionTypeFilter[]>([
-    "Income",
-    "Expense",
+    "All",
   ]);
   const [searchQuery, setSearchQuery] = useState("");
   const [periodModalVisible, setPeriodModalVisible] = useState(false);

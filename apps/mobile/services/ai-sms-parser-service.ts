@@ -11,32 +11,31 @@
  */
 
 import { supabase } from "./supabase";
+import { z } from "zod";
 
 import type { Category, CurrencyType, TransactionType } from "@astik/db";
 import { SUPPORTED_CURRENCIES, buildCategoryTree } from "@astik/logic";
 import type { ParsedSmsTransaction, SmsMessage } from "@astik/logic/src/types";
 
 // ---------------------------------------------------------------------------
-// Types — AI response shape
+// Schemas — AI response validation
 // ---------------------------------------------------------------------------
 
-interface AiSmsTransaction {
-  readonly messageId: string;
-  readonly amount: number;
-  readonly currency: string;
-  readonly type: string;
-  readonly counterparty: string;
-  readonly date: string;
-  readonly categorySystemName: string;
-  /** True for ATM cash withdrawal transactions. */
-  readonly isAtmWithdrawal?: boolean;
-  /** Last 4 digits of the card found in the SMS body. */
-  readonly cardLast4?: string;
-  /** AI self-assessed confidence in the accuracy of this extraction (0.0–1.0). */
-  readonly confidenceScore: number;
-  /** True if the AI is highly confident this is a real completed transaction. */
-  readonly isTrusted: boolean;
-}
+const AiSmsTransactionSchema = z.object({
+  messageId: z.string(),
+  amount: z.number(),
+  currency: z.string(),
+  type: z.string(),
+  counterparty: z.string(),
+  date: z.string(),
+  categorySystemName: z.string(),
+  isAtmWithdrawal: z.boolean().optional().default(false),
+  cardLast4: z.string().optional(),
+  confidenceScore: z.number(),
+  isTrusted: z.boolean(),
+});
+
+type AiSmsTransaction = z.infer<typeof AiSmsTransactionSchema>;
 
 /** Result from AI parsing */
 export interface AiParseResult {
@@ -108,27 +107,6 @@ const INTER_CHUNK_DELAY_MS = 2000;
 // ---------------------------------------------------------------------------
 
 /**
- * Runtime type guard for a single AI transaction object.
- * Validates that all required properties exist with correct types.
- */
-function isValidAiTransaction(value: unknown): value is AiSmsTransaction {
-  if (typeof value !== "object" || value === null) return false;
-
-  const obj = value as Record<string, unknown>;
-
-  return (
-    typeof obj.messageId === "string" &&
-    typeof obj.amount === "number" &&
-    typeof obj.currency === "string" &&
-    typeof obj.type === "string" &&
-    typeof obj.counterparty === "string" &&
-    typeof obj.date === "string" &&
-    typeof obj.categorySystemName === "string" &&
-    typeof obj.confidenceScore === "number"
-  );
-}
-
-/**
  * Parsed edge function response.
  */
 interface ChunkAiResult {
@@ -139,6 +117,7 @@ interface ChunkAiResult {
 
 /**
  * Safely parse and validate the Edge Function response.
+ * Uses Zod schema validation for each transaction entry.
  * Returns empty transactions if the response shape is unexpected.
  */
 function parseAiResponse(data: unknown): ChunkAiResult {
@@ -161,11 +140,26 @@ function parseAiResponse(data: unknown): ChunkAiResult {
     return emptyResult;
   }
 
-  const transactions = obj.transactions.filter(isValidAiTransaction);
-  const invalid = obj.transactions.length - transactions.length;
-  if (invalid > 0) {
+  const transactions: AiSmsTransaction[] = [];
+  let invalidCount = 0;
+
+  for (const raw of obj.transactions) {
+    const parsed = AiSmsTransactionSchema.safeParse(raw);
+    if (parsed.success) {
+      transactions.push(parsed.data);
+    } else {
+      invalidCount++;
+      console.warn(
+        "[ai-sms-parser] Skipping malformed transaction entry:",
+        raw,
+        parsed.error.issues
+      );
+    }
+  }
+
+  if (invalidCount > 0) {
     console.warn(
-      `[ai-sms-parser] parseAiResponse: ${invalid}/${obj.transactions.length} transactions failed validation`
+      `[ai-sms-parser] parseAiResponse: ${invalidCount}/${obj.transactions.length} transactions failed validation`
     );
   }
 

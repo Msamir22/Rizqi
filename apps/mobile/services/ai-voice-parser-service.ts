@@ -30,7 +30,7 @@ const DEFAULT_CATEGORY_DISPLAY_NAME = "other";
 const VOICE_AI_CONFIDENCE_BASELINE = 0.8;
 
 // ---------------------------------------------------------------------------
-// Schemas — AI response validation (Zod v4)
+// Schemas — AI response validation
 // ---------------------------------------------------------------------------
 
 const AiVoiceTransactionSchema = z.object({
