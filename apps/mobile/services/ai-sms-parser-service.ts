@@ -199,20 +199,17 @@ function normalizeType(raw: string): TransactionType {
 function parseCategory(
   categorySystemName: string,
   validCategories: CategoryMap
-): { name: Category["displayName"]; id: Category["id"] } {
-  if (validCategories.has(categorySystemName))
-    return (
-      // Other category is guaranteed to exist
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      validCategories.get(categorySystemName) || validCategories.get("other")!
-    );
+): { name: Category["displayName"]; id: Category["id"] } | null {
+  const directMatch = validCategories.get(categorySystemName);
+  if (directMatch) return directMatch;
+
+  const fallbackCategory = validCategories.get("other");
+  if (fallbackCategory) return fallbackCategory;
   console.warn(
     `[ai-sms-parser] Unknown category "${categorySystemName}" from AI, falling back to "other"`
   );
 
-  // Other category is guaranteed to exist
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  return validCategories.get("other")!;
+  return null;
 }
 
 function parseDate(dateStr: string, fallbackMs: number): Date {
@@ -270,6 +267,13 @@ function mapAiTransactions(
         : aiTx.counterparty;
 
     const category = parseCategory(aiTx.categorySystemName, validCategoryMap);
+
+    if (!category) {
+      console.warn(
+        `[ai-sms-parser] No valid category mapping for messageId: ${aiTx.messageId}, skipping`
+      );
+      continue;
+    }
 
     results.push({
       amount: Math.abs(aiTx.amount),

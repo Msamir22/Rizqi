@@ -11,6 +11,7 @@
  */
 
 import { supabase } from "./supabase";
+import { z } from "zod";
 
 import type { ParsedSmsTransaction } from "@astik/logic/src/types";
 import type { CurrencyType, TransactionType } from "@astik/db";
@@ -23,45 +24,29 @@ import type { CurrencyType, TransactionType } from "@astik/db";
 const VOICE_INPUT_SENDER = "voice-input";
 
 /** Default category display name when AI doesn't provide one. */
-const DEFAULT_CATEGORY_DISPLAY_NAME = "uncategorized";
+const DEFAULT_CATEGORY_DISPLAY_NAME = "other";
 
 /** Baseline confidence for voice-parsed transactions (0–1). */
 const VOICE_AI_CONFIDENCE_BASELINE = 0.8;
 
 // ---------------------------------------------------------------------------
-// Types — AI response shape
+// Schemas — AI response validation (Zod v4)
 // ---------------------------------------------------------------------------
 
-interface AiVoiceTransaction {
-  readonly amount: number;
-  readonly currency: string;
-  readonly type: string;
-  readonly merchant: string;
-  readonly categorySystemName: string;
-  readonly description: string;
-}
+const AiVoiceTransactionSchema = z.object({
+  amount: z.number(),
+  currency: z.string(),
+  type: z.string(),
+  merchant: z.string(),
+  categorySystemName: z.string().optional().default(""),
+  description: z.string().optional().default(""),
+});
+
+type AiVoiceTransaction = z.infer<typeof AiVoiceTransactionSchema>;
 
 interface ParseVoiceResponse {
-  readonly transactions: readonly AiVoiceTransaction[];
+  readonly transactions: readonly unknown[];
   readonly error?: string;
-}
-
-/**
- * Runtime type guard for AI voice transaction objects.
- * Validates required fields have correct types to prevent
- * downstream crashes from malformed Edge Function responses.
- */
-function isValidAiVoiceTransaction(
-  value: unknown
-): value is AiVoiceTransaction {
-  if (typeof value !== "object" || value === null) return false;
-  const obj = value as Record<string, unknown>;
-  return (
-    typeof obj.amount === "number" &&
-    typeof obj.currency === "string" &&
-    typeof obj.type === "string" &&
-    typeof obj.merchant === "string"
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -170,14 +155,19 @@ export async function parseVoiceWithAi(
 
     // Map AI response to ParsedSmsTransaction (filter out malformed entries)
     const now = new Date();
-    const validTransactions = data.transactions.filter((tx: unknown) => {
-      if (isValidAiVoiceTransaction(tx)) return true;
-      console.warn(
-        "[ai-voice-parser] Skipping malformed transaction entry:",
-        tx
-      );
-      return false;
-    });
+    const validTransactions: AiVoiceTransaction[] = [];
+    for (const raw of data.transactions) {
+      const parsed = AiVoiceTransactionSchema.safeParse(raw);
+      if (parsed.success) {
+        validTransactions.push(parsed.data);
+      } else {
+        console.warn(
+          "[ai-voice-parser] Skipping malformed transaction entry:",
+          raw,
+          parsed.error.issues
+        );
+      }
+    }
 
     const results: ParsedSmsTransaction[] = validTransactions.map(
       (aiTx: AiVoiceTransaction): ParsedSmsTransaction => ({
