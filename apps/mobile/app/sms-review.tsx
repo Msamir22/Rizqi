@@ -96,16 +96,6 @@ export default function SmsReviewScreen(): React.JSX.Element {
           clearTransactions();
           router.replace("/(tabs)/transactions");
         }
-
-        // Notify user if ATM withdrawals were skipped (FR-007)
-        if (result.skippedAtmCount > 0) {
-          showToast({
-            type: "warning",
-            title: "ATM Withdrawals Skipped",
-            message: result.atmSkipReason,
-            duration: 5000,
-          });
-        }
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         showToast({

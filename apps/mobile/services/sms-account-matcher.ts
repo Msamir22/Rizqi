@@ -355,7 +355,7 @@ function matchAccountCore(
   }
 
   // Step 5: First bank account fallback (NEW — sorted by created_at ASC)
-  const firstBankAccount = accounts.find((a) => a.type === "BANK");
+  const firstBankAccount = accounts.find((a) => a.type === "BANK_ACCOUNT");
   if (firstBankAccount) {
     return {
       accountId: firstBankAccount.id,

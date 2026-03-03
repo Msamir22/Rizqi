@@ -29,10 +29,11 @@ import {
   Transaction,
   Transfer,
   type Category,
+  type CurrencyType,
 } from "@astik/db";
 import type { ParsedSmsTransaction } from "@astik/logic";
 import { Q, type Model } from "@nozbe/watermelondb";
-import { findCashAccount } from "./account-service";
+import { ensureCashAccount } from "./account-service";
 import { getCurrentUserId } from "./supabase";
 
 // ---------------------------------------------------------------------------
@@ -42,8 +43,6 @@ import { getCurrentUserId } from "./supabase";
 interface BatchSaveResult {
   readonly savedCount: number;
   readonly failedCount: number;
-  readonly skippedAtmCount: number;
-  readonly atmSkipReason?: string;
   readonly errors: readonly string[];
 }
 
@@ -117,7 +116,7 @@ export async function batchCreateSmsTransactions(
   transactionAccountMap: ReadonlyMap<number, string>
 ): Promise<BatchSaveResult> {
   if (transactions.length === 0) {
-    return { savedCount: 0, failedCount: 0, skippedAtmCount: 0, errors: [] };
+    return { savedCount: 0, failedCount: 0, errors: [] };
   }
 
   // ── Pre-batch lookups (outside the write block) ──────────────────────
@@ -127,7 +126,6 @@ export async function batchCreateSmsTransactions(
     return {
       savedCount: 0,
       failedCount: transactions.length,
-      skippedAtmCount: 0,
       errors: ["User not authenticated"],
     };
   }
@@ -135,11 +133,26 @@ export async function batchCreateSmsTransactions(
   const categoryMap = await buildCategoryMap();
   const errors: string[] = [];
 
-  // Look up existing Cash account for ATM withdrawal routing (no lazy creation)
-  const hasAtmWithdrawals = transactions.some((tx) => tx.isAtmWithdrawal);
-  const cashAccountId = hasAtmWithdrawals
-    ? await findCashAccount(userId)
-    : null;
+  // Ensure Cash accounts exist for ATM withdrawal routing
+  const cashAccountIdByCurrency = new Map<string, string>();
+  const atmCurrencies = new Set<string>();
+
+  for (const tx of transactions) {
+    if (tx.isAtmWithdrawal) {
+      atmCurrencies.add(tx.currency);
+    }
+  }
+
+  for (const currency of atmCurrencies) {
+    const result = await ensureCashAccount(userId, currency as CurrencyType);
+    if (result.accountId) {
+      cashAccountIdByCurrency.set(currency, result.accountId);
+    } else {
+      errors.push(
+        `Failed to ensure cash account for currency ${currency}: ${result.error}`
+      );
+    }
+  }
 
   // ── Prepare all operations in-memory ─────────────────────────────────
 
@@ -150,7 +163,6 @@ export async function batchCreateSmsTransactions(
   const preparedOps: Model[] = [];
   const balanceDeltas = new Map<string, number>();
   let savedCount = 0;
-  let skippedAtmCount = 0;
   let failedCount = 0;
 
   for (let i = 0; i < transactions.length; i++) {
@@ -167,9 +179,13 @@ export async function batchCreateSmsTransactions(
 
     // ── ATM Withdrawal: prepare as Transfer (bank → cash) ──
     if (tx.isAtmWithdrawal) {
-      // Skip ATM withdrawals if no Cash account exists (FR-007)
+      const cashAccountId = cashAccountIdByCurrency.get(tx.currency);
+
       if (!cashAccountId) {
-        skippedAtmCount++;
+        errors.push(
+          `Skipped ATM withdrawal index ${i} — failed to resolve Cash account in ${tx.currency}`
+        );
+        failedCount++;
         continue;
       }
 
@@ -269,10 +285,5 @@ export async function batchCreateSmsTransactions(
     });
   }
 
-  const atmSkipReason =
-    skippedAtmCount > 0
-      ? `${skippedAtmCount} ATM withdrawal(s) skipped — no Cash account found.`
-      : undefined;
-
-  return { savedCount, failedCount, skippedAtmCount, atmSkipReason, errors };
+  return { savedCount, failedCount, errors };
 }

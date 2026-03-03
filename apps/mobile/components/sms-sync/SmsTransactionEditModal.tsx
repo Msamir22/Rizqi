@@ -91,6 +91,7 @@ interface AccountOption {
   readonly name: string;
   readonly currency: string;
   readonly isPending: boolean;
+  readonly type?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -178,15 +179,29 @@ export function SmsTransactionEditModal({
       name: acc.name,
       currency: acc.currency,
       isPending: false,
+      type: acc.type,
     }));
     const pending: AccountOption[] = pendingAccounts.map((pa) => ({
       id: pa.tempId,
       name: pa.name,
       currency: pa.currency,
       isPending: true,
+      type: "BANK_ACCOUNT", // pending accounts are always bank accounts in this flow
     }));
     return [...real, ...pending];
   }, [accounts, pendingAccounts]);
+
+  const bankAccountOptions = useMemo(
+    () => accountOptions.filter((o) => o.type !== "CASH"),
+    [accountOptions]
+  );
+
+  const existingCashAccountName = useMemo(() => {
+    const cashAcc = accounts.find(
+      (a) => a.type === "CASH" && a.currency === transaction.currency
+    );
+    return cashAcc?.name;
+  }, [accounts, transaction.currency]);
 
   // Determine selected account's currency for conversion notice
   const selectedAccountCurrency = useMemo(() => {
@@ -334,8 +349,9 @@ export function SmsTransactionEditModal({
 
   const handleSelectAccount = useCallback((opt: AccountOption) => {
     setSelectedAccountId(opt.id);
-    setSelectedAccountName(`${opt.name} (${opt.currency})`);
+    setSelectedAccountName(opt.name);
     setIsAccountPickerOpen(false);
+    setValidationError(null);
   }, []);
 
   // ── Render ────────────────────────────────────────────────────────
@@ -401,16 +417,28 @@ export function SmsTransactionEditModal({
             showsVerticalScrollIndicator={false}
           >
             {/* Sender info (read-only) */}
-            <View className="mb-4 bg-slate-800/60 rounded-xl p-3">
-              <Text className="text-xs text-slate-500 mb-1 font-medium">
-                From
-              </Text>
-              <Text className="text-sm text-white font-semibold">
-                {transaction.senderDisplayName}
-              </Text>
-              <Text className="text-xs text-slate-400 mt-1">
-                {formatDate(transaction.date)}
-              </Text>
+            <View className="mb-4 bg-slate-800/60 rounded-xl px-4 py-3 flex-row items-center border border-slate-700/50">
+              <View className="w-10 h-10 rounded-full bg-emerald-500/20 items-center justify-center mr-3">
+                <Ionicons
+                  name="business"
+                  size={20}
+                  color={palette.nileGreen[400]}
+                />
+              </View>
+              <View className="flex-1">
+                <Text className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-0.5">
+                  From
+                </Text>
+                <Text
+                  className="text-sm text-white font-semibold flex-shrink"
+                  numberOfLines={1}
+                >
+                  {transaction.senderDisplayName}
+                </Text>
+                <Text className="text-[10px] text-slate-400 mt-0.5">
+                  {formatDate(transaction.date)}
+                </Text>
+              </View>
             </View>
 
             {/* Type toggle — hidden for cash withdrawals (always Transfer) */}
@@ -507,7 +535,14 @@ export function SmsTransactionEditModal({
                           currency: selectedAccountCurrency as Parameters<
                             typeof formatCurrency
                           >[0]["currency"],
-                        })} at current rate`
+                        })} at rate ${latestRates
+                          .getRate(
+                            transaction.currency,
+                            selectedAccountCurrency as Parameters<
+                              typeof convertCurrency
+                            >[2]
+                          )
+                          .toFixed(4)}`
                       : "Exchange rate unavailable"}
                   </Text>
                 </View>
@@ -554,9 +589,9 @@ export function SmsTransactionEditModal({
               {/* Account label + "+ New" / "✕ Cancel" pill */}
               <View className="flex-row items-center justify-between mb-2">
                 <Text className="text-xs text-slate-500 font-medium uppercase tracking-wider">
-                  Account
+                  {isAtmWithdrawal ? "From Account" : "Account"}
                 </Text>
-                {hasAccounts && !isCreatingNew && (
+                {hasAccounts && !isCreatingNew && !isAtmWithdrawal && (
                   <TouchableOpacity
                     onPress={handleStartNew}
                     activeOpacity={0.7}
@@ -587,7 +622,7 @@ export function SmsTransactionEditModal({
               </View>
 
               {/* Mode: Text input (no accounts OR creating new) */}
-              {!hasAccounts || isCreatingNew ? (
+              {!isAtmWithdrawal && (!hasAccounts || isCreatingNew) ? (
                 <View>
                   <TextInput
                     value={newAccountName}
@@ -609,11 +644,18 @@ export function SmsTransactionEditModal({
                       {newAccountError}
                     </Text>
                   )}
-                  <Text className="text-xs text-slate-500 mt-2 ml-1">
-                    {isCreatingNew
-                      ? "A new bank account will be created when you save all transactions."
-                      : "No bank accounts found. Enter a name and we'll create one for you."}
-                  </Text>
+                  <View className="flex-row items-start bg-emerald-500/10 p-3 rounded-xl mt-3 border border-emerald-500/20">
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={16}
+                      color={palette.nileGreen[400]}
+                    />
+                    <Text className="text-[10px] text-emerald-400 font-bold uppercase ml-2 flex-1 leading-4 pt-0.5">
+                      {`We'll create an account named '${
+                        newAccountName.trim() || "New Account"
+                      }' in ${transaction.currency}.`}
+                    </Text>
+                  </View>
                 </View>
               ) : (
                 /* Mode: Dropdown (accounts exist, not creating) */
@@ -623,8 +665,14 @@ export function SmsTransactionEditModal({
                     activeOpacity={0.7}
                     className="bg-slate-800/60 rounded-xl px-4 py-3 flex-row items-center justify-between border border-slate-700/50"
                   >
-                    <Text className="text-base text-white font-semibold">
-                      {selectedAccountName || "No account matched"}
+                    <Text
+                      className="text-base text-white font-semibold flex-1"
+                      numberOfLines={1}
+                    >
+                      {selectedAccountName ||
+                        (isAtmWithdrawal
+                          ? "Select source bank account"
+                          : "Select an account")}
                     </Text>
                     <Ionicons
                       name={isAccountPickerOpen ? "chevron-up" : "chevron-down"}
@@ -636,7 +684,10 @@ export function SmsTransactionEditModal({
                   {/* Inline account picker */}
                   {isAccountPickerOpen && (
                     <View className="mt-2 bg-slate-800/80 rounded-xl overflow-hidden border border-slate-700/40">
-                      {accountOptions.map((opt) => (
+                      {(isAtmWithdrawal
+                        ? bankAccountOptions
+                        : accountOptions
+                      ).map((opt) => (
                         <TouchableOpacity
                           key={opt.id}
                           onPress={() => handleSelectAccount(opt)}
@@ -647,13 +698,14 @@ export function SmsTransactionEditModal({
                               : ""
                           }`}
                         >
-                          <View className="flex-row items-center">
+                          <View className="flex-row items-center flex-1">
                             <Text
-                              className={`text-sm font-semibold ${
+                              className={`text-sm font-semibold flex-shrink ${
                                 opt.id === selectedAccountId
                                   ? "text-emerald-400"
                                   : "text-slate-300"
                               }`}
+                              numberOfLines={1}
                             >
                               {opt.name} ({opt.currency})
                             </Text>
@@ -674,6 +726,53 @@ export function SmsTransactionEditModal({
                           )}
                         </TouchableOpacity>
                       ))}
+                    </View>
+                  )}
+
+                  {/* Cash Withdrawal TO field (read-only) */}
+                  {isAtmWithdrawal && (
+                    <View className="mt-4">
+                      {/* Down arrow indicator */}
+                      <View className="items-center -my-3 z-10 relative">
+                        <View className="bg-slate-900 border border-slate-700/50 rounded-full w-8 h-8 items-center justify-center">
+                          <Ionicons
+                            name="arrow-down"
+                            size={16}
+                            color={palette.slate[400]}
+                          />
+                        </View>
+                      </View>
+
+                      {/* To Account block */}
+                      <Text className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-2 mt-2">
+                        To Account
+                      </Text>
+
+                      <View className="bg-slate-800/60 rounded-xl px-4 py-3 border border-slate-700/50 flex-row items-center">
+                        <View className="w-6 h-6 rounded-full bg-amber-500/20 items-center justify-center mr-2">
+                          <Ionicons
+                            name="cash"
+                            size={12}
+                            color={palette.gold[400]}
+                          />
+                        </View>
+                        <Text className="text-white text-base font-semibold">
+                          {existingCashAccountName || "Cash"}
+                        </Text>
+                      </View>
+
+                      {!existingCashAccountName && (
+                        <View className="flex-row items-start bg-amber-500/10 p-3 rounded-xl mt-3 border border-amber-500/20">
+                          <Ionicons
+                            name="information-circle"
+                            size={16}
+                            color={palette.gold[400]}
+                          />
+                          <Text className="text-[10px] text-amber-500 font-bold uppercase ml-2 flex-1 leading-4 pt-0.5">
+                            {`A new cash account will be created automatically in ${transaction.currency}.`}
+                          </Text>
+                        </View>
+                      )}
                     </View>
                   )}
                 </View>
