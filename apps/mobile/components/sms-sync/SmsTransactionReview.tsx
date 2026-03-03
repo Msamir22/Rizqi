@@ -250,6 +250,8 @@ export function SmsTransactionReview({
 
   const { categories: rootCategories } = useCategories();
 
+  const batchSize = 20;
+
   // Run batched account matching on mount (progressive rendering)
   useEffect(() => {
     let cancelled = false;
@@ -269,7 +271,7 @@ export function SmsTransactionReview({
         await matchTransactionsBatched(
           transactions,
           userId,
-          20,
+          batchSize,
           (batchResults) => {
             if (cancelled) return;
             setAccountMatches((prev) => {

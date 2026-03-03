@@ -223,6 +223,14 @@ export async function batchCreateSmsTransactions(
       .query(Q.where("id", Q.oneOf(accountIds)))
       .fetch();
 
+    const existingIds = new Set(accounts.map((a) => a.id));
+    const missingIds = accountIds.filter((id) => !existingIds.has(id));
+    if (missingIds.length > 0) {
+      throw new Error(
+        `[batch-sms-transactions] Missing account rows for mapped IDs: ${missingIds.join(", ")}`
+      );
+    }
+
     for (const account of accounts) {
       const delta = balanceDeltas.get(account.id);
       if (delta && delta !== 0) {
