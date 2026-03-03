@@ -383,7 +383,7 @@ export function SmsTransactionReview({
     [editModalIndex]
   );
 
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(async (): Promise<void> => {
     const result = await prepareSavePayload({
       selectedIndices,
       transactionOverrides,

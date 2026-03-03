@@ -50,7 +50,7 @@ interface ParseVoiceResponse {
 }
 
 // ---------------------------------------------------------------------------
-// Constants
+// Validation Sets
 // ---------------------------------------------------------------------------
 
 const VALID_CURRENCIES: ReadonlySet<string> = new Set([

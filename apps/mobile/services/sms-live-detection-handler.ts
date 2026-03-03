@@ -108,11 +108,12 @@ async function saveDetectedTransaction(
     });
 
     if (!result.success) {
-      console.error(`[sms-detection] ATM transfer failed: ${result.error}`);
-      return;
+      throw new Error(
+        `[sms-detection] ATM transfer failed: ${result.error ?? "unknown error"}`
+      );
     }
 
-    console.log(
+    console.info(
       `[sms-detection] Saved ATM transfer: ${parsed.amount} ${parsed.currency}`
     );
     return;

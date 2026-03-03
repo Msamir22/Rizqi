@@ -19,6 +19,8 @@ export interface TransferData {
   date?: Date;
   notes?: string;
   exchangeRate?: number;
+  /** SMS body hash for deduplication (persisted in DB) */
+  smsBodyHash?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -97,6 +99,7 @@ export async function createSmsAtmTransfer(
       currency: input.currency,
       date: input.date,
       notes: `${ATM_WITHDRAWAL_NOTE_PREFIX}${input.senderDisplayName ? ` — ${input.senderDisplayName}` : ""}`,
+      smsBodyHash: input.smsBodyHash,
     });
 
     return { success: true };
@@ -132,6 +135,10 @@ export async function createTransfer(data: TransferData): Promise<void> {
       transfer.currency = data.currency;
       transfer.date = data.date || new Date();
       transfer.notes = data.notes;
+
+      if (data.smsBodyHash) {
+        transfer.smsBodyHash = data.smsBodyHash;
+      }
 
       // Multi-currency fields
       if (data.convertedAmount) {
