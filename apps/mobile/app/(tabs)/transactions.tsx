@@ -7,12 +7,12 @@ import { PageHeader } from "@/components/navigation/PageHeader";
 import { GroupHeader } from "@/components/transactions/GroupHeader";
 import { QuickEditModal } from "@/components/transactions/QuickEditModal";
 import { TransactionCard } from "@/components/transactions/TransactionCard";
+import { TransactionFiltersBar } from "@/components/transactions/TransactionFiltersBar";
 import { TransferCard } from "@/components/transactions/TransferCard";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
-import { PERIOD_LABELS } from "@/hooks/usePeriodSummary";
 import { batchDeleteDisplayTransactions } from "@/services/transaction-service";
 import {
   useTransactionsGrouping,
@@ -27,14 +27,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  SectionList,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, SectionList, Text, View } from "react-native";
 
 /**
  * Render the Transactions screen with filters, search, grouped list, selection, and quick-edit flows.
@@ -499,85 +492,17 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
         />
 
         {/* Filters & Search Row */}
-
-        <View className="px-5 pb-4">
-          <View className="flex-row mb-3 flex-wrap gap-2">
-            {/* Period Filter Button */}
-            <TouchableOpacity
-              testID="filter-period"
-              className="flex-row items-center bg-white dark:bg-slate-800 py-2.5 px-4 rounded-3xl border border-slate-200 dark:border-slate-700 gap-2 flex-1 shadow-sm"
-              onPress={() => setPeriodModalVisible(true)}
-            >
-              <Ionicons
-                name="calendar-outline"
-                size={18}
-                color={isDark ? palette.nileGreen[400] : palette.nileGreen[600]}
-              />
-              <Text className="text-sm font-semibold text-slate-700 dark:text-slate-200 flex-1">
-                {PERIOD_LABELS[period]}
-              </Text>
-              <Ionicons
-                name="chevron-down"
-                size={16}
-                color={isDark ? palette.slate[500] : palette.slate[400]}
-              />
-            </TouchableOpacity>
-
-            {/* Type Filter Button */}
-            <TouchableOpacity
-              testID="filter-type"
-              className="flex-row items-center bg-white dark:bg-slate-800 py-2.5 px-4 rounded-3xl border border-slate-200 dark:border-slate-700 gap-2 flex-1 shadow-sm"
-              onPress={() => setTypeModalVisible(true)}
-            >
-              <Ionicons
-                name="funnel-outline"
-                size={18}
-                color={isDark ? palette.nileGreen[400] : palette.nileGreen[600]}
-              />
-              <Text
-                className="text-sm font-semibold text-slate-700 dark:text-slate-200 flex-1"
-                numberOfLines={1}
-              >
-                {selectedTypes.length === 3
-                  ? "All Types"
-                  : selectedTypes.length === 0
-                    ? "No Types"
-                    : selectedTypes.join(", ")}
-              </Text>
-              <Ionicons
-                name="chevron-down"
-                size={16}
-                color={isDark ? palette.slate[500] : palette.slate[400]}
-              />
-            </TouchableOpacity>
-          </View>
-
-          {/* Search Bar */}
-          <View className="bg-white dark:bg-slate-900 flex-row items-center px-4 h-12 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-            <Ionicons
-              name="search-outline"
-              size={20}
-              color={isDark ? palette.slate[500] : palette.slate[400]}
-            />
-            <TextInput
-              testID="search-input"
-              className="flex-1 ml-3 text-slate-800 dark:text-slate-100 text-[16px]"
-              placeholder="Search transactions..."
-              placeholderTextColor={palette.slate[400]}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery("")}>
-                <Ionicons
-                  name="close-circle"
-                  size={20}
-                  color={isDark ? palette.slate[500] : palette.slate[400]}
-                />
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
+        <TransactionFiltersBar
+          period={period}
+          onPeriodPress={() => setPeriodModalVisible(true)}
+          selectedTypes={selectedTypes}
+          allTypesCount={3}
+          onTypePress={() => setTypeModalVisible(true)}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder="Search transactions..."
+          containerClassName="px-5 pb-4"
+        />
 
         {/* List Content */}
         {isLoading ? (
