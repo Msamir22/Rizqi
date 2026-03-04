@@ -62,7 +62,7 @@ function CategoryChip({
         numberOfLines={1}
         className={`ml-1.5 text-xs font-medium ${
           isSelected
-            ? "text-nileGreen-700 dark:text-nileGreen-300"
+            ? "text-nileGreen-700 dark:text-nileGreen-400"
             : "text-slate-600 dark:text-slate-300"
         }`}
       >
@@ -142,7 +142,7 @@ export function CategoryPicker({
           contentContainerStyle={{ paddingHorizontal: 4, gap: 8 }}
         >
           {columns.map((column, colIdx) => (
-            <View key={`col-${colIdx}`} style={{ gap: 6 }}>
+            <View key={`col-${colIdx}`} className="gap-6">
               {column.map((cat) => (
                 <CategoryChip
                   key={cat.id}

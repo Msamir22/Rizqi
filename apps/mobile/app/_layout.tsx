@@ -147,6 +147,7 @@ function RootLayoutNav(): React.ReactNode {
       />
       <Stack
         screenOptions={{
+          headerShown: false,
           contentStyle: {
             backgroundColor: isDark
               ? darkTheme.background
@@ -154,41 +155,32 @@ function RootLayoutNav(): React.ReactNode {
           },
         }}
       >
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="index" />
+        <Stack.Screen name="onboarding" />
+        <Stack.Screen name="(tabs)" />
         <Stack.Screen
           name="add-account"
           options={{
-            headerShown: false,
             presentation: "modal",
           }}
         />
-        <Stack.Screen
-          name="voice-input"
-          options={{
-            headerShown: false,
-          }}
-        />
+        <Stack.Screen name="voice-input" />
         <Stack.Screen
           name="add-transaction"
           options={{
             title: "Add Transaction",
-            headerShown: false,
           }}
         />
         <Stack.Screen
           name="edit-transaction"
           options={{
             title: "Edit Transaction",
-            headerShown: false,
           }}
         />
         <Stack.Screen
           name="settings"
           options={{
             title: "Settings",
-            headerShown: false,
           }}
         />
         <Stack.Screen
@@ -201,21 +193,10 @@ function RootLayoutNav(): React.ReactNode {
           name="create-recurring-payment"
           options={{
             presentation: "modal",
-            headerShown: false,
           }}
         />
-        <Stack.Screen
-          name="sms-scan"
-          options={{
-            headerShown: false,
-          }}
-        />
-        <Stack.Screen
-          name="sms-review"
-          options={{
-            headerShown: false,
-          }}
-        />
+        <Stack.Screen name="sms-scan" />
+        <Stack.Screen name="sms-review" />
       </Stack>
     </>
   );

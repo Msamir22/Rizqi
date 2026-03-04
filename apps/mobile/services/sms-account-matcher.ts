@@ -49,8 +49,8 @@ type MatchReason =
   | "none";
 
 interface AccountMatch {
-  readonly accountId: string;
-  readonly accountName: string;
+  readonly accountId: string | null;
+  readonly accountName: string | null;
   readonly matchReason: MatchReason;
 }
 
@@ -419,7 +419,7 @@ function matchAccountCore(
   }
 
   // No match at all
-  return { accountId: "", accountName: "", matchReason: "none" };
+  return { accountId: null, accountName: null, matchReason: "none" };
 }
 
 // ---------------------------------------------------------------------------

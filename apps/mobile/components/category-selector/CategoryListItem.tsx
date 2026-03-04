@@ -77,7 +77,7 @@ export const CategoryListItem = memo(function CategoryListItem({
           numberOfLines={1}
           className={`flex-1 text-base font-medium ${
             isSelected
-              ? "text-nileGreen-700 dark:text-nileGreen-300 font-semibold"
+              ? "text-nileGreen-700 dark:text-nileGreen-400 font-semibold"
               : "text-slate-800 dark:text-slate-100"
           }`}
         >

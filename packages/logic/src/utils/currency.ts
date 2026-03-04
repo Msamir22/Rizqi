@@ -1,5 +1,10 @@
 import type { CurrencyType, MarketRate } from "@astik/db";
 
+const EXCHANGE_RATE_UNAVAILABLE_MESSAGE = "Exchange rate unavailable";
+const CONVERSION_UNAVAILABLE_MESSAGE = "Conversion unavailable";
+const PRIMARY_RATE_FRACTION_DIGITS = 2;
+const SECONDARY_RATE_MAX_FRACTION_DIGITS = 4;
+
 /**
  * Converts an amount from one currency to another.
  *
@@ -22,6 +27,85 @@ export function convertCurrency(
   if (!marketRates || amount === 0 || fromCurrency === toCurrency)
     return amount;
   return amount * marketRates.getRate(fromCurrency, toCurrency);
+}
+
+/**
+ * Formats a given exchange rate between two currencies.
+ * To avoid showing very small decimals (like 1 EGP = 0.020 USD),
+ * it treats the "stronger" currency as the base (the "1") by checking
+ * which direction yields a rate >= 1.
+ * For example, if from=EGP and to=USD, it returns "1 USD = 49.70 EGP",
+ * rather than "1 EGP = 0.02 USD" as doing so reflects the conventional way
+ * rates are displayed (like in LiveRates).
+ */
+export function formatExchangeRate(
+  currencyA: CurrencyType,
+  currencyB: CurrencyType,
+  rates: MarketRate | null
+): string {
+  if (!rates) return EXCHANGE_RATE_UNAVAILABLE_MESSAGE;
+  if (currencyA === currencyB) return `1 ${currencyA} = 1 ${currencyA}`;
+
+  const rateAToB = rates.getRate(currencyA, currencyB);
+
+  if (rateAToB >= 1) {
+    // 1 currencyA = rateAToB currencyB
+    const formatted = new Intl.NumberFormat("en-US", {
+      maximumFractionDigits: PRIMARY_RATE_FRACTION_DIGITS,
+      minimumFractionDigits: PRIMARY_RATE_FRACTION_DIGITS,
+    }).format(rateAToB);
+    return `1 ${currencyA} = ${formatted} ${currencyB}`;
+  } else {
+    // 1 currencyB = rateBToA currencyA
+    const rateBToA = rates.getRate(currencyB, currencyA);
+    const formatted = new Intl.NumberFormat("en-US", {
+      maximumFractionDigits: SECONDARY_RATE_MAX_FRACTION_DIGITS,
+      minimumFractionDigits: PRIMARY_RATE_FRACTION_DIGITS,
+    }).format(rateBToA);
+    return `1 ${currencyB} = ${formatted} ${currencyA}`;
+  }
+}
+
+/**
+ * Builds the "≈ X.XX EGP at rate 1 USD = 49.70 EGP" preview string
+ * for cross-currency transactions dynamically.
+ */
+export function formatConversionPreview(
+  amount: number | string,
+  fromCurrency: CurrencyType,
+  toCurrency: CurrencyType,
+  rates: MarketRate | null
+): string {
+  if (!rates) return EXCHANGE_RATE_UNAVAILABLE_MESSAGE;
+  try {
+    const rawVal = typeof amount === "string" ? parseFloat(amount) : amount;
+    const safeAmount = Number.isFinite(rawVal) ? rawVal : 0;
+
+    if (fromCurrency === toCurrency) {
+      return formatCurrency({
+        amount: safeAmount,
+        currency: toCurrency,
+        minimumFractionDigits: PRIMARY_RATE_FRACTION_DIGITS,
+        maximumFractionDigits: PRIMARY_RATE_FRACTION_DIGITS,
+      });
+    }
+
+    const converted = convertCurrency(
+      safeAmount,
+      fromCurrency,
+      toCurrency,
+      rates
+    );
+    const rateDisplay = formatExchangeRate(fromCurrency, toCurrency, rates);
+    return `≈ ${formatCurrency({
+      amount: converted,
+      currency: toCurrency,
+      minimumFractionDigits: PRIMARY_RATE_FRACTION_DIGITS,
+      maximumFractionDigits: PRIMARY_RATE_FRACTION_DIGITS,
+    })} at rate ${rateDisplay}`;
+  } catch {
+    return CONVERSION_UNAVAILABLE_MESSAGE;
+  }
 }
 
 const CURRENCY_SYMBOLS: Partial<Record<CurrencyType, string>> = {

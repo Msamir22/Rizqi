@@ -1,22 +1,28 @@
-import { TransactionType } from "@astik/db";
+import type { TransactionType } from "@astik/db";
 import * as Haptics from "expo-haptics";
 import { Text, TouchableOpacity, View } from "react-native";
 import { palette } from "@/constants/colors";
 
+type TabType = TransactionType | "TRANSFER";
+
 interface TypeTabsProps {
-  selectedType: TransactionType | "TRANSFER";
-  onSelect: (type: TransactionType | "TRANSFER") => void;
+  selectedType: TabType;
+  onSelect: (type: TabType) => void;
   hideTransfer?: boolean;
+  containerClassName?: string;
+  tabClassName?: string;
 }
 
 export function TypeTabs({
   selectedType,
   onSelect,
   hideTransfer = false,
+  containerClassName,
+  tabClassName,
 }: TypeTabsProps): JSX.Element {
   const allTabs: Array<{
     label: string;
-    value: TransactionType | "TRANSFER";
+    value: TabType;
     color: string;
   }> = [
     { label: "EXPENSE", value: "EXPENSE", color: palette.red[500] },
@@ -29,7 +35,9 @@ export function TypeTabs({
     : allTabs;
 
   return (
-    <View className="flex-row bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-2xl mb-4 mx-6 border border-slate-200 dark:border-slate-700">
+    <View
+      className={`flex-row bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-full mx-6 mb-4 border border-slate-200 dark:border-slate-700 ${containerClassName ?? ""}`}
+    >
       {tabs.map((tab) => {
         const isSelected = selectedType === tab.value;
         return (
@@ -43,9 +51,9 @@ export function TypeTabs({
               onSelect(tab.value);
             }}
             activeOpacity={0.8}
-            className={`flex-1 items-center justify-center py-2.5 rounded-xl ${
+            className={`flex-1 items-center justify-center py-2.5 rounded-full ${
               isSelected ? "" : "bg-transparent"
-            }`}
+            } ${tabClassName ?? ""}`}
             style={{
               backgroundColor: isSelected ? tab.color : undefined,
             }}

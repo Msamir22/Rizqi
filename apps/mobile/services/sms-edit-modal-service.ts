@@ -29,8 +29,8 @@ interface TransactionEdits {
   readonly counterparty: string;
   readonly categoryId: string;
   readonly type: TransactionType;
-  readonly accountId?: string;
-  readonly accountName?: string;
+  readonly accountId: string | null;
+  readonly accountName: string | null;
 }
 
 interface BuildPendingAccountInput {
@@ -41,8 +41,8 @@ interface BuildPendingAccountInput {
 }
 
 interface BuildTransactionEditsInput {
-  readonly accountId: string;
-  readonly accountName: string;
+  readonly accountId: string | null;
+  readonly accountName: string | null;
   readonly counterparty: string;
   readonly type: TransactionType;
   readonly categoryId: string;

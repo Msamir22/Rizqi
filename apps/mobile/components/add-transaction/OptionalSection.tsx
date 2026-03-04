@@ -225,7 +225,7 @@ export function OptionalSection({
                           <Text
                             className={`text-sm font-semibold ${
                               isSelected
-                                ? "text-nileGreen-700 dark:text-nileGreen-300"
+                                ? "text-nileGreen-700 dark:text-nileGreen-400"
                                 : "text-slate-600 dark:text-slate-300"
                             }`}
                           >

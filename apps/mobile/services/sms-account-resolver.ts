@@ -80,7 +80,11 @@ export async function resolveAccountForSms(
   const result = matchAccountCore(input, accounts);
 
   // Return null when no match found (backward-compatible with callers)
-  if (result.matchReason === "none") {
+  if (
+    result.matchReason === "none" ||
+    !result.accountId ||
+    !result.accountName
+  ) {
     return null;
   }
 

@@ -107,7 +107,7 @@ function buildRatesDisplay(
   return [
     {
       id: "1",
-      label: `${displayCurrency}/USD`,
+      label: `USD/${displayCurrency}`,
       value: currencyRate.toFixed(2),
       trend: calculateTrend(currencyRate, previousRate),
       type: "currency",

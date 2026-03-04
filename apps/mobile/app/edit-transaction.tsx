@@ -6,10 +6,7 @@
  * and account (cross-currency allowed). Includes delete and discard modals.
  */
 
-import {
-  AmountDisplay,
-  formatWithCommas,
-} from "@/components/add-transaction/AmountDisplay";
+import { AmountDisplay } from "@/components/add-transaction/AmountDisplay";
 import {
   type CalculatorKey,
   CalculatorKeypad,
@@ -41,6 +38,7 @@ import {
 } from "@/validation/transaction-validation";
 import { Ionicons } from "@expo/vector-icons";
 import type { TransactionType } from "@astik/db";
+import { formatAmountInput } from "@astik/logic";
 import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, {
@@ -524,8 +522,9 @@ export default function EditTransaction(): React.ReactNode {
             parseFloat(amount) > selectedAccount.balance && (
               <Text className="text-amber-500 text-xs font-medium text-center mb-1">
                 ⚠️ This will put your balance at -
-                {formatWithCommas(
-                  (parseFloat(amount) - selectedAccount.balance).toFixed(2)
+                {formatAmountInput(
+                  (parseFloat(amount) - selectedAccount.balance).toFixed(2),
+                  "0"
                 )}{" "}
                 {selectedAccount.currency}
               </Text>

@@ -136,6 +136,6 @@ describe("sms-account-matcher - matchAccountCore", () => {
     // Also verify empty account list returns "none"
     const emptyResult = matchAccountCore(input, []);
     expect(emptyResult.matchReason).toBe("none");
-    expect(emptyResult.accountId).toBe("");
+    expect(emptyResult.accountId).toBe(null);
   });
 });

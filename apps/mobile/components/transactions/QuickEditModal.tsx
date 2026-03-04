@@ -6,7 +6,7 @@ import {
   type CalculatorKey,
   CalculatorKeypad,
 } from "@/components/add-transaction/CalculatorKeypad";
-import { formatWithCommas } from "@/components/add-transaction/AmountDisplay";
+import { formatAmountInput } from "@astik/logic";
 import { CategoryPicker } from "@/components/add-transaction/CategoryPicker";
 import { CategorySelectorModal } from "@/components/modals/CategorySelectorModal";
 import { palette } from "@/constants/colors";
@@ -141,7 +141,7 @@ export function QuickEditModal({
                     className="text-4xl font-bold text-slate-900 dark:text-slate-25"
                     style={amountColor ? { color: amountColor } : {}}
                   >
-                    {currency} {formatWithCommas(amount) || "0"}
+                    {currency} {formatAmountInput(amount, "0")}
                   </Text>
                 </View>
                 <CalculatorKeypad onKeyPress={handleKeyPress} />

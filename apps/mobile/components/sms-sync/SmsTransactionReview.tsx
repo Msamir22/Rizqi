@@ -27,7 +27,7 @@ import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { useCategories } from "@/hooks/useCategories";
 import { useMarketRates } from "@/hooks/useMarketRates";
-import { PERIOD_LABELS, getPeriodDateRange } from "@/hooks/usePeriodSummary";
+import { getPeriodDateRange } from "@/hooks/usePeriodSummary";
 import type {
   GroupingPeriod,
   TransactionTypeFilter,
@@ -54,7 +54,6 @@ import {
   ActivityIndicator,
   FlatList,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -64,6 +63,8 @@ import {
   type TransactionEdits,
 } from "./SmsTransactionEditModal";
 import { SmsTransactionItem } from "./SmsTransactionItem";
+import { useCategoryLookup } from "@/context/CategoriesContext";
+import { TransactionFiltersBar } from "@/components/transactions/TransactionFiltersBar";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -248,7 +249,9 @@ export function SmsTransactionReview({
   // ── Inline edit modal state ──────────────────────────────────────
   const [editModalIndex, setEditModalIndex] = useState<number | null>(null);
 
-  const { categories: rootCategories } = useCategories();
+  const { expenseCategories, incomeCategories } = useCategories();
+
+  const categoryMap = useCategoryLookup();
 
   const batchSize = 20;
 
@@ -450,19 +453,17 @@ export function SmsTransactionReview({
       const tx = item.tx;
       if (!tx) return null;
 
+      const accountName =
+        transactionOverrides.get(item.originalIndex)?.accountName ??
+        accountMatches.get(item.originalIndex)?.accountName ??
+        null;
+
       return (
         <SmsTransactionItem
           transaction={tx}
           index={item.originalIndex}
           isSelected={selectedIndicesRef.current.has(item.originalIndex)}
-          accountName={
-            transactionOverrides.get(item.originalIndex)?.accountName ??
-            accountMatches.get(item.originalIndex)?.accountName ??
-            ""
-          }
-          matchReason={
-            accountMatches.get(item.originalIndex)?.matchReason ?? "none"
-          }
+          accountName={accountName}
           senderDisplayName={tx.senderDisplayName}
           onToggleSelect={handleToggleItem}
           onPress={handleOpenEditModal}
@@ -484,86 +485,17 @@ export function SmsTransactionReview({
   return (
     <View className="flex-1">
       {/* ── Filters & Search ────────────────────────────────────── */}
-      <View className="px-5 pt-3 pb-2">
-        <View className="flex-row mb-3 flex-wrap gap-2">
-          {/* Period Filter Pill */}
-          <TouchableOpacity
-            testID="sms-filter-period"
-            className="flex-row items-center bg-white dark:bg-slate-800 py-2.5 px-4 rounded-3xl border border-slate-200 dark:border-slate-700 gap-2 flex-1"
-            onPress={() => setPeriodModalVisible(true)}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name="calendar-outline"
-              size={18}
-              color={isDark ? palette.nileGreen[400] : palette.nileGreen[600]}
-            />
-            <Text className="text-sm font-semibold text-slate-700 dark:text-slate-200 flex-1">
-              {PERIOD_LABELS[period]}
-            </Text>
-            <Ionicons
-              name="chevron-down"
-              size={16}
-              color={isDark ? palette.slate[500] : palette.slate[400]}
-            />
-          </TouchableOpacity>
-
-          {/* Type Filter Pill */}
-          <TouchableOpacity
-            testID="sms-filter-type"
-            className="flex-row items-center bg-white dark:bg-slate-800 py-2.5 px-4 rounded-3xl border border-slate-200 dark:border-slate-700 gap-2 flex-1"
-            onPress={() => setTypeModalVisible(true)}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name="funnel-outline"
-              size={18}
-              color={isDark ? palette.nileGreen[400] : palette.nileGreen[600]}
-            />
-            <Text
-              className="text-sm font-semibold text-slate-700 dark:text-slate-200 flex-1"
-              numberOfLines={1}
-            >
-              {selectedTypes.length === 2
-                ? "All Types"
-                : selectedTypes.length === 0
-                  ? "No Types"
-                  : selectedTypes.join(", ")}
-            </Text>
-            <Ionicons
-              name="chevron-down"
-              size={16}
-              color={isDark ? palette.slate[500] : palette.slate[400]}
-            />
-          </TouchableOpacity>
-        </View>
-
-        {/* Search Bar */}
-        <View className="bg-white dark:bg-slate-900 flex-row items-center px-4 h-12 rounded-2xl border border-slate-200 dark:border-slate-800">
-          <Ionicons
-            name="search-outline"
-            size={20}
-            color={isDark ? palette.slate[500] : palette.slate[400]}
-          />
-          <TextInput
-            testID="sms-search-input"
-            className="flex-1 ml-3 text-slate-800 dark:text-slate-100 text-[16px]"
-            placeholder="Search counterparty, sender..."
-            placeholderTextColor={palette.slate[400]}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery("")}>
-              <Ionicons
-                name="close-circle"
-                size={20}
-                color={isDark ? palette.slate[500] : palette.slate[400]}
-              />
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
+      <TransactionFiltersBar
+        period={period}
+        onPeriodPress={() => setPeriodModalVisible(true)}
+        selectedTypes={selectedTypes}
+        allTypesCount={2}
+        onTypePress={() => setTypeModalVisible(true)}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder="Search counterparty, sender..."
+        containerClassName="px-5 pb-2"
+      />
 
       {/* ── Summary bar ─────────────────────────────────────────── */}
       <Animated.View
@@ -626,8 +558,20 @@ export function SmsTransactionReview({
       {/* ── Bottom action bar ───────────────────────────────────── */}
       <Animated.View
         entering={FadeInDown.delay(200)}
-        className="absolute bottom-0 left-0 right-0 px-5 pb-8 pt-4 bg-white/95 dark:bg-slate-950/95 border-t border-slate-200 dark:border-slate-800"
+        className="px-5 pb-8 pt-4 bg-white/95 dark:bg-background-dark border-t border-slate-200 dark:border-slate-800 flex-row gap-4 items-center"
       >
+        {/* Discard All */}
+        <TouchableOpacity
+          onPress={onDiscard}
+          disabled={isSaving}
+          activeOpacity={0.85}
+          className=" w-[50%] flex-1 py-4 rounded-xl items-center bg-slate-100 dark:bg-slate-800"
+        >
+          <Text className="text-slate-500 dark:text-slate-400 text-sm font-semibold">
+            Discard All
+          </Text>
+        </TouchableOpacity>
+
         {/* Save Selected */}
         <TouchableOpacity
           onPress={() => {
@@ -642,7 +586,7 @@ export function SmsTransactionReview({
           }}
           disabled={selectedCount === 0 || isSaving}
           activeOpacity={0.85}
-          className={`w-full py-4 rounded-2xl items-center mb-3 ${
+          className={`w-[50%] flex-1 py-4 rounded-xl items-center justify-center ${
             selectedCount === 0 || isSaving
               ? "bg-slate-300 dark:bg-slate-700"
               : "bg-nileGreen-600"
@@ -655,18 +599,6 @@ export function SmsTransactionReview({
               Save {selectedCount} Transaction{selectedCount !== 1 ? "s" : ""}
             </Text>
           )}
-        </TouchableOpacity>
-
-        {/* Discard All */}
-        <TouchableOpacity
-          onPress={onDiscard}
-          disabled={isSaving}
-          activeOpacity={0.85}
-          className="w-full py-3 rounded-2xl items-center bg-slate-100 dark:bg-slate-800"
-        >
-          <Text className="text-slate-500 dark:text-slate-400 text-sm font-semibold">
-            Discard All
-          </Text>
         </TouchableOpacity>
       </Animated.View>
 
@@ -693,17 +625,19 @@ export function SmsTransactionReview({
           currentAccountName={
             transactionOverrides.get(editModalIndex)?.accountName ??
             accountMatches.get(editModalIndex)?.accountName ??
-            ""
+            null
           }
           currentAccountId={
             transactionOverrides.get(editModalIndex)?.accountId ??
             accountMatches.get(editModalIndex)?.accountId ??
-            ""
+            null
           }
           accounts={userAccounts}
-          rootCategories={rootCategories}
+          categoryMap={categoryMap}
           pendingAccounts={pendingAccounts}
           latestRates={latestRates}
+          expenseCategories={expenseCategories}
+          incomeCategories={incomeCategories}
           onSave={handleEditModalSave}
           onCreatePendingAccount={handleCreatePendingAccount}
           onClose={() => setEditModalIndex(null)}

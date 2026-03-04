@@ -1,7 +1,4 @@
-import {
-  AmountDisplay,
-  formatWithCommas,
-} from "@/components/add-transaction/AmountDisplay";
+import { AmountDisplay } from "@/components/add-transaction/AmountDisplay";
 import {
   CalculatorKey,
   CalculatorKeypad,
@@ -35,6 +32,7 @@ import type {
   RecurringFrequency,
   TransactionType,
 } from "@astik/db";
+import { formatAmountInput } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -439,7 +437,7 @@ export default function AddTransaction(): React.ReactNode {
               parseFloat(amount) > selectedAccount.balance && (
                 <Text className="text-amber-500 text-xs font-medium text-center mb-1">
                   ⚠️ This will put your balance at -
-                  {formatWithCommas(
+                  {formatAmountInput(
                     (parseFloat(amount) - selectedAccount.balance).toFixed(2)
                   )}{" "}
                   {selectedAccount.currency}

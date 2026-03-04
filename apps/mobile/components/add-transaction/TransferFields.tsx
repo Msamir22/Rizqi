@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Text, TouchableOpacity, View } from "react-native";
 import { useEffect, useMemo, useState } from "react";
 import { AccountSelectorModal } from "../modals/AccountSelectorModal";
-import { formatWithCommas } from "./AmountDisplay";
+import { formatAmountInput } from "@astik/logic";
 
 interface TransferFieldsProps {
   accounts: Account[];
@@ -186,7 +186,7 @@ export function TransferFields({
                   : "text-slate-400"
               }`}
             >
-              {targetAmount ? formatWithCommas(targetAmount) : "0.00"}
+              {targetAmount ? formatAmountInput(targetAmount, "0") : "0.00"}
             </Text>
           </TouchableOpacity>
 

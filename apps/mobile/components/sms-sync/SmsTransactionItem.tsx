@@ -42,10 +42,10 @@ interface SmsTransactionItemProps {
   readonly index: number;
   /** Whether this item is selected for saving */
   readonly isSelected: boolean;
-  /** Matched account name (or empty if unmatched) */
-  readonly accountName: string;
+  /** Matched account name (or null if unmatched) */
+  readonly accountName: string | null;
   /** How the match was determined (used for fallback display) */
-  readonly matchReason: MatchReason;
+  readonly matchReason?: MatchReason;
   /** SMS sender display name (fallback when no account match) */
   readonly senderDisplayName: string;
   /** Toggle selection — receives index so parent can use a stable ref */
@@ -80,7 +80,6 @@ function SmsTransactionItemInner({
   index,
   isSelected,
   accountName,
-  matchReason,
   senderDisplayName,
   onToggleSelect,
   onPress,
@@ -195,15 +194,13 @@ function SmsTransactionItemInner({
                 {transaction.categoryDisplayName}
               </Text>
             </View>
-            {accountName ? (
+
+            {accountName && (
               <View className="bg-blue-900/40 px-2.5 py-1 rounded-lg">
                 <Text className="text-xs text-blue-300">{accountName}</Text>
               </View>
-            ) : matchReason === "none" ? (
-              <View className="bg-slate-700/40 px-2.5 py-1 rounded-lg">
-                <Text className="text-xs text-slate-400 italic">No match</Text>
-              </View>
-            ) : null}
+            )}
+
             <TouchableOpacity
               onPress={handleToggleExpand}
               hitSlop={14}

@@ -22,6 +22,7 @@ import { useToast } from "@/components/ui/Toast";
 import { palette } from "@/constants/colors";
 import { useSmsScanContext } from "@/context/SmsScanContext";
 import { useSmsSync } from "@/hooks/useSmsSync";
+import { PageHeader } from "@/components/navigation/PageHeader";
 import { batchCreateSmsTransactions } from "@/services/batch-sms-transactions";
 import {
   flushQueuedTransactions,
@@ -31,7 +32,7 @@ import type { ParsedSmsTransaction } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
-import { Alert, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Text, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // ---------------------------------------------------------------------------
@@ -153,29 +154,11 @@ export default function SmsReviewScreen(): React.JSX.Element {
   return (
     <SafeAreaView className="flex-1 bg-background dark:bg-background-dark">
       {/* Header */}
-      <View className="flex-row items-center justify-between px-5 pt-2 pb-3">
-        <TouchableOpacity
-          onPress={() => router.back()}
-          className="flex-row items-center"
-        >
-          <Ionicons
-            name="arrow-back"
-            size={18}
-            color={palette.nileGreen[500]}
-          />
-          <Text className="text-sm text-nileGreen-500 font-medium ml-1.5">
-            Back
-          </Text>
-        </TouchableOpacity>
-
-        <Text className="text-lg font-bold text-slate-900 dark:text-white">
-          Review
-        </Text>
-
-        <TouchableOpacity onPress={handleDiscard} hitSlop={8}>
-          <Ionicons name="close" size={22} color={palette.slate[400]} />
-        </TouchableOpacity>
-      </View>
+      <PageHeader
+        title="Review Transactions"
+        showDrawer={false}
+        showBackButton={true}
+      />
 
       {/* Transaction review list */}
       <SmsTransactionReview

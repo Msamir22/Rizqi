@@ -24,7 +24,7 @@ export function CategorySearchBar({
 }: CategorySearchBarProps): React.JSX.Element {
   const { isDark } = useTheme();
   return (
-    <View className="mx-4 mb-3 flex-row items-center bg-slate-100 dark:bg-slate-800 rounded-xl px-3 py-2.5">
+    <View className="mx-4 mt-2 mb-3 flex-row items-center bg-slate-100 dark:bg-slate-800 rounded-xl px-3 py-2.5">
       <Ionicons
         name="search-outline"
         size={18}
@@ -36,7 +36,7 @@ export function CategorySearchBar({
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor="#94a3b8"
-        className="flex-1 text-sm text-slate-800 dark:text-slate-100"
+        className="flex-1 py-1 text-sm text-slate-800 dark:text-slate-100"
         autoCapitalize="none"
         autoCorrect={false}
         returnKeyType="search"

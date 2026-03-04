@@ -105,7 +105,7 @@ export function PeriodFilterModal({
                         <Text
                           className={`text-sm font-medium ${
                             isSelected
-                              ? "text-nileGreen-700 dark:text-nileGreen-300 font-semibold"
+                              ? "text-nileGreen-700 dark:text-nileGreen-400 font-semibold"
                               : "text-slate-700 dark:text-slate-300"
                           }`}
                         >

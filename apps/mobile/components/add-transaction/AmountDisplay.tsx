@@ -1,3 +1,4 @@
+import { formatAmountInput } from "@astik/logic";
 import { Text, TouchableOpacity, View } from "react-native";
 
 interface AmountDisplayProps {
@@ -9,38 +10,6 @@ interface AmountDisplayProps {
   originalAmount?: string;
   /** Called when the user taps the amount area (e.g. to re-open keypad) */
   onPress?: () => void;
-}
-
-/**
- * Formats a numeric string with thousand separators (commas).
- * Handles expressions with operators by formatting each numeric segment individually.
- * Examples: "5000" → "5,000", "50000+200" → "50,000+200", "1000.50" → "1,000.50"
- */
-export function formatWithCommas(value: string): string {
-  if (!value) return "0";
-
-  // Split by operators while keeping the operators in the result
-  const parts = value.split(/([+\-*/])/);
-
-  return parts
-    .map((part) => {
-      // If it's an operator, return as-is
-      if (["+", "-", "*", "/"].includes(part)) return part;
-
-      // If it's a number, format with commas
-      if (part === "" || part === ".") return part;
-
-      const [integerPart, decimalPart] = part.split(".");
-      const formattedInteger = integerPart.replace(
-        /\B(?=(\d{3})+(?!\d))/g,
-        ","
-      );
-
-      return decimalPart !== undefined
-        ? `${formattedInteger}.${decimalPart}`
-        : formattedInteger;
-    })
-    .join("");
 }
 
 export function AmountDisplay({
@@ -61,7 +30,7 @@ export function AmountDisplay({
     fallbackColorClass = "text-blue-500";
   }
 
-  const displayAmount = formatWithCommas(amount);
+  const displayAmount = formatAmountInput(amount, "0");
 
   // Show original amount when it differs from the current amount
   const hasAmountChanged =
@@ -82,7 +51,7 @@ export function AmountDisplay({
       </Text>
       {hasAmountChanged && (
         <Text className="text-xs mt-1 text-slate-400 dark:text-slate-500 line-through">
-          was {formatWithCommas(originalAmount)}
+          was {formatAmountInput(originalAmount, "0")}
         </Text>
       )}
     </>

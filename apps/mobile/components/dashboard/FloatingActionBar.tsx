@@ -6,6 +6,8 @@
  * This file is kept for reference and can be safely deleted after verifying
  * that the new CustomBottomTabBar works correctly.
  */
+import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
 import {
   FontAwesome5,
   Ionicons,
@@ -15,12 +17,14 @@ import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { TouchableOpacity, View } from "react-native";
-import { palette } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
+
+const SHADOW_OPACITY_BY_MODE: Readonly<Record<string, number>> = {
+  dark: 0.5,
+  light: 0.15,
+};
 
 export function FloatingActionBar(): React.JSX.Element {
-  const { mode } = useTheme();
-  const isDark = mode === "dark";
+  const { isDark } = useTheme();
 
   const onVoicePress = (): void => {
     router.push("/voice-input");
@@ -34,10 +38,13 @@ export function FloatingActionBar(): React.JSX.Element {
     <View className="absolute bottom-8 self-center">
       <View
         className="rounded-[40px] shadow-lg"
+        // eslint-disable-next-line react-native/no-inline-styles
         style={{
           shadowColor: "#000",
           shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: isDark ? 0.5 : 0.15,
+          shadowOpacity:
+            // eslint-disable-next-line no-restricted-syntax
+            SHADOW_OPACITY_BY_MODE[isDark ? "dark" : "light"] ?? 0.15,
           shadowRadius: 20,
           elevation: 10,
         }}

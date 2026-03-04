@@ -6,10 +6,7 @@
  * Includes delete and discard modals.
  */
 
-import {
-  AmountDisplay,
-  formatWithCommas,
-} from "@/components/add-transaction/AmountDisplay";
+import { AmountDisplay } from "@/components/add-transaction/AmountDisplay";
 import {
   type CalculatorKey,
   CalculatorKeypad,
@@ -35,6 +32,7 @@ import {
   deleteTransfer,
   updateTransfer,
 } from "@/services/transfer-service";
+import { formatAmountInput } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import type { TransactionType } from "@astik/db";
 import * as Haptics from "expo-haptics";
@@ -489,7 +487,7 @@ export default function EditTransfer(): React.ReactNode {
         {/* Amount Display */}
         <View className="px-6">
           <AmountDisplay
-            amount={formatWithCommas(amount || "0")}
+            amount={formatAmountInput(amount, "0")}
             currency={
               isTransferMode
                 ? fromAccount?.currency || "EGP"
@@ -499,7 +497,7 @@ export default function EditTransfer(): React.ReactNode {
             mainColor={!isTransferMode ? selectedCategory?.color : undefined}
             originalAmount={
               originalRef.current?.amount
-                ? formatWithCommas(originalRef.current.amount)
+                ? formatAmountInput(originalRef.current.amount, "0")
                 : undefined
             }
             onPress={() => {
@@ -614,7 +612,7 @@ export default function EditTransfer(): React.ReactNode {
                     }`}
                   >
                     <Text className="flex-1 text-base font-bold text-slate-900 dark:text-white">
-                      {formatWithCommas(targetAmount || "0")}
+                      {formatAmountInput(targetAmount, "0")}
                     </Text>
                     <Text className="text-xs font-medium text-slate-400 dark:text-slate-500 ml-2">
                       {toAccount.currency}

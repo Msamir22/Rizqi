@@ -362,6 +362,11 @@ interface ChunkWork {
  * @returns Parsed transactions only (account suggestions derived separately)
  * @throws Never — returns empty array on total failure
  */
+import { MOCK_PARSED_TRANSACTIONS } from "./mock-parsed-transactions";
+
+// Toggle this to true to return mock parsed transactions and save AI tokens.
+const USE_MOCK_DATA = true;
+
 export async function parseSmsWithAi(
   candidates: readonly SmsCandidate[],
   context: ParseSmsContext,
@@ -369,6 +374,13 @@ export async function parseSmsWithAi(
 ): Promise<AiParseResult> {
   const emptyResult: AiParseResult = { transactions: [] };
   if (candidates.length === 0) return emptyResult;
+
+  if (USE_MOCK_DATA) {
+    console.info(
+      "[ai-sms-parser] 🟡 Using MOCK parsed transactions to save AI tokens."
+    );
+    return { transactions: [...MOCK_PARSED_TRANSACTIONS] };
+  }
 
   // Build validation set once for the entire parse session
   const validCategoryMap: CategoryMap = new Map(
