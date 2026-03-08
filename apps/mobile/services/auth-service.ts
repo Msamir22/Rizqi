@@ -52,6 +52,14 @@ interface TimeoutSentinel {
 
 type BrowserOrTimeout = WebBrowserAuthSessionResult | TimeoutSentinel;
 
+/**
+ * Handle returned by createCancellableTimeout() to allow cancellation.
+ */
+interface CancellableTimeout {
+  readonly promise: Promise<TimeoutSentinel>;
+  readonly cancel: () => void;
+}
+
 // =============================================================================
 // Constants
 // =============================================================================
@@ -176,21 +184,28 @@ export async function initiateOAuthLink(
       };
     }
 
-    // Open the OAuth URL in the system browser with timeout.
-    // The second argument tells openAuthSessionAsync to intercept the
-    // redirect to AUTH_REDIRECT_URL and close the browser automatically.
+    // Open the OAuth URL in the system browser with a cancellable timeout.
+    // When the browser resolves, the timeout is cancelled.
+    // When the timeout fires, the browser is dismissed.
+    const timeout = createCancellableTimeout(OAUTH_TIMEOUT_MS);
+
     const browserResult: BrowserOrTimeout = await Promise.race([
       WebBrowser.openAuthSessionAsync(result.url, AUTH_REDIRECT_URL),
-      createTimeout(OAUTH_TIMEOUT_MS),
+      timeout.promise,
     ]);
 
     // Check for timeout sentinel first (distinct from user cancellation)
     if (isTimeoutSentinel(browserResult)) {
+      // Dismiss the lingering browser window
+      WebBrowser.dismissAuthSession();
       return {
         success: false,
         error: "Sign-in took too long. Please try again.",
       };
     }
+
+    // Browser resolved — cancel the timeout timer
+    timeout.cancel();
 
     if (
       browserResult.type === WebBrowserResultType.CANCEL ||
@@ -246,15 +261,32 @@ export async function initiateOAuthLink(
 // =============================================================================
 
 /**
- * Create a timeout promise that resolves with a dedicated sentinel
- * to distinguish OAuth timeouts from user-initiated cancellations.
+ * Create a cancellable timeout that resolves with a TimeoutSentinel.
+ * Returns both the promise and a cancel function to clear the timer
+ * when the browser resolves before the timeout fires.
+ *
+ * Architecture & Design Rationale:
+ * - Pattern: Cancellable Promise (resource cleanup)
+ * - Why: Plain Promise.race leaks the timer when the browser wins,
+ *   and leaves the browser open when the timeout wins.
  */
-function createTimeout(ms: number): Promise<TimeoutSentinel> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
+function createCancellableTimeout(ms: number): CancellableTimeout {
+  let timerId: ReturnType<typeof setTimeout> | null = null;
+
+  const promise = new Promise<TimeoutSentinel>((resolve) => {
+    timerId = setTimeout(() => {
       resolve({ type: "TIMEOUT" });
     }, ms);
   });
+
+  const cancel = (): void => {
+    if (timerId !== null) {
+      clearTimeout(timerId);
+      timerId = null;
+    }
+  };
+
+  return { promise, cancel };
 }
 
 /**

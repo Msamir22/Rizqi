@@ -8,6 +8,10 @@
  *   logic to resolve the true user (refetching from server when the
  *   session says is_anonymous due to stale JWT after linkIdentity).
  * - SOLID: SRP — resolveUser handles one concern (user resolution).
+ *
+ * Race Guard: applyResolvedSession() + listenerFiredRef ensures that
+ * a stale bootstrap result cannot overwrite a fresher session from
+ * onAuthStateChange.
  */
 
 import { Session, User } from "@supabase/supabase-js";
@@ -16,6 +20,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { supabase } from "@/services/supabase";
@@ -102,14 +107,49 @@ export function AuthProvider({
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Guard: tracks whether onAuthStateChange has fired at least once.
+  // If it has, the bootstrap result is stale and should be discarded.
+  const listenerFiredRef = useRef(false);
+
+  /**
+   * Centralized session application. Both bootstrap and the auth
+   * listener route through here. The `fromListener` flag indicates
+   * the source: listener updates always win; bootstrap updates are
+   * skipped if the listener has already fired.
+   *
+   * Architecture & Design Rationale:
+   * - Pattern: Single Entry Point for State Mutation
+   * - Why: Prevents the race where bootstrap's slower resolveUser()
+   *   overwrites a fresher session already published by the listener.
+   */
+  const applyResolvedSession = useCallback(
+    (
+      resolvedSession: Session | null,
+      resolvedUser: User | null,
+      fromListener: boolean
+    ): void => {
+      if (!fromListener && listenerFiredRef.current) {
+        // Bootstrap resolved AFTER the listener already fired — skip.
+        return;
+      }
+
+      if (fromListener) {
+        listenerFiredRef.current = true;
+      }
+
+      setSession(resolvedSession);
+      setUser(resolvedUser);
+    },
+    []
+  );
+
   useEffect(() => {
     // Bootstrap: get initial session and resolve user
     supabase.auth
       .getSession()
       .then(async ({ data: { session: initialSession } }) => {
-        setSession(initialSession);
         const resolved = await resolveUser(initialSession?.user ?? null);
-        setUser(resolved);
+        applyResolvedSession(initialSession, resolved, false);
         setIsLoading(false);
       })
       .catch(() => setIsLoading(false));
@@ -118,13 +158,12 @@ export function AuthProvider({
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-      setSession(newSession);
       const resolved = await resolveUser(newSession?.user ?? null);
-      setUser(resolved);
+      applyResolvedSession(newSession, resolved, true);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [applyResolvedSession]);
 
   const signOut = useCallback(async (): Promise<void> => {
     await supabase.auth.signOut();

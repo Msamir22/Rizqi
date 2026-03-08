@@ -97,7 +97,10 @@ export default function AddAccount(): React.ReactNode {
 
         {/* Account Type Pills */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View className="mb-8 flex-row justify-center gap-2.5 px-6">
+          <View
+            className="mb-8 flex-row justify-center gap-2.5 px-6"
+            accessibilityRole="radiogroup"
+          >
             {ACCOUNT_TYPES.map((type) => {
               const isSelected = formData.accountType === type.id;
               return (
@@ -105,6 +108,13 @@ export default function AddAccount(): React.ReactNode {
                   key={type.id}
                   onPress={() => updateField("accountType", type.id)}
                   activeOpacity={0.8}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: isSelected }}
+                  accessibilityLabel={
+                    isSelected
+                      ? `${type.label}, selected`
+                      : type.label
+                  }
                   className={`flex-row items-center rounded-2xl px-3 py-3 border ${
                     isSelected
                       ? "bg-nileGreen-600 border-nileGreen-600"
