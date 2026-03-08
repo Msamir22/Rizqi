@@ -3,7 +3,7 @@
 **Purpose**: Validate specification completeness and quality before proceeding
 to planning  
 **Created**: 2026-03-05  
-**Feature**: [spec.md](file:///e:/Work/My%20Projects/Astik/specs/014-signup-prompt/spec.md)
+**Feature**: [spec.md](../spec.md)
 
 ## Content Quality
 
@@ -32,10 +32,7 @@ to planning
 
 ## Notes
 
-- Spec references Supabase methods in assumptions section only (not in
-  requirements), which is acceptable since it explains WHY no data migration is
-  needed.
-- Auth method decision (Google-only for V1) documented in Assumptions. User to
-  confirm before planning.
+- Auth method decision includes Google, Facebook, and Apple (iOS only)
+  per confirmed design decisions.
 - Trigger thresholds (50 txns, 10 days) are per user's confirmed design
   decisions from mockup review.
