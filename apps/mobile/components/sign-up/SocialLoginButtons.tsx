@@ -10,16 +10,20 @@
  * - Why: Buttons only render UI; OAuth logic lives in auth-service.ts (SRP)
  * - SOLID: OCP — adding a new provider = adding one more button, no changes to existing
  *
+ * TODO: Extract OAuth orchestration into a dedicated useOAuthLink hook to
+ * remove business logic from this component (Constitution IV).
+ *
  * @module SocialLoginButtons
  */
 
 import { Ionicons } from "@expo/vector-icons";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
   Text,
   TouchableOpacity,
+  useColorScheme,
   View,
 } from "react-native";
 
@@ -71,6 +75,11 @@ const PROVIDER_CONFIGS: readonly ProviderConfig[] = [
   },
 ];
 
+/** Platform-filtered provider list (computed once at module level). */
+const VISIBLE_PROVIDERS = PROVIDER_CONFIGS.filter(
+  (config) => !config.platformFilter || config.platformFilter === Platform.OS
+);
+
 // =============================================================================
 // Component
 // =============================================================================
@@ -82,10 +91,15 @@ export function SocialLoginButtons({
   const [loadingProvider, setLoadingProvider] = useState<OAuthProvider | null>(
     null
   );
+  // Synchronous ref guard to prevent double-tap race conditions.
+  // The state `loadingProvider` drives UI (spinner), but state updates are
+  // batched/async and can miss rapid successive taps.
+  const isInFlightRef = useRef(false);
 
   const handlePress = useCallback(
     async (provider: OAuthProvider): Promise<void> => {
-      if (loadingProvider) return; // Prevent double-tap
+      if (isInFlightRef.current) return;
+      isInFlightRef.current = true;
 
       setLoadingProvider(provider);
       try {
@@ -102,18 +116,15 @@ export function SocialLoginButtons({
         onError("Something went wrong. Please try again.");
       } finally {
         setLoadingProvider(null);
+        isInFlightRef.current = false;
       }
     },
-    [loadingProvider, onSuccess, onError]
-  );
-
-  const visibleProviders = PROVIDER_CONFIGS.filter(
-    (config) => !config.platformFilter || config.platformFilter === Platform.OS
+    [onSuccess, onError]
   );
 
   return (
     <View className="gap-3 w-full">
-      {visibleProviders.map((config) => (
+      {VISIBLE_PROVIDERS.map((config) => (
         <SocialButton
           key={config.provider}
           config={config}
@@ -143,11 +154,26 @@ function SocialButton({
   isDisabled,
   onPress,
 }: SocialButtonProps): React.JSX.Element {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+
   const isApple = config.provider === "apple";
   const isFacebook = config.provider === "facebook";
-  const textColor =
-    isFacebook || isApple ? "text-white" : "text-slate-900 dark:text-slate-50";
-  const iconColor = isFacebook ? "#FFFFFF" : isApple ? "#FFFFFF" : "#4285F4";
+
+  // Apple button: dark bg + white text in light mode, white bg + black text in dark mode
+  const appleTextColor = isDark ? "text-black" : "text-white";
+  const appleIconColor = isDark ? "#000000" : "#FFFFFF";
+
+  const textColor = isApple
+    ? appleTextColor
+    : isFacebook
+      ? "text-white"
+      : "text-slate-900 dark:text-slate-50";
+  const iconColor = isApple
+    ? appleIconColor
+    : isFacebook
+      ? "#FFFFFF"
+      : "#4285F4";
 
   return (
     <TouchableOpacity

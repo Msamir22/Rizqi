@@ -10,6 +10,9 @@
  * - Why: Sheet only renders UI; logic lives in the hook (SRP)
  * - SOLID: DIP — depends on stats/callbacks, not data sources
  *
+ * TODO: Migrate from RN Animated to react-native-reanimated for
+ * smoother 60fps animations on the UI thread.
+ *
  * @module SignUpPromptSheet
  */
 
@@ -19,10 +22,10 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
-  Dimensions,
   Modal,
   Pressable,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 
@@ -40,13 +43,6 @@ interface StatItem {
 }
 
 // =============================================================================
-// Constants
-// =============================================================================
-
-const SCREEN_HEIGHT = Dimensions.get("window").height;
-const SHEET_TRANSLATE_Y = SCREEN_HEIGHT * 0.6;
-
-// =============================================================================
 // Component
 // =============================================================================
 
@@ -54,8 +50,10 @@ export function SignUpPromptSheet(): React.JSX.Element | null {
   const { shouldShowPrompt, stats, dismissWithCooldown, dismissPermanently } =
     useSignUpPrompt();
   const { showToast } = useToast();
+  const { height: screenHeight } = useWindowDimensions();
+  const sheetTranslateY = screenHeight * 0.6;
   const [isVisible, setIsVisible] = useState(false);
-  const slideAnim = useRef(new Animated.Value(SHEET_TRANSLATE_Y)).current;
+  const slideAnim = useRef(new Animated.Value(sheetTranslateY)).current;
 
   // Show the sheet when conditions are met
   useEffect(() => {
@@ -72,23 +70,31 @@ export function SignUpPromptSheet(): React.JSX.Element | null {
 
   const handleDismiss = useCallback((): void => {
     Animated.timing(slideAnim, {
-      toValue: SHEET_TRANSLATE_Y,
+      toValue: sheetTranslateY,
       duration: 250,
       useNativeDriver: true,
     }).start(() => {
       setIsVisible(false);
     });
-  }, [slideAnim]);
+  }, [slideAnim, sheetTranslateY]);
 
   const handleSkip = useCallback(async (): Promise<void> => {
     handleDismiss();
-    await dismissWithCooldown();
-  }, [handleDismiss, dismissWithCooldown]);
+    try {
+      await dismissWithCooldown();
+    } catch {
+      showToast({ type: "error", title: "Failed to save preference" });
+    }
+  }, [handleDismiss, dismissWithCooldown, showToast]);
 
   const handleNeverShow = useCallback(async (): Promise<void> => {
     handleDismiss();
-    await dismissPermanently();
-  }, [handleDismiss, dismissPermanently]);
+    try {
+      await dismissPermanently();
+    } catch {
+      showToast({ type: "error", title: "Failed to save preference" });
+    }
+  }, [handleDismiss, dismissPermanently, showToast]);
 
   const handleOAuthSuccess = useCallback((): void => {
     handleDismiss();

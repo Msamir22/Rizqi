@@ -13,14 +13,15 @@
 const mockLinkIdentity = jest.fn();
 
 const mockRefreshSession = jest.fn<
-  Promise<{ data: unknown; error: null }>,
+  Promise<{ data: unknown; error: unknown }>,
   unknown[]
 >();
 const mockGetUser = jest.fn<
   Promise<{
     data: {
-      user: { identities: Array<{ id: string }>; is_anonymous: boolean };
+      user: { identities: Array<{ id: string }>; is_anonymous: boolean } | null;
     };
+    error: unknown;
   }>,
   unknown[]
 >();
@@ -38,7 +39,7 @@ jest.mock("@/services/supabase", () => ({
   },
 }));
 
-jest.mock("@/constants/storage-keys", () => ({
+jest.mock("@/constants/auth-constants", () => ({
   AUTH_REDIRECT_URL: "astik://auth-callback",
 }));
 
@@ -117,6 +118,7 @@ describe("auth-service - initiateOAuthLink", () => {
           is_anonymous: false,
         },
       },
+      error: null,
     });
   });
 
@@ -248,6 +250,72 @@ describe("auth-service - initiateOAuthLink", () => {
         success: false,
         error:
           "No internet connection. Please check your network and try again.",
+      });
+    });
+
+    it("returns error when refreshSession fails", async () => {
+      mockLinkIdentity.mockResolvedValue({
+        url: "https://accounts.google.com/...",
+      });
+      mockOpenAuthSession.mockResolvedValue({ type: "success" });
+      mockRefreshSession.mockResolvedValue({
+        data: {},
+        error: createRetryableFetchError("Network failure during refresh"),
+      });
+
+      const result = await initiateOAuthLink("google");
+
+      expect(result).toEqual({
+        success: false,
+        error:
+          "No internet connection. Please check your network and try again.",
+      });
+    });
+
+    it("returns error when getUser fails after successful browser flow", async () => {
+      mockLinkIdentity.mockResolvedValue({
+        url: "https://accounts.google.com/...",
+      });
+      mockOpenAuthSession.mockResolvedValue({ type: "success" });
+      mockRefreshSession.mockResolvedValue({ data: {}, error: null });
+      mockGetUser.mockResolvedValue({
+        data: { user: null },
+        error: createRetryableFetchError("Network failure during getUser"),
+      });
+
+      const result = await initiateOAuthLink("google");
+
+      expect(result).toEqual({
+        success: false,
+        error:
+          "No internet connection. Please check your network and try again.",
+      });
+    });
+
+    it("returns 'already linked' when browser succeeds but identity still anonymous (silent 422)", async () => {
+      // This covers the case where Supabase returns a 302 redirect even
+      // when linkIdentity fails server-side with 422.
+      mockLinkIdentity.mockResolvedValue({
+        url: "https://accounts.google.com/...",
+      });
+      mockOpenAuthSession.mockResolvedValue({ type: "success" });
+      mockRefreshSession.mockResolvedValue({ data: {}, error: null });
+      mockGetUser.mockResolvedValue({
+        data: {
+          user: {
+            identities: [],
+            is_anonymous: true,
+          },
+        },
+        error: null,
+      });
+
+      const result = await initiateOAuthLink("google");
+
+      expect(result).toEqual({
+        success: false,
+        error:
+          "This account is already linked to another user. Please try a different account.",
       });
     });
   });

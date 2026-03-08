@@ -47,7 +47,7 @@ export function SignUpBanner({
           <MaterialCommunityIcons
             name="shield-lock-outline"
             size={28}
-            color="#FFFFFF"
+            color={palette.white}
           />
         </View>
 

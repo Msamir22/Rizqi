@@ -114,7 +114,7 @@ export default function AddAccount(): React.ReactNode {
                     isSelected
                       ? // eslint-disable-next-line react-native/no-inline-styles
                         {
-                          shadowColor: "rgb(5 150 105 / 0.2)",
+                          shadowColor: "rgba(5, 150, 105, 0.2)",
                           shadowOffset: { width: 0, height: 1 },
                           shadowOpacity: 0.1,
                           shadowRadius: 2,
@@ -133,7 +133,7 @@ export default function AddAccount(): React.ReactNode {
                           ? palette.slate[400]
                           : palette.slate[600]
                     }
-                    className="mr-2"
+                    style={{ marginRight: 8 }}
                   />
                   <Text
                     className={`text-xs font-extrabold tracking-widest uppercase ${
@@ -204,7 +204,7 @@ export default function AddAccount(): React.ReactNode {
               smsSenderName={formData.smsSenderName || ""}
               onBankNameChange={(val) => updateField("bankName", val)}
               onCardLast4Change={(val) => {
-                const cleaned = val.replace(/\D/g, "").slice(0, 4);
+                const cleaned = val.replace(/\\D/g, "").slice(0, 4);
                 updateField("cardLast4", cleaned);
               }}
               onSmsSenderNameChange={(val) => updateField("smsSenderName", val)}

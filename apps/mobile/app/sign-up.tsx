@@ -52,20 +52,30 @@ export default function SignUpScreen(): React.JSX.Element {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isDark, theme } = useTheme();
-  const { isAnonymous } = useAuth();
+  const { isAnonymous, isLoading } = useAuth();
   const { showToast } = useToast();
   const { source } = useLocalSearchParams<{ source?: string }>();
 
   const isFromOnboarding = source === "onboarding";
 
   // Guard: If user is no longer anonymous (e.g. after successful OAuth link),
-  // redirect away from the sign-up screen. Using useEffect avoids the
-  // "setState during render" warning.
+  // redirect away from the sign-up screen. Wait for auth to hydrate first
+  // to avoid premature navigation on cold start.
   useEffect(() => {
+    if (isLoading) return;
     if (!isAnonymous) {
-      router.replace("/(tabs)");
+      if (isFromOnboarding) {
+        router.replace("/(tabs)");
+      } else {
+        // Source-based return: go back to where the user came from (e.g., Settings)
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          router.replace("/(tabs)");
+        }
+      }
     }
-  }, [isAnonymous, router]);
+  }, [isAnonymous, isLoading, router, isFromOnboarding]);
 
   const handleOAuthSuccess = useCallback((): void => {
     showToast({ type: "success", title: "Account secured ✓" });
@@ -79,8 +89,16 @@ export default function SignUpScreen(): React.JSX.Element {
   );
 
   const handleSkip = useCallback((): void => {
-    router.replace("/(tabs)");
-  }, [router]);
+    if (isFromOnboarding) {
+      router.replace("/(tabs)");
+    } else {
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace("/(tabs)");
+      }
+    }
+  }, [router, isFromOnboarding]);
 
   return (
     <View className="flex-1">

@@ -373,12 +373,16 @@ export default function SettingsScreen(): React.JSX.Element {
               <View className="w-8 dark:bg-[#3b82f6] bg-[#fb923c] h-8 rounded-lg justify-center items-center">
                 <Ionicons name="person" size={20} color="#FFF" />
               </View>
-              <View>
+              <View className="flex-1">
                 <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
                   Profile
                 </Text>
                 {!isAnonymous && user?.email && (
-                  <Text className="text-xs text-slate-500 dark:text-slate-400">
+                  <Text
+                    className="text-xs text-slate-500 dark:text-slate-400"
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
                     {user.email}
                   </Text>
                 )}

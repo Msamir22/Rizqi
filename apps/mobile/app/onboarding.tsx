@@ -124,6 +124,18 @@ export default function OnboardingScreen(): React.JSX.Element | null {
   const { isAnonymous } = useAuth();
 
   /**
+   * Navigate to the main app or sign-up screen based on auth status.
+   * DRY extraction: used by both handleCurrencyPickerSkip and handleGoToApp.
+   */
+  const navigateAfterOnboarding = useCallback((): void => {
+    if (isAnonymous) {
+      router.replace("/sign-up?source=onboarding");
+    } else {
+      router.replace("/(tabs)");
+    }
+  }, [router, isAnonymous]);
+
+  /**
    * Called when the carousel finishes (user taps "Get Started" or "Skip").
    * Always transitions to the currency picker.
    */
@@ -134,7 +146,7 @@ export default function OnboardingScreen(): React.JSX.Element | null {
       // Resolve user ID for potential wallet creation
       const uid = await getCurrentUserId();
       if (!uid) {
-        console.warn("No authenticated user, skipping wallet creation");
+        // TODO: Replace with structured logging (e.g., Sentry)
         router.replace("/(tabs)");
         return;
       }
@@ -142,8 +154,8 @@ export default function OnboardingScreen(): React.JSX.Element | null {
 
       // Always show currency picker — user makes the choice
       setPhase("currency-picker");
-    } catch (error) {
-      console.error("Failed to save onboarding status", error);
+    } catch {
+      // TODO: Replace with structured logging (e.g., Sentry)
       router.replace("/(tabs)");
     }
   }, [router]);
@@ -156,21 +168,13 @@ export default function OnboardingScreen(): React.JSX.Element | null {
 
   /** Called when user skips the currency picker — no wallet created. */
   const handleCurrencyPickerSkip = useCallback((): void => {
-    if (isAnonymous) {
-      router.replace("/sign-up?source=onboarding");
-    } else {
-      router.replace("/(tabs)");
-    }
-  }, [router, isAnonymous]);
+    navigateAfterOnboarding();
+  }, [navigateAfterOnboarding]);
 
   /** Navigate to main app or sign-up (used by both success and error paths). */
   const handleGoToApp = useCallback((): void => {
-    if (isAnonymous) {
-      router.replace("/sign-up?source=onboarding");
-    } else {
-      router.replace("/(tabs)");
-    }
-  }, [router, isAnonymous]);
+    navigateAfterOnboarding();
+  }, [navigateAfterOnboarding]);
 
   const handleNext = useCallback((): void => {
     if (currentIndex === ONBOARDING_DATA.length - 1) {
@@ -212,9 +216,7 @@ export default function OnboardingScreen(): React.JSX.Element | null {
   // Navigation must happen in an effect, not during render.
   useEffect(() => {
     if (phase === "wallet-creation" && selectedCurrency && !userId) {
-      console.error(
-        "[onboarding] No userId available for wallet creation, skipping to app"
-      );
+      // TODO: Replace with structured logging (e.g., Sentry)
       router.replace("/(tabs)");
     }
   }, [phase, selectedCurrency, userId, router]);
@@ -328,10 +330,10 @@ export default function OnboardingScreen(): React.JSX.Element | null {
           </Text>
           {currentIndex !== ONBOARDING_DATA.length - 1 && (
             <Ionicons
-              className="ml-2"
               name="arrow-forward"
               size={20}
               color="white"
+              style={{ marginLeft: 8 }}
             />
           )}
         </TouchableOpacity>

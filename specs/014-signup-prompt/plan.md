@@ -1,7 +1,7 @@
 # Implementation Plan: Optional Sign-Up Prompt
 
 **Branch**: `014-signup-prompt` | **Date**: 2026-03-05 | **Spec**:
-[spec.md](file:///e:/Work/My%20Projects/Astik/specs/014-signup-prompt/spec.md)
+[spec.md](spec.md)
 **Input**: Feature specification from `/specs/014-signup-prompt/spec.md`
 
 ## Summary
