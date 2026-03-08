@@ -52,8 +52,26 @@ const OVERLAY_BG = "rgba(0, 0, 0, 0.5)";
 
 interface StatItem {
   readonly icon: keyof typeof Ionicons.glyphMap;
-  readonly value: number;
+  readonly value: string;
   readonly label: string;
+}
+
+// =============================================================================
+// Helpers
+// =============================================================================
+
+/**
+ * Format a currency amount for display in the stats section.
+ * Uses compact notation for large numbers (e.g., 12.5K, 1.2M).
+ */
+function formatAmount(amount: number): string {
+  if (amount >= 1_000_000) {
+    return `${(amount / 1_000_000).toFixed(1)}M`;
+  }
+  if (amount >= 1_000) {
+    return `${(amount / 1_000).toFixed(1)}K`;
+  }
+  return amount.toFixed(0);
 }
 
 // =============================================================================
@@ -219,13 +237,18 @@ export function SignUpPromptSheet(): React.JSX.Element | null {
   const statItems: readonly StatItem[] = [
     {
       icon: "receipt-outline",
-      value: stats.transactionCount,
+      value: String(stats.transactionCount),
       label: "transactions",
     },
     {
       icon: "wallet-outline",
-      value: stats.accountCount,
+      value: String(stats.accountCount),
       label: "accounts",
+    },
+    {
+      icon: "cash-outline",
+      value: formatAmount(stats.totalAmount),
+      label: "tracked",
     },
   ];
 

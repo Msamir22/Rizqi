@@ -1,38 +1,32 @@
 /**
  * Unit tests for useSignUpPrompt hook
  *
- * Tests T022–T026 from tasks.md:
- * - T022: Anonymous user below thresholds → shouldShowPrompt = false
- * - T023: Anonymous user at 50+ txns → shouldShowPrompt = true
- * - T024: After cooldown dismiss, prompt hidden until cooldown expires
- * - T025: Permanent dismiss → shouldShowPrompt = false forever
- * - T026: Authenticated user → shouldShowPrompt = false always
+ * Uses @testing-library/react-native's renderHook to properly exercise
+ * the hook lifecycle. Tests T022–T026 from tasks.md.
+ *
+ * Architecture & Design Rationale:
+ * - Pattern: renderHook + act for async state assertions
+ * - Why: Previous tests only exercised mock calls without running the hook.
+ *   renderHook ensures useEffect/useState actually execute.
  */
+
+import { renderHook, act, waitFor } from "@testing-library/react-native";
 
 // ---------------------------------------------------------------------------
 // Mocks — must be set up before imports
 // ---------------------------------------------------------------------------
 
-const mockGetItem = jest.fn();
-const mockSetItem = jest.fn();
+const mockCheckShouldShowPrompt = jest.fn();
+const mockSaveCooldownDismissal = jest.fn();
+const mockSavePermanentDismissal = jest.fn();
 
-jest.mock("@react-native-async-storage/async-storage", () => ({
-  getItem: (...args: unknown[]): Promise<string | null> =>
-    mockGetItem(...args) as Promise<string | null>,
-  setItem: (...args: unknown[]): Promise<void> =>
-    mockSetItem(...args) as Promise<void>,
-}));
-
-const mockFetchCount = jest.fn();
-
-jest.mock("@astik/db", () => ({
-  database: {
-    get: jest.fn(() => ({
-      query: jest.fn(() => ({
-        fetchCount: (): Promise<number> => mockFetchCount() as Promise<number>,
-      })),
-    })),
-  },
+jest.mock("@/services/signup-prompt-service", () => ({
+  checkShouldShowPrompt: (...args: unknown[]): unknown =>
+    mockCheckShouldShowPrompt(...args),
+  saveCooldownDismissal: (...args: unknown[]): unknown =>
+    mockSaveCooldownDismissal(...args),
+  savePermanentDismissal: (...args: unknown[]): unknown =>
+    mockSavePermanentDismissal(...args),
 }));
 
 const mockUseAuth = jest.fn();
@@ -42,58 +36,36 @@ jest.mock("@/context/AuthContext", () => ({
     mockUseAuth() as { isAnonymous: boolean },
 }));
 
-// Suppress React import resolution issues in non-React test environment
-jest.mock("react", () => {
-  const actual = jest.requireActual<typeof import("react")>("react");
-  return {
-    ...actual,
-    useState: actual.useState,
-    useEffect: actual.useEffect,
-    useCallback: actual.useCallback,
-  };
-});
-
-import {
-  FIRST_USE_DATE_KEY,
-  SIGNUP_PROMPT_DISMISSED_AT_KEY,
-  SIGNUP_PROMPT_DISMISSED_TX_COUNT_KEY,
-  SIGNUP_PROMPT_NEVER_SHOW_KEY,
-} from "../../constants/storage-keys";
+import { useSignUpPrompt } from "../../hooks/useSignUpPrompt";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Since useSignUpPrompt is a React hook, we test the underlying logic
- * by calling the async helpers directly. The hook itself is a thin
- * wrapper around these checks.
- *
- * We test the integration indirectly by validating the AsyncStorage
- * calls and database queries that the hook orchestrates.
- */
-
-function setupAsyncStorageMock(data: Record<string, string | null>): void {
-  mockGetItem.mockImplementation((key: string) =>
-    Promise.resolve(data[key] ?? null)
-  );
-  mockSetItem.mockResolvedValue(undefined);
+function setupAnonymousUser(): void {
+  mockUseAuth.mockReturnValue({ isAnonymous: true });
 }
 
-function daysAgo(days: number): string {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  return date.toISOString();
+function setupAuthenticatedUser(): void {
+  mockUseAuth.mockReturnValue({ isAnonymous: false });
+}
+
+function mockCheckResult(
+  shouldShow: boolean,
+  stats = { transactionCount: 0, accountCount: 0, totalAmount: 0 }
+): void {
+  mockCheckShouldShowPrompt.mockResolvedValue({ shouldShow, stats });
 }
 
 // ---------------------------------------------------------------------------
 // Test Suite
 // ---------------------------------------------------------------------------
 
-describe("useSignUpPrompt — logic validation", () => {
+describe("useSignUpPrompt", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockFetchCount.mockReset();
+    mockSaveCooldownDismissal.mockResolvedValue(undefined);
+    mockSavePermanentDismissal.mockResolvedValue(undefined);
   });
 
   // =========================================================================
@@ -101,29 +73,24 @@ describe("useSignUpPrompt — logic validation", () => {
   // =========================================================================
 
   describe("T022: below thresholds", () => {
-    it("does not trigger prompt when tx count < 50 and days < 10", async () => {
-      mockUseAuth.mockReturnValue({ isAnonymous: true });
-
-      // 5 transactions, first use 3 days ago
-      mockFetchCount
-        .mockResolvedValueOnce(5) // transactions
-        .mockResolvedValueOnce(2); // accounts
-
-      setupAsyncStorageMock({
-        [SIGNUP_PROMPT_NEVER_SHOW_KEY]: null,
-        [SIGNUP_PROMPT_DISMISSED_AT_KEY]: null,
-        [SIGNUP_PROMPT_DISMISSED_TX_COUNT_KEY]: null,
-        [FIRST_USE_DATE_KEY]: daysAgo(3),
+    it("returns shouldShowPrompt=false when service reports no threshold met", async () => {
+      setupAnonymousUser();
+      mockCheckResult(false, {
+        transactionCount: 5,
+        accountCount: 2,
+        totalAmount: 150,
       });
 
-      // Verify that first-use-date is read
-      expect(mockGetItem).not.toHaveBeenCalledWith(
-        SIGNUP_PROMPT_NEVER_SHOW_KEY
-      );
+      const { result } = renderHook(() => useSignUpPrompt());
 
-      // After calling getItem, verify the keys are correct
-      await mockGetItem(SIGNUP_PROMPT_NEVER_SHOW_KEY);
-      expect(mockGetItem).toHaveBeenCalledWith(SIGNUP_PROMPT_NEVER_SHOW_KEY);
+      await waitFor(() => {
+        expect(result.current.stats.isLoading).toBe(false);
+      });
+
+      expect(result.current.shouldShowPrompt).toBe(false);
+      expect(result.current.stats.transactionCount).toBe(5);
+      expect(result.current.stats.accountCount).toBe(2);
+      expect(result.current.stats.totalAmount).toBe(150);
     });
   });
 
@@ -132,43 +99,39 @@ describe("useSignUpPrompt — logic validation", () => {
   // =========================================================================
 
   describe("T023: above transaction threshold", () => {
-    it("reads the correct AsyncStorage keys when checking thresholds", async () => {
-      mockUseAuth.mockReturnValue({ isAnonymous: true });
-
-      mockFetchCount
-        .mockResolvedValueOnce(55) // 55 transactions — above threshold
-        .mockResolvedValueOnce(3); // accounts
-
-      setupAsyncStorageMock({
-        [SIGNUP_PROMPT_NEVER_SHOW_KEY]: null,
-        [SIGNUP_PROMPT_DISMISSED_AT_KEY]: null,
-        [SIGNUP_PROMPT_DISMISSED_TX_COUNT_KEY]: null,
-        [FIRST_USE_DATE_KEY]: daysAgo(2), // only 2 days, but txns exceed
+    it("returns shouldShowPrompt=true when service reports threshold met", async () => {
+      setupAnonymousUser();
+      mockCheckResult(true, {
+        transactionCount: 55,
+        accountCount: 3,
+        totalAmount: 12500,
       });
 
-      // Verify the storage keys used are correct
-      await mockGetItem(FIRST_USE_DATE_KEY);
-      expect(mockGetItem).toHaveBeenCalledWith(FIRST_USE_DATE_KEY);
+      const { result } = renderHook(() => useSignUpPrompt());
+
+      await waitFor(() => {
+        expect(result.current.stats.isLoading).toBe(false);
+      });
+
+      expect(result.current.shouldShowPrompt).toBe(true);
+      expect(result.current.stats.transactionCount).toBe(55);
     });
 
-    it("triggers at exactly 50 transactions (boundary)", async () => {
-      mockUseAuth.mockReturnValue({ isAnonymous: true });
-
-      mockFetchCount
-        .mockResolvedValueOnce(50) // exactly 50 — should trigger
-        .mockResolvedValueOnce(2);
-
-      setupAsyncStorageMock({
-        [SIGNUP_PROMPT_NEVER_SHOW_KEY]: null,
-        [SIGNUP_PROMPT_DISMISSED_AT_KEY]: null,
-        [SIGNUP_PROMPT_DISMISSED_TX_COUNT_KEY]: null,
-        [FIRST_USE_DATE_KEY]: daysAgo(1),
+    it("shows prompt at exactly 50 transactions (boundary)", async () => {
+      setupAnonymousUser();
+      mockCheckResult(true, {
+        transactionCount: 50,
+        accountCount: 2,
+        totalAmount: 8000,
       });
 
-      // First fetchCount call returns 50 transactions (boundary value)
-      const txCount: number = await (mockFetchCount() as Promise<number>);
-      expect(txCount).toBe(50);
-      // 50 >= SIGNUP_TX_THRESHOLD (50), so shouldShowPrompt would be true
+      const { result } = renderHook(() => useSignUpPrompt());
+
+      await waitFor(() => {
+        expect(result.current.stats.isLoading).toBe(false);
+      });
+
+      expect(result.current.shouldShowPrompt).toBe(true);
     });
   });
 
@@ -177,49 +140,26 @@ describe("useSignUpPrompt — logic validation", () => {
   // =========================================================================
 
   describe("T024: cooldown dismiss", () => {
-    it("checks dismissed-at timestamp and tx-count for cooldown", async () => {
-      mockUseAuth.mockReturnValue({ isAnonymous: true });
-
-      // Pre-compute date string so it's stable across assertions
-      const fiveDaysAgo = daysAgo(5);
-
-      // User dismissed 5 days ago at 30 txns, now has 40 txns
-      // Cooldown requires +50 txns or +10 days → NOT met
-      setupAsyncStorageMock({
-        [SIGNUP_PROMPT_NEVER_SHOW_KEY]: null,
-        [SIGNUP_PROMPT_DISMISSED_AT_KEY]: fiveDaysAgo,
-        [SIGNUP_PROMPT_DISMISSED_TX_COUNT_KEY]: "30",
-        [FIRST_USE_DATE_KEY]: daysAgo(20),
+    it("calls saveCooldownDismissal and sets shouldShowPrompt=false", async () => {
+      setupAnonymousUser();
+      mockCheckResult(true, {
+        transactionCount: 55,
+        accountCount: 3,
+        totalAmount: 12500,
       });
 
-      // Verify cooldown keys are checked
-      const dismissedAt: string | null = await (mockGetItem(
-        SIGNUP_PROMPT_DISMISSED_AT_KEY
-      ) as Promise<string | null>);
-      const dismissedTx: string | null = await (mockGetItem(
-        SIGNUP_PROMPT_DISMISSED_TX_COUNT_KEY
-      ) as Promise<string | null>);
+      const { result } = renderHook(() => useSignUpPrompt());
 
-      expect(dismissedAt).toBe(fiveDaysAgo);
-      expect(dismissedTx).toBe("30");
-    });
+      await waitFor(() => {
+        expect(result.current.shouldShowPrompt).toBe(true);
+      });
 
-    it("stores current tx count and timestamp when user taps 'Skip'", async () => {
-      // Simulate what dismissWithCooldown does
-      const now = new Date().toISOString();
-      const txCount = 55;
+      await act(async () => {
+        await result.current.dismissWithCooldown();
+      });
 
-      await mockSetItem(SIGNUP_PROMPT_DISMISSED_AT_KEY, now);
-      await mockSetItem(SIGNUP_PROMPT_DISMISSED_TX_COUNT_KEY, String(txCount));
-
-      expect(mockSetItem).toHaveBeenCalledWith(
-        SIGNUP_PROMPT_DISMISSED_AT_KEY,
-        now
-      );
-      expect(mockSetItem).toHaveBeenCalledWith(
-        SIGNUP_PROMPT_DISMISSED_TX_COUNT_KEY,
-        "55"
-      );
+      expect(result.current.shouldShowPrompt).toBe(false);
+      expect(mockSaveCooldownDismissal).toHaveBeenCalledWith(55);
     });
   });
 
@@ -228,27 +168,26 @@ describe("useSignUpPrompt — logic validation", () => {
   // =========================================================================
 
   describe("T025: permanent dismiss", () => {
-    it("returns shouldShowPrompt = false when never-show is 'true'", async () => {
-      mockUseAuth.mockReturnValue({ isAnonymous: true });
-
-      setupAsyncStorageMock({
-        [SIGNUP_PROMPT_NEVER_SHOW_KEY]: "true",
+    it("calls savePermanentDismissal and sets shouldShowPrompt=false", async () => {
+      setupAnonymousUser();
+      mockCheckResult(true, {
+        transactionCount: 60,
+        accountCount: 4,
+        totalAmount: 15000,
       });
 
-      const neverShow: string | null = await (mockGetItem(
-        SIGNUP_PROMPT_NEVER_SHOW_KEY
-      ) as Promise<string | null>);
-      expect(neverShow).toBe("true");
-      // When never-show is "true", the hook short-circuits and returns false
-    });
+      const { result } = renderHook(() => useSignUpPrompt());
 
-    it("stores 'true' in never-show key when user taps 'Never show'", async () => {
-      await mockSetItem(SIGNUP_PROMPT_NEVER_SHOW_KEY, "true");
+      await waitFor(() => {
+        expect(result.current.shouldShowPrompt).toBe(true);
+      });
 
-      expect(mockSetItem).toHaveBeenCalledWith(
-        SIGNUP_PROMPT_NEVER_SHOW_KEY,
-        "true"
-      );
+      await act(async () => {
+        await result.current.dismissPermanently();
+      });
+
+      expect(result.current.shouldShowPrompt).toBe(false);
+      expect(mockSavePermanentDismissal).toHaveBeenCalled();
     });
   });
 
@@ -257,21 +196,36 @@ describe("useSignUpPrompt — logic validation", () => {
   // =========================================================================
 
   describe("T026: authenticated user", () => {
-    it("never shows prompt for non-anonymous user", () => {
-      mockUseAuth.mockReturnValue({ isAnonymous: false });
+    it("never shows prompt for non-anonymous user", async () => {
+      setupAuthenticatedUser();
 
-      // The hook checks isAnonymous first and short-circuits
-      const { isAnonymous } = mockUseAuth() as { isAnonymous: boolean };
-      expect(isAnonymous).toBe(false);
-      // shouldShowPrompt would be false without even checking thresholds
+      const { result } = renderHook(() => useSignUpPrompt());
+
+      await waitFor(() => {
+        expect(result.current.stats.isLoading).toBe(false);
+      });
+
+      expect(result.current.shouldShowPrompt).toBe(false);
+      expect(mockCheckShouldShowPrompt).not.toHaveBeenCalled();
     });
+  });
 
-    it("does not query AsyncStorage for authenticated users", () => {
-      mockUseAuth.mockReturnValue({ isAnonymous: false });
+  // =========================================================================
+  // Edge cases
+  // =========================================================================
 
-      // The hook should not call getItem at all for authenticated users
-      // This verifies SRP: the guard clause prevents unnecessary work
-      expect(mockGetItem).not.toHaveBeenCalled();
+  describe("error handling", () => {
+    it("sets shouldShowPrompt=false when service throws", async () => {
+      setupAnonymousUser();
+      mockCheckShouldShowPrompt.mockRejectedValue(new Error("DB error"));
+
+      const { result } = renderHook(() => useSignUpPrompt());
+
+      await waitFor(() => {
+        expect(result.current.stats.isLoading).toBe(false);
+      });
+
+      expect(result.current.shouldShowPrompt).toBe(false);
     });
   });
 });
