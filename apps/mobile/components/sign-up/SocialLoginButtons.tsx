@@ -6,18 +6,17 @@
  * - Apple additionally on iOS only (App Store requirement)
  *
  * Architecture & Design Rationale:
- * - Pattern: Composition with callback delegation
- * - Why: Buttons only render UI; OAuth logic lives in auth-service.ts (SRP)
- * - SOLID: OCP — adding a new provider = adding one more button, no changes to existing
- *
- * TODO: Extract OAuth orchestration into a dedicated useOAuthLink hook to
- * remove business logic from this component (Constitution IV).
+ * - Pattern: Presentational Component (Constitution IV)
+ * - Why: All OAuth orchestration logic has been extracted to
+ *   useOAuthLink hook. This component is purely UI.
+ * - SOLID: SRP — renders buttons and spinners only.
+ *   OCP — adding a new provider = adding one PROVIDER_CONFIGS entry.
  *
  * @module SocialLoginButtons
  */
 
 import { Ionicons } from "@expo/vector-icons";
-import React, { useCallback, useRef, useState } from "react";
+import React from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -27,6 +26,7 @@ import {
   View,
 } from "react-native";
 
+import { useOAuthLink } from "@/hooks/useOAuthLink";
 import type { OAuthProvider } from "@/services/supabase";
 
 // =============================================================================
@@ -88,39 +88,10 @@ export function SocialLoginButtons({
   onSuccess,
   onError,
 }: SocialLoginButtonsProps): React.JSX.Element {
-  const [loadingProvider, setLoadingProvider] = useState<OAuthProvider | null>(
-    null
-  );
-  // Synchronous ref guard to prevent double-tap race conditions.
-  // The state `loadingProvider` drives UI (spinner), but state updates are
-  // batched/async and can miss rapid successive taps.
-  const isInFlightRef = useRef(false);
-
-  const handlePress = useCallback(
-    async (provider: OAuthProvider): Promise<void> => {
-      if (isInFlightRef.current) return;
-      isInFlightRef.current = true;
-
-      setLoadingProvider(provider);
-      try {
-        // Lazy-import to keep the component's bundle footprint minimal
-        const { initiateOAuthLink } = await import("@/services/auth-service");
-        const result = await initiateOAuthLink(provider);
-
-        if (result.success) {
-          onSuccess();
-        } else {
-          onError(result.error);
-        }
-      } catch {
-        onError("Something went wrong. Please try again.");
-      } finally {
-        setLoadingProvider(null);
-        isInFlightRef.current = false;
-      }
-    },
-    [onSuccess, onError]
-  );
+  const { handleOAuthPress, loadingProvider } = useOAuthLink({
+    onSuccess,
+    onError,
+  });
 
   return (
     <View className="gap-3 w-full">
@@ -130,7 +101,7 @@ export function SocialLoginButtons({
           config={config}
           isLoading={loadingProvider === config.provider}
           isDisabled={loadingProvider !== null}
-          onPress={handlePress}
+          onPress={handleOAuthPress}
         />
       ))}
     </View>

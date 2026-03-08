@@ -1,6 +1,13 @@
 /**
  * Auth Context
- * Provides authentication state and functions throughout the app
+ * Provides authentication state and functions throughout the app.
+ *
+ * Architecture & Design Rationale:
+ * - Pattern: React Context + shared user-resolution function
+ * - Why: DRY — both bootstrap and onAuthStateChange need the same
+ *   logic to resolve the true user (refetching from server when the
+ *   session says is_anonymous due to stale JWT after linkIdentity).
+ * - SOLID: SRP — resolveUser handles one concern (user resolution).
  */
 
 import { Session, User } from "@supabase/supabase-js";
@@ -45,6 +52,42 @@ export function useAuth(): AuthContextValue {
 }
 
 // =============================================================================
+// User Resolution
+// =============================================================================
+
+/**
+ * Resolve the ground-truth user from the server when the session JWT
+ * still carries is_anonymous=true (e.g. after linkIdentity()).
+ *
+ * Falls back to the session user when the server cannot be reached
+ * or returns an error.
+ *
+ * @param sessionUser - The user from the current session/JWT
+ * @returns The resolved user (may differ from sessionUser)
+ */
+async function resolveUser(sessionUser: User | null): Promise<User | null> {
+  if (!sessionUser?.is_anonymous) {
+    return sessionUser;
+  }
+
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    if (error) {
+      // TODO: Replace with structured logging (e.g., Sentry)
+      // Network/auth errors — fall back to session user
+      return sessionUser;
+    }
+    if (data.user && !data.user.is_anonymous) {
+      return data.user;
+    }
+  } catch {
+    // Defensive: getUser() threw unexpectedly — use session user
+  }
+
+  return sessionUser;
+}
+
+// =============================================================================
 // Provider
 // =============================================================================
 
@@ -60,12 +103,13 @@ export function AuthProvider({
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
+    // Bootstrap: get initial session and resolve user
     supabase.auth
       .getSession()
-      .then(({ data: { session: initialSession } }) => {
+      .then(async ({ data: { session: initialSession } }) => {
         setSession(initialSession);
-        setUser(initialSession?.user ?? null);
+        const resolved = await resolveUser(initialSession?.user ?? null);
+        setUser(resolved);
         setIsLoading(false);
       })
       .catch(() => setIsLoading(false));
@@ -75,32 +119,8 @@ export function AuthProvider({
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
       setSession(newSession);
-      const sessionUser = newSession?.user ?? null;
-
-      // After linkIdentity(), the session JWT may still carry is_anonymous=true
-      // until the token is fully refreshed. Explicitly refetch from the server
-      // to get the ground-truth value whenever the session says anonymous.
-      if (sessionUser?.is_anonymous) {
-        try {
-          const { data, error } = await supabase.auth.getUser();
-          if (error) {
-            // TODO: Replace with structured logging (e.g., Sentry)
-            // Network/auth errors during listener — fall back to session user
-            setUser(sessionUser);
-            return;
-          }
-          if (data.user && !data.user.is_anonymous) {
-            setUser(data.user);
-            return;
-          }
-        } catch {
-          // Defensive: getUser() threw unexpectedly — use session user
-          setUser(sessionUser);
-          return;
-        }
-      }
-
-      setUser(sessionUser);
+      const resolved = await resolveUser(newSession?.user ?? null);
+      setUser(resolved);
     });
 
     return () => subscription.unsubscribe();

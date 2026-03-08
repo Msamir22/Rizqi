@@ -42,6 +42,16 @@ interface OAuthErrorResult {
 
 type OAuthResult = OAuthSuccessResult | OAuthErrorResult;
 
+/**
+ * Sentinel type to distinguish OAuth timeout from user-initiated
+ * browser cancellation.
+ */
+interface TimeoutSentinel {
+  readonly type: "TIMEOUT";
+}
+
+type BrowserOrTimeout = WebBrowser.WebBrowserResult | TimeoutSentinel;
+
 // =============================================================================
 // Constants
 // =============================================================================
@@ -169,12 +179,18 @@ export async function initiateOAuthLink(
     // Open the OAuth URL in the system browser with timeout.
     // The second argument tells openAuthSessionAsync to intercept the
     // redirect to AUTH_REDIRECT_URL and close the browser automatically.
-    // TODO: Use a dedicated timeout sentinel instead of DISMISS to
-    // distinguish user-initiated cancellation from timeouts.
-    const browserResult = await Promise.race([
+    const browserResult: BrowserOrTimeout = await Promise.race([
       WebBrowser.openAuthSessionAsync(result.url, AUTH_REDIRECT_URL),
       createTimeout(OAUTH_TIMEOUT_MS),
     ]);
+
+    // Check for timeout sentinel first (distinct from user cancellation)
+    if (isTimeoutSentinel(browserResult)) {
+      return {
+        success: false,
+        error: "Sign-in took too long. Please try again.",
+      };
+    }
 
     if (
       browserResult.type === WebBrowserResultType.CANCEL ||
@@ -230,15 +246,24 @@ export async function initiateOAuthLink(
 // =============================================================================
 
 /**
- * Create a timeout promise that resolves with a dismiss-type result
- * to enforce the 30-second OAuth completion limit (SC-005).
+ * Create a timeout promise that resolves with a dedicated sentinel
+ * to distinguish OAuth timeouts from user-initiated cancellations.
  */
-function createTimeout(ms: number): Promise<WebBrowser.WebBrowserResult> {
+function createTimeout(ms: number): Promise<TimeoutSentinel> {
   return new Promise((resolve) => {
     setTimeout(() => {
-      resolve({ type: WebBrowserResultType.DISMISS });
+      resolve({ type: "TIMEOUT" });
     }, ms);
   });
+}
+
+/**
+ * Type guard for the timeout sentinel.
+ */
+function isTimeoutSentinel(
+  result: BrowserOrTimeout
+): result is TimeoutSentinel {
+  return "type" in result && result.type === "TIMEOUT";
 }
 
 /**
