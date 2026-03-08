@@ -12,7 +12,7 @@
  * @module SignUpBanner
  */
 
-import { palette } from "@/constants/colors";
+import { colors, palette } from "@/constants/colors";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
@@ -47,7 +47,7 @@ export function SignUpBanner({
           <MaterialCommunityIcons
             name="shield-lock-outline"
             size={28}
-            color={palette.white}
+            color={colors.white}
           />
         </View>
 
