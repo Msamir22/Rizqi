@@ -64,7 +64,6 @@ export function AuthProvider({
     supabase.auth
       .getSession()
       .then(({ data: { session: initialSession } }) => {
-        debugger;
         setSession(initialSession);
         setUser(initialSession?.user ?? null);
         setIsLoading(false);
@@ -75,7 +74,6 @@ export function AuthProvider({
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-      debugger;
       setSession(newSession);
       const sessionUser = newSession?.user ?? null;
 
@@ -83,9 +81,21 @@ export function AuthProvider({
       // until the token is fully refreshed. Explicitly refetch from the server
       // to get the ground-truth value whenever the session says anonymous.
       if (sessionUser?.is_anonymous) {
-        const { data } = await supabase.auth.getUser();
-        if (data.user && !data.user.is_anonymous) {
-          setUser(data.user);
+        try {
+          const { data, error } = await supabase.auth.getUser();
+          if (error) {
+            // TODO: Replace with structured logging (e.g., Sentry)
+            // Network/auth errors during listener — fall back to session user
+            setUser(sessionUser);
+            return;
+          }
+          if (data.user && !data.user.is_anonymous) {
+            setUser(data.user);
+            return;
+          }
+        } catch {
+          // Defensive: getUser() threw unexpectedly — use session user
+          setUser(sessionUser);
           return;
         }
       }

@@ -10,7 +10,7 @@
 import { SupabaseDatabase } from "@astik/db";
 import { createClient, AuthError } from "@supabase/supabase-js";
 import * as SecureStore from "expo-secure-store";
-import { AUTH_REDIRECT_URL } from "@/constants/storage-keys";
+import { AUTH_REDIRECT_URL } from "@/constants/auth-constants";
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL as string;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY as string;
@@ -36,6 +36,10 @@ if (!supabaseUrl || !supabaseAnonKey) {
  * Persistence behavior:
  * - iOS: Uses Keychain (survives data clear and reinstall)
  * - Android: Uses EncryptedSharedPreferences (cleared when user clears app data)
+ *
+ * TODO: Use generation-based chunk prefixes to prevent concurrent read/write
+ * corruption during chunked writes. Currently, a concurrent getItem() could
+ * assemble mixed old/new chunks if setItem() is in progress.
  */
 
 const CHUNK_SIZE = 2048;
@@ -59,7 +63,7 @@ const secureStoreAdapter = {
         for (let i = 0; i < count; i++) {
           const chunk = await SecureStore.getItemAsync(chunkKey(key, i));
           if (chunk === null) {
-            console.error(`SecureStore: missing chunk ${i} for key "${key}"`);
+            // TODO: Replace with structured logging (e.g., Sentry)
             return null;
           }
           chunks.push(chunk);
@@ -70,8 +74,8 @@ const secureStoreAdapter = {
 
       // Small value — return as-is
       return raw;
-    } catch (error) {
-      console.error("SecureStore getItem error:", error);
+    } catch {
+      // TODO: Replace with structured logging (e.g., Sentry)
       return null;
     }
   },
@@ -114,8 +118,8 @@ const secureStoreAdapter = {
       for (let i = chunks.length; i < oldChunkCount; i++) {
         await SecureStore.deleteItemAsync(chunkKey(key, i));
       }
-    } catch (error) {
-      console.error("SecureStore setItem error:", error);
+    } catch {
+      // TODO: Replace with structured logging (e.g., Sentry)
     }
   },
 
@@ -133,8 +137,8 @@ const secureStoreAdapter = {
 
       // Remove the main key
       await SecureStore.deleteItemAsync(key);
-    } catch (error) {
-      console.error("SecureStore removeItem error:", error);
+    } catch {
+      // TODO: Replace with structured logging (e.g., Sentry)
     }
   },
 };
@@ -171,7 +175,6 @@ export async function isAuthenticated(): Promise<boolean> {
     data: { session },
   } = await supabase.auth.getSession();
 
-  console.log("User ID", session?.user?.id);
   return session !== null;
 }
 
@@ -181,7 +184,7 @@ export async function isAuthenticated(): Promise<boolean> {
 export async function signInAnonymously(): Promise<string | null> {
   const { data, error } = await supabase.auth.signInAnonymously();
   if (error) {
-    console.error("Anonymous sign-in failed:", error);
+    // TODO: Replace with structured logging (e.g., Sentry)
     return null;
   }
   return data.user?.id ?? null;
@@ -216,7 +219,7 @@ export async function ensureAuthenticated(maxRetries = 3): Promise<boolean> {
   }
 
   // All attempts failed - continue offline (WatermelonDB works locally)
-  console.warn("Authentication failed after retries, continuing offline");
+  // TODO: Replace with structured logging (e.g., Sentry)
   return false;
 }
 
@@ -235,6 +238,9 @@ type OAuthProvider = "google" | "facebook" | "apple";
  *
  * @param provider - The OAuth provider to link (google, facebook, or apple)
  * @returns The OAuth URL to open in a browser, or an error
+ *
+ * TODO: Add zod runtime validation for the linkIdentity response shape
+ * to fail fast on malformed API responses.
  */
 export async function linkIdentityWithProvider(
   provider: OAuthProvider

@@ -39,6 +39,3 @@ export const SIGNUP_COOLDOWN_TX = 50;
 
 /** Additional days after dismiss before re-triggering. */
 export const SIGNUP_COOLDOWN_DAYS = 10;
-
-/** Deep link scheme for OAuth redirect. */
-export const AUTH_REDIRECT_URL = "astik://auth-callback";

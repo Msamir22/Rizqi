@@ -22,7 +22,7 @@ import {
   type OAuthProvider,
 } from "@/services/supabase";
 import { isAuthError, isAuthRetryableFetchError } from "@supabase/supabase-js";
-import { AUTH_REDIRECT_URL } from "@/constants/storage-keys";
+import { AUTH_REDIRECT_URL } from "@/constants/auth-constants";
 
 // Ensure the browser auth session can complete on warm start
 WebBrowser.maybeCompleteAuthSession();
@@ -69,14 +69,10 @@ export async function initiateOAuthLink(
   provider: OAuthProvider
 ): Promise<OAuthResult> {
   try {
-    debugger;
     const result = await linkIdentityWithProvider(provider);
 
     if ("error" in result) {
-      console.error(
-        "[initiateOAuthLink] Error linking identity:",
-        result.error
-      );
+      // TODO: Replace with structured logging (e.g., Sentry)
       return {
         success: false,
         error: getHumanReadableError(result.error),
@@ -86,6 +82,8 @@ export async function initiateOAuthLink(
     // Open the OAuth URL in the system browser with timeout.
     // The second argument tells openAuthSessionAsync to intercept the
     // redirect to AUTH_REDIRECT_URL and close the browser automatically.
+    // TODO: Use a dedicated timeout sentinel instead of DISMISS to
+    // distinguish user-initiated cancellation from timeouts.
     const browserResult = await Promise.race([
       WebBrowser.openAuthSessionAsync(result.url, AUTH_REDIRECT_URL),
       createTimeout(OAUTH_TIMEOUT_MS),
@@ -101,14 +99,23 @@ export async function initiateOAuthLink(
     // After linkIdentity completes server-side, the local session JWT still
     // has is_anonymous=true. Force a session refresh so onAuthStateChange
     // fires with the updated user profile (is_anonymous=false).
-    await supabase.auth.refreshSession();
+    const { error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError) {
+      // TODO: Replace with structured logging (e.g., Sentry)
+      return { success: false, error: getHumanReadableError(refreshError) };
+    }
 
     // Verify the identity was actually linked. Supabase returns a 302 redirect
     // even when linkIdentity fails with 422 (e.g. "Identity is already linked
     // to another user"), so the browser reports success. We must check the
     // user's identities to confirm the link actually happened.
-    debugger;
-    const { data: userData } = await supabase.auth.getUser();
+    const { data: userData, error: getUserError } =
+      await supabase.auth.getUser();
+    if (getUserError) {
+      // TODO: Replace with structured logging (e.g., Sentry)
+      return { success: false, error: getHumanReadableError(getUserError) };
+    }
+
     const identities = userData.user?.identities ?? [];
     if (identities.length === 0 || userData.user?.is_anonymous) {
       return {
@@ -120,7 +127,7 @@ export async function initiateOAuthLink(
 
     return { success: true };
   } catch (error: unknown) {
-    console.error("[initiateOAuthLink] Error in catch block:", error);
+    // TODO: Replace with structured logging (e.g., Sentry)
     return { success: false, error: getHumanReadableError(error) };
   }
 }
