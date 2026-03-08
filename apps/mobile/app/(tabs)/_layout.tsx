@@ -4,6 +4,7 @@ import { Tabs } from "expo-router";
 import React from "react";
 import { View } from "react-native";
 import { QuickActionFab } from "@/components/fab";
+import { SignUpPromptSheet } from "@/components/sign-up/SignUpPromptSheet";
 import { CustomBottomTabBar } from "@/components/tab-bar/CustomBottomTabBar";
 
 export default function TabLayout(): React.ReactElement {
@@ -49,6 +50,7 @@ export default function TabLayout(): React.ReactElement {
       </Tabs>
 
       <QuickActionFab />
+      <SignUpPromptSheet />
     </View>
   );
 }

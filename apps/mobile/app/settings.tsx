@@ -12,8 +12,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SignUpBanner } from "../components/sign-up/SignUpBanner";
 import { CurrencyPicker } from "../components/currency/CurrencyPicker";
 import { GradientBackground } from "../components/ui/GradientBackground";
+import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { usePreferredCurrency } from "../hooks/usePreferredCurrency";
 import { useSmsPermission } from "../hooks/useSmsPermission";
@@ -40,6 +42,7 @@ import { ConfirmationModal } from "@/components/modals/ConfirmationModal";
  */
 export default function SettingsScreen(): React.JSX.Element {
   const { theme, isDark, toggleTheme } = useTheme();
+  const { isAnonymous, user } = useAuth();
   const { preferredCurrency, setPreferredCurrency } = usePreferredCurrency();
   const [isCurrencyPickerVisible, setIsCurrencyPickerVisible] = useState(false);
   const {
@@ -140,6 +143,13 @@ export default function SettingsScreen(): React.JSX.Element {
         <View className="w-6" />
       </View>
       <ScrollView contentContainerClassName="px-5">
+        {/* Sign-Up Banner (anonymous users only) */}
+        {isAnonymous && (
+          <SignUpBanner
+            onPress={() => router.push("/sign-up?source=settings")}
+          />
+        )}
+
         {/* Appearance Section */}
         <View className="mb-8">
           <Text className="text-[13px] font-semibold mb-3 ml-1 uppercase text-slate-500 dark:text-slate-400">
@@ -363,9 +373,20 @@ export default function SettingsScreen(): React.JSX.Element {
               <View className="w-8 dark:bg-[#3b82f6] bg-[#fb923c] h-8 rounded-lg justify-center items-center">
                 <Ionicons name="person" size={20} color="#FFF" />
               </View>
-              <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
-                Profile
-              </Text>
+              <View className="flex-1">
+                <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
+                  Profile
+                </Text>
+                {!isAnonymous && user?.email && (
+                  <Text
+                    className="text-xs text-slate-500 dark:text-slate-400"
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {user.email}
+                  </Text>
+                )}
+              </View>
             </View>
             <Ionicons
               name="chevron-forward"

@@ -10,12 +10,13 @@
 
 ### 1.1 Authentication Methods
 
-| Method              | Status         |
-| ------------------- | -------------- |
-| Email/Password      | ✅ Enabled     |
-| Google Social Login | ✅ Enabled     |
-| Apple Social Login  | ❌ Not planned |
-| Phone OTP           | ❌ Not planned |
+| Method              | Status                |
+| ------------------- | --------------------- |
+| Email/Password      | ✅ Enabled            |
+| Google Social Login | ✅ Enabled            |
+| Apple Social Login  | ✅ Enabled (iOS only) |
+| Facebook Login      | ✅ Enabled            |
+| Phone OTP           | ❌ Not planned        |
 
 ### 1.2 Guest Mode (Anonymous Authentication)
 

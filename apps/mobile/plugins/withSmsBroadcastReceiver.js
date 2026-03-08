@@ -325,6 +325,9 @@ function withKotlinSourceFiles(config) {
 /**
  * Adds the SmsEventPackage to MainApplication.kt's getPackages() list.
  * This is needed so React Native discovers the SmsEventModule at startup.
+ *
+ * Regex patterns are CRLF-tolerant (\r?\n) so they work on both Unix
+ * and Windows line endings.
  */
 function withSmsEventPackageRegistration(config) {
   return withDangerousMod(config, [
@@ -358,17 +361,33 @@ function withSmsEventPackageRegistration(config) {
         return modConfig;
       }
 
-      // Find the getPackages() method and add SmsEventPackage to the list
-      // The Expo-generated MainApplication uses PackageList(this).packages
-      // We need to add our package to the returned list
-      const packagesPattern =
-        /override fun getPackages\(\): List<ReactPackage> \{[^}]*?return PackageList\(this\)\.packages/;
+      // Detect the line ending used in the file
+      const eol = content.includes("\r\n") ? "\r\n" : "\n";
 
-      if (packagesPattern.test(content)) {
+      // Find the getPackages() method and add SmsEventPackage to the list.
+      // CRLF-tolerant patterns: use \r?\n to match either LF or CRLF.
+
+      // Expo SDK 52+ style: val packages = PackageList(this).packages
+      const newStylePattern = /val packages = PackageList\(this\)\.packages\r?\n/;
+
+      // Older Expo style: override fun getPackages() ... return PackageList(this).packages
+      const oldStylePattern =
+        /override fun getPackages\(\): List<ReactPackage>\s*\{[\s\S]*?return PackageList\(this\)\.packages/;
+
+      if (newStylePattern.test(content)) {
+        // Expo SDK 52+ style: insert add() after the val declaration
         content = content.replace(
-          packagesPattern,
+          newStylePattern,
           (match) =>
-            `${match}.apply {\n              add(${packageName}.SmsEventPackage())\n            }`
+            `${match}            packages.add(${packageName}.SmsEventPackage())${eol}`
+        );
+        fs.writeFileSync(mainApplicationPath, content, "utf-8");
+      } else if (oldStylePattern.test(content)) {
+        // Older Expo style: inline return
+        content = content.replace(
+          oldStylePattern,
+          (match) =>
+            `${match}.apply {${eol}              add(${packageName}.SmsEventPackage())${eol}            }`
         );
         fs.writeFileSync(mainApplicationPath, content, "utf-8");
       } else {

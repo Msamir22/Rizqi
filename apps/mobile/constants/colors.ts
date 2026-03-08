@@ -76,7 +76,13 @@ export const palette = {
     50: "#F8FAFC", // Light Mode BG
     25: "#FFFFFF",
   },
-};
+
+  // Third-Party Brand Colors
+  brand: {
+    facebook: "#1877F2",
+    google: "#4285F4",
+  },
+} as const;
 
 // 2. The Semantic Theme
 export const colors = {

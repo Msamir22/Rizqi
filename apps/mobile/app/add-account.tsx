@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { TextField } from "@/components/ui/TextField";
 import { ACCOUNT_TYPES, CURRENCIES } from "@/constants/accounts";
-import { palette } from "@/constants/colors";
+import { colors, palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import {
   useAccountForm,
@@ -96,57 +96,69 @@ export default function AddAccount(): React.ReactNode {
         </View>
 
         {/* Account Type Pills */}
-        <View className="mb-8 flex-row justify-center gap-2.5 px-6 flex-wrap">
-          {ACCOUNT_TYPES.map((type) => {
-            const isSelected = formData.accountType === type.id;
-            return (
-              <TouchableOpacity
-                key={type.id}
-                onPress={() => updateField("accountType", type.id)}
-                activeOpacity={0.8}
-                className={`flex-row items-center rounded-2xl px-5 py-3.5 border ${
-                  isSelected
-                    ? "bg-nileGreen-600 border-nileGreen-600"
-                    : "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
-                }`}
-                style={
-                  isSelected
-                    ? {
-                        shadowColor: "rgb(5 150 105 / 0.2)",
-                        shadowOffset: { width: 0, height: 1 },
-                        shadowOpacity: 0.1,
-                        shadowRadius: 2,
-                        elevation: 2,
-                      }
-                    : undefined
-                }
-              >
-                <Ionicons
-                  name={type.icon}
-                  size={18}
-                  color={
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View
+            className="mb-8 flex-row justify-center gap-2.5 px-6"
+            accessibilityRole="radiogroup"
+          >
+            {ACCOUNT_TYPES.map((type) => {
+              const isSelected = formData.accountType === type.id;
+              return (
+                <TouchableOpacity
+                  key={type.id}
+                  onPress={() => updateField("accountType", type.id)}
+                  activeOpacity={0.8}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: isSelected }}
+                  accessibilityLabel={
                     isSelected
-                      ? "#FFF"
-                      : isDark
-                        ? palette.slate[400]
-                        : palette.slate[600]
+                      ? `${type.label}, selected`
+                      : type.label
                   }
-                  className="mr-2"
-                />
-                <Text
-                  className={`text-xs font-extrabold tracking-widest uppercase ${
+                  className={`flex-row items-center rounded-2xl px-3 py-3 border ${
                     isSelected
-                      ? "text-white"
-                      : "text-slate-500 dark:text-slate-400"
+                      ? "bg-nileGreen-600 border-nileGreen-600"
+                      : "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
                   }`}
+                  style={
+                    isSelected
+                      ? // eslint-disable-next-line react-native/no-inline-styles
+                        {
+                          shadowColor: "rgba(5, 150, 105, 0.2)",
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.1,
+                          shadowRadius: 2,
+                          elevation: 2,
+                        }
+                      : undefined
+                  }
                 >
-                  {type.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
+                  <Ionicons
+                    name={type.icon}
+                    size={18}
+                    color={
+                      isSelected
+                        ? colors.white
+                        : isDark
+                          ? palette.slate[400]
+                          : palette.slate[600]
+                    }
+                    style={{ marginRight: 8 }}
+                  />
+                  <Text
+                    className={`text-xs font-extrabold tracking-widest uppercase ${
+                      isSelected
+                        ? "text-white"
+                        : "text-slate-500 dark:text-slate-400"
+                    }`}
+                  >
+                    {type.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </ScrollView>
         {/* Form Container */}
         <View className="px-4">
           {/* Account Name */}
@@ -214,7 +226,7 @@ export default function AddAccount(): React.ReactNode {
       {/* Fixed Bottom Button - Hidden when keyboard is visible to prevent covering screen */}
       {!isKeyboardVisible && (
         <View
-          className="absolute bottom-0 left-0 right-0 px-6 pt-6 pb-10 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-800"
+          className="absolute bottom-0 left-0 right-0 px-6 pt-6 pb-10 bg-white dark:bg-background-dark border-t border-slate-200 dark:border-slate-800"
           style={{ paddingBottom: insets.bottom + 16 }}
         >
           <Button

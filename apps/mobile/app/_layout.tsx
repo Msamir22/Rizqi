@@ -197,6 +197,7 @@ function RootLayoutNav(): React.ReactNode {
         />
         <Stack.Screen name="sms-scan" />
         <Stack.Screen name="sms-review" />
+        <Stack.Screen name="sign-up" />
       </Stack>
     </>
   );

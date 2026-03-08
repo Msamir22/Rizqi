@@ -16,6 +16,7 @@
 
 import { palette } from "@/constants/colors";
 import { HAS_ONBOARDED_KEY } from "@/constants/storage-keys";
+import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { getCurrentUserId } from "@/services/supabase";
 import type { CurrencyType } from "@astik/db";
@@ -120,6 +121,31 @@ export default function OnboardingScreen(): React.JSX.Element | null {
     null
   );
   const [userId, setUserId] = useState<string | null>(null);
+  const { isAnonymous, isLoading: isAuthLoading } = useAuth();
+
+  /**
+   * Navigate to the main app or sign-up screen based on auth status.
+   * DRY extraction: used by both handleCurrencyPickerSkip and handleGoToApp.
+   *
+   * Waits for auth hydration to complete before reading isAnonymous,
+   * otherwise the default `false` value could cause premature navigation
+   * to /(tabs) instead of /sign-up.
+   */
+  const navigateAfterOnboarding = useCallback((): void => {
+    if (isAuthLoading) return;
+
+    if (isAnonymous) {
+      router.replace("/sign-up?source=onboarding");
+    } else {
+      router.replace("/(tabs)");
+    }
+  }, [router, isAnonymous, isAuthLoading]);
+
+  /**
+   * When auth finishes loading after onboarding phases that deferred
+   * navigation due to isAuthLoading, trigger the deferred navigation.
+   */
+  const pendingNavigationRef = useRef(false);
 
   /**
    * Called when the carousel finishes (user taps "Get Started" or "Skip").
@@ -132,7 +158,7 @@ export default function OnboardingScreen(): React.JSX.Element | null {
       // Resolve user ID for potential wallet creation
       const uid = await getCurrentUserId();
       if (!uid) {
-        console.warn("No authenticated user, skipping wallet creation");
+        // TODO: Replace with structured logging (e.g., Sentry)
         router.replace("/(tabs)");
         return;
       }
@@ -140,8 +166,8 @@ export default function OnboardingScreen(): React.JSX.Element | null {
 
       // Always show currency picker — user makes the choice
       setPhase("currency-picker");
-    } catch (error) {
-      console.error("Failed to save onboarding status", error);
+    } catch {
+      // TODO: Replace with structured logging (e.g., Sentry)
       router.replace("/(tabs)");
     }
   }, [router]);
@@ -154,13 +180,29 @@ export default function OnboardingScreen(): React.JSX.Element | null {
 
   /** Called when user skips the currency picker — no wallet created. */
   const handleCurrencyPickerSkip = useCallback((): void => {
-    router.replace("/(tabs)");
-  }, [router]);
+    if (isAuthLoading) {
+      pendingNavigationRef.current = true;
+      return;
+    }
+    navigateAfterOnboarding();
+  }, [navigateAfterOnboarding, isAuthLoading]);
 
-  /** Navigate to main app (used by both success and error paths). */
+  /** Navigate to main app or sign-up (used by both success and error paths). */
   const handleGoToApp = useCallback((): void => {
-    router.replace("/(tabs)");
-  }, [router]);
+    if (isAuthLoading) {
+      pendingNavigationRef.current = true;
+      return;
+    }
+    navigateAfterOnboarding();
+  }, [navigateAfterOnboarding, isAuthLoading]);
+
+  // When auth finishes loading, fire any pending navigation
+  useEffect(() => {
+    if (!isAuthLoading && pendingNavigationRef.current) {
+      pendingNavigationRef.current = false;
+      navigateAfterOnboarding();
+    }
+  }, [isAuthLoading, navigateAfterOnboarding]);
 
   const handleNext = useCallback((): void => {
     if (currentIndex === ONBOARDING_DATA.length - 1) {
@@ -202,9 +244,7 @@ export default function OnboardingScreen(): React.JSX.Element | null {
   // Navigation must happen in an effect, not during render.
   useEffect(() => {
     if (phase === "wallet-creation" && selectedCurrency && !userId) {
-      console.error(
-        "[onboarding] No userId available for wallet creation, skipping to app"
-      );
+      // TODO: Replace with structured logging (e.g., Sentry)
       router.replace("/(tabs)");
     }
   }, [phase, selectedCurrency, userId, router]);
@@ -318,10 +358,10 @@ export default function OnboardingScreen(): React.JSX.Element | null {
           </Text>
           {currentIndex !== ONBOARDING_DATA.length - 1 && (
             <Ionicons
-              className="ml-2"
               name="arrow-forward"
               size={20}
               color="white"
+              style={{ marginLeft: 8 }}
             />
           )}
         </TouchableOpacity>
