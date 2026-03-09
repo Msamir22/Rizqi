@@ -6,7 +6,6 @@ import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   Switch,
   Text,
@@ -35,6 +34,7 @@ import {
   stopSmsListener,
 } from "../services/sms-live-listener-service";
 import { ConfirmationModal } from "@/components/modals/ConfirmationModal";
+import { useToast } from "@/components/ui/Toast";
 
 /**
  * Render the Settings screen for managing appearance, currency, and general preferences.
@@ -57,9 +57,11 @@ export default function SettingsScreen(): React.JSX.Element {
   const { setScanMode } = useSmsScanContext();
   const [isFullRescanModalOpen, setIsFullRescanModalOpen] = useState(false);
   const database = useDatabase();
+  const { showToast } = useToast();
 
   // Logout UI state
   const [showSyncWarning, setShowSyncWarning] = useState(false);
+  const [showForceLogoutError, setShowForceLogoutError] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Live detection preferences
@@ -105,11 +107,10 @@ export default function SettingsScreen(): React.JSX.Element {
   const navigateToScan = useCallback(
     async (mode: "incremental" | "full"): Promise<void> => {
       if (!isAndroid) {
-        Alert.alert(
-          "SMS Sync",
-          "SMS transaction sync is only available on Android devices.",
-          [{ text: "OK" }]
-        );
+        showToast({
+          type: "info",
+          title: "SMS transaction sync is only available on Android devices.",
+        });
         return;
       }
 
@@ -125,7 +126,7 @@ export default function SettingsScreen(): React.JSX.Element {
         router.push("/sms-scan");
       }
     },
-    [isAndroid, smsPermissionStatus, requestPermission, setScanMode]
+    [isAndroid, smsPermissionStatus, requestPermission, setScanMode, showToast]
   );
 
   const handleIncrementalSync = useCallback(async (): Promise<void> => {
@@ -154,11 +155,11 @@ export default function SettingsScreen(): React.JSX.Element {
     setIsLoggingOut(false);
 
     if (result.error === "no_network") {
-      Alert.alert(
-        "No Internet Connection",
-        "Please check your network and try again.",
-        [{ text: "OK" }]
-      );
+      showToast({
+        type: "error",
+        title:
+          "No internet connection. Please check your network and try again.",
+      });
       return;
     }
 
@@ -168,12 +169,11 @@ export default function SettingsScreen(): React.JSX.Element {
     }
 
     // "unknown" or any other unhandled error
-    Alert.alert(
-      "Logout Failed",
-      "Something went wrong while logging out. Please try again.",
-      [{ text: "OK" }]
-    );
-  }, [database]);
+    showToast({
+      type: "error",
+      title: "Something went wrong while logging out. Please try again.",
+    });
+  }, [database, showToast]);
 
   const handleForceLogout = useCallback(async (): Promise<void> => {
     setShowSyncWarning(false);
@@ -188,12 +188,8 @@ export default function SettingsScreen(): React.JSX.Element {
       return;
     }
 
-    // Force logout failed — surface the error instead of silently navigating
-    Alert.alert(
-      "Logout Failed",
-      "Could not complete logout. Your data may still be on this device. Please try again.",
-      [{ text: "OK" }]
-    );
+    // Force logout failed — show retry modal
+    setShowForceLogoutError(true);
   }, [database]);
 
   return (
@@ -526,6 +522,21 @@ export default function SettingsScreen(): React.JSX.Element {
           handleForceLogout().catch(console.error);
         }}
         onCancel={() => setShowSyncWarning(false)}
+      />
+      {/* Force Logout Error Modal */}
+      <ConfirmationModal
+        visible={showForceLogoutError}
+        variant="warning"
+        icon="alert-circle-outline"
+        title="Logout Failed"
+        message="Could not complete logout. Your data may still be on this device."
+        confirmLabel="Retry"
+        cancelLabel="Cancel"
+        onConfirm={() => {
+          setShowForceLogoutError(false);
+          handleForceLogout().catch(console.error);
+        }}
+        onCancel={() => setShowForceLogoutError(false)}
       />
       {/* Currency Picker Modal */}
       <CurrencyPicker
