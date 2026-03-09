@@ -40,6 +40,7 @@ import {
 } from "../services/sms-live-listener-service";
 
 // Prevent splash screen from auto-hiding until fonts are loaded
+// TODO: Replace with structured logging (e.g., Sentry)
 SplashScreen.preventAutoHideAsync().catch(console.error);
 
 export default function RootLayout(): React.ReactNode {
@@ -53,6 +54,7 @@ export default function RootLayout(): React.ReactNode {
   // Hide splash screen once fonts are loaded
   useEffect(() => {
     if (fontsLoaded || fontError) {
+      // TODO: Replace with structured logging (e.g., Sentry)
       SplashScreen.hideAsync().catch(console.error);
     }
   }, [fontsLoaded, fontError]);
@@ -72,15 +74,18 @@ export default function RootLayout(): React.ReactNode {
 
   useEffect(() => {
     // Initialize notifications channel and action handler
+    // TODO: Replace with structured logging (e.g., Sentry)
     initializeNotifications().catch(console.error);
     const cleanupActions = initializeDetectionActionHandler();
 
     // Subscribe to detected transactions from Tier 1 listener
     const cleanupDetection = onTransactionDetected((parsed) => {
+      // TODO: Replace with structured logging (e.g., Sentry)
       handleDetectedSms(parsed).catch(console.error);
     });
 
     // Start listener if preference enabled
+    // TODO: Replace with structured logging (e.g., Sentry)
     startDetectionIfEnabled().catch(console.error);
 
     // Listen for app state changes to restart listener
@@ -88,6 +93,7 @@ export default function RootLayout(): React.ReactNode {
       "change",
       (nextState: AppStateStatus) => {
         if (nextState === "active") {
+          // TODO: Replace with structured logging (e.g., Sentry)
           startDetectionIfEnabled().catch(console.error);
         }
       }
@@ -144,7 +150,13 @@ export default function RootLayout(): React.ReactNode {
  * Auth Guard — blocks access to all app routes when not authenticated.
  * Uses useEffect + router.replace for reliable redirection even when
  * the navigation stack already has active screens.
+ *
+ * Public routes that don't require authentication:
+ * - "auth" — the main authentication screen
+ * - "auth-callback" — deep link handler for OAuth/email verification redirects
  */
+const PUBLIC_ROUTES = new Set(["auth", "auth-callback"]);
+
 function AuthGuard({
   children,
 }: {
@@ -158,8 +170,8 @@ function AuthGuard({
       return;
     }
 
-    // Allow auth screen through without authentication
-    const isPublicRoute = segments[0] === "auth";
+    // Allow public routes through without authentication
+    const isPublicRoute = PUBLIC_ROUTES.has(segments[0] as string);
 
     if (!isAuthenticated && !isPublicRoute) {
       router.replace("/auth");
@@ -235,6 +247,7 @@ function RootLayoutNav(): React.ReactNode {
         <Stack.Screen name="sms-scan" />
         <Stack.Screen name="sms-review" />
         <Stack.Screen name="auth" />
+        <Stack.Screen name="auth-callback" />
       </Stack>
     </>
   );

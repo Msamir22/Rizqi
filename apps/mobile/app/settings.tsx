@@ -6,7 +6,6 @@ import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   Switch,
   Text,
@@ -35,6 +34,7 @@ import {
   stopSmsListener,
 } from "../services/sms-live-listener-service";
 import { ConfirmationModal } from "@/components/modals/ConfirmationModal";
+import { useToast } from "@/components/ui/Toast";
 
 /**
  * Render the Settings screen for managing appearance, currency, and general preferences.
@@ -57,9 +57,11 @@ export default function SettingsScreen(): React.JSX.Element {
   const { setScanMode } = useSmsScanContext();
   const [isFullRescanModalOpen, setIsFullRescanModalOpen] = useState(false);
   const database = useDatabase();
+  const { showToast } = useToast();
 
   // Logout UI state
   const [showSyncWarning, setShowSyncWarning] = useState(false);
+  const [showForceLogoutError, setShowForceLogoutError] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Live detection preferences
@@ -70,6 +72,7 @@ export default function SettingsScreen(): React.JSX.Element {
     if (!isAndroid) {
       return;
     }
+    // TODO: Replace with structured logging (e.g., Sentry)
     isLiveDetectionEnabled().then(setLiveDetection).catch(console.error);
     isAutoConfirmEnabled().then(setAutoConfirmSms).catch(console.error);
   }, [isAndroid]);
@@ -104,11 +107,10 @@ export default function SettingsScreen(): React.JSX.Element {
   const navigateToScan = useCallback(
     async (mode: "incremental" | "full"): Promise<void> => {
       if (!isAndroid) {
-        Alert.alert(
-          "SMS Sync",
-          "SMS transaction sync is only available on Android devices.",
-          [{ text: "OK" }]
-        );
+        showToast({
+          type: "info",
+          title: "SMS transaction sync is only available on Android devices.",
+        });
         return;
       }
 
@@ -124,7 +126,7 @@ export default function SettingsScreen(): React.JSX.Element {
         router.push("/sms-scan");
       }
     },
-    [isAndroid, smsPermissionStatus, requestPermission, setScanMode]
+    [isAndroid, smsPermissionStatus, requestPermission, setScanMode, showToast]
   );
 
   const handleIncrementalSync = useCallback(async (): Promise<void> => {
@@ -133,6 +135,7 @@ export default function SettingsScreen(): React.JSX.Element {
 
   const handleCurrencySelect = useCallback(
     (currency: CurrencyType) => {
+      // TODO: Replace with structured logging (e.g., Sentry)
       setPreferredCurrency(currency).catch(console.error);
     },
     [setPreferredCurrency]
@@ -152,22 +155,41 @@ export default function SettingsScreen(): React.JSX.Element {
     setIsLoggingOut(false);
 
     if (result.error === "no_network") {
+      showToast({
+        type: "error",
+        title:
+          "No internet connection. Please check your network and try again.",
+      });
       return;
     }
 
     if (result.error === "sync_failed") {
       setShowSyncWarning(true);
+      return;
     }
-  }, [database]);
+
+    // "unknown" or any other unhandled error
+    showToast({
+      type: "error",
+      title: "Something went wrong while logging out. Please try again.",
+    });
+  }, [database, showToast]);
 
   const handleForceLogout = useCallback(async (): Promise<void> => {
     setShowSyncWarning(false);
     setIsLoggingOut(true);
 
-    await performLogout(database, true);
+    const result = await performLogout(database, true);
 
     setIsLoggingOut(false);
-    router.replace("/auth");
+
+    if (result.success) {
+      router.replace("/auth");
+      return;
+    }
+
+    // Force logout failed — show retry modal
+    setShowForceLogoutError(true);
   }, [database]);
 
   return (
@@ -350,6 +372,7 @@ export default function SettingsScreen(): React.JSX.Element {
               <Switch
                 value={liveDetection}
                 onValueChange={(v) => {
+                  // TODO: Replace with structured logging (e.g., Sentry)
                   handleToggleLiveDetection(v).catch(console.error);
                 }}
                 trackColor={{ false: "#767577", true: palette.nileGreen[500] }}
@@ -382,6 +405,7 @@ export default function SettingsScreen(): React.JSX.Element {
                 <Switch
                   value={autoConfirmSms}
                   onValueChange={(v) => {
+                    // TODO: Replace with structured logging (e.g., Sentry)
                     handleToggleAutoConfirm(v).catch(console.error);
                   }}
                   trackColor={{
@@ -474,6 +498,7 @@ export default function SettingsScreen(): React.JSX.Element {
       <ConfirmationModal
         visible={isFullRescanModalOpen}
         onConfirm={() => {
+          // TODO: Replace with structured logging (e.g., Sentry)
           navigateToScan("full").catch(console.error);
         }}
         onCancel={() => setIsFullRescanModalOpen(false)}
@@ -493,9 +518,25 @@ export default function SettingsScreen(): React.JSX.Element {
         confirmLabel="Proceed Anyway"
         cancelLabel="Cancel"
         onConfirm={() => {
+          // TODO: Replace with structured logging (e.g., Sentry)
           handleForceLogout().catch(console.error);
         }}
         onCancel={() => setShowSyncWarning(false)}
+      />
+      {/* Force Logout Error Modal */}
+      <ConfirmationModal
+        visible={showForceLogoutError}
+        variant="warning"
+        icon="alert-circle-outline"
+        title="Logout Failed"
+        message="Could not complete logout. Your data may still be on this device."
+        confirmLabel="Retry"
+        cancelLabel="Cancel"
+        onConfirm={() => {
+          setShowForceLogoutError(false);
+          handleForceLogout().catch(console.error);
+        }}
+        onCancel={() => setShowForceLogoutError(false)}
       />
       {/* Currency Picker Modal */}
       <CurrencyPicker

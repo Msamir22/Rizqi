@@ -217,11 +217,18 @@ export default function AuthScreen(): React.JSX.Element {
   // ─── Resend Verification ───────────────────────────────────────────────
 
   const handleResendVerification = useCallback(async (): Promise<void> => {
-    const result = await resendVerificationEmail(pendingEmail);
-    if (result.error) {
-      showToast({ type: "error", title: result.error.message });
-    } else {
-      showToast({ type: "success", title: "Verification email sent!" });
+    try {
+      const result = await resendVerificationEmail(pendingEmail);
+      if (result.error) {
+        showToast({ type: "error", title: result.error.message });
+      } else {
+        showToast({ type: "success", title: "Verification email sent!" });
+      }
+    } catch {
+      showToast({
+        type: "error",
+        title: "Failed to resend verification email. Please try again.",
+      });
     }
   }, [pendingEmail, showToast]);
 

@@ -118,9 +118,6 @@ export function EmailPasswordForm({
   };
 
   const inputTextColor = isDark ? palette.slate[50] : palette.slate[900];
-  const inputBgClass = isDark
-    ? "bg-slate-800 border-slate-600"
-    : "bg-white border-slate-200";
   const placeholderColor = isDark ? palette.slate[400] : palette.slate[500];
 
   return (
@@ -137,7 +134,7 @@ export function EmailPasswordForm({
       {/* Email Input */}
       <View>
         <TextInput
-          className={`py-4 px-4 rounded-2xl border text-base ${inputBgClass}`}
+          className="py-4 px-4 rounded-2xl border text-base bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600"
           placeholder="Email address"
           placeholderTextColor={placeholderColor}
           style={{ color: inputTextColor }}
@@ -159,7 +156,7 @@ export function EmailPasswordForm({
       {/* Password Input */}
       <View className="relative">
         <TextInput
-          className={`py-4 px-4 pr-14 rounded-2xl border text-base ${inputBgClass}`}
+          className="py-4 px-4 pr-14 rounded-2xl border text-base bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600"
           placeholder="Password"
           placeholderTextColor={placeholderColor}
           style={{ color: inputTextColor }}

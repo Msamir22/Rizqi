@@ -27,9 +27,8 @@ import {
   signInWithEmail as supabaseSignIn,
   resetPasswordForEmail as supabaseResetPassword,
   supabase,
-  type OAuthProvider,
-  type EmailAuthResult,
 } from "@/services/supabase";
+import type { OAuthProvider, EmailAuthResult } from "@/services/supabase";
 import { isAuthError, isAuthRetryableFetchError } from "@supabase/supabase-js";
 import { AUTH_REDIRECT_URL } from "@/constants/auth-constants";
 

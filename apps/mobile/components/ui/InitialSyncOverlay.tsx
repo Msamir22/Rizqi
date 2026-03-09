@@ -8,30 +8,31 @@
  * - Why: Separates display concern from sync logic. SyncProvider owns the
  *   `isInitialSync` state; this component only reads it.
  * - SOLID: SRP — only renders the overlay UI.
+ * - Uses react-native-reanimated for smooth, performant animations
+ *   as required by Constitution V.
  */
 
 import { palette } from "@/constants/colors";
 import { useSync } from "@/providers/SyncProvider";
-import React, { useEffect, useRef } from "react";
-import {
-  ActivityIndicator,
-  Animated,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import React, { useEffect } from "react";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 
 export function InitialSyncOverlay(): React.ReactNode {
   const { isInitialSync } = useSync();
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const opacity = useSharedValue(0);
 
   useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: isInitialSync ? 1 : 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  }, [isInitialSync, fadeAnim]);
+    opacity.value = withTiming(isInitialSync ? 1 : 0, { duration: 300 });
+  }, [isInitialSync, opacity]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
 
   if (!isInitialSync) {
     return null;
@@ -39,7 +40,7 @@ export function InitialSyncOverlay(): React.ReactNode {
 
   return (
     <Animated.View
-      style={[styles.overlay, { opacity: fadeAnim }]}
+      style={[styles.overlay, animatedStyle]}
       pointerEvents={isInitialSync ? "auto" : "none"}
     >
       <View style={styles.card}>
@@ -55,11 +56,13 @@ export function InitialSyncOverlay(): React.ReactNode {
  * Using StyleSheet here because this overlay must render above all content
  * with absolute positioning — Tailwind classes don't reliably handle
  * z-index + absolute fill on overlay components in React Native.
+ *
+ * Colors use palette constants from colors.ts per Constitution V.
  */
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(15, 23, 42, 0.95)",
+    backgroundColor: `rgba(${hexToRgbValues(palette.slate[950])}, 0.95)`,
     justifyContent: "center",
     alignItems: "center",
     zIndex: 9999,
@@ -72,13 +75,28 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#f8fafc",
+    color: palette.slate[50],
     fontFamily: "Inter_600SemiBold",
     marginTop: 8,
   },
   subtitle: {
     fontSize: 14,
-    color: "#94a3b8",
+    color: palette.slate[400],
     fontFamily: "Inter_400Regular",
   },
 });
+
+/**
+ * Convert a hex color string to comma-separated RGB values
+ * for use in rgba() expressions.
+ *
+ * @param hex - A hex color string (e.g., "#0f172a")
+ * @returns Comma-separated RGB values (e.g., "15, 23, 42")
+ */
+function hexToRgbValues(hex: string): string {
+  const cleaned = hex.replace("#", "");
+  const r = parseInt(cleaned.substring(0, 2), 16);
+  const g = parseInt(cleaned.substring(2, 4), 16);
+  const b = parseInt(cleaned.substring(4, 6), 16);
+  return `${r}, ${g}, ${b}`;
+}
