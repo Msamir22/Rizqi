@@ -41,6 +41,23 @@ context:
 - Identify bugs, anti-patterns, missing types, duplicate logic, and
   architectural flaws.
 
+## 2.5. Review Existing Bot/Automated Comments
+
+If the PR has existing review comments from automated tools (e.g.,
+**CodeRabbit**, **SonarCloud**, **ESLint bot**), the agent MUST:
+
+- Use `mcp_github_get_pull_request_comments` to fetch all PR comments.
+- Filter for comments from bot users (e.g., `coderabbitai[bot]`).
+- **Triage each bot finding**:
+  - **Accept**: If the finding is valid and safe to fix, include it in the fix
+    plan.
+  - **Defer**: If the finding requires a large refactor or is beyond the scope
+    of a fix PR, note it as a `// TODO:` comment in the relevant file.
+  - **Reject**: If the finding is incorrect or not applicable, skip it (explain
+    why in the fix PR description).
+- Consolidate bot findings with the agent's own review into a single fix plan.
+  Avoid duplicating fixes that overlap between the two reviews.
+
 ## 3. Submit Review Feedback
 
 - Write constructive, specific, and actionable review comments.
