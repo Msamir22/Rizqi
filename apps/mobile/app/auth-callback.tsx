@@ -3,15 +3,15 @@
  *
  * Catch-all route for deep link redirects (`astik://auth-callback`).
  * Handles:
- * 1. OAuth redirects — when openAuthSessionAsync doesn't catch the URL
- * 2. Email verification deep links — confirms email and routes appropriately
- * 3. Password reset deep links — routes to password update flow
+ * 1. OAuth redirects \u2014 when openAuthSessionAsync doesn't catch the URL
+ * 2. Email verification deep links \u2014 confirms email and routes appropriately
+ * 3. Password reset deep links \u2014 routes to password update flow
  *
  * On any callback, checks auth state and redirects accordingly:
- * - Recovery deep link + authenticated → /reset-password
- * - Authenticated + onboarded → /(tabs)
- * - Authenticated + not onboarded → /onboarding
- * - Not authenticated → /auth
+ * - Recovery deep link + authenticated \u2192 /settings (TODO: add /reset-password route)
+ * - Authenticated + onboarded \u2192 /(tabs)
+ * - Authenticated + not onboarded \u2192 /onboarding
+ * - Not authenticated \u2192 /auth
  *
  * @module AuthCallbackRoute
  */
@@ -46,18 +46,20 @@ export default function AuthCallbackScreen(): React.JSX.Element {
     if (isLoading) return;
 
     if (!isAuthenticated) {
-      // Email verification completed but no session yet — go to auth
+      // Email verification completed but no session yet \u2014 go to auth
       router.replace("/auth");
       return;
     }
 
     // Check for password-recovery deep link before normal routing
     if (isPasswordRecoveryLink(params)) {
-      router.replace("/reset-password");
+      // TODO: Create dedicated /reset-password route. For now, send to settings
+      // where the user can change their password.
+      router.replace("/settings" as never);
       return;
     }
 
-    // Authenticated — check onboarding status and redirect
+    // Authenticated \u2014 check onboarding status and redirect
     AsyncStorage.getItem(HAS_ONBOARDED_KEY)
       .then((value) => {
         if (value === "true") {

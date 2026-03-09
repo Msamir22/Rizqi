@@ -31,8 +31,8 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useDatabase } from "../providers/DatabaseProvider";
-import { performLogout } from "../services/logout-service";
+import { useDatabase } from "@/providers/DatabaseProvider";
+import { performLogout } from "@/services/logout-service";
 
 // =============================================================================
 // Types
