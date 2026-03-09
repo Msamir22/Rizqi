@@ -1,7 +1,7 @@
 # Astik - Finalized Business Decisions
 
 > **Status:** 🟢 Confirmed  
-> **Last Updated:** 2026-01-01  
+> **Last Updated:** 2026-03-09  
 > **Purpose:** Single source of truth for all confirmed business decisions
 
 ---
@@ -10,18 +10,22 @@
 
 ### 1.1 Authentication Methods
 
-| Method              | Status                |
-| ------------------- | --------------------- |
-| Email/Password      | ✅ Enabled            |
-| Google Social Login | ✅ Enabled            |
-| Apple Social Login  | ✅ Enabled (iOS only) |
-| Facebook Login      | ✅ Enabled            |
-| Phone OTP           | ❌ Not planned        |
+| Method              | Status                                    |
+| ------------------- | ----------------------------------------- |
+| Email/Password      | ✅ Enabled                                |
+| Google Social Login | ✅ Enabled                                |
+| Apple Social Login  | 🟡 Deferred (requires Apple certificates) |
+| Facebook Login      | 🟡 Deferred (requires FB Developer setup) |
+| Phone OTP           | ❌ Not planned                            |
 
-### 1.2 Guest Mode (Anonymous Authentication)
+### 1.2 Mandatory Authentication (Enforced Sign-Up/Sign-In)
 
-**Implementation:** Supabase Anonymous Authentication with WatermelonDB
-offline-first
+**Decision (2026-03-09):** Anonymous/guest authentication has been **removed**.
+All users must sign up or sign in before accessing any app features.
+
+**Rationale:** As a fintech app handling financial data, allowing anonymous
+access contradicts the security posture. Mandatory authentication ensures data
+is always tied to a recoverable account, preventing data loss on device changes.
 
 **Flow:**
 
@@ -31,33 +35,45 @@ offline-first
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
 │  1. FIRST APP LAUNCH                                                    │
-│     └─→ signInAnonymously() → Supabase creates "Ghost ID" (user_123)    │
+│     └─→ Auth screen shown — Google OAuth or Email/Password              │
+│     └─→ No "Skip" or "Continue as Guest" option                         │
 │                                                                          │
-│  2. USER ADDS DATA                                                       │
-│     └─→ Saved to WatermelonDB (instant) → Syncs to Supabase (background)│
+│  2. SIGN UP (Email/Password)                                             │
+│     └─→ Email verification required before app access                   │
+│     └─→ "Forgot Password?" link available in Sign In mode               │
 │                                                                          │
-│  3. SIGN-UP PROMPT                                                       │
-│     └─→ Triggered after 5 transactions                                  │
-│     └─→ User can continue indefinitely without signing up               │
+│  3. SIGN UP (Google OAuth)                                               │
+│     └─→ Immediate access after OAuth completes                          │
 │                                                                          │
-│  4. ACCOUNT CONVERSION                                                   │
-│     └─→ updateUser({ email, password }) → Attaches credentials          │
-│     └─→ NO data migration needed (same user_id)                         │
+│  4. RETURNING USER                                                       │
+│     └─→ Session persists — goes directly to dashboard                   │
+│     └─→ Expired session → Auth screen → sign in again                   │
 │                                                                          │
-│  5. DEVICE LOSS (Guest)                                                  │
-│     └─→ Data exists in Supabase but ACCESS IS LOST (no credentials)     │
+│  5. LOGOUT                                                               │
+│     └─→ Session fully cleared (no anonymous fallback)                   │
+│     └─→ Returns to Auth screen                                          │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
+**What was removed:**
+
+- `signInAnonymously()` — no anonymous Supabase sessions
+- `isAnonymous` flag — no anonymous user state
+- `resolveUser()` — no anonymous-to-authenticated verification
+- Sign-up prompt system (bottom sheet, banner, usage-based triggers)
+- Identity linking / conflict resolution logic
+- `useOAuthLink` hook (anonymous-to-linked flow)
+- `useSignUpPrompt` hook and `signup-prompt-service`
+
 ### 1.3 User Profile Fields
 
-| Field        | Required              | Notes                         |
-| ------------ | --------------------- | ----------------------------- |
-| `id` (UUID)  | ✅                    | Supabase auth.users           |
-| `email`      | Only after conversion | Anonymous users have no email |
-| `name`       | 🟡 TBD                | Display name for greeting     |
-| `avatar_url` | 🟡 TBD                | From Google profile?          |
+| Field        | Required                | Notes                     |
+| ------------ | ----------------------- | ------------------------- |
+| `id` (UUID)  | ✅                      | Supabase auth.users       |
+| `email`      | ✅ (required at signup) | All users have email      |
+| `name`       | 🟡 TBD                  | Display name for greeting |
+| `avatar_url` | 🟡 TBD                  | From Google profile?      |
 
 ---
 
