@@ -121,25 +121,17 @@ export default function OnboardingScreen(): React.JSX.Element | null {
     null
   );
   const [userId, setUserId] = useState<string | null>(null);
-  const { isAnonymous, isLoading: isAuthLoading } = useAuth();
+  const { isLoading: isAuthLoading } = useAuth();
 
   /**
-   * Navigate to the main app or sign-up screen based on auth status.
-   * DRY extraction: used by both handleCurrencyPickerSkip and handleGoToApp.
-   *
-   * Waits for auth hydration to complete before reading isAnonymous,
-   * otherwise the default `false` value could cause premature navigation
-   * to /(tabs) instead of /sign-up.
+   * Navigate to the main app after onboarding.
+   * Since unauthenticated users cannot reach onboarding (index.tsx redirects
+   * them to /auth), this always goes to /(tabs).
    */
   const navigateAfterOnboarding = useCallback((): void => {
     if (isAuthLoading) return;
-
-    if (isAnonymous) {
-      router.replace("/sign-up?source=onboarding");
-    } else {
-      router.replace("/(tabs)");
-    }
-  }, [router, isAnonymous, isAuthLoading]);
+    router.replace("/(tabs)");
+  }, [router, isAuthLoading]);
 
   /**
    * When auth finishes loading after onboarding phases that deferred

@@ -6,11 +6,10 @@
  * - Apple additionally on iOS only (App Store requirement)
  *
  * Architecture & Design Rationale:
- * - Pattern: Presentational Component (Constitution IV)
- * - Why: All OAuth orchestration logic has been extracted to
- *   useOAuthLink hook. This component is purely UI.
- * - SOLID: SRP — renders buttons and spinners only.
- *   OCP — adding a new provider = adding one PROVIDER_CONFIGS entry.
+ * - Pattern: Presentational Component (no business logic)
+ * - Why: All OAuth orchestration lives in useOAuthFlow hook (SRP).
+ *   This component only renders buttons and reflects loading state.
+ * - SOLID: OCP — adding a new provider = adding one more config entry
  *
  * @module SocialLoginButtons
  */
@@ -26,7 +25,6 @@ import {
 } from "react-native";
 
 import { palette } from "@/constants/colors";
-import { useOAuthLink } from "@/hooks/useOAuthLink";
 import type { OAuthProvider } from "@/services/supabase";
 
 // =============================================================================
@@ -34,10 +32,10 @@ import type { OAuthProvider } from "@/services/supabase";
 // =============================================================================
 
 interface SocialLoginButtonsProps {
-  /** Called when OAuth completes successfully. */
-  readonly onSuccess: () => void;
-  /** Called when OAuth fails. Receives a user-friendly error message. */
-  readonly onError: (errorMessage: string) => void;
+  /** The provider currently loading, or null if idle. */
+  readonly loadingProvider: OAuthProvider | null;
+  /** Called when user taps a provider button. */
+  readonly onPress: (provider: OAuthProvider) => Promise<void>;
 }
 
 // =============================================================================
@@ -66,25 +64,25 @@ const PROVIDER_CONFIGS: readonly ProviderConfig[] = [
     iconColor: palette.brand.google,
     textClass: "text-slate-900 dark:text-slate-50",
   },
-  {
-    provider: "facebook",
-    label: "Continue with Facebook",
-    iconName: "logo-facebook",
-    bgClass: `bg-[${palette.brand.facebook}]`,
-    iconColor: palette.slate[25],
-    textClass: "text-white",
-  },
-  {
-    provider: "apple",
-    label: "Continue with Apple",
-    iconName: "logo-apple",
-    bgClass: "bg-black dark:bg-white",
-    // Apple: black bg + white icon in light, white bg + black icon in dark
-    // Using light-mode color here; dark mode handled via Tailwind dark: on text
-    iconColor: palette.slate[25],
-    textClass: "text-white dark:text-black",
-    platformFilter: "ios",
-  },
+  // TODO: Enable Facebook and Apple OAuth after configuring provider credentials
+  // (FB Developer Console + Apple Developer certificates). See GitHub issue backlog.
+  // {
+  //   provider: "facebook",
+  //   label: "Continue with Facebook",
+  //   iconName: "logo-facebook",
+  //   bgClass: `bg-[${palette.brand.facebook}]`,
+  //   iconColor: palette.slate[25],
+  //   textClass: "text-white",
+  // },
+  // {
+  //   provider: "apple",
+  //   label: "Continue with Apple",
+  //   iconName: "logo-apple",
+  //   bgClass: "bg-black dark:bg-white",
+  //   iconColor: palette.slate[25],
+  //   textClass: "text-white dark:text-black",
+  //   platformFilter: "ios",
+  // },
 ];
 
 /** Platform-filtered provider list (computed once at module level). */
@@ -97,14 +95,9 @@ const VISIBLE_PROVIDERS = PROVIDER_CONFIGS.filter(
 // =============================================================================
 
 export function SocialLoginButtons({
-  onSuccess,
-  onError,
+  loadingProvider,
+  onPress,
 }: SocialLoginButtonsProps): React.JSX.Element {
-  const { handleOAuthPress, loadingProvider } = useOAuthLink({
-    onSuccess,
-    onError,
-  });
-
   return (
     <View className="gap-3 w-full">
       {VISIBLE_PROVIDERS.map((config) => (
@@ -113,7 +106,7 @@ export function SocialLoginButtons({
           config={config}
           isLoading={loadingProvider === config.provider}
           isDisabled={loadingProvider !== null}
-          onPress={handleOAuthPress}
+          onPress={onPress}
         />
       ))}
     </View>

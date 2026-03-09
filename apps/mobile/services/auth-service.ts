@@ -1,25 +1,34 @@
 /**
- * Auth Service — OAuth Flow Orchestration
+ * Auth Service — Authentication Flow Orchestration
  *
- * Single-responsibility service that handles the browser-based OAuth flow
- * for converting anonymous users to provider-linked accounts.
+ * Single-responsibility service that handles authentication flows:
+ * 1. OAuth sign-in — opening browser-based OAuth for Google (and future providers)
+ * 2. Email/password sign-in & sign-up — with error formatting
+ * 3. Password reset — triggering reset emails
  *
  * Architecture & Design Rationale:
  * - Pattern: Service-Layer Separation (Constitution IV)
- * - Why: OAuth orchestration involves browser interaction, network calls,
+ * - Why: Auth orchestration involves browser interaction, network calls,
  *   and error handling — none of which belongs in components or hooks.
- * - SOLID: SRP — this service only handles OAuth identity linking flows.
+ * - SOLID: SRP — this service only handles auth flow orchestration.
  *
  * @module auth-service
  */
 
 import * as WebBrowser from "expo-web-browser";
-import { WebBrowserResultType, type WebBrowserAuthSessionResult } from "expo-web-browser";
+import {
+  WebBrowserResultType,
+  type WebBrowserAuthSessionResult,
+} from "expo-web-browser";
 
 import {
-  linkIdentityWithProvider,
+  signInWithOAuthProvider,
+  signUpWithEmail as supabaseSignUp,
+  signInWithEmail as supabaseSignIn,
+  resetPasswordForEmail as supabaseResetPassword,
   supabase,
   type OAuthProvider,
+  type EmailAuthResult,
 } from "@/services/supabase";
 import { isAuthError, isAuthRetryableFetchError } from "@supabase/supabase-js";
 import { AUTH_REDIRECT_URL } from "@/constants/auth-constants";
@@ -31,6 +40,8 @@ WebBrowser.maybeCompleteAuthSession();
 // Types
 // =============================================================================
 
+type OAuthErrorCode = "cancelled" | "network" | "timeout" | "unknown";
+
 interface OAuthSuccessResult {
   readonly success: true;
 }
@@ -38,6 +49,7 @@ interface OAuthSuccessResult {
 interface OAuthErrorResult {
   readonly success: false;
   readonly error: string;
+  readonly errorCode: OAuthErrorCode;
 }
 
 type OAuthResult = OAuthSuccessResult | OAuthErrorResult;
@@ -66,127 +78,39 @@ interface CancellableTimeout {
 
 const OAUTH_TIMEOUT_MS = 30_000;
 
-const UNEXPECTED_RESPONSE_ERROR =
-  "Unexpected response from server. Please try again.";
-
 // =============================================================================
-// Response Validators
+// Public API — OAuth
 // =============================================================================
 
 /**
- * Validates the response from `linkIdentityWithProvider()`.
- * Ensures the result is an object with either { url: string } or { error }.
+ * Sign in with an OAuth provider (Google, Facebook, Apple).
  *
- * Architecture & Design Rationale:
- * - Pattern: Fail-Fast Validation at Service Boundary
- * - Why: External SDK responses can change between versions. Validating
- *   the shape at the boundary prevents silent data corruption downstream.
- * - SOLID: SRP — validation is isolated from orchestration logic.
- */
-function validateLinkIdentityResult(
-  result: unknown
-): { valid: true; data: { url: string } | { error: unknown } } | { valid: false; message: string } {
-  if (result === null || result === undefined || typeof result !== "object") {
-    return { valid: false, message: UNEXPECTED_RESPONSE_ERROR };
-  }
-
-  const record = result as Record<string, unknown>;
-
-  // Error path: { error: ... }
-  if ("error" in record && record.error !== null && record.error !== undefined) {
-    return { valid: true, data: { error: record.error } };
-  }
-
-  // Success path: { url: string }
-  if ("url" in record && typeof record.url === "string" && record.url.length > 0) {
-    return { valid: true, data: { url: record.url } };
-  }
-
-  return { valid: false, message: UNEXPECTED_RESPONSE_ERROR };
-}
-
-/**
- * Validates the response from `supabase.auth.getUser()`.
- * Ensures the user object has the expected shape with identities array
- * and is_anonymous flag.
- */
-function validateGetUserData(
-  userData: unknown
-): { valid: true; user: { identities: ReadonlyArray<{ id: string }>; is_anonymous: boolean } } | { valid: false; message: string } {
-  if (userData === null || userData === undefined || typeof userData !== "object") {
-    return { valid: false, message: UNEXPECTED_RESPONSE_ERROR };
-  }
-
-  const data = userData as Record<string, unknown>;
-  const user = data.user;
-
-  if (user === null || user === undefined || typeof user !== "object") {
-    return { valid: false, message: UNEXPECTED_RESPONSE_ERROR };
-  }
-
-  const userRecord = user as Record<string, unknown>;
-
-  // identities must be an array
-  if (!Array.isArray(userRecord.identities)) {
-    return { valid: false, message: UNEXPECTED_RESPONSE_ERROR };
-  }
-
-  // is_anonymous must be a boolean
-  if (typeof userRecord.is_anonymous !== "boolean") {
-    return { valid: false, message: UNEXPECTED_RESPONSE_ERROR };
-  }
-
-  return {
-    valid: true,
-    user: {
-      identities: userRecord.identities as ReadonlyArray<{ id: string }>,
-      is_anonymous: userRecord.is_anonymous,
-    },
-  };
-}
-
-// =============================================================================
-// Public API
-// =============================================================================
-
-/**
- * Initiate the full OAuth identity-linking flow for a given provider.
- *
- * 1. Calls `linkIdentityWithProvider()` to get the OAuth URL from Supabase
+ * 1. Calls `signInWithOAuthProvider()` to get the OAuth URL from Supabase
  * 2. Opens the URL in the system browser via `expo-web-browser`
  * 3. Waits for the redirect back to the app via `AUTH_REDIRECT_URL`
+ * 4. Extracts session tokens from the redirect URL
  *
  * On success, Supabase's `onAuthStateChange` fires automatically in
- * `AuthContext`, updating `isAnonymous` to `false`.
+ * `AuthContext`, updating the user state.
  *
- * @param provider - The OAuth provider to link
+ * @param provider - The OAuth provider to sign in with
  * @returns Result indicating success or failure with error message
  */
-export async function initiateOAuthLink(
+export async function signInWithOAuth(
   provider: OAuthProvider
 ): Promise<OAuthResult> {
   try {
-    const rawResult = await linkIdentityWithProvider(provider);
-
-    // Validate linkIdentity response shape
-    const linkValidation = validateLinkIdentityResult(rawResult);
-    if (!linkValidation.valid) {
-      return { success: false, error: linkValidation.message };
-    }
-
-    const result = linkValidation.data;
+    const result = await signInWithOAuthProvider(provider);
 
     if ("error" in result) {
-      // TODO: Replace with structured logging (e.g., Sentry)
       return {
         success: false,
         error: getHumanReadableError(result.error),
+        errorCode: getErrorCode(result.error),
       };
     }
 
     // Open the OAuth URL in the system browser with a cancellable timeout.
-    // When the browser resolves, the timeout is cancelled.
-    // When the timeout fires, the browser is dismissed.
     const timeout = createCancellableTimeout(OAUTH_TIMEOUT_MS);
 
     const browserResult: BrowserOrTimeout = await Promise.race([
@@ -194,13 +118,13 @@ export async function initiateOAuthLink(
       timeout.promise,
     ]);
 
-    // Check for timeout sentinel first (distinct from user cancellation)
+    // Check for timeout sentinel first
     if (isTimeoutSentinel(browserResult)) {
-      // Dismiss the lingering browser window
       WebBrowser.dismissAuthSession();
       return {
         success: false,
         error: "Sign-in took too long. Please try again.",
+        errorCode: "timeout",
       };
     }
 
@@ -211,49 +135,82 @@ export async function initiateOAuthLink(
       browserResult.type === WebBrowserResultType.CANCEL ||
       browserResult.type === WebBrowserResultType.DISMISS
     ) {
-      return { success: false, error: "Sign-in was cancelled." };
-    }
-
-    // After linkIdentity completes server-side, the local session JWT still
-    // has is_anonymous=true. Force a session refresh so onAuthStateChange
-    // fires with the updated user profile (is_anonymous=false).
-    const { error: refreshError } = await supabase.auth.refreshSession();
-    if (refreshError) {
-      // TODO: Replace with structured logging (e.g., Sentry)
-      return { success: false, error: getHumanReadableError(refreshError) };
-    }
-
-    // Verify the identity was actually linked. Supabase returns a 302 redirect
-    // even when linkIdentity fails with 422 (e.g. "Identity is already linked
-    // to another user"), so the browser reports success. We must check the
-    // user's identities to confirm the link actually happened.
-    const { data: rawUserData, error: getUserError } =
-      await supabase.auth.getUser();
-    if (getUserError) {
-      // TODO: Replace with structured logging (e.g., Sentry)
-      return { success: false, error: getHumanReadableError(getUserError) };
-    }
-
-    // Validate getUser response shape
-    const userValidation = validateGetUserData(rawUserData);
-    if (!userValidation.valid) {
-      return { success: false, error: userValidation.message };
-    }
-
-    const { user } = userValidation;
-    if (user.identities.length === 0 || user.is_anonymous) {
       return {
         success: false,
-        error:
-          "This account is already linked to another user. Please try a different account.",
+        error: "Sign-in was cancelled.",
+        errorCode: "cancelled",
+      };
+    }
+
+    // signInWithOAuth creates a session via redirect. Extract tokens
+    // from the redirect URL and establish the session.
+    const redirectUrl =
+      browserResult.type === "success" ? browserResult.url : undefined;
+
+    const sessionResult = await extractSessionFromRedirectUrl(redirectUrl);
+    if (!sessionResult.success) {
+      return {
+        success: false,
+        error: sessionResult.error,
+        errorCode: "unknown",
       };
     }
 
     return { success: true };
   } catch (error: unknown) {
     // TODO: Replace with structured logging (e.g., Sentry)
-    return { success: false, error: getHumanReadableError(error) };
+    return {
+      success: false,
+      error: getHumanReadableError(error),
+      errorCode: getErrorCode(error),
+    };
   }
+}
+
+// =============================================================================
+// Public API — Email/Password
+// =============================================================================
+
+/**
+ * Sign up a new user with email and password.
+ * Wraps the Supabase call with user-friendly error formatting.
+ *
+ * @param email - The user's email address
+ * @param password - The user's chosen password
+ * @returns Result indicating success, verification needed, or error
+ */
+export async function signUpWithEmail(
+  email: string,
+  password: string
+): Promise<EmailAuthResult> {
+  return supabaseSignUp(email, password);
+}
+
+/**
+ * Sign in an existing user with email and password.
+ * Wraps the Supabase call with user-friendly error formatting.
+ *
+ * @param email - The user's email address
+ * @param password - The user's password
+ * @returns Result indicating success or error
+ */
+export async function signInWithEmail(
+  email: string,
+  password: string
+): Promise<EmailAuthResult> {
+  return supabaseSignIn(email, password);
+}
+
+/**
+ * Request a password reset email for the specified address.
+ *
+ * @param email - The email address to send the reset link to
+ * @returns Result indicating success or error
+ */
+export async function requestPasswordReset(
+  email: string
+): Promise<EmailAuthResult> {
+  return supabaseResetPassword(email);
 }
 
 // =============================================================================
@@ -299,6 +256,87 @@ function isTimeoutSentinel(
 }
 
 /**
+ * Extract session tokens from the OAuth redirect URL and establish
+ * the new session in the Supabase client.
+ *
+ * The redirect URL can contain tokens in two forms:
+ * - Fragment (implicit flow): `#access_token=...&refresh_token=...`
+ * - Query param (PKCE flow): `?code=...`
+ *
+ * Architecture & Design Rationale:
+ * - Pattern: Strategy—delegates to the appropriate Supabase method
+ *   based on URL shape.
+ * - Why: signInWithOAuth creates a completely new server-side session.
+ *   The auth code/tokens are ONLY available in the redirect URL.
+ *   `detectSessionInUrl: false` in our client means they're never
+ *   auto-extracted.
+ */
+async function extractSessionFromRedirectUrl(
+  url: string | undefined
+): Promise<{ success: true } | { success: false; error: string }> {
+  if (!url) {
+    return {
+      success: false,
+      error: "No redirect URL received from the browser.",
+    };
+  }
+
+  // Try fragment-based tokens first (implicit flow)
+  // URL format: astik://auth-callback#access_token=...&refresh_token=...
+  const hashIndex = url.indexOf("#");
+  if (hashIndex !== -1) {
+    const fragment = url.substring(hashIndex + 1);
+    const params = new URLSearchParams(fragment);
+    const accessToken = params.get("access_token");
+    const refreshToken = params.get("refresh_token");
+
+    if (accessToken && refreshToken) {
+      const { error } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+
+      if (error) {
+        return {
+          success: false,
+          error: getHumanReadableError(error),
+        };
+      }
+
+      return { success: true };
+    }
+  }
+
+  // Try query-based code (PKCE flow)
+  // URL format: astik://auth-callback?code=...
+  const queryIndex = url.indexOf("?");
+  if (queryIndex !== -1) {
+    const queryString = url.substring(queryIndex + 1);
+    const params = new URLSearchParams(queryString);
+    const code = params.get("code");
+
+    if (code) {
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+      if (error) {
+        return {
+          success: false,
+          error: getHumanReadableError(error),
+        };
+      }
+
+      return { success: true };
+    }
+  }
+
+  // Neither tokens nor code found — the URL might be malformed
+  return {
+    success: false,
+    error: "Could not extract session from the sign-in response.",
+  };
+}
+
+/**
  * Translate Supabase errors into user-friendly text.
  *
  * Uses `AuthError.code` for API errors (stable across SDK versions)
@@ -317,8 +355,12 @@ function getHumanReadableError(error: unknown): string {
   // API-level errors with structured error codes
   if (isAuthError(error) && error.code) {
     switch (error.code) {
-      case "identity_already_exists":
-        return "This account is already linked to another user. Please use a different account.";
+      case "user_already_exists":
+        return "An account with this email already exists. Please sign in instead.";
+      case "invalid_credentials":
+        return "Invalid email or password. Please try again.";
+      case "email_not_confirmed":
+        return "Please verify your email address before signing in.";
       case "request_timeout":
       case "hook_timeout":
       case "hook_timeout_after_retry":
@@ -331,4 +373,24 @@ function getHumanReadableError(error: unknown): string {
   return "Something went wrong during sign-in. Please try again.";
 }
 
-export type { OAuthProvider, OAuthResult };
+/**
+ * Map an error to a structured error code.
+ */
+function getErrorCode(error: unknown): OAuthErrorCode {
+  if (isAuthRetryableFetchError(error)) {
+    return "network";
+  }
+  if (isAuthError(error) && error.code) {
+    switch (error.code) {
+      case "request_timeout":
+      case "hook_timeout":
+      case "hook_timeout_after_retry":
+        return "timeout";
+      default:
+        return "unknown";
+    }
+  }
+  return "unknown";
+}
+
+export type { OAuthErrorCode, OAuthProvider, OAuthResult };

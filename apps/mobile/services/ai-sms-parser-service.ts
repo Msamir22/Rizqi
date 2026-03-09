@@ -365,7 +365,7 @@ interface ChunkWork {
 import { MOCK_PARSED_TRANSACTIONS } from "./mock-parsed-transactions";
 
 // Toggle this to true to return mock parsed transactions and save AI tokens.
-const USE_MOCK_DATA = true;
+const USE_MOCK_DATA = false;
 
 export async function parseSmsWithAi(
   candidates: readonly SmsCandidate[],

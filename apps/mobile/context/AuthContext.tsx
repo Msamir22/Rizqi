@@ -3,18 +3,17 @@
  * Provides authentication state and functions throughout the app.
  *
  * Architecture & Design Rationale:
- * - Pattern: React Context + shared user-resolution function
- * - Why: DRY — both bootstrap and onAuthStateChange need the same
- *   logic to resolve the true user (refetching from server when the
- *   session says is_anonymous due to stale JWT after linkIdentity).
- * - SOLID: SRP — resolveUser handles one concern (user resolution).
+ * - Pattern: React Context with session-based state
+ * - Why: Simple session check — if session exists, the user is
+ *   authenticated. No server re-verification needed.
+ * - SOLID: SRP — context only manages auth state propagation.
  *
- * Race Guard: applyResolvedSession() + listenerFiredRef ensures that
+ * Race Guard: applySession() + listenerFiredRef ensures that
  * a stale bootstrap result cannot overwrite a fresher session from
  * onAuthStateChange.
  */
 
-import { Session, User } from "@supabase/supabase-js";
+import type { Session, User } from "@supabase/supabase-js";
 import React, {
   createContext,
   useCallback,
@@ -34,7 +33,6 @@ interface AuthContextValue {
   readonly session: Session | null;
   readonly isLoading: boolean;
   readonly isAuthenticated: boolean;
-  readonly isAnonymous: boolean;
   readonly signOut: () => Promise<void>;
 }
 
@@ -54,42 +52,6 @@ export function useAuth(): AuthContextValue {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
-}
-
-// =============================================================================
-// User Resolution
-// =============================================================================
-
-/**
- * Resolve the ground-truth user from the server when the session JWT
- * still carries is_anonymous=true (e.g. after linkIdentity()).
- *
- * Falls back to the session user when the server cannot be reached
- * or returns an error.
- *
- * @param sessionUser - The user from the current session/JWT
- * @returns The resolved user (may differ from sessionUser)
- */
-async function resolveUser(sessionUser: User | null): Promise<User | null> {
-  if (!sessionUser?.is_anonymous) {
-    return sessionUser;
-  }
-
-  try {
-    const { data, error } = await supabase.auth.getUser();
-    if (error) {
-      // TODO: Replace with structured logging (e.g., Sentry)
-      // Network/auth errors — fall back to session user
-      return sessionUser;
-    }
-    if (data.user && !data.user.is_anonymous) {
-      return data.user;
-    }
-  } catch {
-    // Defensive: getUser() threw unexpectedly — use session user
-  }
-
-  return sessionUser;
 }
 
 // =============================================================================
@@ -119,15 +81,11 @@ export function AuthProvider({
    *
    * Architecture & Design Rationale:
    * - Pattern: Single Entry Point for State Mutation
-   * - Why: Prevents the race where bootstrap's slower resolveUser()
+   * - Why: Prevents the race where bootstrap's slower getSession()
    *   overwrites a fresher session already published by the listener.
    */
-  const applyResolvedSession = useCallback(
-    (
-      resolvedSession: Session | null,
-      resolvedUser: User | null,
-      fromListener: boolean
-    ): void => {
+  const applySession = useCallback(
+    (newSession: Session | null, fromListener: boolean): void => {
       if (!fromListener && listenerFiredRef.current) {
         // Bootstrap resolved AFTER the listener already fired — skip.
         return;
@@ -137,19 +95,20 @@ export function AuthProvider({
         listenerFiredRef.current = true;
       }
 
-      setSession(resolvedSession);
-      setUser(resolvedUser);
+      const sessionUser = newSession?.user ?? null;
+
+      setSession(sessionUser ? newSession : null);
+      setUser(sessionUser);
     },
     []
   );
 
   useEffect(() => {
-    // Bootstrap: get initial session and resolve user
+    // Bootstrap: get initial session
     supabase.auth
       .getSession()
-      .then(async ({ data: { session: initialSession } }) => {
-        const resolved = await resolveUser(initialSession?.user ?? null);
-        applyResolvedSession(initialSession, resolved, false);
+      .then(({ data: { session: initialSession } }) => {
+        applySession(initialSession, false);
         setIsLoading(false);
       })
       .catch(() => setIsLoading(false));
@@ -157,26 +116,22 @@ export function AuthProvider({
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-      const resolved = await resolveUser(newSession?.user ?? null);
-      applyResolvedSession(newSession, resolved, true);
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      applySession(newSession, true);
     });
 
     return () => subscription.unsubscribe();
-  }, [applyResolvedSession]);
+  }, [applySession]);
 
   const signOut = useCallback(async (): Promise<void> => {
     await supabase.auth.signOut();
   }, []);
 
-  const isAnonymous = user?.is_anonymous ?? false;
-
   const value: AuthContextValue = {
     user,
     session,
     isLoading,
-    isAuthenticated: !!session,
-    isAnonymous,
+    isAuthenticated: user !== null,
     signOut,
   };
 

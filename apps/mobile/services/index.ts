@@ -3,12 +3,7 @@
  * Central export for all service modules
  */
 
-export {
-  getCurrentUserId,
-  isAuthenticated,
-  signInAnonymously,
-  supabase,
-} from "./supabase";
+export { getCurrentUserId, isAuthenticated, supabase } from "./supabase";
 export { syncDatabase } from "./sync";
 export {
   createTransaction,

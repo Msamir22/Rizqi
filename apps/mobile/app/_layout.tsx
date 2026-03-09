@@ -6,7 +6,7 @@ import {
   Inter_700Bold,
 } from "@expo-google-fonts/inter";
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { router, Stack, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef } from "react";
@@ -19,7 +19,8 @@ import { ThemeProvider, useTheme } from "../context/ThemeContext";
 import "../global.css";
 
 import { ToastProvider } from "../components/ui/Toast";
-import { AuthProvider } from "../context/AuthContext";
+import { InitialSyncOverlay } from "../components/ui/InitialSyncOverlay";
+import { AuthProvider, useAuth } from "../context/AuthContext";
 import { CategoriesProvider } from "../context/CategoriesContext";
 
 import { SmsScanProvider } from "../context/SmsScanContext";
@@ -121,7 +122,10 @@ export default function RootLayout(): React.ReactNode {
                     <ThemeProvider>
                       <SafeAreaProvider>
                         <ToastProvider>
-                          <RootLayoutNav />
+                          <AuthGuard>
+                            <RootLayoutNav />
+                            <InitialSyncOverlay />
+                          </AuthGuard>
                         </ToastProvider>
                       </SafeAreaProvider>
                     </ThemeProvider>
@@ -134,6 +138,39 @@ export default function RootLayout(): React.ReactNode {
       </GestureHandlerRootView>
     </ErrorBoundary>
   );
+}
+
+/**
+ * Auth Guard — blocks access to all app routes when not authenticated.
+ * Uses useEffect + router.replace for reliable redirection even when
+ * the navigation stack already has active screens.
+ */
+function AuthGuard({
+  children,
+}: {
+  children: React.ReactNode;
+}): React.ReactNode {
+  const { isAuthenticated, isLoading } = useAuth();
+  const segments = useSegments();
+
+  useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+
+    // Allow auth screen through without authentication
+    const isPublicRoute = segments[0] === "auth";
+
+    if (!isAuthenticated && !isPublicRoute) {
+      router.replace("/auth");
+    }
+  }, [isAuthenticated, isLoading, segments]);
+
+  if (isLoading) {
+    return null;
+  }
+
+  return <>{children}</>;
 }
 
 function RootLayoutNav(): React.ReactNode {
@@ -197,7 +234,7 @@ function RootLayoutNav(): React.ReactNode {
         />
         <Stack.Screen name="sms-scan" />
         <Stack.Screen name="sms-review" />
-        <Stack.Screen name="sign-up" />
+        <Stack.Screen name="auth" />
       </Stack>
     </>
   );

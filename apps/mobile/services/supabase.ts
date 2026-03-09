@@ -157,8 +157,8 @@ export const supabase = createClient<SupabaseDatabase>(
 );
 
 /**
- * Get current authenticated user ID
- * Returns null if not authenticated (guest mode still has an anonymous user)
+ * Get current authenticated user ID.
+ * Returns null if not authenticated.
  */
 export async function getCurrentUserId(): Promise<string | null> {
   const {
@@ -168,7 +168,7 @@ export async function getCurrentUserId(): Promise<string | null> {
 }
 
 /**
- * Check if user is authenticated (including anonymous)
+ * Check if user has a valid authenticated session.
  */
 export async function isAuthenticated(): Promise<boolean> {
   const {
@@ -178,74 +178,26 @@ export async function isAuthenticated(): Promise<boolean> {
   return session !== null;
 }
 
-/**
- * Sign in anonymously for guest mode
- */
-export async function signInAnonymously(): Promise<string | null> {
-  const { data, error } = await supabase.auth.signInAnonymously();
-  if (error) {
-    // TODO: Replace with structured logging (e.g., Sentry)
-    return null;
-  }
-  return data.user?.id ?? null;
-}
-
-/**
- * Ensure user is authenticated (anonymous or real)
- * Retries with exponential backoff, then continues offline if all fail
- *
- * @param maxRetries - Maximum number of retry attempts (default: 3)
- * @returns true if authenticated, false if failed (app continues offline)
- */
-export async function ensureAuthenticated(maxRetries = 3): Promise<boolean> {
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    // Check if already authenticated
-    const hasSession = await isAuthenticated();
-    if (hasSession) {
-      return true;
-    }
-
-    // Attempt anonymous sign-in
-    const userId = await signInAnonymously();
-    if (userId) {
-      return true;
-    }
-
-    // Wait before retry with exponential backoff (500ms, 1s, 2s)
-    if (attempt < maxRetries - 1) {
-      const delay = 500 * Math.pow(2, attempt);
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
-  }
-
-  // All attempts failed - continue offline (WatermelonDB works locally)
-  // TODO: Replace with structured logging (e.g., Sentry)
-  return false;
-}
-
 // =============================================================================
-// Identity Linking (Anonymous → OAuth)
+// OAuth Authentication
 // =============================================================================
 
-/** Supported OAuth providers for account conversion. */
+/** Supported OAuth providers. */
 type OAuthProvider = "google" | "facebook" | "apple";
 
 /**
- * Convert an anonymous user to a provider-linked account.
+ * Sign in with an OAuth provider.
  *
- * Uses Supabase's `linkIdentity()` which preserves the existing `user_id`,
- * meaning all data in WatermelonDB and Supabase remains intact.
+ * Uses Supabase's `signInWithOAuth()` to create or restore a session
+ * via the specified provider. Returns the OAuth URL to open in a browser.
  *
- * @param provider - The OAuth provider to link (google, facebook, or apple)
+ * @param provider - The OAuth provider to sign in with (google, facebook, or apple)
  * @returns The OAuth URL to open in a browser, or an error
- *
- * TODO: Add zod runtime validation for the linkIdentity response shape
- * to fail fast on malformed API responses.
  */
-export async function linkIdentityWithProvider(
+export async function signInWithOAuthProvider(
   provider: OAuthProvider
 ): Promise<{ url: string } | { error: AuthError }> {
-  const { data, error } = await supabase.auth.linkIdentity({
+  const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
     options: {
       redirectTo: AUTH_REDIRECT_URL,
@@ -259,4 +211,117 @@ export async function linkIdentityWithProvider(
   return { url: data.url };
 }
 
-export type { OAuthProvider };
+// =============================================================================
+// Email/Password Authentication
+// =============================================================================
+
+/**
+ * Result of an email auth operation.
+ * On success, returns user data. On error, returns the AuthError.
+ */
+interface EmailAuthResult {
+  readonly success: boolean;
+  readonly error?: AuthError;
+  readonly needsVerification?: boolean;
+}
+
+/**
+ * Sign up a new user with email and password.
+ *
+ * Creates a new Supabase user. The user must verify their email
+ * before they can sign in. Supabase automatically sends a
+ * verification email on success.
+ *
+ * @param email - The user's email address
+ * @param password - The user's chosen password
+ * @returns Result indicating success, error, or verification needed
+ */
+export async function signUpWithEmail(
+  email: string,
+  password: string
+): Promise<EmailAuthResult> {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+  });
+
+  if (error) {
+    return { success: false, error };
+  }
+
+  // Supabase returns user with `email_confirmed_at = null` for unverified users
+  const needsVerification = !data.user?.email_confirmed_at;
+
+  return { success: true, needsVerification };
+}
+
+/**
+ * Sign in an existing user with email and password.
+ *
+ * Only works for users who have verified their email address.
+ *
+ * @param email - The user's email address
+ * @param password - The user's password
+ * @returns Result indicating success or error
+ */
+export async function signInWithEmail(
+  email: string,
+  password: string
+): Promise<EmailAuthResult> {
+  const { error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error) {
+    return { success: false, error };
+  }
+
+  return { success: true };
+}
+
+/**
+ * Send a password reset email to the specified address.
+ *
+ * Supabase sends an email with a reset link. The user clicks the link,
+ * which deep-links back to the app via `auth-callback.tsx`.
+ *
+ * @param email - The email address to send the reset link to
+ * @returns Result indicating success or error
+ */
+export async function resetPasswordForEmail(
+  email: string
+): Promise<EmailAuthResult> {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: AUTH_REDIRECT_URL,
+  });
+
+  if (error) {
+    return { success: false, error };
+  }
+
+  return { success: true };
+}
+
+/**
+ * Resend the email verification link for a pending sign-up.
+ *
+ * @param email - The email address to resend verification to
+ * @returns Result indicating success or error
+ */
+export async function resendVerificationEmail(
+  email: string
+): Promise<EmailAuthResult> {
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email,
+  });
+
+  if (error) {
+    return { success: false, error };
+  }
+
+  return { success: true };
+}
+
+export type { OAuthProvider, EmailAuthResult };
