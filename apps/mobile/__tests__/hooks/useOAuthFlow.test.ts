@@ -6,6 +6,7 @@
  * - Idle → Loading → Error
  * - Idle → Loading → Cancellation (silent)
  * - Double-tap prevention
+ * - In-flight guard prevents second OAuth launch
  *
  * Mock Strategy:
  *   - auth-service is mocked to control signInWithOAuth
@@ -210,6 +211,49 @@ describe("useOAuthFlow", () => {
     expect(mockOnError).toHaveBeenCalledWith(
       "Something went wrong. Please try again."
     );
+    expect(unwrap(result).loadingProvider).toBeNull();
+  });
+
+  // =========================================================================
+  // In-flight guard — prevents second OAuth launch while first is pending
+  // =========================================================================
+
+  it("prevents a second OAuth launch while the first is still pending", async () => {
+    // Create a deferred promise so we control when signInWithOAuth resolves
+    let resolveOAuth!: (value: { success: boolean }) => void;
+    const pendingPromise = new Promise<{ success: boolean }>((resolve) => {
+      resolveOAuth = resolve;
+    });
+
+    mockSignInWithOAuth.mockReturnValueOnce(pendingPromise);
+
+    const { result } = renderHook(() =>
+      useOAuthFlow(mockOnSuccess, mockOnError)
+    );
+
+    // Fire first call (stays pending)
+    let firstCallPromise: Promise<void> | undefined;
+    await actAsync(async () => {
+      firstCallPromise = unwrap(result).handleOAuth("google");
+    });
+
+    // Fire second call while first is still pending — should be a no-op
+    await actAsync(async () => {
+      await unwrap(result).handleOAuth("google");
+    });
+
+    // Only one call should have reached signInWithOAuth
+    expect(mockSignInWithOAuth).toHaveBeenCalledTimes(1);
+
+    // Now resolve the first promise
+    await actAsync(async () => {
+      resolveOAuth({ success: true });
+      await firstCallPromise;
+    });
+
+    // onSuccess should be called exactly once
+    expect(mockOnSuccess).toHaveBeenCalledTimes(1);
+    // Loading state should be cleared
     expect(unwrap(result).loadingProvider).toBeNull();
   });
 });

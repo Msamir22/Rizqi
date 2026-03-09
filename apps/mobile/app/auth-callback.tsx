@@ -8,6 +8,7 @@
  * 3. Password reset deep links — routes to password update flow
  *
  * On any callback, checks auth state and redirects accordingly:
+ * - Recovery deep link + authenticated → /reset-password
  * - Authenticated + onboarded → /(tabs)
  * - Authenticated + not onboarded → /onboarding
  * - Not authenticated → /auth
@@ -18,13 +19,28 @@
 import { HAS_ONBOARDED_KEY } from "@/constants/storage-keys";
 import { useAuth } from "@/context/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect } from "react";
 import { View } from "react-native";
+
+/**
+ * Detect whether the current deep link is a password-recovery callback.
+ *
+ * Supabase password reset deep links typically include `type=recovery`
+ * in either the URL fragment or the query parameters.
+ */
+function isPasswordRecoveryLink(params: Record<string, string | string[]>): boolean {
+  // Check query params provided by Expo Router
+  if (params.type === "recovery" || params.action === "reset") {
+    return true;
+  }
+  return false;
+}
 
 export default function AuthCallbackScreen(): React.JSX.Element {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
+  const params = useLocalSearchParams<Record<string, string>>();
 
   useEffect(() => {
     if (isLoading) return;
@@ -32,6 +48,12 @@ export default function AuthCallbackScreen(): React.JSX.Element {
     if (!isAuthenticated) {
       // Email verification completed but no session yet — go to auth
       router.replace("/auth");
+      return;
+    }
+
+    // Check for password-recovery deep link before normal routing
+    if (isPasswordRecoveryLink(params)) {
+      router.replace("/reset-password");
       return;
     }
 
@@ -47,7 +69,7 @@ export default function AuthCallbackScreen(): React.JSX.Element {
       .catch(() => {
         router.replace("/(tabs)");
       });
-  }, [router, isAuthenticated, isLoading]);
+  }, [router, isAuthenticated, isLoading, params]);
 
   // Render nothing while redirecting
   return <View />;

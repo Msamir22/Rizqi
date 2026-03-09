@@ -18,19 +18,18 @@
 import * as WebBrowser from "expo-web-browser";
 import {
   WebBrowserResultType,
-  type WebBrowserAuthSessionResult,
 } from "expo-web-browser";
+import type { WebBrowserAuthSessionResult } from "expo-web-browser";
 
 import { AUTH_REDIRECT_URL } from "@/constants/auth-constants";
 import {
-  type EmailAuthResult,
-  type OAuthProvider,
   signInWithOAuthProvider,
   supabase,
   resetPasswordForEmail as supabaseResetPassword,
   signInWithEmail as supabaseSignIn,
   signUpWithEmail as supabaseSignUp,
 } from "@/services/supabase";
+import type { EmailAuthResult, OAuthProvider } from "@/services/supabase";
 import { isAuthError, isAuthRetryableFetchError } from "@supabase/supabase-js";
 
 // Ensure the browser auth session can complete on warm start
@@ -40,81 +39,71 @@ WebBrowser.maybeCompleteAuthSession();
 // Types
 // =============================================================================
 
+/** Error codes returned by the OAuth flow. */
 type OAuthErrorCode = "cancelled" | "network" | "timeout" | "unknown";
 
-interface OAuthSuccessResult {
-  readonly success: true;
-}
+/** Result of an OAuth sign-in attempt. */
+type OAuthResult =
+  | { success: true }
+  | { success: false; error: string; errorCode: OAuthErrorCode };
 
-interface OAuthErrorResult {
-  readonly success: false;
-  readonly error: string;
-  readonly errorCode: OAuthErrorCode;
-}
-
-type OAuthResult = OAuthSuccessResult | OAuthErrorResult;
-
-/**
- * Sentinel type to distinguish OAuth timeout from user-initiated
- * browser cancellation.
- */
+/** Sentinel value to differentiate timeout from browser result. */
 interface TimeoutSentinel {
-  readonly type: "TIMEOUT";
+  type: "TIMEOUT";
 }
 
+/** Browser result or timeout — for Promise.race. */
 type BrowserOrTimeout = WebBrowserAuthSessionResult | TimeoutSentinel;
 
-/**
- * Handle returned by createCancellableTimeout() to allow cancellation.
- */
+/** Cancellable timeout with cleanup. */
 interface CancellableTimeout {
-  readonly promise: Promise<TimeoutSentinel>;
-  readonly cancel: () => void;
+  promise: Promise<TimeoutSentinel>;
+  cancel: () => void;
 }
 
 // =============================================================================
 // Constants
 // =============================================================================
 
-const OAUTH_TIMEOUT_MS = 30_000;
+/** Maximum time (ms) to wait for the browser to return a result. */
+const OAUTH_TIMEOUT_MS = 120_000;
 
 // =============================================================================
 // Public API — OAuth
 // =============================================================================
 
 /**
- * Sign in with an OAuth provider (Google, Facebook, Apple).
+ * Initiate OAuth sign-in for the specified provider.
  *
- * 1. Calls `signInWithOAuthProvider()` to get the OAuth URL from Supabase
- * 2. Opens the URL in the system browser via `expo-web-browser`
- * 3. Waits for the redirect back to the app via `AUTH_REDIRECT_URL`
- * 4. Extracts session tokens from the redirect URL
+ * Opens the system browser, waits for the user to authenticate,
+ * and establishes the Supabase session from the redirect URL.
  *
- * On success, Supabase's `onAuthStateChange` fires automatically in
- * `AuthContext`, updating the user state.
- *
- * @param provider - The OAuth provider to sign in with
- * @returns Result indicating success or failure with error message
+ * @param provider - The OAuth provider to sign in with (google, facebook, or apple)
+ * @returns OAuthResult indicating success, cancellation, or error
  */
 export async function signInWithOAuth(
   provider: OAuthProvider
 ): Promise<OAuthResult> {
   try {
-    const result = await signInWithOAuthProvider(provider);
+    const oauthResponse = await signInWithOAuthProvider(provider);
 
-    if ("error" in result) {
+    // Provider returned an error (e.g., network failure)
+    if ("error" in oauthResponse) {
       return {
         success: false,
-        error: getHumanReadableError(result.error),
-        errorCode: getErrorCode(result.error),
+        error: getHumanReadableError(oauthResponse.error),
+        errorCode: getErrorCode(oauthResponse.error),
       };
     }
 
-    // Open the OAuth URL in the system browser with a cancellable timeout.
+    // Open the browser and race against a timeout
     const timeout = createCancellableTimeout(OAUTH_TIMEOUT_MS);
 
     const browserResult: BrowserOrTimeout = await Promise.race([
-      WebBrowser.openAuthSessionAsync(result.url, AUTH_REDIRECT_URL),
+      WebBrowser.openAuthSessionAsync(
+        oauthResponse.url,
+        AUTH_REDIRECT_URL
+      ) as Promise<WebBrowserAuthSessionResult>,
       timeout.promise,
     ]);
 

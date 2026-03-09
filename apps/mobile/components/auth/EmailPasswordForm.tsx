@@ -1,17 +1,13 @@
 /**
  * Email/Password Authentication Form
  *
- * Renders an email/password form with:
- * - Email input with basic validation
- * - Password input with show/hide toggle
- * - Mode toggle (Sign Up / Sign In)
- * - Submit button with loading state
- * - "Forgot Password?" link (Sign In mode only)
- * - Inline error messages
+ * Renders the email + password input form with sign-in/sign-up mode toggle.
+ * Handles client-side validation before delegating to the parent handler.
  *
  * Architecture & Design Rationale:
- * - Pattern: Presentational Component (no business logic)
- * - Why: All auth orchestration lives in the parent screen (auth.tsx).
+ * - Pattern: Controlled Component (Constitution III)
+ * - Why: Parent (AuthScreen) owns the auth flow; this component only
+ *   handles form state and validation. onSubmit delegates to parent.
  *   This component only renders the form and reflects state.
  * - SOLID: SRP — form rendering only. OCP — new fields can be added
  *   without modifying existing validation logic.
@@ -51,6 +47,8 @@ interface EmailPasswordFormProps {
   readonly isLoading: boolean;
   /** Error message to display below the form. */
   readonly errorMessage: string | null;
+  /** Called when user interacts with the form to clear any server-side error. */
+  readonly onClearError?: () => void;
 }
 
 // =============================================================================
@@ -68,6 +66,7 @@ export function EmailPasswordForm({
   onForgotPassword,
   isLoading,
   errorMessage,
+  onClearError,
 }: EmailPasswordFormProps): React.JSX.Element {
   const { isDark } = useTheme();
   const [email, setEmail] = useState("");
@@ -78,8 +77,13 @@ export function EmailPasswordForm({
 
   const displayError = errorMessage ?? localError;
 
-  const validateAndSubmit = async (): Promise<void> => {
+  const clearErrors = (): void => {
     setLocalError(null);
+    onClearError?.();
+  };
+
+  const validateAndSubmit = async (): Promise<void> => {
+    clearErrors();
 
     const trimmedEmail = email.trim();
 
@@ -110,7 +114,7 @@ export function EmailPasswordForm({
 
   const toggleMode = (): void => {
     setMode((prev) => (prev === "signIn" ? "signUp" : "signIn"));
-    setLocalError(null);
+    clearErrors();
   };
 
   const handleForgotPassword = (): void => {
@@ -141,7 +145,7 @@ export function EmailPasswordForm({
           value={email}
           onChangeText={(text) => {
             setEmail(text);
-            setLocalError(null);
+            clearErrors();
           }}
           keyboardType="email-address"
           autoCapitalize="none"
@@ -163,7 +167,7 @@ export function EmailPasswordForm({
           value={password}
           onChangeText={(text) => {
             setPassword(text);
-            setLocalError(null);
+            clearErrors();
           }}
           secureTextEntry={!showPassword}
           autoCapitalize="none"

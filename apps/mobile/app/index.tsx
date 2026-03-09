@@ -23,14 +23,25 @@ export default function Index(): React.ReactNode {
   const [hasOnboarded, setHasOnboarded] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem(HAS_ONBOARDED_KEY)
-      .then((value) => {
+    const init = async (): Promise<void> => {
+      try {
+        const value = await AsyncStorage.getItem(HAS_ONBOARDED_KEY);
         if (value === "true") {
           setHasOnboarded(true);
         }
-      })
-      .catch(console.error)
-      .finally(() => setIsReady(true));
+      } catch (error: unknown) {
+        // TODO: Replace with structured logging (e.g., Sentry)
+        // Failed to read onboarding status — default to not onboarded
+        void error;
+      } finally {
+        setIsReady(true);
+      }
+    };
+
+    init().catch(() => {
+      // Ensure isReady is always set even if the async IIFE throws
+      setIsReady(true);
+    });
   }, []);
 
   if (!isReady) {

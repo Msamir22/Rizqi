@@ -1,30 +1,32 @@
 /**
- * Unit tests for auth-service (simplified — mandatory authentication)
+ * Unit tests for auth-service
  *
- * Tests:
- * - signInWithOAuth: success, network error, cancellation, exceptions
- * - signUpWithEmail: delegates to supabase signUpWithEmail
- * - signInWithEmail: delegates to supabase signInWithEmail
- * - requestPasswordReset: delegates to supabase resetPasswordForEmail
+ * Tests public API functions:
+ * - signInWithOAuth (success, PKCE, error, cancellation, exceptions)
+ * - signUpWithEmail (success, error)
+ * - signInWithEmail (success)
+ * - requestPasswordReset (success)
+ *
+ * Mock Strategy:
+ *   - supabase is mocked via jest.mock to control signInWithOAuthProvider,
+ *     setSession, exchangeCodeForSession, signUpWithEmail, signInWithEmail,
+ *     and resetPasswordForEmail
+ *   - expo-web-browser is mocked for openAuthSessionAsync and
+ *     dismissAuthSession
+ *   - @supabase/supabase-js error helpers are mocked for network error
+ *     detection
  */
 
 // ---------------------------------------------------------------------------
-// Mocks
+// Mocks — must be set up before importing the module under test
 // ---------------------------------------------------------------------------
 
 const mockSignInWithOAuthProvider = jest.fn();
+const mockSetSession = jest.fn();
+const mockExchangeCodeForSession = jest.fn();
 const mockSignUpWithEmail = jest.fn();
 const mockSignInWithEmailFn = jest.fn();
 const mockResetPasswordForEmail = jest.fn();
-
-const mockSetSession = jest.fn<
-  Promise<{ data: unknown; error: unknown }>,
-  unknown[]
->();
-const mockExchangeCodeForSession = jest.fn<
-  Promise<{ data: unknown; error: unknown }>,
-  unknown[]
->();
 
 jest.mock("@/services/supabase", () => ({
   signInWithOAuthProvider: (...args: unknown[]): Promise<unknown> =>
@@ -243,6 +245,29 @@ describe("auth-service - signUpWithEmail", () => {
     );
     expect(result.needsVerification).toBe(true);
     expect(result.error).toBeNull();
+  });
+
+  it("returns error result when supabase signUpWithEmail fails", async () => {
+    const mockError = {
+      message: "User already registered",
+      status: 422,
+      name: "AuthApiError",
+    };
+
+    mockSignUpWithEmail.mockResolvedValue({
+      success: false,
+      error: mockError,
+      needsVerification: false,
+    });
+
+    const result = await signUpWithEmail("existing@example.com", "password123");
+
+    expect(mockSignUpWithEmail).toHaveBeenCalledWith(
+      "existing@example.com",
+      "password123"
+    );
+    expect(result.success).toBe(false);
+    expect(result.error).toEqual(mockError);
   });
 });
 
