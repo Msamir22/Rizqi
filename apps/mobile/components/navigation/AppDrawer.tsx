@@ -1,13 +1,15 @@
 /**
  * App Navigation Drawer
- * Slide-out navigation menu with profile header and sectioned menu
+ * Slide-out navigation menu with profile header and sectioned menu.
+ * Logout is guarded by a confirmation modal.
  */
 
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Animated,
   Dimensions,
   Modal,
@@ -18,9 +20,11 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ConfirmationModal } from "@/components/modals/ConfirmationModal";
 import { palette } from "@/constants/colors";
-import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
+import { useDatabase } from "@/providers/DatabaseProvider";
+import { performLogout } from "@/services/logout-service";
 
 // =============================================================================
 // Types
@@ -114,11 +118,16 @@ export function AppDrawer({
   onClose,
 }: AppDrawerProps): React.JSX.Element {
   const { isDark, toggleTheme } = useTheme();
-  const { signOut } = useAuth();
-  const insets = useSafeAreaInsets();
-  const slideAnim = React.useRef(new Animated.Value(-DRAWER_WIDTH)).current;
 
-  React.useEffect(() => {
+  const database = useDatabase();
+  const insets = useSafeAreaInsets();
+  const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
+
+  // Logout UI state
+  const [showSyncWarning, setShowSyncWarning] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  useEffect(() => {
     Animated.timing(slideAnim, {
       toValue: visible ? 0 : -DRAWER_WIDTH,
       duration: 250,
@@ -133,10 +142,39 @@ export function AppDrawer({
     }, 100);
   };
 
-  const handleLogout = async (): Promise<void> => {
+  const handleLogoutPress = useCallback(async (): Promise<void> => {
+    setIsLoggingOut(true);
+
+    const result = await performLogout(database);
+
+    if (result.success) {
+      setIsLoggingOut(false);
+      onClose();
+      router.replace("/auth");
+      return;
+    }
+
+    setIsLoggingOut(false);
+
+    if (result.error === "no_network") {
+      return;
+    }
+
+    if (result.error === "sync_failed") {
+      setShowSyncWarning(true);
+    }
+  }, [database, onClose]);
+
+  const handleForceLogout = useCallback(async (): Promise<void> => {
+    setShowSyncWarning(false);
+    setIsLoggingOut(true);
+
+    await performLogout(database, true);
+
+    setIsLoggingOut(false);
     onClose();
-    await signOut();
-  };
+    router.replace("/auth");
+  }, [database, onClose]);
 
   return (
     <Modal
@@ -236,20 +274,42 @@ export function AppDrawer({
 
               {/* Logout */}
               <TouchableOpacity
-                onPress={handleLogout}
+                onPress={handleLogoutPress}
+                disabled={isLoggingOut}
                 className="flex-row items-center py-3"
               >
-                <Ionicons
-                  name="log-out-outline"
-                  size={22}
-                  color={palette.red[400]}
-                />
-                <Text className="ml-4 text-base text-red-400">Logout</Text>
+                {isLoggingOut ? (
+                  <ActivityIndicator size={22} color={palette.red[400]} />
+                ) : (
+                  <Ionicons
+                    name="log-out-outline"
+                    size={22}
+                    color={palette.red[400]}
+                  />
+                )}
+                <Text className="ml-4 text-base text-red-400">
+                  {isLoggingOut ? "Logging out..." : "Logout"}
+                </Text>
               </TouchableOpacity>
             </View>
           </Pressable>
         </Animated.View>
       </Pressable>
+
+      {/* Sync failure warning modal (FR-013) */}
+      <ConfirmationModal
+        visible={showSyncWarning}
+        variant="warning"
+        icon="cloud-offline-outline"
+        title="Sync Failed"
+        message="Some data may not have been saved to the cloud. If you proceed, any unsynced data will be lost."
+        confirmLabel="Proceed Anyway"
+        cancelLabel="Cancel"
+        onConfirm={() => {
+          handleForceLogout().catch(console.error);
+        }}
+        onCancel={() => setShowSyncWarning(false)}
+      />
     </Modal>
   );
 }

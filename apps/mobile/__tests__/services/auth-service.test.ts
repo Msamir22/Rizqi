@@ -1,40 +1,46 @@
 /**
- * Unit tests for auth-service OAuth flow orchestration
+ * Unit tests for auth-service (simplified — mandatory authentication)
  *
- * Tests T011–T012 from tasks.md:
- * - T011: linkIdentityWithProvider calls Supabase linkIdentity with correct provider
- * - T012: Error handling for network failure and duplicate account
+ * Tests:
+ * - signInWithOAuth: success, network error, cancellation, exceptions
+ * - signUpWithEmail: delegates to supabase signUpWithEmail
+ * - signInWithEmail: delegates to supabase signInWithEmail
+ * - requestPasswordReset: delegates to supabase resetPasswordForEmail
  */
 
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
 
-const mockLinkIdentity = jest.fn();
+const mockSignInWithOAuthProvider = jest.fn();
+const mockSignUpWithEmail = jest.fn();
+const mockSignInWithEmailFn = jest.fn();
+const mockResetPasswordForEmail = jest.fn();
 
-const mockRefreshSession = jest.fn<
+const mockSetSession = jest.fn<
   Promise<{ data: unknown; error: unknown }>,
   unknown[]
 >();
-const mockGetUser = jest.fn<
-  Promise<{
-    data: {
-      user: { identities: Array<{ id: string }>; is_anonymous: boolean } | null;
-    };
-    error: unknown;
-  }>,
+const mockExchangeCodeForSession = jest.fn<
+  Promise<{ data: unknown; error: unknown }>,
   unknown[]
 >();
 
 jest.mock("@/services/supabase", () => ({
-  linkIdentityWithProvider: (...args: unknown[]): Promise<unknown> =>
-    mockLinkIdentity(...args) as Promise<unknown>,
+  signInWithOAuthProvider: (...args: unknown[]): Promise<unknown> =>
+    mockSignInWithOAuthProvider(...args) as Promise<unknown>,
+  signUpWithEmail: (...args: unknown[]): Promise<unknown> =>
+    mockSignUpWithEmail(...args) as Promise<unknown>,
+  signInWithEmail: (...args: unknown[]): Promise<unknown> =>
+    mockSignInWithEmailFn(...args) as Promise<unknown>,
+  resetPasswordForEmail: (...args: unknown[]): Promise<unknown> =>
+    mockResetPasswordForEmail(...args) as Promise<unknown>,
   supabase: {
     auth: {
-      refreshSession: (...args: unknown[]): Promise<unknown> =>
-        mockRefreshSession(...args) as Promise<unknown>,
-      getUser: (...args: unknown[]): Promise<unknown> =>
-        mockGetUser(...args) as Promise<unknown>,
+      setSession: (...args: unknown[]): Promise<unknown> =>
+        mockSetSession(...args) as Promise<unknown>,
+      exchangeCodeForSession: (...args: unknown[]): Promise<unknown> =>
+        mockExchangeCodeForSession(...args) as Promise<unknown>,
     },
   },
 }));
@@ -43,12 +49,18 @@ jest.mock("@/constants/auth-constants", () => ({
   AUTH_REDIRECT_URL: "astik://auth-callback",
 }));
 
-const mockOpenAuthSession = jest.fn<Promise<{ type: string }>, unknown[]>();
+const mockOpenAuthSession = jest.fn<
+  Promise<{ type: string; url?: string }>,
+  unknown[]
+>();
+const mockDismissAuthSession = jest.fn();
 
 jest.mock("expo-web-browser", () => ({
   maybeCompleteAuthSession: jest.fn(),
   openAuthSessionAsync: (...args: unknown[]): Promise<unknown> =>
     mockOpenAuthSession(...args) as Promise<unknown>,
+  dismissAuthSession: (...args: unknown[]): unknown =>
+    mockDismissAuthSession(...args) as unknown,
   WebBrowserResultType: {
     CANCEL: "cancel",
     DISMISS: "dismiss",
@@ -57,32 +69,16 @@ jest.mock("expo-web-browser", () => ({
 }));
 
 // Import after mocks
-import { initiateOAuthLink } from "../../services/auth-service";
+import {
+  signInWithOAuth,
+  signUpWithEmail,
+  signInWithEmail,
+  requestPasswordReset,
+} from "../../services/auth-service";
 
 // ---------------------------------------------------------------------------
 // Test Helpers
 // ---------------------------------------------------------------------------
-
-/**
- * Creates an AuthError-shaped object that passes `isAuthError()` type guard.
- * Supabase type guards check for `__isAuthError` property on the object.
- */
-function createAuthError(
-  message: string,
-  code: string,
-  status = 422
-): Error & { __isAuthError: boolean; code: string; status: number } {
-  const error = new Error(message) as Error & {
-    __isAuthError: boolean;
-    code: string;
-    status: number;
-  };
-  error.name = "AuthApiError";
-  error.__isAuthError = true;
-  error.code = code;
-  error.status = status;
-  return error;
-}
 
 /**
  * Creates an AuthRetryableFetchError-shaped object that passes
@@ -102,42 +98,33 @@ function createRetryableFetchError(
 }
 
 // ---------------------------------------------------------------------------
-// Test Suite
+// Test Suite: signInWithOAuth
 // ---------------------------------------------------------------------------
 
-describe("auth-service - initiateOAuthLink", () => {
+describe("auth-service - signInWithOAuth", () => {
   beforeEach(() => {
+    jest.useFakeTimers();
     jest.clearAllMocks();
-
-    // Default mocks for the success path
-    mockRefreshSession.mockResolvedValue({ data: {}, error: null });
-    mockGetUser.mockResolvedValue({
-      data: {
-        user: {
-          identities: [{ id: "identity-1" }],
-          is_anonymous: false,
-        },
-      },
-      error: null,
-    });
   });
 
-  // =========================================================================
-  // T011: linkIdentityWithProvider calls correct provider
-  // =========================================================================
+  afterEach(() => {
+    jest.useRealTimers();
+  });
 
-  describe("T011: successful OAuth flows", () => {
-    it("calls linkIdentityWithProvider with 'google' and opens browser", async () => {
-      mockLinkIdentity.mockResolvedValue({
+  describe("success flows", () => {
+    it("calls signInWithOAuthProvider with 'google' and opens browser", async () => {
+      mockSignInWithOAuthProvider.mockResolvedValue({
         url: "https://accounts.google.com/o/oauth2/auth?...",
       });
       mockOpenAuthSession.mockResolvedValue({
         type: "success",
+        url: "astik://auth-callback#access_token=test-token&refresh_token=test-refresh&token_type=bearer",
       });
+      mockSetSession.mockResolvedValue({ data: { session: {} }, error: null });
 
-      const result = await initiateOAuthLink("google");
+      const result = await signInWithOAuth("google");
 
-      expect(mockLinkIdentity).toHaveBeenCalledWith("google");
+      expect(mockSignInWithOAuthProvider).toHaveBeenCalledWith("google");
       expect(mockOpenAuthSession).toHaveBeenCalledWith(
         "https://accounts.google.com/o/oauth2/auth?...",
         "astik://auth-callback"
@@ -145,178 +132,164 @@ describe("auth-service - initiateOAuthLink", () => {
       expect(result).toEqual({ success: true });
     });
 
-    it("calls linkIdentityWithProvider with 'facebook'", async () => {
-      mockLinkIdentity.mockResolvedValue({
-        url: "https://www.facebook.com/v18.0/dialog/oauth?...",
+    it("extracts PKCE code from redirect URL and calls exchangeCodeForSession", async () => {
+      mockSignInWithOAuthProvider.mockResolvedValue({
+        url: "https://accounts.google.com/o/oauth2/auth?...",
       });
       mockOpenAuthSession.mockResolvedValue({
         type: "success",
+        url: "astik://auth-callback?code=pkce-auth-code",
+      });
+      mockExchangeCodeForSession.mockResolvedValue({
+        data: { session: {} },
+        error: null,
       });
 
-      const result = await initiateOAuthLink("facebook");
+      const result = await signInWithOAuth("google");
 
-      expect(mockLinkIdentity).toHaveBeenCalledWith("facebook");
+      expect(mockExchangeCodeForSession).toHaveBeenCalledWith("pkce-auth-code");
+      expect(mockSetSession).not.toHaveBeenCalled();
       expect(result).toEqual({ success: true });
     });
 
-    it("calls linkIdentityWithProvider with 'apple'", async () => {
-      mockLinkIdentity.mockResolvedValue({
-        url: "https://appleid.apple.com/auth/authorize?...",
+    it("returns error when redirect URL has no tokens or code", async () => {
+      mockSignInWithOAuthProvider.mockResolvedValue({
+        url: "https://accounts.google.com/o/oauth2/auth?...",
       });
       mockOpenAuthSession.mockResolvedValue({
         type: "success",
+        url: "astik://auth-callback",
       });
 
-      const result = await initiateOAuthLink("apple");
+      const result = await signInWithOAuth("google");
 
-      expect(mockLinkIdentity).toHaveBeenCalledWith("apple");
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({
+        success: false,
+        error: "Could not extract session from the sign-in response.",
+        errorCode: "unknown",
+      });
     });
   });
 
-  // =========================================================================
-  // T012: Error handling
-  // =========================================================================
-
-  describe("T012: error handling", () => {
-    it("returns human-readable error for network failure", async () => {
-      mockLinkIdentity.mockResolvedValue({
-        error: createRetryableFetchError("TypeError: Network request failed"),
+  describe("error handling", () => {
+    it("returns network error when signInWithOAuthProvider fails", async () => {
+      mockSignInWithOAuthProvider.mockResolvedValue({
+        error: createRetryableFetchError("Network error"),
       });
 
-      const result = await initiateOAuthLink("google");
+      const result = await signInWithOAuth("google");
 
       expect(result).toEqual({
         success: false,
         error:
           "No internet connection. Please check your network and try again.",
+        errorCode: "network",
       });
     });
 
-    it("returns human-readable error for duplicate account (identity already exists)", async () => {
-      mockLinkIdentity.mockResolvedValue({
-        error: createAuthError(
-          "Identity already exists for this user",
-          "identity_already_exists"
-        ),
-      });
-
-      const result = await initiateOAuthLink("google");
-
-      expect(result).toEqual({
-        success: false,
-        error:
-          "This account is already linked to another user. Please use a different account.",
-      });
-    });
-
-    it("returns generic error for unknown failures", async () => {
-      mockLinkIdentity.mockResolvedValue({
-        error: createAuthError("Some unexpected error", "unexpected_failure"),
-      });
-
-      const result = await initiateOAuthLink("google");
-
-      expect(result).toEqual({
-        success: false,
-        error: "Something went wrong during sign-in. Please try again.",
-      });
-    });
-
-    it("returns cancelled error when user dismisses browser", async () => {
-      mockLinkIdentity.mockResolvedValue({
+    it("returns cancelled when user dismisses browser", async () => {
+      mockSignInWithOAuthProvider.mockResolvedValue({
         url: "https://accounts.google.com/...",
       });
-      mockOpenAuthSession.mockResolvedValue({
-        type: "cancel",
-      });
+      mockOpenAuthSession.mockResolvedValue({ type: "cancel" });
 
-      const result = await initiateOAuthLink("google");
+      const result = await signInWithOAuth("google");
 
       expect(result).toEqual({
         success: false,
         error: "Sign-in was cancelled.",
+        errorCode: "cancelled",
       });
     });
 
     it("handles thrown exceptions gracefully", async () => {
-      mockLinkIdentity.mockRejectedValue(
-        createRetryableFetchError("Unexpected network error from fetch")
+      mockSignInWithOAuthProvider.mockRejectedValue(
+        new Error("Unexpected error")
       );
 
-      const result = await initiateOAuthLink("google");
+      const result = await signInWithOAuth("google");
 
       expect(result).toEqual({
         success: false,
-        error:
-          "No internet connection. Please check your network and try again.",
+        error: "Something went wrong during sign-in. Please try again.",
+        errorCode: "unknown",
       });
     });
+  });
+});
 
-    it("returns error when refreshSession fails", async () => {
-      mockLinkIdentity.mockResolvedValue({
-        url: "https://accounts.google.com/...",
-      });
-      mockOpenAuthSession.mockResolvedValue({ type: "success" });
-      mockRefreshSession.mockResolvedValue({
-        data: {},
-        error: createRetryableFetchError("Network failure during refresh"),
-      });
+// ---------------------------------------------------------------------------
+// Test Suite: signUpWithEmail
+// ---------------------------------------------------------------------------
 
-      const result = await initiateOAuthLink("google");
+describe("auth-service - signUpWithEmail", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
 
-      expect(result).toEqual({
-        success: false,
-        error:
-          "No internet connection. Please check your network and try again.",
-      });
+  it("delegates to supabase signUpWithEmail and returns result", async () => {
+    mockSignUpWithEmail.mockResolvedValue({
+      user: { id: "user-1" },
+      session: null,
+      needsVerification: true,
+      error: null,
     });
 
-    it("returns error when getUser fails after successful browser flow", async () => {
-      mockLinkIdentity.mockResolvedValue({
-        url: "https://accounts.google.com/...",
-      });
-      mockOpenAuthSession.mockResolvedValue({ type: "success" });
-      mockRefreshSession.mockResolvedValue({ data: {}, error: null });
-      mockGetUser.mockResolvedValue({
-        data: { user: null },
-        error: createRetryableFetchError("Network failure during getUser"),
-      });
+    const result = await signUpWithEmail("test@example.com", "password123");
 
-      const result = await initiateOAuthLink("google");
+    expect(mockSignUpWithEmail).toHaveBeenCalledWith(
+      "test@example.com",
+      "password123"
+    );
+    expect(result.needsVerification).toBe(true);
+    expect(result.error).toBeNull();
+  });
+});
 
-      expect(result).toEqual({
-        success: false,
-        error:
-          "No internet connection. Please check your network and try again.",
-      });
+// ---------------------------------------------------------------------------
+// Test Suite: signInWithEmail
+// ---------------------------------------------------------------------------
+
+describe("auth-service - signInWithEmail", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("delegates to supabase signInWithEmail and returns result", async () => {
+    mockSignInWithEmailFn.mockResolvedValue({
+      user: { id: "user-1" },
+      session: { access_token: "token" },
+      needsVerification: false,
+      error: null,
     });
 
-    it("returns 'already linked' when browser succeeds but identity still anonymous (silent 422)", async () => {
-      // This covers the case where Supabase returns a 302 redirect even
-      // when linkIdentity fails server-side with 422.
-      mockLinkIdentity.mockResolvedValue({
-        url: "https://accounts.google.com/...",
-      });
-      mockOpenAuthSession.mockResolvedValue({ type: "success" });
-      mockRefreshSession.mockResolvedValue({ data: {}, error: null });
-      mockGetUser.mockResolvedValue({
-        data: {
-          user: {
-            identities: [],
-            is_anonymous: true,
-          },
-        },
-        error: null,
-      });
+    const result = await signInWithEmail("test@example.com", "password123");
 
-      const result = await initiateOAuthLink("google");
+    expect(mockSignInWithEmailFn).toHaveBeenCalledWith(
+      "test@example.com",
+      "password123"
+    );
+    expect(result.error).toBeNull();
+  });
+});
 
-      expect(result).toEqual({
-        success: false,
-        error:
-          "This account is already linked to another user. Please try a different account.",
-      });
+// ---------------------------------------------------------------------------
+// Test Suite: requestPasswordReset
+// ---------------------------------------------------------------------------
+
+describe("auth-service - requestPasswordReset", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("delegates to supabase resetPasswordForEmail and returns result", async () => {
+    mockResetPasswordForEmail.mockResolvedValue({
+      error: null,
     });
+
+    const result = await requestPasswordReset("test@example.com");
+
+    expect(mockResetPasswordForEmail).toHaveBeenCalledWith("test@example.com");
+    expect(result.error).toBeNull();
   });
 });
