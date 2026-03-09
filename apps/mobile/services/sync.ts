@@ -562,6 +562,14 @@ function transformToSupabase<T extends WritableSupabaseTablesNames>(
 let activeSyncPromise: Promise<void> | null = null;
 
 /**
+ * Returns the currently in-flight sync promise, if any.
+ * Used by the logout service to await an active sync before resetting the database.
+ */
+export function getActiveSyncPromise(): Promise<void> | null {
+  return activeSyncPromise;
+}
+
+/**
  * Synchronize WatermelonDB with Supabase
  * Call this after app start and periodically
  *

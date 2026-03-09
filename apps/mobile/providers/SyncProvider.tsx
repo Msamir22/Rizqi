@@ -14,7 +14,9 @@ import {
   useState,
 } from "react";
 import { AppState, AppStateStatus } from "react-native";
-import { ensureAuthenticated, isAuthenticated } from "../services/supabase";
+import { useAuth } from "../context/AuthContext";
+import { isAuthenticated as checkIsAuthenticated } from "../services/supabase";
+import { completeInterruptedLogout } from "../services/logout-service";
 import { syncDatabase } from "../services/sync";
 
 // Sync intervals in milliseconds
@@ -23,6 +25,7 @@ const SYNC_INTERVAL_BACKGROUND = 30 * 60 * 1000; // 30 minutes when backgrounded
 
 interface SyncContextValue {
   isSyncing: boolean;
+  isInitialSync: boolean;
   lastSyncedAt: Date | null;
   syncError: Error | null;
   sync: (forceFullSync?: boolean) => Promise<void>;
@@ -35,7 +38,9 @@ interface SyncProviderProps {
 }
 
 export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
+  const { isAuthenticated } = useAuth();
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isInitialSync, setIsInitialSync] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [syncError, setSyncError] = useState<Error | null>(null);
   const [appState, setAppState] = useState<AppStateStatus>(
@@ -46,7 +51,7 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
 
   const sync = useCallback(async (forceFullSync = false): Promise<void> => {
     // Check if authenticated before syncing
-    const authenticated = await isAuthenticated();
+    const authenticated = await checkIsAuthenticated();
     if (!authenticated) {
       console.log("Sync skipped: Not authenticated");
       return;
@@ -88,13 +93,15 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
       console.log(`⏰ Sync interval set to ${intervalName}`);
 
       syncIntervalRef.current = setInterval(() => {
-        isAuthenticated()
-          .then((authenticated) => {
-            if (authenticated) {
-              sync().catch(console.error);
-            }
-          })
-          .catch(console.error);
+        if (isAuthenticated) {
+          checkIsAuthenticated()
+            .then((authenticated) => {
+              if (authenticated) {
+                sync().catch(console.error);
+              }
+            })
+            .catch(console.error);
+        }
       }, interval);
     },
     [sync]
@@ -134,10 +141,12 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
   // Initial sync on mount + data cleared detection
   useEffect(() => {
     const initialSync = async (): Promise<void> => {
-      // First ensure user is authenticated (creates anonymous user if needed)
-      const isAuthed = await ensureAuthenticated();
-      if (!isAuthed) {
-        console.log("⚠️ Auth failed - sync will not run");
+      // FR-012: Complete any interrupted logout from a force-close
+      await completeInterruptedLogout(database);
+
+      // Check user is authenticated before syncing
+      if (!isAuthenticated) {
+        console.log("⚠️ Not authenticated - sync will not run");
         setupSyncInterval(true); // Still set up interval for retry
         return;
       }
@@ -150,7 +159,9 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
 
       if (count === 0) {
         console.log("📱 Local DB empty - triggering full sync from server");
+        setIsInitialSync(true);
         await sync(true);
+        setIsInitialSync(false);
       } else {
         await sync();
       }
@@ -168,10 +179,11 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isAuthenticated]);
 
   const value: SyncContextValue = {
     isSyncing,
+    isInitialSync,
     lastSyncedAt,
     syncError,
     sync,
