@@ -320,56 +320,36 @@ function matchAccountCore(
 
   // Step 1: Card last 4 + sender match (highest confidence)
   if (cardLast4) {
-    for (const acc of accounts) {
-      if (acc.cardLast4 && acc.cardLast4 === cardLast4) {
-        // Card match found — verify sender also matches for highest confidence
-        if (
-          isSenderMatch(senderDisplayName, {
-            bankSmsSenderName: acc.smsSenderName,
-            bankName: acc.bankName,
-            accountName: acc.name,
-          })
-        ) {
-          return {
-            accountId: acc.id,
-            accountName: acc.name,
-            matchReason: "card_last4",
-          };
-        }
-      }
-    }
-
-    // Card match without sender verification (still high confidence)
-    for (const acc of accounts) {
-      if (acc.cardLast4 && acc.cardLast4 === cardLast4) {
-        return {
-          accountId: acc.id,
-          accountName: acc.name,
-          matchReason: "card_last4",
-        };
-      }
-    }
-  }
-
-  // Step 2: Sender match alone against bank_details / account name
-  for (const acc of accounts) {
-    if (
-      isSenderMatch(senderDisplayName, {
-        bankSmsSenderName: acc.smsSenderName,
-        bankName: acc.bankName,
-        accountName: acc.name,
-      })
-    ) {
+    const matchedAccount = accounts.find((acc) => acc.cardLast4 === cardLast4);
+    if (matchedAccount) {
       return {
-        accountId: acc.id,
-        accountName: acc.name,
-        matchReason: "sms_sender",
+        accountId: matchedAccount.id,
+        accountName: matchedAccount.name,
+        matchReason: "card_last4",
       };
     }
   }
 
+  // Step 2: Sender match alone against bank_details / account name
+  const matchedAccount = accounts.find((acc) =>
+    isSenderMatch(senderDisplayName, {
+      bankSmsSenderName: acc.smsSenderName,
+      bankName: acc.bankName,
+      accountName: acc.name,
+    })
+  );
+  if (matchedAccount) {
+    return {
+      accountId: matchedAccount.id,
+      accountName: matchedAccount.name,
+      matchReason: "sms_sender",
+    };
+  }
+
   // Step 3: Name + currency match via bank registry
   if (currency) {
+    // This should always return a bank info for Egyptian banks
+    // since we already filter the sms based on this registry
     const bankInfo = isKnownFinancialSender(senderDisplayName);
     if (bankInfo) {
       const normalizedBankName = bankInfo.shortName.toLowerCase().trim();
@@ -476,7 +456,8 @@ async function matchTransactionsBatched(
       : DEFAULT_BATCH_SIZE;
 
   const accounts =
-    preloadedAccounts ?? (await fetchAccountsWithDetails(userId));
+    preloadedAccounts?.filter((acc) => acc.type === "BANK") ??
+    (await fetchAccountsWithDetails(userId, "BANK"));
 
   for (let start = 0; start < transactions.length; start += safeBatchSize) {
     const end = Math.min(start + safeBatchSize, transactions.length);
