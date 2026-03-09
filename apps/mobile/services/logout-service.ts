@@ -94,6 +94,7 @@ export async function performLogout(
     } catch {
       // Best-effort cleanup — nothing more we can do
     }
+    // TODO: Replace with structured logging (e.g., Sentry)
     console.error("Logout failed:", error);
     return { success: false, error: "unknown" };
   }
@@ -117,10 +118,13 @@ export async function completeInterruptedLogout(
       return; // No interrupted logout to complete
     }
 
+    // TODO: Replace with structured logging (e.g., Sentry)
     console.log("Completing interrupted logout from previous session...");
     await executeLogoutCleanup(database);
+    // TODO: Replace with structured logging (e.g., Sentry)
     console.log("Interrupted logout cleanup completed.");
   } catch (error) {
+    // TODO: Replace with structured logging (e.g., Sentry)
     console.error("Failed to complete interrupted logout:", error);
     // Remove the flag to prevent infinite loops
     try {
@@ -159,16 +163,21 @@ async function attemptSync(database: Database): Promise<boolean> {
     } catch (error) {
       const isLastAttempt = attempt === MAX_SYNC_RETRIES;
       if (isLastAttempt) {
+        // TODO: Replace with structured logging (e.g., Sentry)
         console.error(
           `Sync failed after ${MAX_SYNC_RETRIES + 1} attempts:`,
           error
         );
         return false;
       }
+      // TODO: Replace with structured logging (e.g., Sentry)
       console.warn(`Sync attempt ${attempt + 1} failed, retrying...`, error);
     }
   }
 
+  // This is unreachable because the for-loop always exits via
+  // return true (sync success) or return false (last attempt failed).
+  // Kept for TypeScript exhaustiveness.
   return false;
 }
 
@@ -198,6 +207,7 @@ async function clearUserPreferences(): Promise<void> {
   try {
     await AsyncStorage.multiRemove([...CLEARABLE_USER_KEYS]);
   } catch (error) {
+    // TODO: Replace with structured logging (e.g., Sentry)
     console.error("Failed to clear user preferences:", error);
     // Non-fatal — continue with logout
   }

@@ -17,7 +17,7 @@
  * @module useOAuthFlow
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 
 import { signInWithOAuth } from "@/services/auth-service";
 import type { OAuthProvider } from "@/services/supabase";
@@ -48,10 +48,15 @@ export function useOAuthFlow(
   );
   const [error, setError] = useState<string | null>(null);
 
+  // Use a ref for the in-flight guard to avoid stale closure issues
+  // and prevent unnecessary callback recreations
+  const isLoadingRef = useRef(false);
+
   const handleOAuth = useCallback(
     async (provider: OAuthProvider): Promise<void> => {
-      if (loadingProvider) return; // Prevent double-tap
+      if (isLoadingRef.current) return; // Prevent double-tap
 
+      isLoadingRef.current = true;
       setLoadingProvider(provider);
       setError(null);
 
@@ -76,10 +81,11 @@ export function useOAuthFlow(
         setError(message);
         onError(message);
       } finally {
+        isLoadingRef.current = false;
         setLoadingProvider(null);
       }
     },
-    [loadingProvider, onSuccess, onError]
+    [onSuccess, onError]
   );
 
   return {
