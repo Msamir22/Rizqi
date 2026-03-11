@@ -36,6 +36,9 @@ interface LogoutResult {
 /** Maximum number of sync retry attempts before giving up. */
 const MAX_SYNC_RETRIES = 1;
 
+/** Maximum time (ms) to wait for an in-flight sync before abandoning it. */
+const ACTIVE_SYNC_TIMEOUT_MS = 10_000;
+
 // =============================================================================
 // Core Logout Functions
 // =============================================================================
@@ -61,26 +64,22 @@ export async function performLogout(
   forceSkipSync = false
 ): Promise<LogoutResult> {
   try {
-    // Step 1: Set force-close recovery flag
-    await AsyncStorage.setItem(LOGOUT_IN_PROGRESS_KEY, "true");
-
     if (!forceSkipSync) {
       // Step 2: Check network connectivity
       const networkState = await fetch();
       if (!networkState.isConnected) {
-        await AsyncStorage.removeItem(LOGOUT_IN_PROGRESS_KEY);
         return { success: false, error: "no_network" };
       }
 
       // Step 3: Await any in-flight sync, then run a fresh sync
       const syncSucceeded = await attemptSync(database);
       if (!syncSucceeded) {
-        // Don't proceed — caller should show warning modal
-        // Keep the logout_in_progress flag so if user decides to proceed,
-        // we can skip right to cleanup
         return { success: false, error: "sync_failed" };
       }
     }
+
+    // Mark logout as interrupted only once cleanup becomes irreversible
+    await AsyncStorage.setItem(LOGOUT_IN_PROGRESS_KEY, "true");
 
     // Steps 4–7: Perform the actual cleanup
     await executeLogoutCleanup(database);
@@ -142,13 +141,18 @@ export async function completeInterruptedLogout(
  * @returns true if sync succeeded, false if it failed after retries
  */
 async function attemptSync(database: Database): Promise<boolean> {
-  // Wait for any active sync to complete first
+  // Wait for any active sync to complete first, but bound the wait
   const activeSync = getActiveSyncPromise();
   if (activeSync) {
     try {
-      await activeSync;
+      const timeout = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error("Active sync timed out"));
+        }, ACTIVE_SYNC_TIMEOUT_MS);
+      });
+      await Promise.race([activeSync, timeout]);
     } catch {
-      // Active sync failed — we'll try a fresh one below
+      // Active sync failed or timed out — we'll try a fresh one below
     }
   }
 

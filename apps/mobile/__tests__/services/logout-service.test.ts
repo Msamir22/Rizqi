@@ -201,9 +201,9 @@ describe("logout-service", () => {
 
     expect(result).toEqual({ success: true });
     expect(callOrder).toEqual([
-      "setFlag",
       "networkCheck",
       "sync",
+      "setFlag",
       "resetDB",
       "clearKeys",
       "signOut",
@@ -220,8 +220,6 @@ describe("logout-service", () => {
     const netInfoMocks = getNetInfoMocks();
     const syncMocks = getSyncMocks();
     const supaMocks = getSupabaseMocks();
-    const asyncMocks = getAsyncStorageMocks();
-
     netInfoMocks.fetch.mockResolvedValue({ isConnected: false });
 
     const result = await performLogout(db);
@@ -230,9 +228,6 @@ describe("logout-service", () => {
     expect(syncMocks.syncDatabase).not.toHaveBeenCalled();
     expect(syncMocks.resetSyncState).not.toHaveBeenCalled();
     expect(supaMocks.signOut).not.toHaveBeenCalled();
-    expect(asyncMocks.removeItem).toHaveBeenCalledWith(
-      "@astik/logout-in-progress"
-    );
   });
 
   // =========================================================================
@@ -378,5 +373,32 @@ describe("logout-service", () => {
 
     expect(result).toEqual({ success: true });
     expect(callOrder).toEqual(["activeSyncDone", "newSync"]);
+  });
+
+  // =========================================================================
+  // Test 10: Times out when active sync never resolves
+  // =========================================================================
+  it("should time out if active sync promise never resolves and proceed to fresh sync", async () => {
+    jest.useFakeTimers();
+    const syncMocks = getSyncMocks();
+    const netInfoMocks = getNetInfoMocks();
+
+    netInfoMocks.fetch.mockResolvedValue({ isConnected: true });
+
+    // A promise that never resolves (simulates a hung sync)
+    const neverResolvingPromise = new Promise<void>(() => {});
+    syncMocks.getActiveSyncPromise.mockReturnValue(neverResolvingPromise);
+    syncMocks.syncDatabase.mockResolvedValue(undefined);
+
+    const logoutPromise = performLogout(db);
+
+    // Advance past the 10s active sync timeout and flush microtasks
+    await jest.advanceTimersByTimeAsync(10_000);
+
+    const result = await logoutPromise;
+
+    expect(result).toEqual({ success: true });
+    expect(syncMocks.syncDatabase).toHaveBeenCalledTimes(1);
+    jest.useRealTimers();
   });
 });
