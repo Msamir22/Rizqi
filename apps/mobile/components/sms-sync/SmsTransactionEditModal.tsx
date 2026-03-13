@@ -220,24 +220,32 @@ export function SmsTransactionEditModal({
     setCounterparty(transaction.counterparty || "");
     setTxType(transaction.type);
 
-    // Auto-select first bank account if no match was provided
-    if (currentAccountId && currentAccountName) {
-      setSelectedAccountId(currentAccountId);
-      setSelectedAccountName(currentAccountName);
-    } else if (accountOptions.length > 0) {
-      setSelectedAccountId(accountOptions[0].id);
-      setSelectedAccountName(accountOptions[0].name);
+    // Validate that the matched account exists in the BANK-only dropdown
+    const matchedOption = currentAccountId
+      ? accountOptions.find((o) => o.id === currentAccountId)
+      : undefined;
+
+    if (matchedOption) {
+      setSelectedAccountId(matchedOption.id);
+      setSelectedAccountName(matchedOption.name);
     } else {
       setSelectedAccountId("");
       setSelectedAccountName("");
     }
 
     setIsAccountPickerOpen(false);
-    setIsCreatingNew(false);
+    // Auto-switch to text input when no bank accounts exist
+    setIsCreatingNew(!hasBankAccounts);
     setNewAccountName(transaction.senderDisplayName);
     setNewAccountError(null);
     setFormErrors({});
-  }, [transaction, currentAccountId, currentAccountName, accountOptions]);
+  }, [
+    transaction,
+    currentAccountId,
+    currentAccountName,
+    accountOptions,
+    hasBankAccounts,
+  ]);
 
   // Reset flag when transaction changes
   useEffect(() => {
@@ -610,7 +618,7 @@ export function SmsTransactionEditModal({
                 <Text className="text-xs text-slate-500 font-medium uppercase tracking-wider">
                   {isAtmWithdrawal ? "From Account" : "Account"}
                 </Text>
-                {!isCreatingNew && (
+                {!isCreatingNew && hasBankAccounts && (
                   <TouchableOpacity
                     onPress={handleStartNew}
                     activeOpacity={0.7}
@@ -641,7 +649,7 @@ export function SmsTransactionEditModal({
               </View>
 
               {/* Mode: Text input (creating new) */}
-              {isCreatingNew ? (
+              {isCreatingNew || !hasBankAccounts ? (
                 <View>
                   <TextInput
                     value={newAccountName}
