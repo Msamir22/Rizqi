@@ -460,7 +460,10 @@ function transformFromSupabase(
 
   for (const col of ALL_DATE_COLUMNS) {
     if (typeof record[col] === "string") {
-      transformed[col] = new Date(record[col]).getTime();
+      const timestamp = new Date(record[col]).getTime();
+      if (!Number.isNaN(timestamp)) {
+        transformed[col] = timestamp;
+      }
     }
   }
 
