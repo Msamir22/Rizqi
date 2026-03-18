@@ -112,6 +112,26 @@ Parent table for all liquid money containers.
 - One account = one currency
 - Same name can exist with different currencies (e.g., "CIB USD", "CIB EGP")
 - Balance updated automatically when transactions are added
+- **Name uniqueness (2026-03-18):** Account names must be unique per user +
+  currency combination (case-insensitive). Two EGP accounts cannot both be named
+  "Cash", but an EGP "Cash" and a USD "Cash" can coexist.
+- **Default account (2026-03-18):** At most one account per user can be marked
+  `is_default = TRUE`. Setting a new default automatically clears the previous
+  one. A `UNIQUE` partial index enforces this at the DB level:
+  `UNIQUE (user_id) WHERE is_default = TRUE AND deleted = FALSE`.
+- **Delete cascade scope (2026-03-18):** Deleting an account cascade-deletes
+  (soft): bank_details, transactions, transfers (both directions), debts, and
+  recurring_payments linked to that account.
+- **Default account on delete (2026-03-18):** When a default account is deleted,
+  the `is_default` flag is cleared — no other account is auto-promoted. The user
+  must set a new default manually.
+- **Balance adjustment tracking (2026-03-18):** When editing an account's
+  balance, the user can choose to either silently update the balance or track
+  the difference as a balance adjustment transaction (under the internal
+  `balance_adj_income` / `balance_adj_expense` categories). These categories are
+  marked `is_internal = TRUE` and hidden from the category picker.
+- **Read-only fields (2026-03-18):** Account type and currency cannot be changed
+  after creation. They are displayed as read-only on the edit screen.
 
 #### Table: `bank_details`
 

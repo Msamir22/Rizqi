@@ -102,11 +102,11 @@ export default function Accounts(): ReactElement {
           account={item}
           latestRates={latestRates}
           onPress={() => {
-            // TODO: Navigate to account details
+            router.push(`/edit-account?id=${item.id}`);
           }}
         />
       ),
-      [latestRates]
+      [latestRates, router]
     );
 
   const keyExtractor = useCallback(

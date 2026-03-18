@@ -83,7 +83,7 @@ function AccountCard({ data, width }: AccountCardProps): React.JSX.Element {
   return (
     <TouchableOpacity
       activeOpacity={0.85}
-      onPress={() => router.push("/accounts")}
+      onPress={() => router.push(`/edit-account?id=${data.id}`)}
       style={{ width }}
     >
       <LinearGradient

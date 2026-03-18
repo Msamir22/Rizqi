@@ -81,3 +81,70 @@ export function validateAccountForm(data: unknown): {
     errors,
   };
 }
+
+/**
+ * Zod schema for edit account form validation.
+ * Allows negative balances (e.g., overdrafts) unlike the create schema.
+ */
+export const editAccountFormSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Account name is required")
+    .max(50, "Account name must be less than 50 characters"),
+  balance: z
+    .string()
+    .min(1, "Balance is required")
+    .refine((val) => !isNaN(parseFloat(val)), "Balance must be a valid number"),
+  bankName: z
+    .string()
+    .max(50, "Bank name must be less than 50 characters")
+    .optional()
+    .or(z.literal("")),
+  cardLast4: z
+    .string()
+    .optional()
+    .or(z.literal(""))
+    .refine((val) => !val || /^\d{4}$/.test(val), "Must be exactly 4 digits"),
+  smsSenderName: z
+    .string()
+    .max(100, "SMS sender name must be less than 100 characters")
+    .optional()
+    .or(z.literal("")),
+});
+
+export type EditAccountFormData = z.infer<typeof editAccountFormSchema>;
+
+export type EditValidationErrors = Partial<
+  Record<keyof EditAccountFormData, string>
+>;
+
+/**
+ * Validates the edit account form data using zod.
+ * Unlike validateAccountForm, this allows negative balances.
+ *
+ * @param data - The form data to validate
+ * @returns Object with isValid boolean and errors object
+ */
+export function validateEditAccountForm(data: unknown): {
+  isValid: boolean;
+  errors: EditValidationErrors;
+} {
+  const result = editAccountFormSchema.safeParse(data);
+
+  if (result.success) {
+    return { isValid: true, errors: {} };
+  }
+
+  const errors: EditValidationErrors = {};
+  result.error.issues.forEach((issue) => {
+    const path = issue.path[0] as keyof EditAccountFormData;
+    if (path && !errors[path]) {
+      errors[path] = issue.message;
+    }
+  });
+
+  return {
+    isValid: false,
+    errors,
+  };
+}
