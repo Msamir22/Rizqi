@@ -57,6 +57,7 @@ export type DebtStatus =
   | "SETTLED"
   | "WRITTEN_OFF";
 export type DebtType = "LENT" | "BORROWED";
+export type GoldKaratEnum = "24" | "22" | "21" | "18" | "14" | "10";
 export type MetalType = "GOLD" | "SILVER" | "PLATINUM" | "PALLADIUM";
 export type RecurringAction = "AUTO_CREATE" | "NOTIFY";
 export type RecurringFrequency =
@@ -67,6 +68,7 @@ export type RecurringFrequency =
   | "YEARLY"
   | "CUSTOM";
 export type RecurringStatus = "ACTIVE" | "PAUSED" | "COMPLETED";
+export type SilverFinenessEnum = "999" | "950" | "925" | "900" | "850" | "800";
 export type ThemePreference = "LIGHT" | "DARK" | "SYSTEM";
 export type TransactionSource = "MANUAL" | "VOICE" | "SMS" | "RECURRING";
 export type TransactionType = "EXPENSE" | "INCOME";

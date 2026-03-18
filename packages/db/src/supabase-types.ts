@@ -1012,6 +1012,7 @@ export type Database = {
         | "BTC";
       debt_status: "ACTIVE" | "PARTIALLY_PAID" | "SETTLED" | "WRITTEN_OFF";
       debt_type: "LENT" | "BORROWED";
+      gold_karat_enum: "24" | "22" | "21" | "18" | "14" | "10";
       metal_type: "GOLD" | "SILVER" | "PLATINUM" | "PALLADIUM";
       recurring_action: "AUTO_CREATE" | "NOTIFY";
       recurring_frequency:
@@ -1022,6 +1023,7 @@ export type Database = {
         | "YEARLY"
         | "CUSTOM";
       recurring_status: "ACTIVE" | "PAUSED" | "COMPLETED";
+      silver_fineness_enum: "999" | "950" | "925" | "900" | "850" | "800";
       theme_preference: "LIGHT" | "DARK" | "SYSTEM";
       transaction_source: "MANUAL" | "VOICE" | "SMS" | "RECURRING";
       transaction_type: "EXPENSE" | "INCOME";
@@ -1201,6 +1203,7 @@ export const Constants = {
       ],
       debt_status: ["ACTIVE", "PARTIALLY_PAID", "SETTLED", "WRITTEN_OFF"],
       debt_type: ["LENT", "BORROWED"],
+      gold_karat_enum: ["24", "22", "21", "18", "14", "10"],
       metal_type: ["GOLD", "SILVER", "PLATINUM", "PALLADIUM"],
       recurring_action: ["AUTO_CREATE", "NOTIFY"],
       recurring_frequency: [
@@ -1212,6 +1215,7 @@ export const Constants = {
         "CUSTOM",
       ],
       recurring_status: ["ACTIVE", "PAUSED", "COMPLETED"],
+      silver_fineness_enum: ["999", "950", "925", "900", "850", "800"],
       theme_preference: ["LIGHT", "DARK", "SYSTEM"],
       transaction_source: ["MANUAL", "VOICE", "SMS", "RECURRING"],
       transaction_type: ["EXPENSE", "INCOME"],
