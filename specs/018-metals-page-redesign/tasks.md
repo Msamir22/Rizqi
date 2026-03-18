@@ -26,7 +26,7 @@
 component
 
 - [ ] T002 [P] Create SQL migration
-      `supabase/migrations/024_gold_silver_purity_enums.sql` — define
+      `supabase/migrations/034_gold_silver_purity_enums.sql` — define
       `gold_karat_enum` (24, 22, 21, 18, 14, 10) and `silver_fineness_enum`
       (999, 950, 925, 900, 850, 800) Postgres enums as SSOT for purity options
 - [ ] T003 [P] Verify and update `packages/logic/src/utils/purity-utils.ts` —
@@ -287,7 +287,7 @@ T013         (US5: Add modal)
 
 | Metric                      | Value                                             |
 | --------------------------- | ------------------------------------------------- |
-| **Total tasks**             | 22                                                |
+| **Total tasks**             | 21                                                |
 | **Setup**                   | 1 task                                            |
 | **Schema & Infrastructure** | 4 tasks (enums, purity verify, Tooltip, Skeleton) |
 | **Foundational**            | 2 tasks (service + hook)                          |
