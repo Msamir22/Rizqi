@@ -28,6 +28,16 @@ import {
 import { palette } from "@/constants/colors";
 
 // ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+/** Size for the header swap-vertical icon. */
+const HEADER_ICON_SIZE = 28;
+
+/** Size for the arrow-forward icon between balance values. */
+const ARROW_ICON_SIZE = 18;
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -90,9 +100,18 @@ export function BalanceChangedSheet({
 
   const difference = newBalance - previousBalance;
   const isIncrease = difference > 0;
-  const changeLabel = isIncrease ? "Increase" : "Decrease";
-  const changeColor = isIncrease ? palette.nileGreen[500] : palette.red[500];
-  const changeSign = isIncrease ? "+" : "-";
+  const isDecrease = difference < 0;
+  const changeLabel = isIncrease
+    ? "Increase"
+    : isDecrease
+      ? "Decrease"
+      : "No Change";
+  const changeColor = isIncrease
+    ? palette.nileGreen[500]
+    : isDecrease
+      ? palette.red[500]
+      : palette.slate[500];
+  const changeSign = isIncrease ? "+" : isDecrease ? "-" : "";
 
   return (
     <Modal
@@ -121,7 +140,7 @@ export function BalanceChangedSheet({
                   <View className="w-14 h-14 rounded-full bg-amber-100 dark:bg-amber-500/20 justify-center items-center mb-3">
                     <Ionicons
                       name="swap-vertical"
-                      size={28}
+                      size={HEADER_ICON_SIZE}
                       color={palette.gold[500]}
                     />
                   </View>
@@ -147,7 +166,7 @@ export function BalanceChangedSheet({
                     </View>
                     <Ionicons
                       name="arrow-forward"
-                      size={18}
+                      size={ARROW_ICON_SIZE}
                       color={isDark ? palette.slate[500] : palette.slate[400]}
                     />
                     <View className="flex-1 items-end">

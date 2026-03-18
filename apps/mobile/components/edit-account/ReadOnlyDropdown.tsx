@@ -20,6 +20,16 @@ import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 
 // ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+/** Duration in milliseconds before the tooltip auto-hides. */
+const TOOLTIP_AUTO_HIDE_MS = 3000;
+
+/** Duration in milliseconds for tooltip fade animations. */
+const TOOLTIP_FADE_DURATION_MS = 200;
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -129,7 +139,7 @@ export function ReadOnlyDropdown({
       // Hide tooltip with fade out
       Animated.timing(tooltipOpacity, {
         toValue: 0,
-        duration: 200,
+        duration: TOOLTIP_FADE_DURATION_MS,
         useNativeDriver: true,
       }).start(() => setShowTooltip(false));
     } else {
@@ -137,18 +147,18 @@ export function ReadOnlyDropdown({
       setShowTooltip(true);
       Animated.timing(tooltipOpacity, {
         toValue: 1,
-        duration: 200,
+        duration: TOOLTIP_FADE_DURATION_MS,
         useNativeDriver: true,
       }).start();
 
-      // Auto-hide after 3 seconds
+      // Auto-hide after configured duration
       timeoutRef.current = setTimeout(() => {
         Animated.timing(tooltipOpacity, {
           toValue: 0,
-          duration: 200,
+          duration: TOOLTIP_FADE_DURATION_MS,
           useNativeDriver: true,
         }).start(() => setShowTooltip(false));
-      }, 3000);
+      }, TOOLTIP_AUTO_HIDE_MS);
     }
   }, [showTooltip, tooltipOpacity]);
 

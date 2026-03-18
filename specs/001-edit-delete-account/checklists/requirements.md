@@ -3,7 +3,7 @@
 **Purpose**: Validate specification completeness and quality before proceeding
 to planning  
 **Created**: 2026-03-18  
-**Feature**: [spec.md](file:///E:/Work/My%20Projects/Astik/specs/001-edit-delete-account/spec.md)
+**Feature**: [spec.md](../spec.md)
 
 ## Content Quality
 
