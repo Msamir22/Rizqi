@@ -14,7 +14,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Pressable, Text, View } from "react-native";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
@@ -88,6 +88,7 @@ export function ReadOnlyDropdown({
   const { isDark } = useTheme();
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipOpacity] = useState(new Animated.Value(0));
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const tooltipBgColor = isDark ? palette.slate[700] : palette.slate[800];
 
@@ -108,7 +109,22 @@ export function ReadOnlyDropdown({
     [tooltipBgColor]
   );
 
+  // Cleanup timeout on unmount to prevent state updates on unmounted component
+  useEffect(() => {
+    return (): void => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleLockPress = useCallback((): void => {
+    // Clear any existing auto-hide timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
     if (showTooltip) {
       // Hide tooltip with fade out
       Animated.timing(tooltipOpacity, {
@@ -126,7 +142,7 @@ export function ReadOnlyDropdown({
       }).start();
 
       // Auto-hide after 3 seconds
-      setTimeout(() => {
+      timeoutRef.current = setTimeout(() => {
         Animated.timing(tooltipOpacity, {
           toValue: 0,
           duration: 200,
@@ -137,51 +153,52 @@ export function ReadOnlyDropdown({
   }, [showTooltip, tooltipOpacity]);
 
   return (
-    <View className={`mb-3 ${className}`}>
-      <Text className="input-label mb-2">{label}</Text>
+    <View className={`mb-4 ${className}`}>
+      {/* Label */}
+      <Text className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">
+        {label}
+      </Text>
 
-      <View className="relative">
-        <View className="rounded-2xl border border-slate-200/60 bg-slate-50 dark:border-slate-700/60 dark:bg-slate-800/50 overflow-hidden">
-          <View className="p-4">
-            <View className="flex-row items-center justify-between">
-              <View className="flex-row items-center flex-1">
-                {icon && (
-                  <View className="mr-3 w-8 items-center">
-                    <Text className="text-xl">{icon}</Text>
-                  </View>
-                )}
-                <Text className="text-base font-medium text-slate-500 dark:text-slate-400">
-                  {displayValue}
-                </Text>
-              </View>
-
-              <Pressable
-                onPress={handleLockPress}
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              >
-                <Ionicons
-                  name="lock-closed"
-                  size={16}
-                  color={isDark ? palette.slate[500] : palette.slate[400]}
-                />
-              </Pressable>
-            </View>
-          </View>
+      {/* Dropdown-like container */}
+      <View className="flex-row items-center justify-between px-4 py-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/50">
+        {/* Left: Icon + Value */}
+        <View className="flex-row items-center flex-1">
+          {icon ? (
+            <Text className="text-lg mr-2">{icon}</Text>
+          ) : null}
+          <Text className="text-base font-medium text-slate-500 dark:text-slate-400">
+            {displayValue}
+          </Text>
         </View>
 
-        {/* Custom styled tooltip */}
-        {showTooltip && (
-          <Animated.View style={tooltipStyle}>
-            <Text
-              className="text-xs font-medium"
-              style={{ color: palette.slate[100] }}
-            >
-              {tooltipText}
-            </Text>
-            {/* Tooltip arrow */}
-            <View style={tooltipArrowStyle} />
-          </Animated.View>
-        )}
+        {/* Right: Lock icon + Tooltip trigger */}
+        <View className="relative">
+          <Pressable
+            onPress={handleLockPress}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`${label} is locked. Tap for more info.`}
+          >
+            <Ionicons
+              name="lock-closed"
+              size={16}
+              color={
+                isDark ? palette.slate[500] : palette.slate[400]
+              }
+            />
+          </Pressable>
+
+          {/* Custom Tooltip */}
+          {showTooltip && (
+            <Animated.View style={tooltipStyle}>
+              <Text className="text-xs font-medium text-white text-center">
+                {tooltipText}
+              </Text>
+              {/* Arrow */}
+              <View style={tooltipArrowStyle} />
+            </Animated.View>
+          )}
+        </View>
       </View>
     </View>
   );

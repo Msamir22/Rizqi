@@ -38,6 +38,9 @@ const BALANCE_ADJUSTMENT_INCOME_CATEGORY_ID =
 const BALANCE_ADJUSTMENT_EXPENSE_CATEGORY_ID =
   "00000000-0000-0000-0001-000000000201";
 
+/** Tolerance for floating-point balance comparison. */
+const BALANCE_EPSILON = 0.001;
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -317,7 +320,7 @@ export async function createBalanceAdjustmentTransaction(
 ): Promise<ServiceResult> {
   try {
     const difference = newBalance - previousBalance;
-    if (difference === 0) {
+    if (Math.abs(difference) < BALANCE_EPSILON) {
       return { success: true };
     }
 
@@ -341,7 +344,7 @@ export async function createBalanceAdjustmentTransaction(
         tx.source = "MANUAL";
         tx.isDraft = false;
         tx.deleted = false;
-        tx.note = `Balance adjustment: ${previousBalance} → ${newBalance}`;
+        tx.note = `Balance adjustment: ${previousBalance} \u2192 ${newBalance}`;
       });
     });
 

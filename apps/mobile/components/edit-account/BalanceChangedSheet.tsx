@@ -16,7 +16,7 @@
 
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Modal,
   Text,
@@ -80,6 +80,13 @@ export function BalanceChangedSheet({
   const isDark = colorScheme === "dark";
   const [selectedOption, setSelectedOption] =
     useState<BalanceChangeOption>("silent");
+
+  // Reset selection to default when modal opens
+  useEffect(() => {
+    if (visible) {
+      setSelectedOption("silent");
+    }
+  }, [visible]);
 
   const difference = newBalance - previousBalance;
   const isIncrease = difference > 0;
@@ -177,6 +184,9 @@ export function BalanceChangedSheet({
                   <TouchableOpacity
                     onPress={() => setSelectedOption("silent")}
                     activeOpacity={0.7}
+                    accessibilityRole="radio"
+                    accessibilityLabel="Just update the balance silently"
+                    accessibilityState={{ checked: selectedOption === "silent" }}
                     className={`flex-row items-center p-4 rounded-xl mb-2 border ${
                       selectedOption === "silent"
                         ? "border-nileGreen-500 bg-nileGreen-50 dark:bg-nileGreen-900/20"
@@ -208,6 +218,9 @@ export function BalanceChangedSheet({
                   <TouchableOpacity
                     onPress={() => setSelectedOption("tracked")}
                     activeOpacity={0.7}
+                    accessibilityRole="radio"
+                    accessibilityLabel="Track the balance change as a transaction"
+                    accessibilityState={{ checked: selectedOption === "tracked" }}
                     className={`flex-row items-center p-4 rounded-xl border ${
                       selectedOption === "tracked"
                         ? "border-nileGreen-500 bg-nileGreen-50 dark:bg-nileGreen-900/20"
@@ -236,28 +249,23 @@ export function BalanceChangedSheet({
                   </TouchableOpacity>
                 </View>
 
-                {/* Actions */}
-                <View className="flex-row gap-3">
-                  <TouchableOpacity
-                    className="flex-1 py-3.5 rounded-xl items-center justify-center bg-slate-100 dark:bg-slate-800"
-                    onPress={onCancel}
-                    disabled={isSubmitting}
-                  >
-                    <Text className="text-base font-semibold text-slate-600 dark:text-slate-300">
-                      Cancel
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    className="flex-1 py-3.5 rounded-xl items-center justify-center bg-nileGreen-500"
-                    onPress={() => onConfirm(selectedOption)}
-                    disabled={isSubmitting}
-                  >
-                    <Text className="text-base font-semibold text-white">
-                      {isSubmitting ? "Saving..." : "Confirm"}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+                {/* Action Button */}
+                <TouchableOpacity
+                  onPress={() => onConfirm(selectedOption)}
+                  disabled={isSubmitting}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Confirm balance change"
+                  className={`py-4 rounded-xl items-center ${
+                    isSubmitting
+                      ? "bg-nileGreen-400"
+                      : "bg-nileGreen-500"
+                  }`}
+                >
+                  <Text className="text-base font-bold text-white">
+                    {isSubmitting ? "Saving..." : "Confirm"}
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
           </TouchableWithoutFeedback>

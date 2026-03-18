@@ -90,24 +90,36 @@ export function useDeleteAccount(accountId: string): UseDeleteAccountResult {
           await Promise.all([
             database
               .get<Transaction>("transactions")
-              .query(Q.where("account_id", accountId))
+              .query(
+                Q.where("account_id", accountId),
+                Q.where("deleted", false)
+              )
               .fetchCount(),
             database
               .get<Transfer>("transfers")
               .query(
-                Q.or(
-                  Q.where("from_account_id", accountId),
-                  Q.where("to_account_id", accountId)
+                Q.and(
+                  Q.or(
+                    Q.where("from_account_id", accountId),
+                    Q.where("to_account_id", accountId)
+                  ),
+                  Q.where("deleted", false)
                 )
               )
               .fetchCount(),
             database
               .get("debts")
-              .query(Q.where("account_id", accountId))
+              .query(
+                Q.where("account_id", accountId),
+                Q.where("deleted", false)
+              )
               .fetchCount(),
             database
               .get("recurring_payments")
-              .query(Q.where("account_id", accountId))
+              .query(
+                Q.where("account_id", accountId),
+                Q.where("deleted", false)
+              )
               .fetchCount(),
           ]);
 
@@ -154,7 +166,7 @@ export function useDeleteAccount(accountId: string): UseDeleteAccountResult {
 
         showToast({
           type: "success",
-          title: "Account Deleted 🗑️",
+          title: "Account Deleted \uD83D\uDDD1\uFE0F",
           message: "Account and all linked records have been removed",
         });
 

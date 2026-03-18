@@ -166,7 +166,13 @@ export function useEditAccountForm(
             account.id
           );
 
-          if (!result.isUnique && !result.error) {
+          if (result.isUnique && !result.error) {
+            // Clear any previous uniqueness error
+            setErrors((prev) => {
+              const { name: _removed, ...rest } = prev;
+              return rest;
+            });
+          } else if (!result.isUnique && !result.error) {
             setErrors((prev) => ({
               ...prev,
               name: "An account with this name already exists",
