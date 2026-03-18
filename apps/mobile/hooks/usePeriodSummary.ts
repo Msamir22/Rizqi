@@ -249,10 +249,10 @@ export function usePeriodSummary(
       { totalExpenses: 0, totalIncome: 0 }
     );
 
-    const savings = totals.totalIncome - totals.totalExpenses;
+    const savings = Math.max(0, totals.totalIncome - totals.totalExpenses);
     const savingsPercentage =
       totals.totalIncome > 0
-        ? Math.round((savings / totals.totalIncome) * 100)
+        ? Math.max(0, Math.round((savings / totals.totalIncome) * 100))
         : 0;
     const spentPercentage =
       totals.totalIncome > 0

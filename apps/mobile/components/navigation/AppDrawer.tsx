@@ -10,19 +10,17 @@
 import { palette } from "@/constants/colors";
 import { ConfirmationModal } from "@/components/modals/ConfirmationModal";
 import { useTheme } from "@/context/ThemeContext";
+import { useAuth } from "@/context/AuthContext";
+import { useProfile } from "@/hooks/useProfile";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
   Dimensions,
+  Image,
   Modal,
   Pressable,
   Switch,
@@ -126,10 +124,20 @@ export function AppDrawer({
   onClose,
 }: AppDrawerProps): React.JSX.Element {
   const { isDark, toggleTheme } = useTheme();
+  const { user } = useAuth();
+  const {
+    displayName,
+    avatarUrl,
+    initials,
+    isLoading: isProfileLoading,
+  } = useProfile(user?.email);
 
   const database = useDatabase();
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
+
+  // Avatar image loading state
+  const [avatarError, setAvatarError] = useState(false);
 
   // Logout UI state
   const [showSyncWarning, setShowSyncWarning] = useState(false);
@@ -225,16 +233,47 @@ export function AppDrawer({
               className="p-5 pb-6"
             >
               {/* Avatar */}
-              <View className="w-16 h-16 rounded-full bg-nileGreen-500/20 items-center justify-center mb-3 border-2 border-nileGreen-500/30">
-                <Ionicons
-                  name="person"
-                  size={28}
-                  color={palette.nileGreen[400]}
+              {isProfileLoading ? (
+                <View className="w-16 h-16 rounded-full bg-nileGreen-500/20 items-center justify-center mb-3 border-2 border-nileGreen-500/30">
+                  <ActivityIndicator
+                    size="small"
+                    color={palette.nileGreen[400]}
+                  />
+                </View>
+              ) : avatarUrl && !avatarError ? (
+                <Image
+                  source={{ uri: avatarUrl }}
+                  className="w-16 h-16 rounded-full mb-3 border-2 border-nileGreen-500/30"
+                  onError={() => setAvatarError(true)}
                 />
-              </View>
+              ) : (
+                <View className="w-16 h-16 rounded-full bg-nileGreen-500/20 items-center justify-center mb-3 border-2 border-nileGreen-500/30">
+                  <Text className="text-nileGreen-400 text-xl font-bold">
+                    {initials || "?"}
+                  </Text>
+                </View>
+              )}
               {/* User info */}
-              <Text className="text-white text-lg font-bold">User</Text>
-              <Text className="text-slate-400 text-sm">user@email.com</Text>
+              {isProfileLoading ? (
+                <>
+                  <View className="h-5 w-32 rounded bg-slate-700/50 mb-1" />
+                  <View className="h-4 w-44 rounded bg-slate-700/30" />
+                </>
+              ) : (
+                <>
+                  <Text
+                    className="text-white text-lg font-bold"
+                    numberOfLines={1}
+                  >
+                    {displayName}
+                  </Text>
+                  {user?.email && displayName !== user.email ? (
+                    <Text className="text-slate-400 text-sm" numberOfLines={1}>
+                      {user.email}
+                    </Text>
+                  ) : null}
+                </>
+              )}
             </LinearGradient>
 
             {/* Menu sections */}

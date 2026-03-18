@@ -29,6 +29,7 @@ interface UseRecurringPaymentsOptions {
   readonly limit?: number;
   readonly status?: RecurringStatus;
   readonly type?: TransactionType;
+  readonly dateRange?: { readonly start: Date; readonly end: Date };
 }
 
 interface UseRecurringPaymentsResult {
@@ -37,6 +38,7 @@ interface UseRecurringPaymentsResult {
   readonly counts: Record<RecurringStatus, number>;
   readonly next7DaysTotal: number;
   readonly totalDueThisMonth: number;
+  readonly totalDueFiltered: number;
   readonly totalIncomeThisMonth: number;
   readonly isLoading: boolean;
   readonly statusFilter: RecurringStatus;
@@ -44,6 +46,59 @@ interface UseRecurringPaymentsResult {
 }
 
 export type { UseRecurringPaymentsOptions, UseRecurringPaymentsResult };
+
+// ---------------------------------------------------------------------------
+// Bills Period Filter
+// ---------------------------------------------------------------------------
+
+type BillsPeriodFilter = "this_week" | "this_month" | "six_months" | "one_year";
+
+const BILLS_PERIOD_LABELS: Record<BillsPeriodFilter, string> = {
+  this_week: "This Week",
+  this_month: "This Month",
+  six_months: "6 Months",
+  one_year: "1 Year",
+};
+
+/**
+ * Computes a date range (start, end) for a given bills period filter.
+ * Start is always today (start of day). End is the last millisecond of the target period.
+ */
+function getBillsPeriodDateRange(period: BillsPeriodFilter): {
+  readonly start: Date;
+  readonly end: Date;
+} {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const end = new Date(start);
+
+  switch (period) {
+    case "this_week": {
+      const dayOfWeek = start.getDay();
+      const daysUntilEndOfWeek = 6 - dayOfWeek;
+      end.setDate(start.getDate() + daysUntilEndOfWeek);
+      break;
+    }
+    case "this_month":
+      end.setMonth(end.getMonth() + 1);
+      end.setDate(0); // last day of current month
+      break;
+    case "six_months":
+      end.setMonth(end.getMonth() + 6);
+      break;
+    case "one_year":
+      end.setFullYear(end.getFullYear() + 1);
+      break;
+  }
+
+  // Set end to end-of-day
+  end.setHours(23, 59, 59, 999);
+
+  return { start, end };
+}
+
+export { getBillsPeriodDateRange, BILLS_PERIOD_LABELS };
+export type { BillsPeriodFilter };
 
 // ---------------------------------------------------------------------------
 // Hook
@@ -69,7 +124,7 @@ export type { UseRecurringPaymentsOptions, UseRecurringPaymentsResult };
 export function useRecurringPayments(
   options: UseRecurringPaymentsOptions = {}
 ): UseRecurringPaymentsResult {
-  const { limit, status, type } = options;
+  const { limit, status, type, dateRange } = options;
 
   const [allPayments, setAllPayments] = useState<RecurringPayment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -113,14 +168,20 @@ export function useRecurringPayments(
     if (statusFilter) {
       result = result.filter((p) => p.status === statusFilter);
     }
-    if (limit) {
-      result = result.slice(0, limit);
-    }
     if (type) {
       result = result.filter((p) => p.type === type);
     }
+    if (dateRange) {
+      result = result.filter((p) => {
+        const dueDate = p.nextDueDate;
+        return dueDate >= dateRange.start && dueDate <= dateRange.end;
+      });
+    }
+    if (limit) {
+      result = result.slice(0, limit);
+    }
     return result;
-  }, [allPayments, statusFilter, limit, type]);
+  }, [allPayments, statusFilter, limit, type, dateRange]);
 
   const counts = useMemo<Record<RecurringStatus, number>>(
     () => ({
@@ -157,12 +218,21 @@ export function useRecurringPayments(
       };
     }, [allPayments, toPreferred]);
 
+  /** Total due for filtered period, converted to preferred currency. */
+  const totalDueFiltered = useMemo((): number => {
+    if (!dateRange) return totalDueThisMonth;
+    return filteredPayments
+      .filter((p) => p.isExpense)
+      .reduce((sum, p) => sum + toPreferred(p.amount, p.currency), 0);
+  }, [filteredPayments, dateRange, totalDueThisMonth, toPreferred]);
+
   return {
     allPayments,
     filteredPayments,
     counts,
     next7DaysTotal,
     totalDueThisMonth,
+    totalDueFiltered,
     totalIncomeThisMonth,
     isLoading,
     statusFilter,

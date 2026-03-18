@@ -40,6 +40,8 @@ interface BaseCardProps {
   onSwipeDelete?: (id: string) => void;
   onCategoryPress?: (id: string) => void;
   onAmountPress?: (id: string) => void;
+  /** Optional formatted equivalent amount in preferred currency (e.g., "≈ $12.34") */
+  equivalentAmountText?: string;
 }
 
 /**
@@ -86,6 +88,7 @@ export const BaseCard = React.memo(function BaseCard({
   date,
   onCategoryPress,
   onAmountPress,
+  equivalentAmountText,
 }: BaseCardProps): React.JSX.Element {
   const { isDark } = useTheme();
   return (
@@ -184,6 +187,13 @@ export const BaseCard = React.memo(function BaseCard({
               )}
             </TouchableOpacity>
           </View>
+
+          {/* Equivalent amount in preferred currency */}
+          {equivalentAmountText ? (
+            <Text className="text-[11px] text-slate-400 dark:text-slate-500 text-right mb-0.5">
+              {equivalentAmountText}
+            </Text>
+          ) : null}
 
           {/* Details Row */}
           <View className="flex-row justify-between items-center">

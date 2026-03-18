@@ -23,6 +23,8 @@ interface TransactionCardProps {
   isSelected: boolean;
   onPress: (id: string) => void;
   onLongPress: (id: string) => void;
+  /** Optional formatted equivalent amount in preferred currency */
+  equivalentAmountText?: string;
 }
 
 /**
@@ -69,6 +71,7 @@ export const TransactionCard = React.memo(function TransactionCard({
   isSelected,
   onPress,
   onLongPress,
+  equivalentAmountText,
   // New Props
   index,
   onSwipeDelete,
@@ -111,6 +114,7 @@ export const TransactionCard = React.memo(function TransactionCard({
       onSwipeDelete={onSwipeDelete}
       onCategoryPress={onCategoryPress}
       onAmountPress={onAmountPress}
+      equivalentAmountText={equivalentAmountText}
     />
   );
 });

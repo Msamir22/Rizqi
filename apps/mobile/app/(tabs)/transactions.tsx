@@ -21,6 +21,11 @@ import {
   type TransactionTypeFilter,
 } from "@/hooks/useTransactionsGrouping";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
+import {
+  useHistoricalRates,
+  computeEquivalentText,
+  toDateKey,
+} from "@/hooks/useHistoricalRates";
 import { useSync } from "@/providers/SyncProvider";
 import { updateTransaction, updateTransfer } from "@/services";
 import { Ionicons } from "@expo/vector-icons";
@@ -79,6 +84,21 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
     }
     return map;
   }, [groupedData]);
+
+  // ── Batch-prefetch historical market rates for all visible transactions ──
+  const transactionDates = useMemo(() => {
+    const dates: Date[] = [];
+    for (const group of groupedData) {
+      for (const tx of group.transactions) {
+        if (tx._type === "transaction" && tx.currency !== preferredCurrency) {
+          dates.push(tx.date);
+        }
+      }
+    }
+    return dates;
+  }, [groupedData, preferredCurrency]);
+
+  const { ratesByDate } = useHistoricalRates(transactionDates);
 
   // ── Performance: memoized SectionList data & callbacks ──────────────
   const sections = useMemo(
@@ -397,6 +417,14 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
           index={index}
           onCategoryPress={handleCategoryPress}
           onAmountPress={handleAmountPress}
+          equivalentAmountText={
+            computeEquivalentText(
+              item.amount,
+              item.currency,
+              preferredCurrency,
+              ratesByDate.get(toDateKey(item.date))
+            ) ?? undefined
+          }
         />
       );
     },
