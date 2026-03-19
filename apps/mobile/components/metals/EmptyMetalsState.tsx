@@ -32,8 +32,7 @@ interface EmptyMetalsStateProps {
 // ---------------------------------------------------------------------------
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const EMPTY_ILLUSTRATION =
-  require("@/assets/images/empty-metals.png") as number;
+const EMPTY_ILLUSTRATION = require("@/assets/images/empty-metals.png") as number;
 
 const ILLUSTRATION_SIZE = { width: 200, height: 140 };
 
