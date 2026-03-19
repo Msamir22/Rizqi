@@ -47,7 +47,7 @@ function toDateKey(date: Date): string {
  */
 function dateKeyToEndOfDayTimestamp(dateKey: string): number {
   const [year, month, day] = dateKey.split("-").map(Number);
-  return new Date(year, month - 1, day, 23, 59, 59, 999).getTime();
+  return Date.UTC(year, month - 1, day, 23, 59, 59, 999);
 }
 
 /**
