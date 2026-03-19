@@ -41,6 +41,16 @@ function toDateKey(date: Date): string {
 }
 
 /**
+ * Converts a YYYY-MM-DD date key to an end-of-day timestamp (ms).
+ * WatermelonDB stores @date fields as numeric timestamps, so we must
+ * compare against a number, not a string.
+ */
+function dateKeyToEndOfDayTimestamp(dateKey: string): number {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return new Date(year, month - 1, day, 23, 59, 59, 999).getTime();
+}
+
+/**
  * Computes the formatted equivalent amount string for a transaction.
  * Returns null if no rate is found or currencies are the same.
  */
@@ -97,11 +107,15 @@ function useHistoricalRates(dates: readonly Date[]): UseHistoricalRatesResult {
       const results: HistoricalRateEntry[] = [];
 
       for (const dateKey of uniqueDateKeys) {
+        // Convert dateKey to end-of-day timestamp for correct comparison
+        // against the numeric created_at field stored by WatermelonDB's @date decorator
+        const endOfDay = dateKeyToEndOfDayTimestamp(dateKey);
+
         // Find the most recent rate on or before this date
         const matched = await collection
           .query(
-            Q.where("rate_date", Q.lte(dateKey)),
-            Q.sortBy("rate_date", Q.desc),
+            Q.where("created_at", Q.lte(endOfDay)),
+            Q.sortBy("created_at", Q.desc),
             Q.take(1)
           )
           .fetch();

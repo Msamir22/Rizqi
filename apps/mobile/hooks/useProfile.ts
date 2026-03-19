@@ -78,6 +78,8 @@ export function useProfile(email?: string | null): UseProfileResult {
   const [isLoading, setIsLoading] = useState(true);
 
   // Observe the first profile record
+  // TODO: Scope this query by user_id when multi-account support is added.
+  // Currently safe because Astik is single-user and login wipes local data.
   useEffect(() => {
     const collection = database.get<Profile>("profiles");
     const subscription = collection
