@@ -20,7 +20,13 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Animated, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
+import ReanimatedAnimated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  runOnJS,
+} from "react-native-reanimated";
 
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
@@ -161,7 +167,7 @@ export function Tooltip({
   animationDurationMs = DEFAULT_ANIMATION_DURATION_MS,
 }: TooltipProps): React.JSX.Element | null {
   const { isDark } = useTheme();
-  const opacityRef = useRef(new Animated.Value(0));
+  const opacity = useSharedValue(0);
   const [isRendered, setIsRendered] = useState(false);
   const autoDismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
@@ -179,33 +185,33 @@ export function Tooltip({
   useEffect(() => {
     if (visible) {
       setIsRendered(true);
-      Animated.timing(opacityRef.current, {
-        toValue: 1,
-        duration: animationDurationMs,
-        useNativeDriver: true,
-      }).start();
+      opacity.value = withTiming(1, { duration: animationDurationMs });
 
       if (autoDismissMs > 0) {
         clearAutoDismissTimer();
         autoDismissTimerRef.current = setTimeout(() => {
-          Animated.timing(opacityRef.current, {
-            toValue: 0,
-            duration: animationDurationMs,
-            useNativeDriver: true,
-          }).start(() => {
-            setIsRendered(false);
-            onDismiss();
-          });
+          opacity.value = withTiming(
+            0,
+            { duration: animationDurationMs },
+            (finished) => {
+              if (finished) {
+                runOnJS(setIsRendered)(false);
+                runOnJS(onDismiss)();
+              }
+            }
+          );
         }, autoDismissMs);
       }
     } else {
-      Animated.timing(opacityRef.current, {
-        toValue: 0,
-        duration: animationDurationMs,
-        useNativeDriver: true,
-      }).start(() => {
-        setIsRendered(false);
-      });
+      opacity.value = withTiming(
+        0,
+        { duration: animationDurationMs },
+        (finished) => {
+          if (finished) {
+            runOnJS(setIsRendered)(false);
+          }
+        }
+      );
     }
 
     return clearAutoDismissTimer;
@@ -215,12 +221,16 @@ export function Tooltip({
     animationDurationMs,
     onDismiss,
     clearAutoDismissTimer,
+    opacity,
   ]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
 
   const tooltipStyle = useMemo(
     () => ({
       ...getTooltipBaseStyle(position),
-      opacity: opacityRef.current,
       backgroundColor: tooltipBgColor,
     }),
     [position, tooltipBgColor]
@@ -241,7 +251,7 @@ export function Tooltip({
   }
 
   return (
-    <Animated.View style={tooltipStyle}>
+    <ReanimatedAnimated.View style={[tooltipStyle, animatedStyle]}>
       <Pressable onPress={onDismiss}>
         <Text
           className="text-xs font-medium"
@@ -251,6 +261,6 @@ export function Tooltip({
         </Text>
       </Pressable>
       <View style={arrowStyle} />
-    </Animated.View>
+    </ReanimatedAnimated.View>
   );
 }
