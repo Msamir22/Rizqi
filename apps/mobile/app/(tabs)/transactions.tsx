@@ -437,6 +437,7 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
       handlePress,
       handleCategoryPress,
       handleAmountPress,
+      ratesByDate,
     ]
   );
 

@@ -139,6 +139,11 @@ export function AppDrawer({
   // Avatar image loading state
   const [avatarError, setAvatarError] = useState(false);
 
+  // Reset avatar error when URL changes (e.g., user updates their profile photo)
+  useEffect(() => {
+    setAvatarError(false);
+  }, [avatarUrl]);
+
   // Logout UI state
   const [showSyncWarning, setShowSyncWarning] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
