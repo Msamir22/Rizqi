@@ -37,6 +37,18 @@ import { useMetalHoldings, type MetalHolding } from "@/hooks/useMetalHoldings";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 
 // ---------------------------------------------------------------------------
+// Skeleton Dimension Constants
+// ---------------------------------------------------------------------------
+
+const HERO_SKELETON_HEIGHT = 160;
+const SPLIT_CARD_HEIGHT = 100;
+const TABS_SKELETON_HEIGHT = 44;
+const HOLDING_SKELETON_HEIGHT = 72;
+const RADIUS_LARGE = 24;
+const RADIUS_SMALL = 16;
+const PERCENTAGE_MULTIPLIER = 100;
+
+// ---------------------------------------------------------------------------
 // Skeleton Loading Component
 // ---------------------------------------------------------------------------
 
@@ -44,26 +56,26 @@ function MetalsPageSkeleton(): React.JSX.Element {
   return (
     <View className="px-5 pt-4">
       {/* Hero Card Skeleton */}
-      <Skeleton width="100%" height={160} borderRadius={24} />
+      <Skeleton width="100%" height={HERO_SKELETON_HEIGHT} borderRadius={RADIUS_LARGE} />
 
       {/* Split Cards Skeleton */}
       <View className="flex-row gap-3 mt-6 mb-6">
         <View className="flex-1">
-          <Skeleton width="100%" height={100} borderRadius={16} />
+          <Skeleton width="100%" height={SPLIT_CARD_HEIGHT} borderRadius={RADIUS_SMALL} />
         </View>
         <View className="flex-1">
-          <Skeleton width="100%" height={100} borderRadius={16} />
+          <Skeleton width="100%" height={SPLIT_CARD_HEIGHT} borderRadius={RADIUS_SMALL} />
         </View>
       </View>
 
       {/* Tabs Skeleton */}
-      <Skeleton width="100%" height={44} borderRadius={16} />
+      <Skeleton width="100%" height={TABS_SKELETON_HEIGHT} borderRadius={RADIUS_SMALL} />
 
       {/* Holding Cards Skeleton */}
       <View className="mt-4 gap-3">
-        <Skeleton width="100%" height={72} borderRadius={16} />
-        <Skeleton width="100%" height={72} borderRadius={16} />
-        <Skeleton width="100%" height={72} borderRadius={16} />
+        <Skeleton width="100%" height={HOLDING_SKELETON_HEIGHT} borderRadius={RADIUS_SMALL} />
+        <Skeleton width="100%" height={HOLDING_SKELETON_HEIGHT} borderRadius={RADIUS_SMALL} />
+        <Skeleton width="100%" height={HOLDING_SKELETON_HEIGHT} borderRadius={RADIUS_SMALL} />
       </View>
     </View>
   );
@@ -112,14 +124,14 @@ export default function MyMetalsScreen(): React.JSX.Element {
     latestRates && previousDayRate && previousDayRate.goldUsdPerGram > 0
       ? ((latestRates.goldUsdPerGram - previousDayRate.goldUsdPerGram) /
           previousDayRate.goldUsdPerGram) *
-        100
+        PERCENTAGE_MULTIPLIER
       : 0;
 
   const silverChangePercent =
     latestRates && previousDayRate && previousDayRate.silverUsdPerGram > 0
       ? ((latestRates.silverUsdPerGram - previousDayRate.silverUsdPerGram) /
           previousDayRate.silverUsdPerGram) *
-        100
+        PERCENTAGE_MULTIPLIER
       : 0;
 
   const handleOpenModal = useCallback(
