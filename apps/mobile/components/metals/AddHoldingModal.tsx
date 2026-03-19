@@ -16,7 +16,13 @@
 
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -28,7 +34,6 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
-  type ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -72,15 +77,6 @@ const ITEM_FORMS: ReadonlyArray<{ value: ItemForm; label: string }> = [
 ];
 
 const ERROR_DISPLAY_DURATION_MS = 5000;
-
-/** Shadow style for the save/add button (ViewStyle for type safety). */
-const ADD_BUTTON_SHADOW: ViewStyle = {
-  shadowColor: palette.gold[600],
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.3,
-  shadowRadius: 8,
-  elevation: 6,
-};
 
 // ---------------------------------------------------------------------------
 // Component

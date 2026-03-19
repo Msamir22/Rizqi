@@ -14,23 +14,20 @@
  * @module useMetalHoldings
  */
 
-import { useEffect, useMemo, useState } from "react";
 import { Q } from "@nozbe/watermelondb";
+import { useEffect, useMemo, useState } from "react";
 
-import { Asset, AssetMetal, database, type CurrencyType } from "@astik/db";
-import { convertCurrency } from "@astik/logic";
+import { Asset, AssetMetal, database } from "@astik/db";
 
 import {
+  type MetalHolding,
+  type PortfolioSplit,
+  type ProfitLoss,
+  computePortfolioSplit,
   enrichHolding,
   groupAndSortHoldings,
-  computePortfolioSplit,
   joinAssetsWithMetals,
   PERCENTAGE_MULTIPLIER,
-} from "../services/metal-holding-calculations";
-import type {
-  MetalHolding,
-  PortfolioSplit,
-  ProfitLoss,
 } from "../services/metal-holding-calculations";
 
 import { useMarketRates } from "./useMarketRates";

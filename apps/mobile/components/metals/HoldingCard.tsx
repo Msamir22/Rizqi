@@ -19,7 +19,6 @@ import { Text, View } from "react-native";
 import type { CurrencyType } from "@astik/db";
 import { formatCurrency, formatPurityForDisplay } from "@astik/logic";
 
-import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import type { MetalHolding } from "@/hooks/useMetalHoldings";
 import {
