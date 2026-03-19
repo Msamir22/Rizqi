@@ -12,7 +12,7 @@
  * @module MetalSplitCards
  */
 
-import React from "react";
+import React, { memo } from "react";
 import { Text, View, type ViewStyle } from "react-native";
 
 import type { CurrencyType } from "@astik/db";
@@ -44,7 +44,7 @@ interface SplitCardProps {
   readonly isGold: boolean;
 }
 
-function SplitCard({
+function SplitCardInner({
   label,
   percentage,
   totalValue,
@@ -118,6 +118,8 @@ function SplitCard({
     </View>
   );
 }
+
+const SplitCard = memo(SplitCardInner);
 
 // ---------------------------------------------------------------------------
 // Main Component
