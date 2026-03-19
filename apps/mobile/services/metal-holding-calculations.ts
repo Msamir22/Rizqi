@@ -199,17 +199,13 @@ function computePortfolioSplit(
     gold: {
       totalValue: goldTotal,
       percentage:
-        totalValue > 0
-          ? (goldTotal / totalValue) * PERCENTAGE_MULTIPLIER
-          : 0,
+        totalValue > 0 ? (goldTotal / totalValue) * PERCENTAGE_MULTIPLIER : 0,
       itemCount: goldHoldings.length,
     },
     silver: {
       totalValue: silverTotal,
       percentage:
-        totalValue > 0
-          ? (silverTotal / totalValue) * PERCENTAGE_MULTIPLIER
-          : 0,
+        totalValue > 0 ? (silverTotal / totalValue) * PERCENTAGE_MULTIPLIER : 0,
       itemCount: silverHoldings.length,
     },
   };

@@ -37,13 +37,6 @@ import { usePreferredCurrency } from "./usePreferredCurrency";
 // Types
 // ---------------------------------------------------------------------------
 
-/** Summary for a single metal type */
-interface MetalTypeSummary {
-  readonly totalValue: number;
-  readonly percentage: number;
-  readonly itemCount: number;
-}
-
 interface UseMetalHoldingsResult {
   /** Gold holdings sorted by purchase date descending (newest first) */
   readonly goldHoldings: readonly MetalHolding[];
@@ -196,7 +189,6 @@ export function useMetalHoldings(): UseMetalHoldingsResult {
 
 export type {
   MetalHolding,
-  MetalTypeSummary,
   PortfolioSplit,
   ProfitLoss,
   UseMetalHoldingsResult,

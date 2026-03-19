@@ -56,26 +56,54 @@ function MetalsPageSkeleton(): React.JSX.Element {
   return (
     <View className="px-5 pt-4">
       {/* Hero Card Skeleton */}
-      <Skeleton width="100%" height={HERO_SKELETON_HEIGHT} borderRadius={RADIUS_LARGE} />
+      <Skeleton
+        width="100%"
+        height={HERO_SKELETON_HEIGHT}
+        borderRadius={RADIUS_LARGE}
+      />
 
       {/* Split Cards Skeleton */}
       <View className="flex-row gap-3 mt-6 mb-6">
         <View className="flex-1">
-          <Skeleton width="100%" height={SPLIT_CARD_HEIGHT} borderRadius={RADIUS_SMALL} />
+          <Skeleton
+            width="100%"
+            height={SPLIT_CARD_HEIGHT}
+            borderRadius={RADIUS_SMALL}
+          />
         </View>
         <View className="flex-1">
-          <Skeleton width="100%" height={SPLIT_CARD_HEIGHT} borderRadius={RADIUS_SMALL} />
+          <Skeleton
+            width="100%"
+            height={SPLIT_CARD_HEIGHT}
+            borderRadius={RADIUS_SMALL}
+          />
         </View>
       </View>
 
       {/* Tabs Skeleton */}
-      <Skeleton width="100%" height={TABS_SKELETON_HEIGHT} borderRadius={RADIUS_SMALL} />
+      <Skeleton
+        width="100%"
+        height={TABS_SKELETON_HEIGHT}
+        borderRadius={RADIUS_SMALL}
+      />
 
       {/* Holding Cards Skeleton */}
       <View className="mt-4 gap-3">
-        <Skeleton width="100%" height={HOLDING_SKELETON_HEIGHT} borderRadius={RADIUS_SMALL} />
-        <Skeleton width="100%" height={HOLDING_SKELETON_HEIGHT} borderRadius={RADIUS_SMALL} />
-        <Skeleton width="100%" height={HOLDING_SKELETON_HEIGHT} borderRadius={RADIUS_SMALL} />
+        <Skeleton
+          width="100%"
+          height={HOLDING_SKELETON_HEIGHT}
+          borderRadius={RADIUS_SMALL}
+        />
+        <Skeleton
+          width="100%"
+          height={HOLDING_SKELETON_HEIGHT}
+          borderRadius={RADIUS_SMALL}
+        />
+        <Skeleton
+          width="100%"
+          height={HOLDING_SKELETON_HEIGHT}
+          borderRadius={RADIUS_SMALL}
+        />
       </View>
     </View>
   );
@@ -248,7 +276,7 @@ export default function MyMetalsScreen(): React.JSX.Element {
         <EmptyMetalsState onAddHolding={handleAddFromEmpty} />
       ) : (
         <FlatList
-          data={activeHoldings as MetalHolding[]}
+          data={activeHoldings}
           keyExtractor={HOLDING_KEY_EXTRACTOR}
           renderItem={renderHoldingItem}
           ListHeaderComponent={renderListHeader}

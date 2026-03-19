@@ -15,8 +15,13 @@
  */
 
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useCallback, useState } from "react";
-import { type LayoutChangeEvent, type StyleProp, View, type ViewStyle } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  type LayoutChangeEvent,
+  type StyleProp,
+  View,
+  type ViewStyle,
+} from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -96,7 +101,7 @@ export function Skeleton({
   const colors = isDark ? SHIMMER_COLORS.dark : SHIMMER_COLORS.light;
 
   // Start the shimmer animation
-  React.useEffect(() => {
+  useEffect(() => {
     shimmerPosition.value = withRepeat(
       withTiming(1, { duration: ANIMATION_DURATION_MS }),
       -1, // infinite repeat
@@ -116,16 +121,14 @@ export function Skeleton({
     overflow: "hidden",
   };
 
-  const gradientWidth = containerWidth > 0
-    ? containerWidth * GRADIENT_WIDTH_MULTIPLIER
-    : 0;
+  const gradientWidth =
+    containerWidth > 0 ? containerWidth * GRADIENT_WIDTH_MULTIPLIER : 0;
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
       {
-        translateX: containerWidth > 0
-          ? shimmerPosition.value * containerWidth
-          : 0,
+        translateX:
+          containerWidth > 0 ? shimmerPosition.value * containerWidth : 0,
       },
     ],
   }));
@@ -137,9 +140,7 @@ export function Skeleton({
 
   return (
     <View style={[containerStyle, style]} onLayout={handleLayout}>
-      <Animated.View
-        style={[{ flex: 1 }, animatedStyle]}
-      >
+      <Animated.View style={[{ flex: 1 }, animatedStyle]}>
         <LinearGradient
           colors={[colors.base, colors.highlight, colors.base]}
           start={{ x: 0, y: 0.5 }}

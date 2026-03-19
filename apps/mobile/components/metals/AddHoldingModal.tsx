@@ -94,6 +94,11 @@ export function AddHoldingModal({
   const insets = useSafeAreaInsets();
   const { preferredCurrency } = usePreferredCurrency();
 
+  // Sync metalType when initialMetalType changes (e.g., opening from different tab)
+  useEffect(() => {
+    setMetalType(initialMetalType);
+  }, [initialMetalType]);
+
   // Form state
   const [metalType, setMetalType] = useState<MetalType>(initialMetalType);
   const [name, setName] = useState("");

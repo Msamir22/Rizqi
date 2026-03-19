@@ -20,12 +20,12 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text, View, type ViewStyle } from "react-native";
 import ReanimatedAnimated, {
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
-  runOnJS,
 } from "react-native-reanimated";
 
 import { palette } from "@/constants/colors";
@@ -70,7 +70,7 @@ const ARROW_SIZE = 6;
 function getTooltipBaseStyle(
   position: TooltipPosition
 ): Record<string, unknown> {
-  const base = {
+  const base: ViewStyle = {
     position: "absolute" as const,
     zIndex: 10,
     borderRadius: 8,
