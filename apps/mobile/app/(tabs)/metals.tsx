@@ -1,380 +1,313 @@
-import {
-  FontAwesome5,
-  Ionicons,
-  MaterialCommunityIcons,
-} from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import { ReactElement, useState } from "react";
-import {
-  Modal,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
-} from "react-native";
+/**
+ * My Metals Screen
+ *
+ * Main page for the Metals tab. Composes all metals components and
+ * connects them to the useMetalHoldings data hook.
+ *
+ * Architecture & Design Rationale:
+ * - Pattern: Page-Level Composer (Atomic Design)
+ * - Why: Composes atomic/molecular components into a full page.
+ *   Data fetching is delegated to useMetalHoldings hook.
+ * - SOLID: SRP — orchestrates layout and data flow only.
+ *   OCP — adding a new section doesn't modify existing components.
+ *
+ * @module MyMetalsScreen
+ */
+
+import { Ionicons } from "@expo/vector-icons";
+import React, { useCallback, useState } from "react";
+import { FlatList, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 import { PageHeader } from "@/components/navigation/PageHeader";
+import {
+  AddHoldingModal,
+  EmptyMetalsState,
+  HoldingCard,
+  LiveRatesStrip,
+  type MetalTab,
+  MetalSplitCards,
+  MetalTabs,
+  MetalsHeroCard,
+} from "@/components/metals";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { palette } from "@/constants/colors";
 import { useMarketRates } from "@/hooks/useMarketRates";
+import { useMetalHoldings, type MetalHolding } from "@/hooks/useMetalHoldings";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 
-const MetalsValueCard = ({
-  currencyCode,
-}: {
-  currencyCode: string;
-}): ReactElement => {
-  // TODO: Wire to real data — placeholder amounts for now
-  const totalAmount = 32450;
-  const totalUSD = 649;
+// ---------------------------------------------------------------------------
+// Skeleton Dimension Constants
+// ---------------------------------------------------------------------------
 
+const HERO_SKELETON_HEIGHT = 160;
+const SPLIT_CARD_HEIGHT = 100;
+const TABS_SKELETON_HEIGHT = 44;
+const HOLDING_SKELETON_HEIGHT = 72;
+const RADIUS_LARGE = 24;
+const RADIUS_SMALL = 16;
+const PERCENTAGE_MULTIPLIER = 100;
+
+// ---------------------------------------------------------------------------
+// Skeleton Loading Component
+// ---------------------------------------------------------------------------
+
+function MetalsPageSkeleton(): React.JSX.Element {
   return (
-    <View className="mb-8 rounded-3xl overflow-hidden bg-white dark:bg-slate-800 border border-gold/10 dark:border-white/10 shadow-md dark:shadow-none">
-      <LinearGradient
-        colors={[palette.slate[50], palette.slate[100]]}
-        className="hidden dark:flex absolute inset-0"
-        // In dark mode we use a specific gradient but Tailwind handles most of it
+    <View className="px-5 pt-4">
+      {/* Hero Card Skeleton */}
+      <Skeleton
+        width="100%"
+        height={HERO_SKELETON_HEIGHT}
+        borderRadius={RADIUS_LARGE}
       />
-      <View className="items-center py-8 gap-2">
-        <Text className="text-sm font-medium text-slate-500 dark:text-slate-400">
-          Total Metals Value
-        </Text>
-        <Text className="text-4xl font-bold text-slate-800 dark:text-white">
-          {currencyCode} {totalAmount.toLocaleString()}
-        </Text>
-        <Text className="text-base text-slate-500 dark:text-white/50">
-          ≈ ${totalUSD} USD
-        </Text>
-      </View>
-    </View>
-  );
-};
 
-// 2. Holding Item Row
-const HoldingItem = ({
-  badge,
-  weight,
-  value,
-  isGold,
-}: {
-  badge: string;
-  weight: string;
-  value: string;
-  isGold: boolean;
-}): ReactElement => {
-  return (
-    <View className="mb-3 flex-row items-center justify-between rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-800 p-4 shadow-sm dark:shadow-none">
-      <View className="flex-row items-center gap-4">
-        {/* Badge */}
-        <View
-          className={`min-w-[60px] items-center rounded-full px-3 py-1.5 ${
-            isGold
-              ? "bg-amber-100 dark:bg-amber-700"
-              : "bg-slate-100 dark:bg-slate-600"
-          }`}
-        >
-          <Text
-            className={`text-[13px] font-bold ${
-              isGold
-                ? "text-amber-800 dark:text-white"
-                : "text-slate-600 dark:text-white"
-            }`}
-          >
-            {badge}
-          </Text>
-        </View>
-
-        {/* Weight */}
-        <Text className="text-base font-semibold text-slate-800 dark:text-white">
-          {weight}
-        </Text>
-      </View>
-
-      <View className="flex-row items-center gap-3">
-        <Text className="text-base text-slate-800 dark:text-white">
-          {value}
-        </Text>
-        <TouchableOpacity>
-          <MaterialCommunityIcons
-            name="pencil-outline"
-            size={20}
-            className="text-slate-400 dark:text-slate-500"
+      {/* Split Cards Skeleton */}
+      <View className="flex-row gap-3 mt-6 mb-6">
+        <View className="flex-1">
+          <Skeleton
+            width="100%"
+            height={SPLIT_CARD_HEIGHT}
+            borderRadius={RADIUS_SMALL}
           />
-        </TouchableOpacity>
+        </View>
+        <View className="flex-1">
+          <Skeleton
+            width="100%"
+            height={SPLIT_CARD_HEIGHT}
+            borderRadius={RADIUS_SMALL}
+          />
+        </View>
+      </View>
+
+      {/* Tabs Skeleton */}
+      <Skeleton
+        width="100%"
+        height={TABS_SKELETON_HEIGHT}
+        borderRadius={RADIUS_SMALL}
+      />
+
+      {/* Holding Cards Skeleton */}
+      <View className="mt-4 gap-3">
+        <Skeleton
+          width="100%"
+          height={HOLDING_SKELETON_HEIGHT}
+          borderRadius={RADIUS_SMALL}
+        />
+        <Skeleton
+          width="100%"
+          height={HOLDING_SKELETON_HEIGHT}
+          borderRadius={RADIUS_SMALL}
+        />
+        <Skeleton
+          width="100%"
+          height={HOLDING_SKELETON_HEIGHT}
+          borderRadius={RADIUS_SMALL}
+        />
       </View>
     </View>
   );
-};
+}
 
-// 3. Add Button (Outline)
-const AddSectionButton = ({
-  label,
-  onPress,
-  isGold,
-}: {
-  label: string;
-  onPress: () => void;
-  isGold: boolean;
-}): ReactElement => (
-  <TouchableOpacity
-    onPress={onPress}
-    className={`mt-1 flex-row items-center justify-center gap-2 rounded-xl border py-3.5 ${
-      isGold
-        ? "border-amber-500/50 dark:border-amber-500/30"
-        : "border-slate-200 dark:border-slate-700"
-    }`}
-  >
-    <Ionicons
-      name="add"
-      size={20}
-      color={isGold ? palette.gold[600] : palette.slate[500]}
-    />
-    <Text
-      className={`text-base font-semibold ${
-        isGold ? "text-amber-600 dark:text-amber-500" : "text-slate-500"
-      }`}
-    >
-      {label}
-    </Text>
-  </TouchableOpacity>
-);
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const HOLDING_KEY_EXTRACTOR = (item: MetalHolding): string => item.asset.id;
+
+const FLAT_LIST_CONTENT_STYLE = { paddingBottom: 100 };
+
+// ---------------------------------------------------------------------------
+// Main Screen
+// ---------------------------------------------------------------------------
 
 /**
- * Renders the My Metals screen with a portfolio summary, holdings lists for gold and silver, a live price ticker, and a modal to add new holdings.
- *
- * @returns The root React element for the My Metals screen.
+ * Renders the My Metals screen with portfolio summary, holdings by type,
+ * portfolio split, live rates strip, and add holding modal.
  */
-export default function MyMetalsScreen(): ReactElement {
+export default function MyMetalsScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
-  const { latestRates } = useMarketRates();
+  const { latestRates, previousDayRate } = useMarketRates();
   const { preferredCurrency } = usePreferredCurrency();
-  const [modalVisible, setModalVisible] = useState(false);
-  const [addType, setAddType] = useState<"gold" | "silver">("gold");
+  const {
+    goldHoldings,
+    silverHoldings,
+    totalValue,
+    profitLoss,
+    portfolioSplit,
+    isLoading,
+  } = useMetalHoldings();
 
-  // Calculate prices based on latestRates
-  // goldUsdPerGram is already in USD per gram
-  // USD per ounce = USD per gram × 31.1035
-  const GoldPrice = latestRates ? latestRates.goldUsdPerGram * 31.1035 : 0;
-  const SilverPrice = latestRates ? latestRates.silverUsdPerGram : 0;
-  // Wait, original ticker: Silver: ${SilverPrice.toFixed(2)}/g
+  const [activeTab, setActiveTab] = useState<MetalTab>("gold");
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalMetalType, setModalMetalType] = useState<"GOLD" | "SILVER">(
+    "GOLD"
+  );
+
+  const hasHoldings = goldHoldings.length > 0 || silverHoldings.length > 0;
+  const activeHoldings = activeTab === "gold" ? goldHoldings : silverHoldings;
+
+  // Compute 24h change for live rates strip
+  const goldChangePercent =
+    latestRates && previousDayRate && previousDayRate.goldUsdPerGram > 0
+      ? ((latestRates.goldUsdPerGram - previousDayRate.goldUsdPerGram) /
+          previousDayRate.goldUsdPerGram) *
+        PERCENTAGE_MULTIPLIER
+      : 0;
+
+  const silverChangePercent =
+    latestRates && previousDayRate && previousDayRate.silverUsdPerGram > 0
+      ? ((latestRates.silverUsdPerGram - previousDayRate.silverUsdPerGram) /
+          previousDayRate.silverUsdPerGram) *
+        PERCENTAGE_MULTIPLIER
+      : 0;
+
+  const handleOpenModal = useCallback(
+    (type: "GOLD" | "SILVER" = "GOLD"): void => {
+      setModalMetalType(type);
+      setModalVisible(true);
+    },
+    []
+  );
+
+  const handleCloseModal = useCallback((): void => {
+    setModalVisible(false);
+  }, []);
+
+  const handleAddFromEmpty = useCallback((): void => {
+    handleOpenModal("GOLD");
+  }, [handleOpenModal]);
+
+  const handleTabChange = useCallback((tab: MetalTab): void => {
+    setActiveTab(tab);
+  }, []);
+
+  const renderHoldingItem = useCallback(
+    ({ item }: { item: MetalHolding }): React.JSX.Element => (
+      <HoldingCard holding={item} currency={preferredCurrency} />
+    ),
+    [preferredCurrency]
+  );
+
+  // ---------------------------------------------------------------------------
+  // Header Content (rendered above FlatList)
+  // ---------------------------------------------------------------------------
+  const renderListHeader = useCallback(
+    (): React.JSX.Element => (
+      <View className="px-5 pt-2">
+        {/* Hero Card */}
+        <MetalsHeroCard
+          totalValue={totalValue}
+          profitLossAmount={profitLoss.amount}
+          profitLossPercent={profitLoss.percent}
+          currency={preferredCurrency}
+        />
+
+        {/* Portfolio Split */}
+        <MetalSplitCards
+          portfolioSplit={portfolioSplit}
+          currency={preferredCurrency}
+        />
+
+        {/* Tabs */}
+        <MetalTabs
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          goldCount={goldHoldings.length}
+          silverCount={silverHoldings.length}
+        />
+
+        {/* Add Button for current tab */}
+        <TouchableOpacity
+          onPress={() =>
+            handleOpenModal(activeTab === "gold" ? "GOLD" : "SILVER")
+          }
+          activeOpacity={0.8}
+          className="flex-row items-center justify-center rounded-xl border border-dashed py-3 mb-3 border-slate-200 dark:border-slate-600"
+        >
+          <Ionicons name="add" size={18} color={palette.slate[400]} />
+          <Text className="ml-1 text-sm font-semibold text-slate-400 dark:text-slate-500">
+            Add {activeTab === "gold" ? "Gold" : "Silver"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    ),
+    [
+      totalValue,
+      profitLoss,
+      preferredCurrency,
+      portfolioSplit,
+      activeTab,
+      handleTabChange,
+      goldHoldings.length,
+      silverHoldings.length,
+      handleOpenModal,
+    ]
+  );
+
+  const renderEmptyList = useCallback(
+    (): React.JSX.Element => (
+      <View className="items-center py-8 px-5">
+        <Text className="text-sm text-slate-400 dark:text-slate-500">
+          No {activeTab === "gold" ? "gold" : "silver"} holdings yet
+        </Text>
+      </View>
+    ),
+    [activeTab]
+  );
+
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
 
   return (
     <View className="flex-1">
-      <PageHeader title="My Metals" />
+      <PageHeader
+        title="My Metals"
+        rightAction={{
+          icon: "add-circle-outline",
+          onPress: () => handleOpenModal(),
+        }}
+      />
 
-      <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
-      >
-        <MetalsValueCard currencyCode={preferredCurrency} />
+      {isLoading ? (
+        <MetalsPageSkeleton />
+      ) : !hasHoldings ? (
+        <EmptyMetalsState onAddHolding={handleAddFromEmpty} />
+      ) : (
+        <FlatList
+          data={activeHoldings}
+          keyExtractor={HOLDING_KEY_EXTRACTOR}
+          renderItem={renderHoldingItem}
+          ListHeaderComponent={renderListHeader}
+          ListEmptyComponent={renderEmptyList}
+          contentContainerStyle={FLAT_LIST_CONTENT_STYLE}
+          showsVerticalScrollIndicator={false}
+          // Performance optimizations
+          removeClippedSubviews
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          initialNumToRender={8}
+        />
+      )}
 
-        {/* Gold Holdings */}
-        <View className="mb-8">
-          <View className="mb-4 flex-row items-center">
-            <FontAwesome5
-              name="coins"
-              size={20}
-              color={palette.gold[600]}
-              style={{ marginRight: 10 }}
-            />
-            <Text className="text-lg font-bold text-slate-800 dark:text-white">
-              Gold Holdings
-            </Text>
-          </View>
+      {/* Live Rates Strip */}
+      {latestRates && !isLoading ? (
+        <LiveRatesStrip
+          goldPricePerGramUsd={latestRates.goldUsdPerGram}
+          silverPricePerGramUsd={latestRates.silverUsdPerGram}
+          goldChangePercent={goldChangePercent}
+          silverChangePercent={silverChangePercent}
+          bottomInset={insets.bottom}
+        />
+      ) : null}
 
-          <HoldingItem
-            badge="24K"
-            weight="15.5g"
-            value={`= ${preferredCurrency} 65,875`}
-            isGold={true}
-          />
-          <HoldingItem
-            badge="21K"
-            weight="8.2g"
-            value={`= ${preferredCurrency} 28,740`}
-            isGold={true}
-          />
-
-          <AddSectionButton
-            label="+ Add Gold"
-            isGold={true}
-            onPress={() => {
-              setAddType("gold");
-              setModalVisible(true);
-            }}
-          />
-        </View>
-
-        {/* Silver Holdings */}
-        <View className="mb-8">
-          <View className="mb-4 flex-row items-center">
-            <View className="mr-2.5 h-6 w-6 items-center justify-center rounded-full bg-slate-300">
-              <View className="h-4 w-4 rounded-full bg-slate-400" />
-            </View>
-            <Text className="text-lg font-bold text-slate-800 dark:text-white">
-              Silver Holdings
-            </Text>
-          </View>
-
-          <HoldingItem
-            badge="Pure"
-            weight="120g"
-            value={`= ${preferredCurrency} 6,240`}
-            isGold={false}
-          />
-
-          <AddSectionButton
-            label="+ Add Silver"
-            isGold={false}
-            onPress={() => {
-              setAddType("silver");
-              setModalVisible(true);
-            }}
-          />
-        </View>
-      </ScrollView>
-
-      {/* Live Ticker */}
-      <View
-        className="absolute bottom-5 left-5 right-5 flex-row items-center justify-center gap-3 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-800 p-3 shadow-sm"
-        style={{ bottom: insets.bottom + 10 }}
-      >
-        <View className="flex-row items-center gap-1">
-          <Text className="text-xs text-slate-500 dark:text-slate-400">
-            Gold 24K:
-          </Text>
-          <Text className="text-xs font-bold text-slate-800 dark:text-white">
-            ${GoldPrice.toFixed(0)}/oz
-          </Text>
-          <Ionicons name="arrow-up" size={12} color={palette.nileGreen[500]} />
-        </View>
-        <View className="h-4 w-[1px] bg-slate-200 dark:bg-white/20" />
-        <View className="flex-row items-center gap-1">
-          <Text className="text-xs text-slate-500 dark:text-slate-400">
-            Silver:
-          </Text>
-          <Text className="text-xs font-bold text-slate-800 dark:text-white">
-            ${SilverPrice.toFixed(2)}/g
-          </Text>
-          <Ionicons name="arrow-forward" size={12} color={palette.slate[400]} />
-        </View>
-      </View>
-
-      {/* Add Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
+      {/* Add Holding Modal */}
+      <AddHoldingModal
         visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
-          <View className="flex-1 justify-end bg-black/50">
-            <TouchableWithoutFeedback onPress={() => {}}>
-              <View
-                className="rounded-t-[32px] bg-white dark:bg-slate-800 p-6"
-                style={{ paddingBottom: insets.bottom + 24 }}
-              >
-                {/* Handle */}
-                <View className="mb-6 h-1 w-10 self-center rounded-full bg-slate-200 dark:bg-white/20" />
-
-                <Text className="mb-6 self-center text-2xl font-bold text-slate-800 dark:text-white">
-                  Add New Holding
-                </Text>
-
-                {/* Type Toggle */}
-                <View className="mb-6 flex-row rounded-2xl bg-slate-100 dark:bg-slate-700 p-1">
-                  {(["gold", "silver"] as const).map((t) => (
-                    <TouchableOpacity
-                      key={t}
-                      onPress={() => setAddType(t)}
-                      className={`flex-1 items-center rounded-xl py-3 ${
-                        addType === t ? "" : "bg-transparent"
-                      }`}
-                      style={{
-                        backgroundColor:
-                          addType === t
-                            ? t === "gold"
-                              ? palette.gold[600]
-                              : palette.slate[400]
-                            : undefined,
-                      }}
-                    >
-                      <Text
-                        className={`font-semibold capitalize ${
-                          addType === t
-                            ? "text-white"
-                            : "text-slate-500 dark:text-slate-400"
-                        }`}
-                      >
-                        {t}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                {/* Karat Selection (Gold Only) */}
-                {addType === "gold" && (
-                  <View className="mb-6 flex-row gap-3">
-                    {["24K", "21K", "18K"].map((k, i) => (
-                      <TouchableOpacity
-                        key={k}
-                        className={`flex-1 items-center rounded-3xl border py-3 ${
-                          i === 0
-                            ? "border-gold bg-gold-bg dark:bg-gold-dark/20"
-                            : "border-border bg-transparent"
-                        }`}
-                        style={{
-                          borderColor: i === 0 ? palette.gold[600] : undefined,
-                        }}
-                      >
-                        <Text
-                          className={`font-semibold ${
-                            i === 0
-                              ? "text-amber-600 dark:text-amber-500"
-                              : "text-slate-500 dark:text-slate-400"
-                          }`}
-                        >
-                          {k}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-
-                {/* Weight Input */}
-                <View className="mb-8 flex-row items-center border-b border-slate-200 dark:border-white/20 pb-2">
-                  <Text className="mr-2 text-2xl font-bold text-slate-800 dark:text-white">
-                    0.0 g
-                  </Text>
-                  <TextInput
-                    placeholder="Enter weight in grams"
-                    placeholderTextColor={palette.slate[400]}
-                    className="flex-1 text-right text-base text-slate-800 dark:text-white"
-                    keyboardType="numeric"
-                  />
-                </View>
-
-                {/* Save Button */}
-                <TouchableOpacity
-                  className="items-center rounded-2xl bg-gold py-4 shadow-md"
-                  style={{
-                    backgroundColor: palette.gold[600],
-                    shadowColor: palette.gold[600],
-                    shadowOpacity: 0.3,
-                  }}
-                  onPress={() => setModalVisible(false)}
-                >
-                  <Text className="text-lg font-bold text-white">
-                    Add to Savings
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
-
-      <PageHeader title="My Metals" />
+        onClose={handleCloseModal}
+        initialMetalType={modalMetalType}
+      />
     </View>
   );
 }

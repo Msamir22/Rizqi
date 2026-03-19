@@ -498,6 +498,16 @@ describe("edit-account-service", () => {
     });
 
     it("should create INCOME transaction when balance increases", async () => {
+      // Capture the created transaction to verify type and category
+      let createdTx: Record<string, unknown> | undefined;
+      mockDb.get.mockImplementation((tableName: string) => ({
+        create: jest.fn((builder: (r: Record<string, unknown>) => void) => {
+          createdTx = { id: `new-${tableName}-${Date.now()}` };
+          builder(createdTx);
+          return Promise.resolve(createdTx);
+        }),
+      }));
+
       const result = await createBalanceAdjustmentTransaction(
         "acc-1",
         "user-1",
@@ -505,11 +515,28 @@ describe("edit-account-service", () => {
         1000,
         1500
       );
+
       expect(result.success).toBe(true);
       expect(mockDb.write).toHaveBeenCalled();
+      expect(createdTx).toBeDefined();
+      expect(createdTx?.type).toBe("INCOME");
+      expect(createdTx?.categoryId).toBe(
+        "00000000-0000-0000-0001-000000000200"
+      );
+      expect(createdTx?.amount).toBe(500);
     });
 
     it("should create EXPENSE transaction when balance decreases", async () => {
+      // Capture the created transaction to verify type and category
+      let createdTx: Record<string, unknown> | undefined;
+      mockDb.get.mockImplementation((tableName: string) => ({
+        create: jest.fn((builder: (r: Record<string, unknown>) => void) => {
+          createdTx = { id: `new-${tableName}-${Date.now()}` };
+          builder(createdTx);
+          return Promise.resolve(createdTx);
+        }),
+      }));
+
       const result = await createBalanceAdjustmentTransaction(
         "acc-1",
         "user-1",
@@ -517,12 +544,28 @@ describe("edit-account-service", () => {
         1500,
         1000
       );
+
       expect(result.success).toBe(true);
       expect(mockDb.write).toHaveBeenCalled();
+      expect(createdTx).toBeDefined();
+      expect(createdTx?.type).toBe("EXPENSE");
+      expect(createdTx?.categoryId).toBe(
+        "00000000-0000-0000-0001-000000000201"
+      );
+      expect(createdTx?.amount).toBe(500);
     });
 
     it("should use absolute difference as amount", async () => {
       // The transaction amount should be positive regardless of direction
+      let createdTx: Record<string, unknown> | undefined;
+      mockDb.get.mockImplementation((tableName: string) => ({
+        create: jest.fn((builder: (r: Record<string, unknown>) => void) => {
+          createdTx = { id: `new-${tableName}-${Date.now()}` };
+          builder(createdTx);
+          return Promise.resolve(createdTx);
+        }),
+      }));
+
       await createBalanceAdjustmentTransaction(
         "acc-1",
         "user-1",
@@ -530,8 +573,11 @@ describe("edit-account-service", () => {
         1000,
         700
       );
+
       // Verify write was called — the created transaction amount = |700 - 1000| = 300
       expect(mockDb.write).toHaveBeenCalled();
+      expect(createdTx).toBeDefined();
+      expect(createdTx?.amount).toBe(300);
     });
 
     it("should return error on database failure", async () => {

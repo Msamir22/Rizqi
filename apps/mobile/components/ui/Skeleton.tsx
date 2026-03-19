@@ -15,8 +15,19 @@
  */
 
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useEffect, useRef } from "react";
-import { Animated, type StyleProp, View, type ViewStyle } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  type LayoutChangeEvent,
+  type StyleProp,
+  View,
+  type ViewStyle,
+} from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated";
 
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
@@ -54,10 +65,8 @@ const SHIMMER_COLORS = {
   },
 } as const;
 
-const SHIMMER_GRADIENT_STYLE: ViewStyle = {
-  flex: 1,
-  width: 400,
-};
+/** Multiplier for gradient width relative to container width */
+const GRADIENT_WIDTH_MULTIPLIER = 2;
 
 // ---------------------------------------------------------------------------
 // Component
@@ -86,25 +95,23 @@ export function Skeleton({
   style,
 }: SkeletonProps): React.JSX.Element {
   const { isDark } = useTheme();
-  const shimmerTranslate = useRef(new Animated.Value(-1)).current;
+  const shimmerPosition = useSharedValue(-1);
+  const [containerWidth, setContainerWidth] = useState(0);
 
   const colors = isDark ? SHIMMER_COLORS.dark : SHIMMER_COLORS.light;
 
+  // Start the shimmer animation
   useEffect(() => {
-    const animation = Animated.loop(
-      Animated.timing(shimmerTranslate, {
-        toValue: 1,
-        duration: ANIMATION_DURATION_MS,
-        useNativeDriver: true,
-      })
+    shimmerPosition.value = withRepeat(
+      withTiming(1, { duration: ANIMATION_DURATION_MS }),
+      -1, // infinite repeat
+      false // no reverse
     );
+  }, [shimmerPosition]);
 
-    animation.start();
-
-    return (): void => {
-      animation.stop();
-    };
-  }, [shimmerTranslate]);
+  const handleLayout = useCallback((event: LayoutChangeEvent): void => {
+    setContainerWidth(event.nativeEvent.layout.width);
+  }, []);
 
   const containerStyle: ViewStyle = {
     width: width as number,
@@ -114,24 +121,31 @@ export function Skeleton({
     overflow: "hidden",
   };
 
-  const translateX = shimmerTranslate.interpolate({
-    inputRange: [-1, 1],
-    outputRange: [-200, 200],
-  });
+  const gradientWidth =
+    containerWidth > 0 ? containerWidth * GRADIENT_WIDTH_MULTIPLIER : 0;
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        translateX:
+          containerWidth > 0 ? shimmerPosition.value * containerWidth : 0,
+      },
+    ],
+  }));
+
+  const gradientContainerStyle: ViewStyle = {
+    flex: 1,
+    width: gradientWidth,
+  };
 
   return (
-    <View style={[containerStyle, style]}>
-      <Animated.View
-        style={{
-          flex: 1,
-          transform: [{ translateX }],
-        }}
-      >
+    <View style={[containerStyle, style]} onLayout={handleLayout}>
+      <Animated.View style={[{ flex: 1 }, animatedStyle]}>
         <LinearGradient
           colors={[colors.base, colors.highlight, colors.base]}
           start={{ x: 0, y: 0.5 }}
           end={{ x: 1, y: 0.5 }}
-          style={SHIMMER_GRADIENT_STYLE}
+          style={gradientContainerStyle}
         />
       </Animated.View>
     </View>

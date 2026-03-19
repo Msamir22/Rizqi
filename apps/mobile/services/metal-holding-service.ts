@@ -56,6 +56,41 @@ interface CreateMetalHoldingData {
 }
 
 // ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const MIN_PURITY_FRACTION = 0;
+const MAX_PURITY_FRACTION = 1;
+
+// ---------------------------------------------------------------------------
+// Validation
+// ---------------------------------------------------------------------------
+
+/**
+ * Validates the input data for creating a metal holding.
+ * Throws a descriptive error if any domain rule is violated.
+ */
+function validateCreateMetalHoldingData(
+  data: CreateMetalHoldingData
+): void {
+  if (data.name.trim().length === 0) {
+    throw new Error("Holding name is required");
+  }
+  if (data.weightGrams <= 0) {
+    throw new Error("Weight must be greater than 0");
+  }
+  if (data.purchasePrice < 0) {
+    throw new Error("Purchase price cannot be negative");
+  }
+  if (
+    data.purityFraction <= MIN_PURITY_FRACTION ||
+    data.purityFraction > MAX_PURITY_FRACTION
+  ) {
+    throw new Error("Purity fraction must be in the range (0, 1]");
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Service Functions
 // ---------------------------------------------------------------------------
 
@@ -65,11 +100,13 @@ interface CreateMetalHoldingData {
  *
  * @param data - The metal holding data to create
  * @returns The created Asset record
- * @throws Error if user is not authenticated or if the write fails
+ * @throws Error if user is not authenticated, validation fails, or if the write fails
  */
 async function createMetalHolding(
   data: CreateMetalHoldingData
 ): Promise<Asset> {
+  validateCreateMetalHoldingData(data);
+
   const userId = await getCurrentUserId();
   if (!userId) {
     throw new Error("User not authenticated");
@@ -82,7 +119,7 @@ async function createMetalHolding(
     // 1. Create the parent Asset record
     const asset = await assetsCollection.create((record) => {
       record.userId = userId;
-      record.name = data.name;
+      record.name = data.name.trim();
       record.type = "METAL";
       record.purchasePrice = data.purchasePrice;
       record.purchaseDate = data.purchaseDate;
