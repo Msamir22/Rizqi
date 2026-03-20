@@ -13,7 +13,6 @@ export type AssetType = "METAL" | "CRYPTO" | "REAL_ESTATE";
 export type BudgetPeriod = "WEEKLY" | "MONTHLY" | "CUSTOM";
 export type BudgetStatus = "ACTIVE" | "PAUSED";
 export type BudgetType = "CATEGORY" | "GLOBAL";
-export type AlertFiredLevel = "WARNING" | "DANGER";
 export type CategoryNature = "WANT" | "NEED" | "MUST";
 export type CurrencyType =
   | "EGP"
