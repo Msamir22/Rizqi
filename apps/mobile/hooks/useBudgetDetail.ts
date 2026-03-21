@@ -177,13 +177,15 @@ export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
           .fetch();
 
         for (const child of children) {
+          // M1 fix: Include L3 (grandchild) transactions in subcategory breakdown
+          const childCategoryIds = await getCategoryAndSubcategoryIds(child.id);
           const allChildTxs = await database
             .get<Transaction>("transactions")
             .query(
               Q.and(
                 Q.where("deleted", false),
                 Q.where("type", "EXPENSE"),
-                Q.where("category_id", child.id),
+                Q.where("category_id", Q.oneOf(childCategoryIds)),
                 Q.where("date", Q.gte(bounds.start.getTime())),
                 Q.where("date", Q.lte(bounds.end.getTime()))
               )

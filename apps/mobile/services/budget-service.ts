@@ -131,14 +131,25 @@ export async function updateBudget(
 ): Promise<Budget> {
   const budget = await budgetsCollection().find(budgetId);
 
-  // Type-specific validation for period changes
+  // Type-specific validation for period changes (C1 fix: correct operator precedence)
+  const effectivePeriod = input.period ?? budget.period;
   if (
-    ((input.period ?? budget.period) === "CUSTOM" &&
-      !(input.periodStart ?? budget.periodStart)) ||
-    !(input.periodEnd ?? budget.periodEnd)
+    effectivePeriod === "CUSTOM" &&
+    (!(input.periodStart ?? budget.periodStart) ||
+      !(input.periodEnd ?? budget.periodEnd))
   ) {
     throw new Error(
       "Custom period budgets require both periodStart and periodEnd"
+    );
+  }
+
+  // Re-validate uniqueness if period or categoryId changed (C2 fix)
+  if (input.period !== undefined || input.categoryId !== undefined) {
+    await validateBudgetUniqueness(
+      budget.type,
+      input.period ?? budget.period,
+      input.categoryId ?? budget.categoryId,
+      budgetId
     );
   }
 
@@ -187,6 +198,11 @@ export async function deleteBudget(budgetId: string): Promise<void> {
 export async function pauseBudget(budgetId: string): Promise<void> {
   const budget = await budgetsCollection().find(budgetId);
 
+  // M2 fix: Guard against pausing an already-paused budget
+  if (budget.status === "PAUSED") {
+    throw new Error("Budget is already paused");
+  }
+
   await database.write(async () => {
     await budget.update((b) => {
       b.status = "PAUSED" as BudgetStatus;
@@ -202,6 +218,12 @@ export async function pauseBudget(budgetId: string): Promise<void> {
  */
 export async function resumeBudget(budgetId: string): Promise<void> {
   const budget = await budgetsCollection().find(budgetId);
+
+  // M3 fix: Guard against resuming a non-paused budget
+  if (budget.status !== "PAUSED") {
+    throw new Error("Cannot resume a budget that is not paused");
+  }
+
   const pausedAtMs = budget.pausedAtMs;
   const nowMs = Date.now();
 
