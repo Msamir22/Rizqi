@@ -186,7 +186,10 @@ export function isPeriodExpired(
   referenceDate: Date = new Date()
 ): boolean {
   if (!periodEnd) return false;
-  return referenceDate.getTime() > periodEnd.getTime();
+  // Normalize to end-of-day so the entire last day of the period is included
+  const endOfDay = new Date(periodEnd);
+  endOfDay.setHours(23, 59, 59, 999);
+  return referenceDate.getTime() > endOfDay.getTime();
 }
 
 // =============================================================================

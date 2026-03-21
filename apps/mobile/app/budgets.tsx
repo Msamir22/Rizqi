@@ -33,6 +33,9 @@ export default function BudgetsScreen(): React.JSX.Element {
       <TouchableOpacity
         onPress={() => router.push("/create-budget")}
         className="absolute right-5 bg-nileGreen-500 w-14 h-14 rounded-full items-center justify-center"
+        accessibilityRole="button"
+        accessibilityLabel="Create budget"
+        accessibilityHint="Opens the form to create a new budget"
         // eslint-disable-next-line react-native/no-inline-styles
         style={{
           bottom: insets.bottom + 20,

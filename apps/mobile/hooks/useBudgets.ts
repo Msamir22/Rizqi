@@ -107,7 +107,11 @@ export function useBudgets(): UseBudgetsResult {
 
       for (const budget of rawBudgets) {
         // Auto-pause expired custom budgets (F2 remediation)
-        if (budget.isCustomPeriod && isPeriodExpired(budget.periodEnd)) {
+        if (
+          budget.status === "ACTIVE" &&
+          budget.isCustomPeriod &&
+          isPeriodExpired(budget.periodEnd)
+        ) {
           await autoPauseBudget(budget.id);
           continue; // Skip this budget — it's now paused
         }

@@ -9,7 +9,7 @@
  */
 
 import React, { useCallback, useState } from "react";
-import { ActivityIndicator, ScrollView, View } from "react-native";
+import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -100,7 +100,8 @@ export default function BudgetDetailScreen(): React.JSX.Element {
     [budget, showToast]
   );
 
-  if (isLoading || !budget || !metrics) {
+  // ── Loading state ──
+  if (isLoading) {
     return (
       <View className="flex-1">
         <PageHeader
@@ -110,6 +111,27 @@ export default function BudgetDetailScreen(): React.JSX.Element {
         />
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color={palette.nileGreen[500]} />
+        </View>
+      </View>
+    );
+  }
+
+  // ── Budget not found ──
+  if (!budget || !metrics) {
+    return (
+      <View className="flex-1">
+        <PageHeader
+          title="Budget Detail"
+          showBackButton={true}
+          showDrawer={false}
+        />
+        <View className="flex-1 items-center justify-center px-6">
+          <Text className="text-lg font-semibold text-slate-600 dark:text-slate-400 text-center">
+            Budget not found
+          </Text>
+          <Text className="text-sm text-slate-400 dark:text-slate-500 mt-1 text-center">
+            This budget may have been deleted.
+          </Text>
         </View>
       </View>
     );
@@ -162,10 +184,7 @@ export default function BudgetDetailScreen(): React.JSX.Element {
         )}
 
         {/* Recent Transactions */}
-        <BudgetRecentTransactions
-          transactions={recentTransactions}
-          currency={effectiveCurrency}
-        />
+        <BudgetRecentTransactions transactions={recentTransactions} />
       </ScrollView>
 
       {/* Actions Sheet */}

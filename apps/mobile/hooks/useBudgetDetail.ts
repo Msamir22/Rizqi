@@ -19,7 +19,10 @@ import {
   type SpendingMetrics,
   type WeeklyBucket,
 } from "@astik/logic/src/budget";
-import { getSpendingForBudget } from "@/services/budget-service";
+import {
+  getSpendingForBudget,
+  getCategoryAndSubcategoryIds,
+} from "@/services/budget-service";
 
 // =============================================================================
 // TYPES
@@ -76,10 +79,19 @@ export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
 
   // ── Subscribe to budget changes ──
   useEffect(() => {
+    if (!budgetId) return;
+
     const subscription = database
       .get<Budget>("budgets")
       .findAndObserve(budgetId)
-      .subscribe((b) => setBudget(b));
+      .subscribe(
+        (b) => setBudget(b),
+        () => {
+          // Budget not found or deleted
+          setBudget(null);
+          setIsLoading(false);
+        }
+      );
 
     return () => subscription.unsubscribe();
   }, [budgetId]);
@@ -113,17 +125,28 @@ export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
       const buckets = getWeeklyBuckets(bounds);
       const weeklyData: WeeklySpendingData[] = [];
 
+      // Resolve category IDs once for reuse in scoped queries
+      const categoryIds =
+        budget.isCategoryBudget && budget.categoryId
+          ? await getCategoryAndSubcategoryIds(budget.categoryId)
+          : null;
+
       for (const bucket of buckets) {
+        const conditions = [
+          Q.where("deleted", false),
+          Q.where("type", "EXPENSE"),
+          Q.where("date", Q.gte(bucket.weekStart.getTime())),
+          Q.where("date", Q.lte(bucket.weekEnd.getTime())),
+        ];
+
+        // Scope to category tree for category budgets
+        if (categoryIds) {
+          conditions.push(Q.where("category_id", Q.oneOf(categoryIds)));
+        }
+
         const txs = await database
           .get<Transaction>("transactions")
-          .query(
-            Q.and(
-              Q.where("deleted", false),
-              Q.where("type", "EXPENSE"),
-              Q.where("date", Q.gte(bucket.weekStart.getTime())),
-              Q.where("date", Q.lte(bucket.weekEnd.getTime()))
-            )
-          )
+          .query(Q.and(...conditions))
           .fetch();
 
         weeklyData.push({
@@ -175,18 +198,25 @@ export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
       }
 
       // Recent transactions
-      const recentQuery = [
+      const recentConditions = [
         Q.where("deleted", false),
         Q.where("type", "EXPENSE"),
         Q.where("date", Q.gte(bounds.start.getTime())),
         Q.where("date", Q.lte(bounds.end.getTime())),
-        Q.sortBy("date", Q.desc),
-        Q.take(RECENT_TRANSACTIONS_LIMIT),
       ];
+
+      // Scope to category tree for category budgets
+      if (categoryIds) {
+        recentConditions.push(Q.where("category_id", Q.oneOf(categoryIds)));
+      }
 
       const recent = await database
         .get<Transaction>("transactions")
-        .query(...recentQuery)
+        .query(
+          ...recentConditions,
+          Q.sortBy("date", Q.desc),
+          Q.take(RECENT_TRANSACTIONS_LIMIT)
+        )
         .fetch();
 
       if (!cancelled) {

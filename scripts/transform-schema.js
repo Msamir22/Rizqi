@@ -129,6 +129,11 @@ function parseSupabaseTypes(content) {
         }
       }
     }
+    if (start !== -1 && end === -1) {
+      throw new Error(
+        "Malformed supabase-types.ts: Enums block has unmatched opening brace"
+      );
+    }
     if (start !== -1 && end !== -1) {
       const enumsBlock = content.substring(start, end);
       const enumRegex = /(\w+):\s*([^;]+);/g;

@@ -12,7 +12,7 @@ import { BudgetForm } from "@/components/budget/BudgetForm";
 import { Budget, database } from "@astik/db";
 import { useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, Text, View } from "react-native";
 import { palette } from "@/constants/colors";
 
 // =============================================================================
@@ -25,6 +25,7 @@ export default function CreateBudgetScreen(): React.JSX.Element {
 
   const [budget, setBudget] = useState<Budget | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(isEdit);
+  const [loadError, setLoadError] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (!id) return;
@@ -34,8 +35,18 @@ export default function CreateBudgetScreen(): React.JSX.Element {
       try {
         const found = await database.get<Budget>("budgets").find(budgetId);
         setBudget(found);
-      } catch {
-        // Budget not found — treat as create mode
+      } catch (error) {
+        // WatermelonDB .find() throws when record not found.
+        // Distinguish "not found" from unexpected errors.
+        const message = error instanceof Error ? error.message : String(error);
+        const isNotFound =
+          message.includes("not found") || message.includes("Could not find");
+
+        if (!isNotFound) {
+          console.error("[CreateBudget] Failed to load budget:", error);
+          setLoadError("Failed to load budget. Please try again.");
+        }
+        // If not found, budget stays undefined → BudgetForm renders in create mode
       } finally {
         setIsLoading(false);
       }
@@ -55,6 +66,12 @@ export default function CreateBudgetScreen(): React.JSX.Element {
       {isLoading ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color={palette.nileGreen[500]} />
+        </View>
+      ) : loadError ? (
+        <View className="flex-1 items-center justify-center px-6">
+          <Text className="text-base text-red-500 text-center">
+            {loadError}
+          </Text>
         </View>
       ) : (
         <BudgetForm existingBudget={budget} />

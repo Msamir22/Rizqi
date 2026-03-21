@@ -24,8 +24,10 @@ interface UseBudgetAlertResult {
   readonly alert: BudgetAlert | null;
   /** Whether the alert modal is visible */
   readonly isVisible: boolean;
-  /** Call after creating a transaction to check for alerts */
-  readonly checkAfterTransaction: (transaction: Transaction) => Promise<void>;
+  /** Call after creating a transaction to check for alerts. Returns true if an alert was triggered. */
+  readonly checkAfterTransaction: (
+    transaction: Transaction
+  ) => Promise<boolean>;
   /** Dismiss the alert modal */
   readonly dismiss: () => void;
   /** Navigate to the budget detail screen */
@@ -41,12 +43,19 @@ export function useBudgetAlert(): UseBudgetAlertResult {
   const [isVisible, setIsVisible] = useState(false);
 
   const checkAfterTransaction = useCallback(
-    async (transaction: Transaction): Promise<void> => {
-      const result = await checkBudgetAlerts(transaction);
-      if (result) {
-        setAlert(result);
-        setIsVisible(true);
+    async (transaction: Transaction): Promise<boolean> => {
+      try {
+        const result = await checkBudgetAlerts(transaction);
+        if (result) {
+          setAlert(result);
+          setIsVisible(true);
+          return true;
+        }
+      } catch (error) {
+        // Alert check is non-critical — never block the transaction flow
+        console.warn("[useBudgetAlert] Alert check failed:", error);
       }
+      return false;
     },
     []
   );

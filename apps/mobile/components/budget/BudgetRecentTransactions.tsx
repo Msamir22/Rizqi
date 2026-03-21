@@ -8,7 +8,7 @@
 
 import React from "react";
 import { Text, View } from "react-native";
-import type { Transaction, CurrencyType } from "@astik/db";
+import type { Transaction } from "@astik/db";
 import { formatCurrency } from "@astik/logic";
 import { palette } from "@/constants/colors";
 import { useCategoryLookup } from "@/context/CategoriesContext";
@@ -25,7 +25,6 @@ import { Ionicons } from "@expo/vector-icons";
 
 interface BudgetRecentTransactionsProps {
   readonly transactions: readonly Transaction[];
-  readonly currency: CurrencyType;
 }
 
 // ---------------------------------------------------------------------------
@@ -34,7 +33,6 @@ interface BudgetRecentTransactionsProps {
 
 export function BudgetRecentTransactions({
   transactions,
-  currency,
 }: BudgetRecentTransactionsProps): React.JSX.Element {
   const categoryMap = useCategoryLookup();
   const { isDark } = useTheme();
@@ -87,7 +85,7 @@ export function BudgetRecentTransactions({
 
             {/* Amount */}
             <Text className="text-sm font-bold text-red-500">
-              -{formatCurrency({ amount: tx.amount, currency })}
+              -{formatCurrency({ amount: tx.amount, currency: tx.currency })}
             </Text>
           </View>
         );

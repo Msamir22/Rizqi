@@ -20,7 +20,11 @@ import {
   getDaysElapsed,
   computeSpendingMetrics,
 } from "@astik/logic/src/budget";
-import { getSpendingForBudget, setAlertFiredLevel } from "./budget-service";
+import {
+  getSpendingForBudget,
+  setAlertFiredLevel,
+  getCategoryAndSubcategoryIds,
+} from "./budget-service";
 
 // =============================================================================
 // TYPES
@@ -63,13 +67,18 @@ export async function checkBudgetAlerts(
     .query(Q.and(Q.where("deleted", false), Q.where("status", "ACTIVE")))
     .fetch();
 
-  // Filter to budgets that match the transaction's category
-  const matchingBudgets = budgets.filter((budget) => {
-    if (budget.isGlobal) return true; // Global budgets match all expenses
-    if (budget.isCategoryBudget && budget.categoryId === transaction.categoryId)
-      return true;
-    return false;
-  });
+  // Filter to budgets that match the transaction's category (including descendants)
+  const matchingBudgets: Budget[] = [];
+  for (const budget of budgets) {
+    if (budget.isGlobal) {
+      matchingBudgets.push(budget);
+    } else if (budget.isCategoryBudget && budget.categoryId) {
+      const categoryIds = await getCategoryAndSubcategoryIds(budget.categoryId);
+      if (categoryIds.includes(transaction.categoryId)) {
+        matchingBudgets.push(budget);
+      }
+    }
+  }
 
   for (const budget of matchingBudgets) {
     const bounds = getCurrentPeriodBounds(

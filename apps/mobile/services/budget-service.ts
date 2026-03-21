@@ -81,6 +81,16 @@ export async function createBudget(input: CreateBudgetInput): Promise<Budget> {
     throw new Error("User not authenticated");
   }
 
+  // Type-specific validation
+  if (input.type === "CATEGORY" && !input.categoryId) {
+    throw new Error("Category budgets require a categoryId");
+  }
+  if (input.period === "CUSTOM" && (!input.periodStart || !input.periodEnd)) {
+    throw new Error(
+      "Custom period budgets require both periodStart and periodEnd"
+    );
+  }
+
   // Validate uniqueness
   await validateBudgetUniqueness(input.type, input.period, input.categoryId);
 
@@ -115,6 +125,17 @@ export async function updateBudget(
   input: UpdateBudgetInput
 ): Promise<Budget> {
   const budget = await budgetsCollection().find(budgetId);
+
+  // Type-specific validation for period changes
+  if (
+    ((input.period ?? budget.period) === "CUSTOM" &&
+      !(input.periodStart ?? budget.periodStart)) ||
+    !(input.periodEnd ?? budget.periodEnd)
+  ) {
+    throw new Error(
+      "Custom period budgets require both periodStart and periodEnd"
+    );
+  }
 
   return database.write(async () => {
     await budget.update((b) => {
@@ -286,7 +307,7 @@ export async function getSpendingForBudget(budget: Budget): Promise<number> {
  * Get a category ID and all its subcategory IDs (L2 + L3).
  * Used for category budget spending aggregation (FR-015).
  */
-async function getCategoryAndSubcategoryIds(
+export async function getCategoryAndSubcategoryIds(
   categoryId: string | undefined
 ): Promise<string[]> {
   if (!categoryId) return [];

@@ -10,7 +10,8 @@
 // =============================================================================
 
 /** Threshold percentages for color-coded progress states */
-const WARNING_THRESHOLD = 80;
+/** Default threshold percentage for warning state */
+const DEFAULT_WARNING_THRESHOLD = 80;
 const DANGER_THRESHOLD = 100;
 
 // =============================================================================
@@ -78,11 +79,15 @@ export function calculateDailyAverage(
  * - danger (red): >= 100%
  *
  * @param percentage - Spent percentage (0-100+)
+ * @param warningThreshold - Percentage at which to show warning (defaults to 80)
  * @returns The status label for color coding
  */
-export function getProgressStatus(percentage: number): ProgressStatus {
+export function getProgressStatus(
+  percentage: number,
+  warningThreshold: number = DEFAULT_WARNING_THRESHOLD
+): ProgressStatus {
   if (percentage >= DANGER_THRESHOLD) return "danger";
-  if (percentage >= WARNING_THRESHOLD) return "warning";
+  if (percentage >= warningThreshold) return "warning";
   return "safe";
 }
 
@@ -92,12 +97,14 @@ export function getProgressStatus(percentage: number): ProgressStatus {
  * @param spent - Amount spent in this period
  * @param limit - Budget limit
  * @param daysElapsed - Days elapsed in period
+ * @param warningThreshold - Optional custom warning threshold (defaults to 80)
  * @returns All computed metrics in a single object
  */
 export function computeSpendingMetrics(
   spent: number,
   limit: number,
-  daysElapsed: number
+  daysElapsed: number,
+  warningThreshold?: number
 ): SpendingMetrics {
   const percentage = calculateSpentPercentage(spent, limit);
   return {
@@ -106,6 +113,6 @@ export function computeSpendingMetrics(
     remaining: calculateRemaining(spent, limit),
     percentage,
     dailyAverage: calculateDailyAverage(spent, daysElapsed),
-    status: getProgressStatus(percentage),
+    status: getProgressStatus(percentage, warningThreshold),
   };
 }

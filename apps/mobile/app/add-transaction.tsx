@@ -33,6 +33,7 @@ import type {
   CurrencyType,
   RecurringFrequency,
   TransactionType,
+  Transaction,
 } from "@astik/db";
 import { formatAmountInput } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
@@ -324,14 +325,14 @@ export default function AddTransaction(): React.ReactNode {
     note?: string;
     type: TransactionType;
     linkedRecurringId?: string;
-  }): Promise<void> => {
+  }): Promise<Transaction | undefined> => {
     if (!selectedAccount) {
       setFormErrors({ accountId: "Please select an account" });
       setIsSubmitting(false);
-      return;
+      return undefined;
     }
 
-    const tx = await createTransaction({
+    return createTransaction({
       amount,
       currency: selectedAccount.currency,
       categoryId: selectedCategoryId,
@@ -343,11 +344,6 @@ export default function AddTransaction(): React.ReactNode {
       date,
       linkedRecurringId,
     });
-
-    // Check budget alerts for expense transactions
-    if (type === "EXPENSE") {
-      await budgetAlert.checkAfterTransaction(tx);
-    }
   };
 
   // Handle Save
@@ -375,6 +371,8 @@ export default function AddTransaction(): React.ReactNode {
 
     setIsSubmitting(true);
     try {
+      let alertTriggered = false;
+
       if (type === "TRANSFER") {
         await validateAndCreateTransfer(finalAmount);
       } else {
@@ -388,12 +386,17 @@ export default function AddTransaction(): React.ReactNode {
           );
         }
 
-        await validateAndCreateTransaction({
+        const tx = await validateAndCreateTransaction({
           amount: finalAmount,
           note,
           type,
           linkedRecurringId,
         });
+
+        // Check budget alerts for expense transactions (non-blocking)
+        if (tx && type === "EXPENSE") {
+          alertTriggered = await budgetAlert.checkAfterTransaction(tx);
+        }
       }
 
       showToast({
@@ -402,8 +405,8 @@ export default function AddTransaction(): React.ReactNode {
         message: "Transaction Created successfully",
       });
 
-      // If a budget alert was triggered, stay on screen to show it
-      if (!budgetAlert.isVisible) {
+      // If a budget alert was triggered, stay on screen to show the modal
+      if (!alertTriggered) {
         router.back();
       }
     } catch (error) {
