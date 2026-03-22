@@ -13,7 +13,6 @@ import {
 } from "@/hooks/useCategoryNavigation";
 import type { Category, TransactionType } from "@astik/db";
 import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   ActivityIndicator,
@@ -224,13 +223,6 @@ export function CategorySelectorModal({
         <View className="flex-1 bg-black/60 justify-end">
           <TouchableWithoutFeedback>
             <View className="rounded-t-3xl overflow-hidden bg-white dark:bg-slate-900">
-              <BlurView
-                intensity={40}
-                tint={isDark ? "dark" : "light"}
-                className="absolute inset-0"
-              />
-              <View className="absolute inset-0 bg-white/95 dark:bg-slate-900/95" />
-
               {/* Header */}
               <View className="flex-row justify-between items-center px-6 py-5 border-b border-slate-200 dark:border-slate-800">
                 <Text className="text-xl font-bold text-slate-800 dark:text-slate-100">

@@ -14,7 +14,7 @@
  */
 
 import React, { useCallback } from "react";
-import { ScrollView, Text, TouchableOpacity } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import type { BudgetPeriod } from "@astik/db";
 import { palette } from "@/constants/colors";
 
@@ -58,20 +58,22 @@ export function PeriodFilterChips({
   onSelect,
 }: PeriodFilterChipsProps): React.JSX.Element {
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerClassName="gap-2 px-4 py-2"
-    >
-      {CHIPS.map((chip) => (
-        <FilterChip
-          key={chip.key}
-          label={chip.label}
-          isActive={selected === chip.key}
-          onPress={() => onSelect(chip.key)}
-        />
-      ))}
-    </ScrollView>
+    <View className="flex-grow-0 py-2 pt-4">
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerClassName="gap-2 px-4 items-center"
+      >
+        {CHIPS.map((chip) => (
+          <FilterChip
+            key={chip.key}
+            label={chip.label}
+            isActive={selected === chip.key}
+            onPress={() => onSelect(chip.key)}
+          />
+        ))}
+      </ScrollView>
+    </View>
   );
 }
 

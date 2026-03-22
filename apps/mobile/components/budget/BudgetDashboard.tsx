@@ -17,7 +17,14 @@
  */
 
 import React, { useCallback } from "react";
-import { ActivityIndicator, FlatList, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  FlatList,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -79,11 +86,6 @@ export function BudgetDashboard(): React.JSX.Element {
     );
   }
 
-  // Empty state
-  if (budgets.length === 0) {
-    return <BudgetEmptyState onCreateBudget={handleCreateBudget} />;
-  }
-
   // S-01: Compute safe-to-spend and daily limit from global budget
   const safeToSpend = globalBudget
     ? Math.max(0, globalBudget.metrics.remaining)
@@ -98,44 +100,48 @@ export function BudgetDashboard(): React.JSX.Element {
       {/* Period Filter */}
       <PeriodFilterChips selected={periodFilter} onSelect={setPeriodFilter} />
 
-      {/* Budget Content */}
-      <FlatList
-        data={categoryBudgets as BudgetWithMetrics[]}
-        keyExtractor={keyExtractor}
-        renderItem={renderCategoryItem}
-        numColumns={2}
-        columnWrapperStyle={{ gap: 10, paddingHorizontal: 20 }}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingBottom: insets.bottom + 80,
-        }}
-        removeClippedSubviews
-        maxToRenderPerBatch={10}
-        windowSize={5}
-        ListHeaderComponent={
-          <>
-            {/* Hero Card */}
-            {globalBudget ? (
-              <View className="px-5">
-                <BudgetHeroCard
-                  data={globalBudget}
-                  currency={preferredCurrency}
-                  onPress={() => handleBudgetPress(globalBudget.budget.id)}
-                />
-              </View>
-            ) : null}
+      {/* Budget Content or Empty State */}
+      {budgets.length === 0 ? (
+        <BudgetEmptyState onCreateBudget={handleCreateBudget} />
+      ) : (
+        <FlatList
+          data={categoryBudgets as BudgetWithMetrics[]}
+          keyExtractor={keyExtractor}
+          renderItem={renderCategoryItem}
+          numColumns={2}
+          columnWrapperStyle={{ gap: 10, paddingHorizontal: 20 }}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            paddingBottom: insets.bottom + 80,
+          }}
+          removeClippedSubviews
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          ListHeaderComponent={
+            <>
+              {/* Hero Card */}
+              {globalBudget ? (
+                <View className="px-5">
+                  <BudgetHeroCard
+                    data={globalBudget}
+                    currency={preferredCurrency}
+                    onPress={() => handleBudgetPress(globalBudget.budget.id)}
+                  />
+                </View>
+              ) : null}
 
-            {/* S-04: CATEGORIES section header */}
-            {categoryBudgets.length > 0 && (
-              <View className="flex-row items-center justify-between px-5 mb-3 mt-2">
-                <Text className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-500">
-                  Categories
-                </Text>
-              </View>
-            )}
-          </>
-        }
-      />
+              {/* S-04: CATEGORIES section header */}
+              {categoryBudgets.length > 0 && (
+                <View className="flex-row items-center justify-between px-5 mb-3 mt-2">
+                  <Text className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-500">
+                    Categories
+                  </Text>
+                </View>
+              )}
+            </>
+          }
+        />
+      )}
 
       {/* S-01: Bottom summary bar */}
       {globalBudget && (
@@ -175,6 +181,30 @@ export function BudgetDashboard(): React.JSX.Element {
             </Text>
           </View>
         </View>
+      )}
+
+      {/* FAB - Create Budget */}
+      {budgets.length > 0 && (
+        <TouchableOpacity
+          onPress={handleCreateBudget}
+          className="absolute right-5 bg-nileGreen-500 w-14 h-14 rounded-full items-center justify-center"
+          accessibilityRole="button"
+          accessibilityLabel="Create budget"
+          accessibilityHint="Opens the form to create a new budget"
+          // NativeWind v4 shadow limitation — requires inline style on interactive components
+          style={{
+            bottom: globalBudget
+              ? insets.bottom + 85 // Above bottom summary bar
+              : insets.bottom + 20,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.15,
+            shadowRadius: 8,
+            elevation: 5,
+          }}
+        >
+          <Ionicons name="add" size={28} color="white" />
+        </TouchableOpacity>
       )}
     </View>
   );
