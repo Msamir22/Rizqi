@@ -30,7 +30,6 @@ import {
 } from "@astik/logic/src/budget";
 import {
   getSpendingForBudget,
-  resetAlertFiredLevel,
   autoPauseBudget,
 } from "@/services/budget-service";
 import type { PeriodFilter } from "@/components/budget/PeriodFilterChips";
@@ -122,13 +121,7 @@ export function useBudgets(): UseBudgetsResult {
           budget.periodEnd
         );
 
-        // Reset alert level on period rollover (F3 remediation)
-        if (
-          budget.alertFiredLevel &&
-          bounds.start.getTime() > budget.updatedAt.getTime()
-        ) {
-          await resetAlertFiredLevel(budget.id);
-        }
+        // NOTE: Period-rollover alert reset is handled in budget-alert-service.ts (C-03)
 
         const spent = await getSpendingForBudget(budget);
         const daysElapsed = getDaysElapsed(bounds.start);
@@ -136,7 +129,8 @@ export function useBudgets(): UseBudgetsResult {
         const metrics = computeSpendingMetrics(
           spent,
           budget.amount,
-          daysElapsed
+          daysElapsed,
+          budget.alertThreshold
         );
 
         results.push({ budget, metrics, daysLeft, daysElapsed });

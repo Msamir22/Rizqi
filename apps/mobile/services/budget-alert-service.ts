@@ -110,7 +110,12 @@ export async function checkBudgetAlerts(
 
     const spent = await getSpendingForBudget(budget);
     const daysElapsed = getDaysElapsed(bounds.start);
-    const metrics = computeSpendingMetrics(spent, budget.amount, daysElapsed);
+    const metrics = computeSpendingMetrics(
+      spent,
+      budget.amount,
+      daysElapsed,
+      budget.alertThreshold
+    );
 
     const currentFiredLevel = budget.typedAlertFiredLevel;
 

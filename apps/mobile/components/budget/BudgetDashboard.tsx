@@ -4,7 +4,8 @@
  * Container component that composes the budget dashboard:
  * - Period filter chips
  * - Global budget hero card (if any)
- * - Category budget list
+ * - Category budget list with section header
+ * - Bottom summary bar (safe to spend + daily limit)
  * - Empty state (when no budgets)
  *
  * Architecture & Design Rationale:
@@ -16,13 +17,14 @@
  */
 
 import React, { useCallback } from "react";
-import { ActivityIndicator, FlatList, View } from "react-native";
+import { ActivityIndicator, FlatList, Text, View } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { palette } from "@/constants/colors";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import { useBudgets, type BudgetWithMetrics } from "@/hooks/useBudgets";
+import { formatCurrency } from "@astik/logic";
 import { PeriodFilterChips } from "./PeriodFilterChips";
 import { BudgetHeroCard } from "./BudgetHeroCard";
 import { BudgetCategoryCard } from "./BudgetCategoryCard";
@@ -82,6 +84,15 @@ export function BudgetDashboard(): React.JSX.Element {
     return <BudgetEmptyState onCreateBudget={handleCreateBudget} />;
   }
 
+  // S-01: Compute safe-to-spend and daily limit from global budget
+  const safeToSpend = globalBudget
+    ? Math.max(0, globalBudget.metrics.remaining)
+    : 0;
+  const dailyLimit =
+    globalBudget && globalBudget.daysLeft > 0
+      ? safeToSpend / globalBudget.daysLeft
+      : 0;
+
   return (
     <View className="flex-1">
       {/* Period Filter */}
@@ -102,17 +113,69 @@ export function BudgetDashboard(): React.JSX.Element {
         maxToRenderPerBatch={10}
         windowSize={5}
         ListHeaderComponent={
-          globalBudget ? (
-            <View className="px-5">
-              <BudgetHeroCard
-                data={globalBudget}
-                currency={preferredCurrency}
-                onPress={() => handleBudgetPress(globalBudget.budget.id)}
-              />
-            </View>
-          ) : null
+          <>
+            {/* Hero Card */}
+            {globalBudget ? (
+              <View className="px-5">
+                <BudgetHeroCard
+                  data={globalBudget}
+                  currency={preferredCurrency}
+                  onPress={() => handleBudgetPress(globalBudget.budget.id)}
+                />
+              </View>
+            ) : null}
+
+            {/* S-04: CATEGORIES section header */}
+            {categoryBudgets.length > 0 && (
+              <View className="flex-row items-center justify-between px-5 mb-3 mt-2">
+                <Text className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-500">
+                  Categories
+                </Text>
+              </View>
+            )}
+          </>
         }
       />
+
+      {/* S-01: Bottom summary bar */}
+      {globalBudget && (
+        <View
+          className="flex-row items-center justify-center border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-6 py-3"
+          style={{ paddingBottom: Math.max(insets.bottom, 12) }}
+        >
+          <View className="items-center flex-1">
+            <Text className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-500">
+              Safe to Spend
+            </Text>
+            <Text
+              className="text-base font-bold"
+              style={{ color: palette.nileGreen[500] }}
+            >
+              {formatCurrency({
+                amount: safeToSpend,
+                currency: preferredCurrency,
+                maximumFractionDigits: 0,
+              })}
+            </Text>
+          </View>
+
+          {/* Vertical divider */}
+          <View className="w-px h-8 bg-slate-200 dark:bg-slate-700 mx-4" />
+
+          <View className="items-center flex-1">
+            <Text className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-500">
+              Daily Limit
+            </Text>
+            <Text className="text-base font-bold text-slate-800 dark:text-white">
+              {formatCurrency({
+                amount: dailyLimit,
+                currency: preferredCurrency,
+                maximumFractionDigits: 0,
+              })}
+            </Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }

@@ -37,8 +37,8 @@ const LEVEL_CONFIG = {
     headerBg: palette.gold[600],
     iconBg: palette.gold[100],
     iconColor: palette.gold[800],
-    title: "Budget Alert",
-    subtitle: "You\u2019re nearing your limit",
+    title: "Spending Alert",
+    dismissLabel: "Got It",
   },
   DANGER: {
     icon: "alert-circle-outline" as const,
@@ -46,7 +46,7 @@ const LEVEL_CONFIG = {
     iconBg: palette.red[100],
     iconColor: palette.red[600],
     title: "Over Budget!",
-    subtitle: "You\u2019ve exceeded your limit",
+    dismissLabel: "Dismiss",
   },
 };
 
@@ -66,6 +66,13 @@ export function BudgetAlertModal({
 
   const config = LEVEL_CONFIG[alert.level];
   const percentage = Math.round(alert.percentage);
+  const overage = alert.spent - alert.limit;
+
+  // Dynamic subtitle with specific numbers
+  const subtitle =
+    alert.level === "WARNING"
+      ? `You\u2019ve spent ${percentage}% of your budget`
+      : `You\u2019ve exceeded your budget by ${formatCurrency({ amount: overage, currency: preferredCurrency, maximumFractionDigits: 0 })}`;
 
   return (
     <Modal
@@ -94,9 +101,7 @@ export function BudgetAlertModal({
               <Ionicons name={config.icon} size={32} color={config.iconColor} />
             </View>
             <Text className="text-xl font-bold text-white">{config.title}</Text>
-            <Text className="text-sm text-white/80 mt-1">
-              {config.subtitle}
-            </Text>
+            <Text className="text-sm text-white/80 mt-1">{subtitle}</Text>
           </View>
 
           {/* Content */}
@@ -116,17 +121,18 @@ export function BudgetAlertModal({
               />
             </View>
 
-            {/* Stats */}
+            {/* Stats — show actual amounts */}
             <View className="flex-row justify-between mb-4">
-              <Text className="text-sm text-slate-500 dark:text-slate-400">
-                {percentage}% used
-              </Text>
-              <Text className="text-sm font-semibold text-slate-800 dark:text-white">
+              <Text
+                className="text-sm font-bold"
+                style={{ color: config.headerBg }}
+              >
                 {formatCurrency({
                   amount: alert.spent,
                   currency: preferredCurrency,
-                })}{" "}
-                /{" "}
+                })}
+              </Text>
+              <Text className="text-sm font-semibold text-slate-800 dark:text-white">
                 {formatCurrency({
                   amount: alert.limit,
                   currency: preferredCurrency,
@@ -134,26 +140,26 @@ export function BudgetAlertModal({
               </Text>
             </View>
 
-            {/* Buttons */}
+            {/* S-12: Buttons — View Budget left, dismiss right */}
             <View className="flex-row gap-3">
-              <TouchableOpacity
-                onPress={onDismiss}
-                className="flex-1 py-3 rounded-xl items-center bg-slate-100 dark:bg-slate-700"
-              >
-                <Text className="text-base font-semibold text-slate-600 dark:text-slate-300">
-                  Got It
-                </Text>
-              </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => {
                   onDismiss();
                   onViewBudget(alert.budgetId);
                 }}
+                className="flex-1 py-3 rounded-xl items-center bg-slate-100 dark:bg-slate-700"
+              >
+                <Text className="text-base font-semibold text-slate-600 dark:text-slate-300">
+                  View Budget
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={onDismiss}
                 className="flex-1 py-3 rounded-xl items-center"
                 style={{ backgroundColor: config.headerBg }}
               >
                 <Text className="text-base font-semibold text-white">
-                  View Budget
+                  {config.dismissLabel}
                 </Text>
               </TouchableOpacity>
             </View>

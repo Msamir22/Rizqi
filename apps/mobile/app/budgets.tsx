@@ -36,7 +36,7 @@ export default function BudgetsScreen(): React.JSX.Element {
         accessibilityRole="button"
         accessibilityLabel="Create budget"
         accessibilityHint="Opens the form to create a new budget"
-        // eslint-disable-next-line react-native/no-inline-styles
+        // NativeWind v4 shadow limitation — requires inline style on interactive components
         style={{
           bottom: insets.bottom + 20,
           shadowColor: "#000",
