@@ -5,6 +5,9 @@ module.exports = {
   roots: ["<rootDir>/src"],
   testMatch: ["**/__tests__/**/*.test.ts"],
   moduleFileExtensions: ["ts", "js", "json"],
+  moduleNameMapper: {
+    "^@astik/db$": "<rootDir>/../db/src",
+  },
   clearMocks: true,
   passWithNoTests: true,
 };

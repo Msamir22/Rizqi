@@ -15,6 +15,7 @@ import {
 } from "@nozbe/watermelondb/decorators";
 import type { Associations } from "@nozbe/watermelondb/Model";
 import type {
+  AlertFiredLevel,
   CurrencyType,
   BudgetPeriod,
   BudgetStatus,
@@ -28,13 +29,16 @@ export abstract class BaseBudget extends Model {
     categories: { type: "belongs_to", key: "category_id" },
   };
 
+  @field("alert_fired_level") alertFiredLevel?: AlertFiredLevel;
   @field("alert_threshold") alertThreshold!: number;
   @field("amount") amount!: number;
   @field("category_id") categoryId?: string;
   @readonly @date("created_at") createdAt!: Date;
-  @field("currency") currency!: CurrencyType;
+  @field("currency") currency?: CurrencyType;
   @field("deleted") deleted!: boolean;
   @field("name") name!: string;
+  @field("pause_intervals") pauseIntervals!: string;
+  @field("paused_at") pausedAt?: string;
   @field("period") period!: BudgetPeriod;
   @date("period_end") periodEnd?: Date;
   @date("period_start") periodStart?: Date;

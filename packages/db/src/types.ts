@@ -9,6 +9,7 @@
 // =============================================================================
 
 export type AccountType = "CASH" | "BANK" | "DIGITAL_WALLET";
+export type AlertFiredLevel = "WARNING" | "DANGER";
 export type AssetType = "METAL" | "CRYPTO" | "REAL_ESTATE";
 export type BudgetPeriod = "WEEKLY" | "MONTHLY" | "CUSTOM";
 export type BudgetStatus = "ACTIVE" | "PAUSED";

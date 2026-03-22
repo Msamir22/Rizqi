@@ -111,19 +111,41 @@ function parseSupabaseTypes(content) {
   const enums = {};
   const relationships = {};
 
-  // Extract enums
-  const enumsMatch = content.match(/Enums:\s*\{([^}]+(?:\{[^}]*\}[^}]*)*)\}/s);
-  if (enumsMatch) {
-    const enumsBlock = enumsMatch[1];
-    const enumRegex = /(\w+):\s*([^;]+);/g;
-    let match;
-    while ((match = enumRegex.exec(enumsBlock)) !== null) {
-      const enumName = match[1];
-      const enumValues = match[2]
-        .split("|")
-        .map((v) => v.trim().replace(/"/g, ""))
-        .filter((v) => v);
-      enums[enumName] = enumValues;
+  // Extract enums using brace-counting (handles multi-line enum values)
+  const enumsStartIdx = content.indexOf("Enums: {");
+  if (enumsStartIdx !== -1) {
+    let braceDepth = 0;
+    let start = -1;
+    let end = -1;
+    for (let i = enumsStartIdx; i < content.length; i++) {
+      if (content[i] === "{") {
+        if (braceDepth === 0) start = i + 1;
+        braceDepth++;
+      } else if (content[i] === "}") {
+        braceDepth--;
+        if (braceDepth === 0) {
+          end = i;
+          break;
+        }
+      }
+    }
+    if (start !== -1 && end === -1) {
+      throw new Error(
+        "Malformed supabase-types.ts: Enums block has unmatched opening brace"
+      );
+    }
+    if (start !== -1 && end !== -1) {
+      const enumsBlock = content.substring(start, end);
+      const enumRegex = /(\w+):\s*([^;]+);/g;
+      let match;
+      while ((match = enumRegex.exec(enumsBlock)) !== null) {
+        const enumName = match[1];
+        const enumValues = match[2]
+          .split("|")
+          .map((v) => v.trim().replace(/"/g, ""))
+          .filter((v) => v);
+        enums[enumName] = enumValues;
+      }
     }
   }
 

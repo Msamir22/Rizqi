@@ -321,7 +321,7 @@ function isSkippableStatement(stmt) {
     /^CREATE\s+(UNIQUE\s+)?INDEX/i,
     /^DROP\s/i,
     /^ALTER\s+TYPE/i,
-    /^ALTER\s+TABLE\s+.*\s+(DROP|ALTER|RENAME)\s/i,
+    /^ALTER\s+TABLE\s+.*\s+(DROP|ALTER|RENAME|ADD\s+CONSTRAINT)\s/i,
     /^REVOKE\s/i,
     /^GRANT\s/i,
     /^COMMENT\s/i,
@@ -597,6 +597,16 @@ function findLatestMigration() {
 // =============================================================================
 // IDEMPOTENCY CHECK
 // =============================================================================
+
+/**
+ * Escape special regex characters in a string for safe use in `new RegExp()`.
+ *
+ * @param {string} str
+ * @returns {string}
+ */
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 /**
  * Check whether a specific column addition already exists within an

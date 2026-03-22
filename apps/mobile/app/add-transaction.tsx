@@ -23,6 +23,8 @@ import { useMarketRates } from "@/hooks/useMarketRates";
 import { createRecurringPayment } from "@/services/recurring-payment-service";
 import { createTransaction } from "@/services/transaction-service";
 import { createTransfer } from "@/services/transfer-service";
+import { useBudgetAlert } from "@/hooks/useBudgetAlert";
+import { BudgetAlertModal } from "@/components/budget/BudgetAlertModal";
 import {
   validateTransactionForm,
   type TransactionValidationErrors,
@@ -31,6 +33,7 @@ import type {
   CurrencyType,
   RecurringFrequency,
   TransactionType,
+  Transaction,
 } from "@astik/db";
 import { formatAmountInput } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
@@ -42,6 +45,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 export default function AddTransaction(): React.ReactNode {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const budgetAlert = useBudgetAlert();
 
   const { accounts } = useAccounts();
 
@@ -321,14 +325,14 @@ export default function AddTransaction(): React.ReactNode {
     note?: string;
     type: TransactionType;
     linkedRecurringId?: string;
-  }): Promise<void> => {
+  }): Promise<Transaction | undefined> => {
     if (!selectedAccount) {
       setFormErrors({ accountId: "Please select an account" });
       setIsSubmitting(false);
-      return;
+      return undefined;
     }
 
-    await createTransaction({
+    return createTransaction({
       amount,
       currency: selectedAccount.currency,
       categoryId: selectedCategoryId,
@@ -367,6 +371,8 @@ export default function AddTransaction(): React.ReactNode {
 
     setIsSubmitting(true);
     try {
+      let alertTriggered = false;
+
       if (type === "TRANSFER") {
         await validateAndCreateTransfer(finalAmount);
       } else {
@@ -380,12 +386,17 @@ export default function AddTransaction(): React.ReactNode {
           );
         }
 
-        await validateAndCreateTransaction({
+        const tx = await validateAndCreateTransaction({
           amount: finalAmount,
           note,
           type,
           linkedRecurringId,
         });
+
+        // Check budget alerts for expense transactions (non-blocking)
+        if (tx && type === "EXPENSE") {
+          alertTriggered = await budgetAlert.checkAfterTransaction(tx);
+        }
       }
 
       showToast({
@@ -393,7 +404,11 @@ export default function AddTransaction(): React.ReactNode {
         title: "Created",
         message: "Transaction Created successfully",
       });
-      router.back();
+
+      // If a budget alert was triggered, stay on screen to show the modal
+      if (!alertTriggered) {
+        router.back();
+      }
     } catch (error) {
       console.error(error);
       // Error is already logged above; validation errors are shown inline
@@ -723,6 +738,17 @@ export default function AddTransaction(): React.ReactNode {
           onClose={() => setIsCategoryModalOpen(false)}
         />
       )}
+
+      {/* Budget Alert Modal */}
+      <BudgetAlertModal
+        visible={budgetAlert.isVisible}
+        alert={budgetAlert.alert}
+        onDismiss={() => {
+          budgetAlert.dismiss();
+          router.back();
+        }}
+        onViewBudget={budgetAlert.viewBudget}
+      />
     </View>
   );
 }

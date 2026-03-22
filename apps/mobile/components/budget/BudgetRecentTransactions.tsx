@@ -1,0 +1,95 @@
+/**
+ * BudgetRecentTransactions Component
+ *
+ * Shows the last 6 matching transactions for the current budget period.
+ *
+ * @module BudgetRecentTransactions
+ */
+
+import React from "react";
+import { Text, View } from "react-native";
+import type { Transaction } from "@astik/db";
+import { formatCurrency } from "@astik/logic";
+import { palette } from "@/constants/colors";
+import { useCategoryLookup } from "@/context/CategoriesContext";
+import {
+  CategoryIcon,
+  type IconLibrary,
+} from "@/components/common/CategoryIcon";
+import { useTheme } from "@/context/ThemeContext";
+import { Ionicons } from "@expo/vector-icons";
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+interface BudgetRecentTransactionsProps {
+  readonly transactions: readonly Transaction[];
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
+export function BudgetRecentTransactions({
+  transactions,
+}: BudgetRecentTransactionsProps): React.JSX.Element {
+  const categoryMap = useCategoryLookup();
+  const { isDark } = useTheme();
+
+  if (transactions.length === 0) return <></>;
+
+  return (
+    <View className="rounded-3xl border p-5 mb-4 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+      <Text className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-4">
+        Recent Transactions
+      </Text>
+
+      {transactions.map((tx) => {
+        const category = categoryMap.get(tx.categoryId);
+        return (
+          <View
+            key={tx.id}
+            className="flex-row items-center py-3 border-b border-slate-100 dark:border-slate-700 last:border-b-0"
+          >
+            {/* Category icon */}
+            <View className="w-10 h-10 rounded-xl items-center justify-center mr-3 bg-slate-100 dark:bg-slate-700/50">
+              {category ? (
+                <CategoryIcon
+                  iconName={category.iconConfig.iconName}
+                  iconLibrary={category.iconConfig.iconLibrary as IconLibrary}
+                  size={18}
+                  color={category.iconConfig.iconColor}
+                />
+              ) : (
+                <Ionicons
+                  name="receipt-outline"
+                  size={18}
+                  color={isDark ? palette.slate[400] : palette.slate[500]}
+                />
+              )}
+            </View>
+
+            {/* Info */}
+            <View className="flex-1">
+              <Text
+                className="text-sm font-semibold text-slate-800 dark:text-white"
+                numberOfLines={1}
+              >
+                {tx.counterparty ?? category?.displayName ?? "Expense"}
+              </Text>
+              <Text className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                {new Date(tx.date).toLocaleDateString()}
+              </Text>
+            </View>
+
+            {/* Amount */}
+            <Text className="text-sm font-bold text-red-500">
+              -{formatCurrency({ amount: tx.amount, currency: tx.currency })}
+            </Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}

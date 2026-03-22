@@ -846,6 +846,8 @@ Budgets help users track and limit their spending. Two types supported:
 | `period_end`      | DATE        | ❌       | For CUSTOM: end date                                     |
 | `alert_threshold` | SMALLINT    | ✅       | Percentage at which to alert (e.g., 80, 90) - Custom     |
 | `status`          | ENUM        | ✅       | `'ACTIVE'`, `'PAUSED'`                                   |
+| `paused_at`       | TIMESTAMPTZ | ❌       | When budget was last paused (NULL when active)           |
+| `pause_intervals` | JSONB       | ✅       | Historical pause windows `[{from, to}]` (default: `[]`)  |
 | `created_at`      | TIMESTAMPTZ | ✅       | Auto-generated                                           |
 | `updated_at`      | TIMESTAMPTZ | ✅       | For WatermelonDB sync                                    |
 | `deleted`         | BOOLEAN     | ✅       | Soft delete for sync (default: false)                    |
@@ -857,6 +859,11 @@ Budgets help users track and limit their spending. Two types supported:
 - **Global Budget:** Sums all expense transactions in period
 - Alert triggered when `spent / amount >= alert_threshold / 100`
 - Multiple budgets can exist (one global + multiple category budgets)
+- **Paused budgets (Freeze & Exclude):** When a budget is paused, `paused_at`
+  records the pause timestamp. Transactions during the paused window are
+  **permanently excluded** from spending calculations. On resume, the interval
+  `{from: paused_at, to: now}` is appended to `pause_intervals` and `paused_at`
+  is cleared. All filtering is done at query time using the recorded intervals.
 
 ### 9.4 Period Calculation
 
