@@ -294,6 +294,9 @@ export function BudgetForm({
           <View className="flex-row gap-3">
             <TouchableOpacity
               onPress={() => updateField("type", "CATEGORY")}
+              accessibilityRole="button"
+              accessibilityLabel="Category budget type"
+              accessibilityState={{ selected: form.type === "CATEGORY" }}
               className={`flex-1 py-3 rounded-2xl items-center ${
                 form.type === "CATEGORY" ? "" : "bg-slate-100 dark:bg-slate-800"
               }`}

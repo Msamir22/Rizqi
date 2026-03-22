@@ -320,33 +320,27 @@ export async function getSpendingForBudget(budget: Budget): Promise<number> {
     budget.periodEnd
   );
 
-  const baseQuery = transactionsCollection().query(
-    Q.and(
-      Q.where("deleted", false),
-      Q.where("type", "EXPENSE"),
-      Q.where("date", Q.gte(bounds.start.getTime())),
-      Q.where("date", Q.lte(bounds.end.getTime()))
-    )
-  );
+  const baseConditions = [
+    Q.where("deleted", false),
+    Q.where("type", "EXPENSE"),
+    Q.where("date", Q.gte(bounds.start.getTime())),
+    Q.where("date", Q.lte(bounds.end.getTime())),
+  ];
 
   let transactions: Transaction[];
 
   if (budget.isGlobal) {
     // Global budget: all expenses in the period
-    transactions = await baseQuery.fetch();
+    transactions = await transactionsCollection()
+      .query(Q.and(...baseConditions))
+      .fetch();
   } else {
     // Category budget: need to include subcategories
     const categoryIds = await getCategoryAndSubcategoryIds(budget.categoryId);
 
     transactions = await transactionsCollection()
       .query(
-        Q.and(
-          Q.where("deleted", false),
-          Q.where("type", "EXPENSE"),
-          Q.where("date", Q.gte(bounds.start.getTime())),
-          Q.where("date", Q.lte(bounds.end.getTime())),
-          Q.where("category_id", Q.oneOf(categoryIds))
-        )
+        Q.and(...baseConditions, Q.where("category_id", Q.oneOf(categoryIds)))
       )
       .fetch();
   }

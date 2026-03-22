@@ -1,7 +1,5 @@
 ---
-description:
-  Perform a comprehensive code review on a branch/PR, add comments, and open a
-  fix PR targeting the original branch.
+description: Perform a comprehensive code review on a branch/PR, add comments
 ---
 
 # Code Review & Fix Workflow
@@ -11,82 +9,264 @@ user's active branch or Pull Request, provide specific feedback, and then
 automatically create a new PR containing the proposed fixes targeting the user's
 original work.
 
+---
+
 ## 1. Context Gathering
 
 Before looking at any code, the agent MUST load and internalize the following
 context:
 
-- **Project Constitution**: Read
-  `e:\Work\My Projects\Astik\.specify\memory\constitution.md` to align with the
-  core architectural and product principles.
-- **Project Rules**: Read the available rule files in
-  `e:\Work\My Projects\Astik\.agent\rules\` to understand specific technical
-  guidelines.
-- **Best Practices** to strictly enforce:
-  - **React Native & Expo**: Proper component structures, efficient rendering,
-    safe area handling, and native best practices.
-  - **TypeScript**: Strict definitions, no `any`, proper interface usage, and
-    absolute type safety.
-  - **Architecture**: Strictly adhere to **SOLID principles**.
-  - **Code Quality**: Ensure the code is **clean** and follows the **DRY (Don't
-    Repeat Yourself)** principle to eliminate duplication.
+### 🔹 Project Constitution
+
+- Read `e:\Work\My Projects\Astik\.specify\memory\constitution.md`
+- Treat it as the **highest authority**
+- All principles are **non-negotiable and must be enforced strictly**
+
+### 🔹 Project Rules
+
+- Read all files under: `e:\Work\My Projects\Astik\.agent\rules\`
+- Treat these rule files as the **source of truth for implementation standards**
+
+### 🔹 Specs (CRITICAL)
+
+- Identify the current branch name
+- Locate the matching folder under `specs/`
+  - The folder name MUST **exactly match the branch name**
+
+  **Example:**
+  - Branch: `017-dashboard-ui-polish`
+  - Folder: `specs/017-dashboard-ui-polish`
+
+- Read all relevant Markdown files inside that folder:
+  - `spc.md`
+  - `plan.md`
+  - `tasks.md`
+
+- Treat these files as the **source of truth for feature requirements**
+
+---
 
 ## 2. Code Analysis
 
-- Identify the target branch or Pull Request to be reviewed.
-- Extract the code changes (e.g., using GitHub MCP server to get PR files, or
-  local git diff).
-- Systematically review the modified code against the rules and best practices
-  internalized in Step 1.
-- Identify bugs, anti-patterns, missing types, duplicate logic, and
-  architectural flaws.
+- Identify the target branch or Pull Request to be reviewed
+- Extract all changed files (PR diff)
+
+### 🔍 2.1 Constitution Compliance (MANDATORY)
+
+For every change in the PR:
+
+- Identify which principles from `constitution.md` apply
+- Validate strict compliance
+
+#### Required Checks:
+
+1. **Architecture & Data Flow**
+   - Offline-first enforced (WatermelonDB first, network second)
+   - No API-dependent core calculations
+   - Required sync fields exist
+
+2. **Business Logic**
+   - Matches `docs/business/business-decisions.md`
+   - No assumptions or undocumented logic
+
+3. **Type Safety (NON-NEGOTIABLE)**
+   - No `any`
+   - Explicit return types
+   - Safe null handling (no `!`)
+   - `zod` validation for external data
+
+4. **Layer Separation**
+   - No business logic in components or hooks
+   - Services handle DB writes
+   - `packages/logic` contains shared logic only
+
+5. **UI & Styling**
+   - NativeWind (Tailwind) used correctly
+   - No hardcoded colors
+   - No `isDark` misuse
+   - UI strictly matches schema
+
+6. **Monorepo Boundaries**
+   - No invalid imports
+   - Dependency direction respected
+
+7. **Database & Migrations**
+   - All schema changes via SQL migrations
+   - No direct DB modifications outside migrations
+   - Generated files committed
+
+8. **Code Quality**
+   - No magic numbers
+   - No missing TODOs for tech debt
+   - Proper naming conventions
+   - No `console.log`
+
+---
+
+### 📂 2.2 Specs Compliance (MANDATORY)
+
+- Review changed files under the `specs/` folder
+- Ensure the correct folder is used (matches branch name)
+
+For all code changes:
+
+- Verify full alignment with:
+  - `spc.md` (specification)
+  - `plan.md` (implementation approach)
+  - `tasks.md` (execution checklist)
+
+#### Check for:
+
+- Missing functionality
+- Incomplete tasks
+- Deviations from plan or spec
+
+🚨 **Blocking Rule:**
+
+- If any task in `tasks.md` is not implemented or justified → PR is **NOT
+  APPROVABLE**
+
+---
+
+### 📏 2.3 Rules Compliance (MANDATORY)
+
+For every changed file:
+
+- Identify relevant rules from `.agent/rules/*.md`
+- Validate that implementation follows them
+
+#### Check for:
+
+- Violations of defined rules
+- Missing required patterns
+- Incorrect implementations
+- Inconsistencies across the codebase
+- Code bypassing rules
+
+---
+
+### 🧠 2.4 General Best Practices
+
+Strictly enforce:
+
+- **React Native & Expo best practices**
+- **TypeScript strict mode**
+- **SOLID principles**
+- **Clean code & DRY**
+
+---
 
 ## 2.5. Review Existing Bot/Automated Comments
 
 If the PR has existing review comments from automated tools (e.g.,
 **CodeRabbit**, **SonarCloud**, **ESLint bot**), the agent MUST:
 
-- Use `mcp_github_get_pull_request_comments` to fetch all PR comments.
-- Filter for comments from bot users (e.g., `coderabbitai[bot]`).
-- **Triage each bot finding**:
-  - **Accept**: If the finding is valid and safe to fix, include it in the fix
-    plan.
-  - **Defer**: If the finding requires a large refactor or is beyond the scope
-    of a fix PR, note it as a `// TODO:` comment in the relevant file.
-  - **Reject**: If the finding is incorrect or not applicable, skip it (explain
-    why in the fix PR description).
-- Consolidate bot findings with the agent's own review into a single fix plan.
-  Avoid duplicating fixes that overlap between the two reviews.
+- Fetch all PR comments
+- Filter bot comments (e.g., `coderabbitai[bot]`)
+
+For each finding:
+
+- **Accept** → include in fix plan
+- **Defer** → add `// TODO:` with explanation
+- **Reject** → document reason in PR description
+
+Avoid duplicate fixes.
+
+---
 
 ## 3. Submit Review Feedback
 
-- Write constructive, specific, and actionable review comments.
-- **For GitHub PRs:** Use tools like `mcp_github_create_pull_request_review` or
-  `mcp_github_add_issue_comment` to add line-by-line comments and an overall
-  summary directly to the PR.
-- **For Local Branches:** Generate a Markdown artifact (`code-review-report.md`)
-  detailing the file-by-file feedback.
+- Provide **clear, structured, actionable feedback**
+
+### 📌 Format for Violations
+
+#### Constitution Violations
+
+- ❌ Violation: <title>
+  - 📄 Principle: <constitution principle>
+  - 📍 Location: <file + line>
+  - 🧨 Issue: explanation
+  - ✅ Fix: concrete solution
+
+#### Rules Violations
+
+- ❌ Violation: <title>
+  - 📄 Rule: `.agent/rules/<file>.md`
+  - 📍 Location: <file + line>
+  - 🧨 Issue: explanation
+  - ✅ Fix: suggestion
+
+#### Specs Violations
+
+- ❌ Violation: <title>
+  - 📄 Spec: `spc.md / plan.md / tasks.md`
+  - 📍 Location: <file + line>
+  - 🧨 Issue: missing or incorrect implementation
+  - ✅ Fix: required implementation
+
+#### Improvements
+
+- ⚠️ Improvement:
+  - 📄 Reference: (rule or principle if applicable)
+  - 💡 Suggestion
+
+---
 
 ## 4. Implement Fixes
 
-- Create and check out a new branch branching off from the _user's original
-  branch_ being reviewed.
-  - _Naming convention:_ `agent-fixes/<original-branch-name>`
-- Apply fixes addressing each of the review comments and feedback points
-  identified in Step 3.
-- Refactor the code as needed, ensuring it perfectly aligns with the project
-  constitution and rules.
-- Commit the changes locally with clear, descriptive commit messages.
+- Create a new branch from the user's branch:
+  - `agent-fixes/<original-branch-name>`
+
+- Apply fixes for:
+  - Constitution violations
+  - Specs gaps
+  - Rules violations
+  - Accepted bot findings
+
+- Ensure final code:
+  - Fully complies with constitution
+  - Fully implements specs
+  - Follows all rules
+
+- Commit with clear messages
+
+---
 
 ## 5. Create Fix Pull Request
 
-- Push the newly created branch to the remote repository.
-- Use the `mcp_github_create_pull_request` tool to open a new Pull Request.
-- **CRITICAL PR CONFIGURATION:** Set the **Base Branch** of this new PR to be
-  the **user's original branch** (the one that was just reviewed), NOT `main`.
-  This allows the user to easily review the agent's proposed fixes against their
-  own work.
-- Add a detailed PR body containing a checklist of the review comments that were
-  addressed.
-- Notify the user with a link or reference to the new PR so they can inspect and
-  merge the changes.
+- Push branch to remote
+
+- Create PR with:
+  - **Base branch = user's original branch**
+
+- Include:
+  - Checklist of fixes
+  - Summary of violations resolved
+  - Notes on deferred/rejected bot comments
+
+---
+
+## 🚨 Final Approval Criteria
+
+The PR is **NOT APPROVABLE** if any of the following exist:
+
+- Constitution violations
+- Missing or incomplete tasks from `tasks.md`
+- Spec deviations
+- Type safety violations
+- Incorrect architecture or layering
+- Broken monorepo boundaries
+- Missing migrations or DB inconsistencies
+
+---
+
+## ✅ Success Criteria
+
+- Code fully matches:
+  - `constitution.md`
+  - `.agent/rules/*.md`
+  - `specs/<branch-name>/*`
+
+- No missing features
+- No architectural violations
+- Clean, maintainable, production-ready code
