@@ -20,19 +20,20 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Budget, database } from "@astik/db";
 import { Q } from "@nozbe/watermelondb";
-import {
-  getCurrentPeriodBounds,
-  getDaysLeft,
-  getDaysElapsed,
-  isPeriodExpired,
-  computeSpendingMetrics,
-  type SpendingMetrics,
-} from "@astik/logic/src/budget";
+
 import {
   getSpendingForBudget,
   autoPauseBudget,
 } from "@/services/budget-service";
 import type { PeriodFilter } from "@/components/budget/PeriodFilterChips";
+import {
+  SpendingMetrics,
+  isPeriodExpired,
+  getCurrentPeriodBounds,
+  getDaysElapsed,
+  getDaysLeft,
+  computeSpendingMetrics,
+} from "@astik/logic";
 
 // =============================================================================
 // TYPES

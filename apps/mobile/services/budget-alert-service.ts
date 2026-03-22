@@ -19,7 +19,7 @@ import {
   getCurrentPeriodBounds,
   getDaysElapsed,
   computeSpendingMetrics,
-} from "@astik/logic/src/budget";
+} from "@astik/logic";
 import {
   getSpendingForBudget,
   setAlertFiredLevel,

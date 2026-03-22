@@ -19,7 +19,7 @@ import {
   filterExcludedTransactions,
   type SpendingMetrics,
   type WeeklyBucket,
-} from "@astik/logic/src/budget";
+} from "@astik/logic";
 import {
   getSpendingForBudget,
   getCategoryAndSubcategoryIds,

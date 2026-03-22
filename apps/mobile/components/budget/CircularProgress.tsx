@@ -21,7 +21,7 @@ import Animated, {
   withTiming,
   Easing,
 } from "react-native-reanimated";
-import type { ProgressStatus } from "@astik/logic/src/budget";
+import type { ProgressStatus } from "@astik/logic";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 

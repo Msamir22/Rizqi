@@ -7,13 +7,12 @@
  * @module BudgetDetailOverview
  */
 
+import { palette } from "@/constants/colors";
+import type { CurrencyType } from "@astik/db";
+import { type SpendingMetrics, formatCurrency } from "@astik/logic";
 import React from "react";
 import { Text, View } from "react-native";
 import { CircularProgress } from "./CircularProgress";
-import type { SpendingMetrics } from "@astik/logic/src/budget";
-import type { CurrencyType } from "@astik/db";
-import { formatCurrency } from "@astik/logic";
-import { palette } from "@/constants/colors";
 
 // ---------------------------------------------------------------------------
 // Types
