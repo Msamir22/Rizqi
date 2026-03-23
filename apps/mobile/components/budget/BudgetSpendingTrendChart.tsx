@@ -114,7 +114,7 @@ export function BudgetSpendingTrendChart({
     <View className="bg-white dark:bg-slate-800 rounded-2xl p-5 mx-5 mb-4 border border-slate-200 dark:border-slate-700">
       {/* Header */}
       <Text className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-4">
-        Weekly Spending
+        Spending Trend
       </Text>
 
       {/* Chart area */}

@@ -19,7 +19,7 @@ import {
   filterExcludedTransactions,
   type SpendingMetrics,
   type WeeklyBucket,
-} from "@astik/logic/src/budget";
+} from "@astik/logic";
 import {
   getSpendingForBudget,
   getCategoryAndSubcategoryIds,
@@ -64,19 +64,24 @@ const RECENT_TRANSACTIONS_LIMIT = 6;
 
 export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
   const [budget, setBudget] = useState<Budget | null>(null);
-  const [metrics, setMetrics] = useState<SpendingMetrics | null>(null);
-  const [daysLeft, setDaysLeft] = useState(0);
-  const [daysElapsed, setDaysElapsed] = useState(1);
-  const [weeklySpending, setWeeklySpending] = useState<WeeklySpendingData[]>(
-    []
-  );
-  const [subcategoryBreakdown, setSubcategoryBreakdown] = useState<
-    SubcategorySpending[]
-  >([]);
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>(
-    []
-  );
-  const [isLoading, setIsLoading] = useState(true);
+  // F-04: Consolidated into a single state object to avoid cascading re-renders
+  const [state, setState] = useState<{
+    readonly metrics: SpendingMetrics | null;
+    readonly daysLeft: number;
+    readonly daysElapsed: number;
+    readonly weeklySpending: readonly WeeklySpendingData[];
+    readonly subcategoryBreakdown: readonly SubcategorySpending[];
+    readonly recentTransactions: readonly Transaction[];
+    readonly isLoading: boolean;
+  }>({
+    metrics: null,
+    daysLeft: 0,
+    daysElapsed: 1,
+    weeklySpending: [],
+    subcategoryBreakdown: [],
+    recentTransactions: [],
+    isLoading: true,
+  });
 
   // ── Subscribe to budget changes ──
   useEffect(() => {
@@ -90,7 +95,15 @@ export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
         () => {
           // Budget not found or deleted
           setBudget(null);
-          setIsLoading(false);
+          setState({
+            metrics: null,
+            daysLeft: 0,
+            daysElapsed: 1,
+            weeklySpending: [],
+            subcategoryBreakdown: [],
+            recentTransactions: [],
+            isLoading: false,
+          });
         }
       );
 
@@ -104,7 +117,7 @@ export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
 
     async function compute(): Promise<void> {
       if (!budget) return;
-      setIsLoading(true);
+      setState((prev) => ({ ...prev, isLoading: true }));
 
       const bounds = getCurrentPeriodBounds(
         budget.period,
@@ -119,7 +132,8 @@ export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
       const computedMetrics = computeSpendingMetrics(
         spent,
         budget.amount,
-        elapsed
+        elapsed,
+        budget.alertThreshold
       );
 
       // Weekly buckets
@@ -247,13 +261,15 @@ export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
       ).slice(0, RECENT_TRANSACTIONS_LIMIT);
 
       if (!cancelled) {
-        setMetrics(computedMetrics);
-        setDaysLeft(left);
-        setDaysElapsed(elapsed);
-        setWeeklySpending(weeklyData);
-        setSubcategoryBreakdown(breakdown);
-        setRecentTransactions(recentFiltered);
-        setIsLoading(false);
+        setState({
+          metrics: computedMetrics,
+          daysLeft: left,
+          daysElapsed: elapsed,
+          weeklySpending: weeklyData,
+          subcategoryBreakdown: breakdown,
+          recentTransactions: recentFiltered,
+          isLoading: false,
+        });
       }
     }
 
@@ -266,12 +282,12 @@ export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
 
   return {
     budget,
-    metrics,
-    daysLeft,
-    daysElapsed,
-    weeklySpending,
-    subcategoryBreakdown,
-    recentTransactions,
-    isLoading,
+    metrics: state.metrics,
+    daysLeft: state.daysLeft,
+    daysElapsed: state.daysElapsed,
+    weeklySpending: state.weeklySpending,
+    subcategoryBreakdown: state.subcategoryBreakdown,
+    recentTransactions: state.recentTransactions,
+    isLoading: state.isLoading,
   };
 }

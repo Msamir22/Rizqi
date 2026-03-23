@@ -32,15 +32,14 @@ import type { Budget, BudgetPeriod, BudgetType } from "@astik/db";
 import {
   createBudget,
   updateBudget,
-  validateBudgetUniqueness,
   type CreateBudgetInput,
   type UpdateBudgetInput,
 } from "@/services/budget-service";
 import { useToast } from "@/components/ui/Toast";
 import { router } from "expo-router";
 import { useCategoryLookup } from "@/context/CategoriesContext";
-import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 
 // =============================================================================
 // Types
@@ -93,8 +92,8 @@ export function BudgetForm({
   const { isDark } = useTheme();
   const { expenseCategories } = useCategories();
   const categoryMap = useCategoryLookup();
-  const { preferredCurrency } = usePreferredCurrency();
   const { showToast } = useToast();
+  const { preferredCurrency } = usePreferredCurrency();
 
   // ── Form state ──
   const [form, setForm] = useState<FormState>(() => ({
@@ -203,21 +202,6 @@ export function BudgetForm({
           message: "Budget updated successfully",
         });
       } else {
-        // Create mode - validate uniqueness first
-        try {
-          await validateBudgetUniqueness(
-            form.type,
-            form.period,
-            form.type === "CATEGORY" ? form.categoryId : undefined
-          );
-        } catch (err) {
-          const message =
-            err instanceof Error ? err.message : "Duplicate budget";
-          setErrors({ general: message });
-          setIsSubmitting(false);
-          return;
-        }
-
         const input: CreateBudgetInput = {
           name: form.name.trim(),
           type: form.type,
@@ -252,9 +236,12 @@ export function BudgetForm({
   return (
     <ScrollView
       className="flex-1 px-5"
+      keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: 40 }}
     >
+      {/* ─── S-09: Field order: Type → Name → Category → Amount → Period → Alert ─── */}
+
       {/* General Error */}
       {errors.general ? (
         <View className="bg-red-50 dark:bg-red-900/20 p-3 rounded-xl mb-4">
@@ -264,28 +251,7 @@ export function BudgetForm({
         </View>
       ) : null}
 
-      {/* Budget Name */}
-      <View className="mb-5">
-        <Text className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-2">
-          Budget Name
-        </Text>
-        <TextInput
-          value={form.name}
-          onChangeText={(v) => updateField("name", v)}
-          placeholder="e.g., Groceries, Monthly Dining"
-          placeholderTextColor={
-            isDark ? palette.slate[600] : palette.slate[400]
-          }
-          className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 text-base text-slate-800 dark:text-white font-medium"
-        />
-        {errors.name ? (
-          <Text className="text-red-500 text-xs font-medium mt-1">
-            {errors.name}
-          </Text>
-        ) : null}
-      </View>
-
-      {/* Budget Type (hidden in edit mode) */}
+      {/* Budget Type (hidden in edit mode) — S-08: icon-bearing cards */}
       {!isEditMode && (
         <View className="mb-5">
           <Text className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-2">
@@ -297,42 +263,83 @@ export function BudgetForm({
               accessibilityRole="button"
               accessibilityLabel="Category budget type"
               accessibilityState={{ selected: form.type === "CATEGORY" }}
-              className={`flex-1 py-3 rounded-2xl items-center ${
-                form.type === "CATEGORY" ? "" : "bg-slate-100 dark:bg-slate-800"
-              }`}
-              style={
+              className={`flex-1 rounded-2xl items-center justify-center border bg-white dark:bg-slate-800 ${
                 form.type === "CATEGORY"
-                  ? { backgroundColor: palette.nileGreen[500] }
-                  : undefined
-              }
+                  ? ""
+                  : "border-slate-200 dark:border-slate-700"
+              }`}
+              style={[
+                { height: 80 },
+                form.type === "CATEGORY"
+                  ? { borderColor: palette.nileGreen[500], borderWidth: 2 }
+                  : undefined,
+              ]}
             >
-              <Text
-                className={`text-sm font-bold ${
+              <Ionicons
+                name="grid-outline"
+                size={24}
+                color={
                   form.type === "CATEGORY"
-                    ? "text-white"
+                    ? palette.nileGreen[500]
+                    : isDark
+                      ? palette.slate[400]
+                      : palette.slate[500]
+                }
+              />
+              <Text
+                className={`text-sm font-bold mt-2 ${
+                  form.type === "CATEGORY"
+                    ? ""
                     : "text-slate-600 dark:text-slate-300"
                 }`}
+                style={
+                  form.type === "CATEGORY"
+                    ? { color: palette.nileGreen[500] }
+                    : undefined
+                }
               >
                 Category
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => updateField("type", "GLOBAL")}
-              className={`flex-1 py-3 rounded-2xl items-center ${
-                form.type === "GLOBAL" ? "" : "bg-slate-100 dark:bg-slate-800"
-              }`}
-              style={
+              accessibilityRole="button"
+              accessibilityLabel="Global budget type"
+              accessibilityState={{ selected: form.type === "GLOBAL" }}
+              className={`flex-1 rounded-2xl items-center justify-center border bg-white dark:bg-slate-800 ${
                 form.type === "GLOBAL"
-                  ? { backgroundColor: palette.nileGreen[500] }
-                  : undefined
-              }
+                  ? ""
+                  : "border-slate-200 dark:border-slate-700"
+              }`}
+              style={[
+                { height: 80 },
+                form.type === "GLOBAL"
+                  ? { borderColor: palette.nileGreen[500], borderWidth: 2 }
+                  : undefined,
+              ]}
             >
-              <Text
-                className={`text-sm font-bold ${
+              <Ionicons
+                name="earth-outline"
+                size={24}
+                color={
                   form.type === "GLOBAL"
-                    ? "text-white"
+                    ? palette.nileGreen[500]
+                    : isDark
+                      ? palette.slate[400]
+                      : palette.slate[500]
+                }
+              />
+              <Text
+                className={`text-sm font-bold mt-2 ${
+                  form.type === "GLOBAL"
+                    ? ""
                     : "text-slate-600 dark:text-slate-300"
                 }`}
+                style={
+                  form.type === "GLOBAL"
+                    ? { color: palette.nileGreen[500] }
+                    : undefined
+                }
               >
                 Global
               </Text>
@@ -340,6 +347,27 @@ export function BudgetForm({
           </View>
         </View>
       )}
+
+      {/* Budget Name */}
+      <View className="mb-5">
+        <Text className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-2">
+          Budget Name
+        </Text>
+        <TextInput
+          value={form.name}
+          onChangeText={(v) => updateField("name", v)}
+          placeholder="e.g., Monthly Food Budget"
+          placeholderTextColor={
+            isDark ? palette.slate[600] : palette.slate[400]
+          }
+          className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 text-base text-slate-800 dark:text-white font-medium"
+        />
+        {errors.name ? (
+          <Text className="text-red-500 text-xs font-medium mt-1">
+            {errors.name}
+          </Text>
+        ) : null}
+      </View>
 
       {/* Category Picker (only for CATEGORY type) */}
       {form.type === "CATEGORY" && (
@@ -364,7 +392,7 @@ export function BudgetForm({
               {selectedCategory?.displayName ?? "Select a category"}
             </Text>
             <Ionicons
-              name="chevron-forward"
+              name="chevron-down"
               size={16}
               color={isDark ? palette.slate[500] : palette.slate[400]}
             />
@@ -380,18 +408,26 @@ export function BudgetForm({
       {/* Amount */}
       <View className="mb-5">
         <Text className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-2">
-          Budget Amount ({preferredCurrency})
+          Budget Limit
         </Text>
-        <TextInput
-          value={form.amount}
-          onChangeText={(v) => updateField("amount", v)}
-          placeholder="0.00"
-          placeholderTextColor={
-            isDark ? palette.slate[600] : palette.slate[400]
-          }
-          keyboardType="decimal-pad"
-          className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 text-base text-slate-800 dark:text-white font-medium"
-        />
+        <View className="flex-row items-center bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
+          <Text
+            className="text-base font-bold pl-4"
+            style={{ color: palette.nileGreen[500] }}
+          >
+            {preferredCurrency}
+          </Text>
+          <TextInput
+            value={form.amount}
+            onChangeText={(v) => updateField("amount", v)}
+            placeholder="0.00"
+            placeholderTextColor={
+              isDark ? palette.slate[600] : palette.slate[400]
+            }
+            keyboardType="decimal-pad"
+            className="flex-1 p-4 text-base text-slate-800 dark:text-white font-medium"
+          />
+        </View>
         {errors.amount ? (
           <Text className="text-red-500 text-xs font-medium mt-1">
             {errors.amount}
@@ -497,6 +533,9 @@ export function BudgetForm({
 
       {/* Alert Threshold */}
       <View className="mb-8">
+        <Text className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-2">
+          Alert When Spending Reaches
+        </Text>
         <AlertThresholdSlider
           value={form.alertThreshold}
           onValueChange={(v) => updateField("alertThreshold", v)}

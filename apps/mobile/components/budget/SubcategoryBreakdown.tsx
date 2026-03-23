@@ -49,7 +49,7 @@ export function SubcategoryBreakdown({
   return (
     <View className="rounded-3xl border p-5 mb-4 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
       <Text className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-4">
-        Spending by Subcategory
+        Top Subcategories
       </Text>
 
       {data.map((item, index) => (

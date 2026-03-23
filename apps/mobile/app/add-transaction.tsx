@@ -393,17 +393,18 @@ export default function AddTransaction(): React.ReactNode {
           linkedRecurringId,
         });
 
-        // Check budget alerts for expense transactions (non-blocking)
+        // F-02: Show success feedback immediately before non-critical alert check
+        showToast({
+          type: "success",
+          title: "Created",
+          message: "Transaction Created successfully",
+        });
+
+        // Check budget alerts for expense transactions (non-blocking to the success flow)
         if (tx && type === "EXPENSE") {
           alertTriggered = await budgetAlert.checkAfterTransaction(tx);
         }
       }
-
-      showToast({
-        type: "success",
-        title: "Created",
-        message: "Transaction Created successfully",
-      });
 
       // If a budget alert was triggered, stay on screen to show the modal
       if (!alertTriggered) {

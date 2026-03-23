@@ -25,7 +25,7 @@ import {
   filterExcludedTransactions,
   buildPauseInterval,
   parsePauseIntervals,
-} from "@astik/logic/src/budget";
+} from "@astik/logic";
 
 // =============================================================================
 // TYPES
