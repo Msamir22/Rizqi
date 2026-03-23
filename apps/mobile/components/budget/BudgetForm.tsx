@@ -236,6 +236,7 @@ export function BudgetForm({
   return (
     <ScrollView
       className="flex-1 px-5"
+      keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: 40 }}
     >
