@@ -7,10 +7,7 @@ import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { useCategoryChildren } from "@/hooks/useCategoryChildren";
 import { useCategoriesWithChildren } from "@/hooks/useCategoriesWithChildren";
-import {
-  useCategoryNavigation,
-  type NavigationDirection,
-} from "@/hooks/useCategoryNavigation";
+import { useCategoryNavigation } from "@/hooks/useCategoryNavigation";
 import type { Category, TransactionType } from "@astik/db";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
@@ -18,25 +15,16 @@ import {
   ActivityIndicator,
   FlatList,
   Modal,
+  Pressable,
   Text,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
   useWindowDimensions,
 } from "react-native";
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from "react-native-reanimated";
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-
-/** Duration of slide animations in ms */
-const SLIDE_ANIMATION_DURATION_MS = 250;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -78,7 +66,7 @@ export function CategorySelectorModal({
   onClose,
 }: CategorySelectorModalProps): React.JSX.Element {
   const { isDark } = useTheme();
-  const { width, height } = useWindowDimensions();
+  const { height } = useWindowDimensions();
 
   // Navigation state machine
   const navigation = useCategoryNavigation();
@@ -87,7 +75,6 @@ export function CategorySelectorModal({
     currentLevel,
     depth,
     searchQuery,
-    direction,
     drillInto,
     goBack,
     jumpToLevel,
@@ -142,27 +129,6 @@ export function CategorySelectorModal({
       hasAutoSkippedRef.current = false;
     }
   }, [visible]);
-
-  // ---[ Slide animation ]---
-  const translateX = useSharedValue(0);
-  const prevDirectionRef = useRef<NavigationDirection>("forward");
-
-  useEffect(() => {
-    // Skip animation on initial mount
-    if (depth === 0 && prevDirectionRef.current === "forward") return;
-
-    const slideFrom = direction === "forward" ? width : -width;
-    translateX.value = slideFrom;
-    translateX.value = withTiming(0, {
-      duration: SLIDE_ANIMATION_DURATION_MS,
-      easing: Easing.out(Easing.cubic),
-    });
-    prevDirectionRef.current = direction;
-  }, [depth, direction, width, translateX]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
-  }));
 
   // ---[ Handlers ]---
 
@@ -219,76 +185,73 @@ export function CategorySelectorModal({
       animationType="slide"
       onRequestClose={handleClose}
     >
-      <TouchableWithoutFeedback onPress={handleClose}>
-        <View className="flex-1 bg-black/60 justify-end">
-          <TouchableWithoutFeedback>
-            <View className="rounded-t-3xl overflow-hidden bg-white dark:bg-slate-900">
-              {/* Header */}
-              <View className="flex-row justify-between items-center px-6 py-5 border-b border-slate-200 dark:border-slate-800">
-                <Text className="text-xl font-bold text-slate-800 dark:text-slate-100">
-                  Select Category
-                </Text>
-                <TouchableOpacity onPress={handleClose} className="p-1">
-                  <Ionicons
-                    name="close"
-                    size={24}
-                    color={isDark ? palette.slate[300] : palette.slate[500]}
-                  />
-                </TouchableOpacity>
-              </View>
-
-              {/* Breadcrumb (only when drilled in) */}
-              {depth > 0 && (
-                <Breadcrumb
-                  stack={stack}
-                  onJumpToLevel={jumpToLevel}
-                  onGoBack={goBack}
-                />
-              )}
-
-              {/* Search bar */}
-              <CategorySearchBar
-                placeholder={searchPlaceholder}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
+      <Pressable
+        className="flex-1 bg-black/60 justify-end"
+        onPress={handleClose}
+      >
+        <Pressable
+          className="rounded-t-3xl overflow-hidden bg-white dark:bg-slate-900"
+          onPress={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <View className="flex-row justify-between items-center px-6 py-5 border-b border-slate-200 dark:border-slate-800">
+            <Text className="text-xl font-bold text-slate-800 dark:text-slate-100">
+              Select Category
+            </Text>
+            <TouchableOpacity onPress={handleClose} className="p-1">
+              <Ionicons
+                name="close"
+                size={24}
+                color={isDark ? palette.slate[300] : palette.slate[500]}
               />
+            </TouchableOpacity>
+          </View>
 
-              {/* Category list with slide animation */}
-              <Animated.View
-                style={[animatedStyle, { maxHeight: listMaxHeight }]}
-              >
-                {isLoading && depth > 0 ? (
-                  <View className="items-center justify-center py-12">
-                    <ActivityIndicator
-                      size="small"
-                      color={palette.nileGreen[500]}
-                    />
-                  </View>
-                ) : filteredCategories.length === 0 ? (
-                  <View className="items-center justify-center py-12">
-                    <Text className="text-sm text-slate-400 dark:text-slate-500">
-                      {searchQuery.trim()
-                        ? "No categories match your search"
-                        : "No categories found"}
-                    </Text>
-                  </View>
-                ) : (
-                  <FlatList
-                    data={filteredCategories}
-                    keyExtractor={keyExtractor}
-                    renderItem={renderItem}
-                    contentContainerClassName="px-4 pb-10 pt-1"
-                    showsVerticalScrollIndicator={false}
-                    removeClippedSubviews
-                    maxToRenderPerBatch={15}
-                    windowSize={5}
-                  />
-                )}
-              </Animated.View>
-            </View>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
+          {/* Breadcrumb (only when drilled in) */}
+          {depth > 0 && (
+            <Breadcrumb
+              stack={stack}
+              onJumpToLevel={jumpToLevel}
+              onGoBack={goBack}
+            />
+          )}
+
+          {/* Search bar */}
+          <CategorySearchBar
+            placeholder={searchPlaceholder}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+
+          {/* Category list */}
+          <View style={{ maxHeight: listMaxHeight }}>
+            {isLoading && depth > 0 ? (
+              <View className="items-center justify-center py-12">
+                <ActivityIndicator
+                  size="small"
+                  color={palette.nileGreen[500]}
+                />
+              </View>
+            ) : filteredCategories.length === 0 ? (
+              <View className="items-center justify-center py-12">
+                <Text className="text-sm text-slate-400 dark:text-slate-500">
+                  {searchQuery.trim()
+                    ? "No categories match your search"
+                    : "No categories found"}
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={filteredCategories}
+                keyExtractor={keyExtractor}
+                renderItem={renderItem}
+                contentContainerClassName="px-4 pb-10 pt-1"
+                showsVerticalScrollIndicator={false}
+              />
+            )}
+          </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }

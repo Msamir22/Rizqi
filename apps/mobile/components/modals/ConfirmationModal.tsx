@@ -1,13 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 
 import React from "react";
-import {
-  Modal,
-  Text,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
-} from "react-native";
+import { Modal, Pressable, Text, TouchableOpacity, View } from "react-native";
 import { palette } from "@/constants/colors";
 
 type ConfirmationVariant = "danger" | "warning" | "info";
@@ -82,62 +76,60 @@ export function ConfirmationModal({
       animationType="fade"
       onRequestClose={onCancel}
     >
-      <TouchableWithoutFeedback onPress={onCancel}>
-        <View className="flex-1 bg-black/70 justify-center items-center">
-          <TouchableWithoutFeedback>
-            <View className="w-[85%] max-w-[340px] rounded-2xl overflow-hidden border border-transparent dark:border-slate-700/40 bg-white dark:bg-slate-900">
-              <View className="p-6">
-                {/* Icon */}
-                <View
-                  className={`w-16 h-16 rounded-full ${config.iconBg} ${config.darkIconBg} justify-center items-center self-center mb-4`}
-                >
-                  <Ionicons
-                    name={iconName}
-                    size={32}
-                    color={config.iconColor}
-                  />
-                </View>
-
-                {/* Title */}
-                <Text className="text-[22px] font-bold text-slate-800 dark:text-slate-100 text-center mb-2">
-                  {title}
-                </Text>
-
-                {/* Message */}
-                <Text className="text-[15px] text-slate-500 dark:text-slate-400 text-center leading-[22px] mb-6">
-                  {message}
-                </Text>
-
-                {/* Actions */}
-                <View className="flex-row gap-3">
-                  <TouchableOpacity
-                    testID="modal-cancel"
-                    className="flex-1 py-3.5 rounded-xl items-center justify-center bg-slate-100 dark:bg-slate-800"
-                    onPress={onCancel}
-                  >
-                    <Text className="text-base font-semibold text-slate-600 dark:text-slate-300">
-                      {cancelLabel}
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    testID="modal-confirm"
-                    className={`flex-1 py-3.5 rounded-xl items-center justify-center ${config.buttonBg}`}
-                    onPress={() => {
-                      onConfirm();
-                      onCancel();
-                    }}
-                  >
-                    <Text className="text-base font-semibold text-white">
-                      {confirmLabel}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+      <Pressable
+        className="flex-1 bg-black/70 justify-center items-center"
+        onPress={onCancel}
+      >
+        <Pressable
+          className="w-[85%] max-w-[340px] rounded-2xl overflow-hidden border border-transparent dark:border-slate-700/40 bg-white dark:bg-slate-900"
+          onPress={(e) => e.stopPropagation()}
+        >
+          <View className="p-6">
+            {/* Icon */}
+            <View
+              className={`w-16 h-16 rounded-full ${config.iconBg} ${config.darkIconBg} justify-center items-center self-center mb-4`}
+            >
+              <Ionicons name={iconName} size={32} color={config.iconColor} />
             </View>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
+
+            {/* Title */}
+            <Text className="text-[22px] font-bold text-slate-800 dark:text-slate-100 text-center mb-2">
+              {title}
+            </Text>
+
+            {/* Message */}
+            <Text className="text-[15px] text-slate-500 dark:text-slate-400 text-center leading-[22px] mb-6">
+              {message}
+            </Text>
+
+            {/* Actions */}
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                testID="modal-cancel"
+                className="flex-1 py-3.5 rounded-xl items-center justify-center bg-slate-100 dark:bg-slate-800"
+                onPress={onCancel}
+              >
+                <Text className="text-base font-semibold text-slate-600 dark:text-slate-300">
+                  {cancelLabel}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                testID="modal-confirm"
+                className={`flex-1 py-3.5 rounded-xl items-center justify-center ${config.buttonBg}`}
+                onPress={() => {
+                  onConfirm();
+                  onCancel();
+                }}
+              >
+                <Text className="text-base font-semibold text-white">
+                  {confirmLabel}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
