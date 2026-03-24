@@ -35,6 +35,7 @@ Android** when used with NativeWind v4. Symptoms include:
 - Using inline `style` instead of `className`
 - Moving the Modal outside the parent View using Fragment
 - Matching the exact pattern of other working Modals (e.g., DeleteAccountSheet)
+- **Upgrading to NativeWind 4.2.3** (tested — race condition persists)
 
 ## Solution: Absolute-Positioned Overlay
 

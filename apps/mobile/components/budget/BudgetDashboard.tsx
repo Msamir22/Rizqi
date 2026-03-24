@@ -121,7 +121,7 @@ export function BudgetDashboard(): React.JSX.Element {
             <>
               {/* Hero Card */}
               {globalBudget ? (
-                <View className="px-5">
+                <View className="px-5 mt-6 mb-2">
                   <BudgetHeroCard
                     data={globalBudget}
                     currency={preferredCurrency}
@@ -136,6 +136,11 @@ export function BudgetDashboard(): React.JSX.Element {
                   <Text className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-500">
                     Categories
                   </Text>
+                  <Ionicons
+                    name="options-outline"
+                    size={16}
+                    color={palette.slate[400]}
+                  />
                 </View>
               )}
             </>

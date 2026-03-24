@@ -246,6 +246,8 @@ function RootLayoutNav(): React.ReactNode {
             presentation: "modal",
           }}
         />
+        <Stack.Screen name="create-budget" />
+        <Stack.Screen name="budget-detail" />
         <Stack.Screen name="sms-scan" />
         <Stack.Screen name="sms-review" />
         <Stack.Screen name="auth" />

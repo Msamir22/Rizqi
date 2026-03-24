@@ -111,69 +111,76 @@ export function BudgetSpendingTrendChart({
   const averageLineBottom = (weeklyAverage / maxAmount) * BAR_MAX_HEIGHT;
 
   return (
-    <View className="bg-white dark:bg-slate-800 rounded-2xl p-5 mx-5 mb-4 border border-slate-200 dark:border-slate-700">
-      {/* Header */}
-      <Text className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-4">
+    <View className="mb-6">
+      <Text className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold mb-2 ml-[22px]">
         Spending Trend
       </Text>
-
-      {/* Chart area */}
-      <View style={{ height: BAR_MAX_HEIGHT + 24 }}>
-        {/* Average line */}
-        <View
-          className="absolute left-0 right-0 border-dashed"
-          style={{
-            bottom: averageLineBottom,
-            borderBottomWidth: 1,
-            borderBottomColor: isDark ? palette.slate[600] : palette.slate[300],
-          }}
-        >
-          <Text
-            className="absolute text-slate-400 dark:text-slate-500 font-medium"
-            style={{ fontSize: 9, right: 0, top: -12 }}
+      <View className="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-slate-200 dark:border-slate-700">
+        {/* Chart area */}
+        <View style={{ height: BAR_MAX_HEIGHT + 24 }}>
+          {/* Average line */}
+          <View
+            className="absolute left-0 right-0 border-dashed"
+            style={{
+              bottom: averageLineBottom,
+              borderBottomWidth: 1,
+              borderBottomColor: isDark
+                ? palette.slate[600]
+                : palette.slate[300],
+            }}
           >
-            avg{" "}
-            {formatCurrency({
-              amount: weeklyAverage,
-              currency,
-              maximumFractionDigits: 0,
-            })}
-          </Text>
-        </View>
-
-        {/* Bars */}
-        <View
-          className="flex-row items-end justify-around"
-          style={{ height: BAR_MAX_HEIGHT }}
-        >
-          {data.map((week, index) => {
-            const barHeight = Math.max(
-              (week.amount / maxAmount) * BAR_MAX_HEIGHT,
-              2
-            );
-            return (
-              <View key={week.label} className="items-center">
-                <AnimatedBar
-                  height={barHeight}
-                  color={getBarColor(week.amount)}
-                  delay={index * 80}
-                />
-              </View>
-            );
-          })}
-        </View>
-
-        {/* Labels */}
-        <View className="flex-row justify-around mt-2">
-          {data.map((week) => (
-            <Text
-              key={week.label}
-              className="text-slate-400 dark:text-slate-500 font-medium text-center"
-              style={{ fontSize: 9, width: BAR_WIDTH + 8 }}
+            <View
+              className="absolute flex-row justify-end"
+              style={{ right: 0, top: -7, left: 0, zIndex: 10 }}
             >
-              {week.label}
-            </Text>
-          ))}
+              <Text
+                className="text-slate-400 dark:text-slate-500 font-medium bg-white dark:bg-slate-800 px-1"
+                style={{ fontSize: 9 }}
+              >
+                avg{" "}
+                {formatCurrency({
+                  amount: weeklyAverage,
+                  currency,
+                  maximumFractionDigits: 0,
+                })}
+              </Text>
+            </View>
+          </View>
+
+          {/* Bars */}
+          <View
+            className="flex-row items-end justify-around"
+            style={{ height: BAR_MAX_HEIGHT }}
+          >
+            {data.map((week, index) => {
+              const barHeight = Math.max(
+                (week.amount / maxAmount) * BAR_MAX_HEIGHT,
+                2
+              );
+              return (
+                <View key={week.label} className="items-center">
+                  <AnimatedBar
+                    height={barHeight}
+                    color={getBarColor(week.amount)}
+                    delay={index * 80}
+                  />
+                </View>
+              );
+            })}
+          </View>
+
+          {/* Labels */}
+          <View className="flex-row justify-around mt-2">
+            {data.map((week) => (
+              <Text
+                key={week.label}
+                className="text-slate-400 dark:text-slate-500 font-medium text-center"
+                style={{ fontSize: 9, width: BAR_WIDTH + 8 }}
+              >
+                {week.label}
+              </Text>
+            ))}
+          </View>
         </View>
       </View>
     </View>
