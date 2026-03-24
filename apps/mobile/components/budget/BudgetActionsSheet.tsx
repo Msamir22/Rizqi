@@ -40,7 +40,7 @@ interface BudgetActionsSheetProps {
   readonly visible: boolean;
   readonly isPaused: boolean;
   readonly onClose: () => void;
-  readonly onAction: (action: BudgetAction) => void;
+  readonly onAction: (action: BudgetAction) => void | Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -137,11 +137,11 @@ export function BudgetActionsSheet({
   const handleDelete = useCallback((): void => {
     setShowDeleteConfirm(false);
     onClose();
-    onAction("delete");
+    void onAction("delete");
   }, [onClose, onAction]);
 
-  const handlePauseToggle = useCallback((): void => {
-    onAction(isPaused ? "resume" : "pause");
+  const handlePauseToggle = useCallback(async (): Promise<void> => {
+    await onAction(isPaused ? "resume" : "pause");
     onClose();
   }, [isPaused, onAction, onClose]);
 
@@ -192,7 +192,7 @@ export function BudgetActionsSheet({
             <TouchableOpacity
               onPress={() => {
                 onClose();
-                onAction("edit");
+                void onAction("edit");
               }}
               activeOpacity={0.7}
               style={styles.row}
@@ -230,7 +230,9 @@ export function BudgetActionsSheet({
               </View>
               {/* Toggle */}
               <TouchableOpacity
-                onPress={handlePauseToggle}
+                onPress={() => {
+                  void handlePauseToggle();
+                }}
                 activeOpacity={0.7}
                 style={[
                   styles.toggleTrack,

@@ -31,6 +31,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { palette } from "@/constants/colors";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import { useBudgets, type BudgetWithMetrics } from "@/hooks/useBudgets";
+import { useTheme } from "@/context/ThemeContext";
 import { formatCurrency } from "@astik/logic";
 import { PeriodFilterChips } from "./PeriodFilterChips";
 import { BudgetHeroCard } from "./BudgetHeroCard";
@@ -43,6 +44,7 @@ import { BudgetEmptyState } from "./BudgetEmptyState";
 
 export function BudgetDashboard(): React.JSX.Element {
   const insets = useSafeAreaInsets();
+  const { isDark } = useTheme();
   const { preferredCurrency } = usePreferredCurrency();
   const {
     globalBudget,
@@ -139,7 +141,7 @@ export function BudgetDashboard(): React.JSX.Element {
                   <Ionicons
                     name="options-outline"
                     size={16}
-                    color={palette.slate[400]}
+                    color={isDark ? palette.slate[500] : palette.slate[400]}
                   />
                 </View>
               )}

@@ -125,9 +125,7 @@ export function BudgetCategoryCard({
               metrics.status === "danger" ? palette.red[500] : palette.gold[600]
             }
           />
-        ) : (
-          <View />
-        )}
+        ) : null}
       </View>
 
       {/* Bottom section: category name + spent/limit */}
