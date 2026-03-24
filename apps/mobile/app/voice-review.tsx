@@ -15,7 +15,7 @@
  */
 
 import { PageHeader } from "@/components/navigation/PageHeader";
-import { SmsTransactionReview } from "@/components/sms-sync/SmsTransactionReview";
+import { TransactionReview } from "@/components/transaction-review/TransactionReview";
 import { useToast } from "@/components/ui/Toast";
 import { palette } from "@/constants/colors";
 import { batchCreateSmsTransactions } from "@/services/batch-sms-transactions";
@@ -176,7 +176,7 @@ export default function VoiceReviewScreen(): React.JSX.Element {
       )}
 
       {/* Transaction review list (reuses SMS review component) */}
-      <SmsTransactionReview
+      <TransactionReview
         transactions={transactions as ParsedSmsTransaction[]}
         onSave={handleSave}
         onDiscard={handleDiscard}

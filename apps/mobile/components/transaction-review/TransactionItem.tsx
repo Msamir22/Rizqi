@@ -1,7 +1,7 @@
 /**
- * SmsTransactionItem Component
+ * TransactionItem Component
  *
- * A single row in the SMS transaction review list. Displays:
+ * A single row in the transaction review list. Displays:
  * - Selection checkbox
  * - Colour-coded amount (green for income, red for expense)
  * - Sender name and counterparty
@@ -20,7 +20,7 @@
  * - Callbacks receive `index` so the parent can use stable useCallback refs
  *   instead of inline arrows that break React.memo
  *
- * @module SmsTransactionItem
+ * @module TransactionItem
  */
 
 import { palette } from "@/constants/colors";
@@ -35,7 +35,7 @@ import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 // Types
 // ---------------------------------------------------------------------------
 
-interface SmsTransactionItemProps {
+interface TransactionItemProps {
   /** The parsed transaction data */
   readonly transaction: ParsedSmsTransaction;
   /** The original index in the flat transactions array */
@@ -75,7 +75,7 @@ const CONFIDENCE_REVIEW_THRESHOLD = 0.8;
 // Component
 // ---------------------------------------------------------------------------
 
-function SmsTransactionItemInner({
+function TransactionItemInner({
   transaction,
   index,
   isSelected,
@@ -84,7 +84,7 @@ function SmsTransactionItemInner({
   onToggleSelect,
   onPress,
   hasMissingInfo = false,
-}: SmsTransactionItemProps): React.JSX.Element {
+}: TransactionItemProps): React.JSX.Element {
   const [isExpanded, setIsExpanded] = useState(false);
   const isExpense = transaction.type === "EXPENSE";
   const needsReview = transaction.confidence <= CONFIDENCE_REVIEW_THRESHOLD;
@@ -239,4 +239,4 @@ function SmsTransactionItemInner({
 }
 
 /** Memoized to avoid re-rendering all 150+ items on every parent state change. */
-export const SmsTransactionItem = memo(SmsTransactionItemInner);
+export const TransactionItem = memo(TransactionItemInner);

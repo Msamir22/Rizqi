@@ -54,9 +54,9 @@ interface VoiceTransactionFlowResult {
   /** Open overlay and start recording */
   readonly startFlow: () => Promise<void>;
   /** Pause recording */
-  readonly pauseRecording: () => Promise<void>;
+  readonly pauseRecording: () => void;
   /** Resume recording */
-  readonly resumeRecording: () => Promise<void>;
+  readonly resumeRecording: () => void;
   /** Stop recording and submit to AI */
   readonly submitRecording: () => Promise<void>;
   /** Discard recording and close overlay */
@@ -119,13 +119,13 @@ export function useVoiceTransactionFlow(
     await recorder.start();
   }, [recorder, config.originTabIndex]);
 
-  const pauseRecording = useCallback(async (): Promise<void> => {
-    await recorder.pause();
+  const pauseRecording = useCallback((): void => {
+    recorder.pause();
     setFlowStatus("paused");
   }, [recorder]);
 
-  const resumeRecording = useCallback(async (): Promise<void> => {
-    await recorder.resume();
+  const resumeRecording = useCallback((): void => {
+    recorder.resume();
     setFlowStatus("recording");
   }, [recorder]);
 

@@ -14,16 +14,7 @@
  * @module useVoiceRecorder
  */
 
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable import/no-unresolved -- expo-audio types unavailable until npm install resolves */
-
 import { useCallback, useEffect, useRef, useState } from "react";
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore - expo-audio types may not be available until npm install resolves
 import {
   useAudioRecorder,
   useAudioRecorderState,
@@ -66,9 +57,9 @@ interface VoiceRecorderResult {
   /** Start a new recording */
   readonly start: () => Promise<void>;
   /** Pause the current recording */
-  readonly pause: () => Promise<void>;
+  readonly pause: () => void;
   /** Resume a paused recording */
-  readonly resume: () => Promise<void>;
+  readonly resume: () => void;
   /** Stop the recording and finalize the audio file */
   readonly stop: () => Promise<{ uri: string; durationMs: number } | null>;
   /** Discard the recording and clean up temp files (FR-021) */
@@ -117,7 +108,7 @@ export function useVoiceRecorder(): VoiceRecorderResult {
 
   // Check permission on mount
   useEffect(() => {
-    AudioModule.getRecordingPermissionsAsync().then(
+    void AudioModule.getRecordingPermissionsAsync().then(
       (result: { granted: boolean }) => {
         setHasPermission(result.granted);
       }
@@ -205,21 +196,21 @@ export function useVoiceRecorder(): VoiceRecorderResult {
     }
   }, [audioRecorder, startTimer]);
 
-  const pause = useCallback(async (): Promise<void> => {
+  const pause = useCallback((): void => {
     if (status !== "recording") return;
     try {
       stopTimer();
-      await audioRecorder.pause();
+      audioRecorder.pause();
       setStatus("paused");
     } catch (err: unknown) {
       console.error("[useVoiceRecorder] Pause failed:", err);
     }
   }, [status, audioRecorder, stopTimer]);
 
-  const resume = useCallback(async (): Promise<void> => {
+  const resume = useCallback((): void => {
     if (status !== "paused") return;
     try {
-      await Promise.resolve(audioRecorder.record());
+      audioRecorder.record();
       setStatus("recording");
       startTimer();
     } catch (err: unknown) {

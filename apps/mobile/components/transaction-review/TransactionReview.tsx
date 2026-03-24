@@ -1,10 +1,10 @@
 /**
- * SmsTransactionReview Component
+ * TransactionReview Component
  *
  * Full-screen review UI for parsed SMS transactions. Provides:
  * - Filter pills (Period + Type) reusing existing filter modals
  * - Search bar for counterparty/sender text filtering
- * - Date-grouped FlatList of SmsTransactionItem rows
+ * - Date-grouped FlatList of TransactionItem rows
  * - "Select All / Deselect All" toggle
  * - Summary bar showing counts
  * - "Save Selected" and "Discard All" actions
@@ -13,11 +13,11 @@
  * Architecture & Design Rationale:
  * - Pattern: Container Component (owns selection + filter state + callbacks)
  * - Why: Encapsulates review logic while delegating each row to
- *   the presentational SmsTransactionItem component (SRP).
+ *   the presentational TransactionItem component (SRP).
  * - SOLID: Open/Closed — reuses PeriodFilterModal and TypeFilterModal
  *   without modifying them. Client-side filtering avoids DB coupling.
  *
- * @module SmsTransactionReview
+ * @module TransactionReview
  */
 
 import { PeriodFilterModal } from "@/components/modals/PeriodFilterModal";
@@ -59,10 +59,10 @@ import {
 } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import {
-  SmsTransactionEditModal,
+  TransactionEditModal,
   type TransactionEdits,
-} from "./SmsTransactionEditModal";
-import { SmsTransactionItem } from "./SmsTransactionItem";
+} from "./TransactionEditModal";
+import { TransactionItem } from "./TransactionItem";
 import { useCategoryLookup } from "@/context/CategoriesContext";
 import { TransactionFiltersBar } from "@/components/transactions/TransactionFiltersBar";
 
@@ -70,7 +70,7 @@ import { TransactionFiltersBar } from "@/components/transactions/TransactionFilt
 // Types
 // ---------------------------------------------------------------------------
 
-interface SmsTransactionReviewProps {
+interface TransactionReviewProps {
   /** All parsed transactions from the scan */
   readonly transactions: readonly ParsedSmsTransaction[];
   /** Called when user saves selected transactions with their account mappings */
@@ -188,12 +188,12 @@ function applyFilters(
 // Component
 // ---------------------------------------------------------------------------
 
-export function SmsTransactionReview({
+export function TransactionReview({
   transactions,
   onSave,
   onDiscard,
   isSaving,
-}: SmsTransactionReviewProps): React.JSX.Element {
+}: TransactionReviewProps): React.JSX.Element {
   const { isDark } = useTheme();
 
   // ── Filter state ──────────────────────────────────────────────────
@@ -290,7 +290,7 @@ export function SmsTransactionReview({
         );
       } catch (err: unknown) {
         if (cancelled) return;
-        console.warn("[SmsTransactionReview] Account matching failed:", err);
+        console.warn("[TransactionReview] Account matching failed:", err);
         showToast({
           type: "warning",
           title: "Account Matching Failed",
@@ -475,7 +475,7 @@ export function SmsTransactionReview({
         null;
 
       return (
-        <SmsTransactionItem
+        <TransactionItem
           transaction={tx}
           index={item.originalIndex}
           isSelected={selectedIndicesRef.current.has(item.originalIndex)}
@@ -635,7 +635,7 @@ export function SmsTransactionReview({
 
       {/* ── Inline edit modal ──────────────────────────────────── */}
       {editModalIndex !== null && effectiveTransactions[editModalIndex] && (
-        <SmsTransactionEditModal
+        <TransactionEditModal
           visible={editModalIndex !== null}
           transaction={effectiveTransactions[editModalIndex]}
           currentAccountName={

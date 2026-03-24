@@ -17,7 +17,7 @@
  * @module sms-review
  */
 
-import { SmsTransactionReview } from "@/components/sms-sync/SmsTransactionReview";
+import { TransactionReview } from "@/components/transaction-review/TransactionReview";
 import { useToast } from "@/components/ui/Toast";
 import { palette } from "@/constants/colors";
 import { useSmsScanContext } from "@/context/SmsScanContext";
@@ -163,7 +163,7 @@ export default function SmsReviewScreen(): React.JSX.Element {
       />
 
       {/* Transaction review list */}
-      <SmsTransactionReview
+      <TransactionReview
         transactions={transactions}
         onSave={handleSave}
         onDiscard={handleDiscard}

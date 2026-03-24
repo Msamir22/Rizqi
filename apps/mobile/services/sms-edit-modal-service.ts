@@ -1,7 +1,7 @@
 /**
  * SMS Edit Modal Service
  *
- * Pure business logic extracted from SmsTransactionEditModal.
+ * Pure business logic extracted from TransactionEditModal.
  * Handles duplicate account detection, pending account construction,
  * and transaction edits building.
  *

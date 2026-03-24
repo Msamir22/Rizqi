@@ -2,7 +2,8 @@
 
 **Feature Branch**: `020-voice-transaction-flow`  
 **Created**: 2026-03-19  
-**Status**: Draft  
+**Updated**: 2026-03-23  
+**Status**: Draft (Rev 2 — post-review)  
 **Input**: GitHub Issue #92 — Enhancement: Refactor Voice Transaction Recording
 Flow
 
@@ -30,19 +31,23 @@ verifying the overlay appears over the current view without navigating away.
 2. **Given** the recording overlay is visible, **When** the user speaks,
    **Then** an audio waveform visualization reflects real-time audio levels AND
    a timer counts upward (00:00 → 01:00).
-3. **Given** the user is recording, **When** they tap the "Done" button,
+3. **Given** the recording overlay is visible, **Then** the user sees a clear
+   indication that the maximum recording duration is 1 minute (e.g., progress
+   bar labeled "0s / 60s").
+4. **Given** the user is recording, **When** they tap the "Done" button,
    **Then** the recording stops AND the audio file is submitted for AI analysis.
-4. **Given** the user is recording, **When** they tap the "Pause" button,
+5. **Given** the user is recording, **When** they tap the "Pause" button,
    **Then** the recording pauses AND the waveform freezes AND the timer pauses
    AND the Pause button becomes a "Resume" button.
-5. **Given** the recording is paused, **When** the user taps "Resume", **Then**
+6. **Given** the recording is paused, **When** the user taps "Resume", **Then**
    the recording continues from where it left off.
-6. **Given** the user is recording, **When** they tap the "Discard" (X) button,
+7. **Given** the user is recording, **When** they tap the "Discard" (X) button,
    **Then** the recording is cancelled AND the overlay closes AND no data is
    sent.
-7. **Given** the user is recording, **When** the timer reaches 60 seconds,
-   **Then** the recording automatically stops AND submits for AI analysis (same
-   as tapping "Done").
+8. **Given** the user is recording, **When** the timer reaches 60 seconds,
+   **Then** the recording automatically stops (NOT auto-submitted). The user
+   remains on the overlay and must explicitly choose "Done" to submit or
+   "Discard" to cancel.
 
 ---
 
@@ -74,6 +79,17 @@ verifying the AI returns parsed transaction data.
 5. **Given** the user speaks in Egyptian Arabic or mixed Arabic/English,
    **When** the AI parses this, **Then** it correctly identifies amounts,
    merchants, and transaction types regardless of language.
+6. **Given** the AI parses transactions, **Then** the currency for each
+   transaction defaults to the user's preferred currency (not detected by AI
+   from voice). The AI does NOT determine the currency.
+7. **Given** the app sends a request to the AI, **Then** it includes the user's
+   category list (same format as parse-sms) and the user's account list (account
+   names + IDs) so the AI can match categories and accounts.
+8. **Given** the user mentions an account name in their voice (e.g., "from my
+   CIB account"), **When** the AI parses this, **Then** it matches the spoken
+   account name to the provided account list and returns the account ID. If no
+   match or no account mentioned, the transaction is linked to the user's
+   default account.
 
 ---
 
@@ -105,15 +121,16 @@ correctly.
    **Then** all transactions are selected/deselected together.
 5. **Given** one or more transactions are selected, **When** the user taps "Save
    N Transactions", **Then** only the selected transactions are persisted to the
-   database.
+   database AND the user is navigated back to the tab they were on before
+   tapping the mic button.
 6. **Given** the review screen is visible, **When** the user taps "Discard All",
    **Then** all transactions are discarded AND the user returns to their
    previous screen.
 7. **Given** the review screen is visible, **When** the user taps "Retry",
    **Then** the user is taken back to the recording overlay to re-record.
-8. **Given** the review screen is in dark mode, **When** the transcript card is
-   displayed, **Then** it shows the AI-generated transcript text (not the user's
-   raw audio, but the AI's text interpretation of it).
+8. **Given** the review screen is visible (regardless of theme mode), **Then**
+   it shows the AI-generated transcript card with the text interpretation of the
+   user's speech.
 
 ---
 
@@ -144,16 +161,16 @@ timer, waveform, and progress bar update in real time.
 
 ### Edge Cases
 
-- What happens when the user taps the mic button while already recording? →
-  Recording overlay remains visible; mic button tap is ignored or brings focus
-  to the overlay.
+- What happens when the user taps the mic button while already recording? → The
+  recording overlay remains visible and brings focus to the overlay.
 - What happens when the app goes to background during recording? → The recording
   pauses automatically and can be resumed when the app returns to foreground. If
   the app stays in background for more than 2 minutes, the recording is
   discarded.
 - What happens when the network is unavailable during AI analysis? → The user
-  sees an error message with a "Retry" button. The audio file is temporarily
-  stored locally to allow retry when connectivity returns.
+  sees a friendly error message: "Network connection is required to analyze your
+  voice note using AI. Please check your connection and try again." No offline
+  retry queue — the user must re-record or return later.
 - What happens when the AI returns an empty result (no transactions detected)? →
   The user sees a friendly message ("No transactions found in your recording.
   Try again?") with options to retry or discard.
@@ -174,9 +191,11 @@ timer, waveform, and progress bar update in real time.
 - **FR-003**: System MUST provide three recording controls: Discard (cancel
   recording), Pause/Resume (toggle recording), and Done (stop and submit).
 - **FR-004**: System MUST enforce a maximum recording duration of 60 seconds,
-  automatically stopping and submitting when the limit is reached.
-- **FR-005**: System MUST display a real-time timer (MM:SS format) and audio
-  waveform visualization during recording.
+  automatically stopping recording when the limit is reached BUT NOT
+  auto-submitting. The user must explicitly choose to submit or discard.
+- **FR-005**: System MUST display a real-time timer (MM:SS format), audio
+  waveform visualization, and a clear indication of the 1-minute max duration
+  during recording.
 - **FR-006**: System MUST display a progress bar showing elapsed time relative
   to the 60-second maximum.
 - **FR-007**: System MUST send the recorded audio file to the AI service for
@@ -189,7 +208,7 @@ timer, waveform, and progress bar update in real time.
 - **FR-010**: System MUST allow users to select/deselect, edit, and save
   individual transactions from the review screen.
 - **FR-011**: System MUST display the AI-generated transcript text in a
-  transcript card at the top of the review screen.
+  transcript card at the top of the review screen, regardless of the theme mode.
 - **FR-012**: System MUST allow the user to retry recording from the review
   screen via a "Retry" action.
 - **FR-013**: System MUST show the mic button in an active visual state (pulse
@@ -200,6 +219,30 @@ timer, waveform, and progress bar update in real time.
   clear messaging and a path to system settings.
 - **FR-016**: System MUST support both Arabic (Egyptian dialect + MSA) and
   English voice input, as well as code-switching between them.
+- **FR-017**: System MUST default the transaction currency to the user's
+  preferred currency. The AI MUST NOT determine the currency from voice.
+- **FR-018**: System MUST send the user's category list and account list
+  (names + IDs) to the AI service so the AI can match categories and accounts
+  from voice input.
+- **FR-019**: If the user mentions an account by name, the AI MUST match it to
+  the provided account list and return the corresponding account ID. If no match
+  or no account mentioned, the system MUST link the transaction to the user's
+  default account.
+- **FR-020**: When the network is unavailable, the system MUST show a friendly
+  error explaining that AI analysis requires a network connection. No offline
+  retry queue.
+- **FR-021**: Audio data MUST NOT be stored server-side. The edge function
+  processes audio in-memory via Gemini and discards it. The local temporary
+  audio file MUST be deleted from the device after submission (or on discard).
+- **FR-022**: The AI MUST extract relative dates/times from voice input (e.g.,
+  "yesterday", "last Friday") and return a parsed date. If no date/time is
+  mentioned, the transaction date defaults to the current timestamp.
+- **FR-023**: If the user does not mention a merchant or counterparty in their
+  voice, the AI MUST return an empty string for the counterparty field. The user
+  can optionally fill it in during review.
+- **FR-024**: The client MUST enforce a 30-second timeout for the AI analysis
+  request. If the AI does not respond within 30 seconds, the system MUST cancel
+  the request and show an error with a retry option.
 
 ### Key Entities
 
@@ -207,12 +250,11 @@ timer, waveform, and progress bar update in real time.
   microphone; associated with a recording session, duration, and status
   (recording, paused, completed, discarded).
 - **Parsed Voice Transaction**: A structured financial entry extracted by AI
-  from the audio; includes amount, currency, transaction type (expense/income),
-  merchant/description, detected category, and detected language. Maps to the
-  existing `ParsedSmsTransaction` data structure.
+  from the audio; includes amount, transaction type (expense/income),
+  merchant/description, detected category (system_name), and matched account ID.
+  Currency is set by the client to the user's preferred currency, not by the AI.
 - **AI Transcript**: The text interpretation of the user's speech as generated
-  by the AI service; displayed in the review screen for user context but not
-  used for parsing (audio is sent directly).
+  by the AI service; displayed in the review screen for user context.
 
 ## Success Criteria _(mandatory)_
 
@@ -232,20 +274,30 @@ timer, waveform, and progress bar update in real time.
 - **SC-006**: The recording overlay opens within 500ms of tapping the mic
   button.
 
-## Assumptions
+## Assumptions (Verified)
 
-- The AI Edge Function (`parse-voice`) already supports audio file input
-  (multipart form data) as confirmed in the existing
-  `ai-voice-parser-service.ts`.
-- The existing `SmsTransactionReview` component and its sub-components
-  (`SmsTransactionItem`, `SmsTransactionEditModal`) are mature enough to be
-  renamed/refactored to a source-agnostic `TransactionReview` component with a
-  `source: "sms" | "voice"` prop.
-- The AI voice parser already maps results to `ParsedSmsTransaction[]`, so the
-  same data type flows through both SMS and voice review flows.
-- The mic button remains globally accessible on all tabs (already the case in
-  the current tab bar design).
-- `expo-av` (or equivalent) is available for audio recording in the Expo managed
-  workflow.
-- No server-side changes are needed beyond what the existing `parse-voice` Edge
-  Function already handles.
+| #   | Assumption                                                                                                      | Verified? | Actual Status                                                                                                                                                                                                                                                                                                                                                                                                       |
+| --- | --------------------------------------------------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | The AI Edge Function `parse-voice` already supports audio file input (multipart form data)                      | ✅ Yes    | Confirmed in `supabase/functions/parse-voice/index.ts` lines 280–296                                                                                                                                                                                                                                                                                                                                                |
+| 2   | `SmsTransactionReview` and sub-components can be renamed/refactored to `TransactionReview` with a `source` prop | ✅ Yes    | Components use `ParsedSmsTransaction` which the voice parser already maps to                                                                                                                                                                                                                                                                                                                                        |
+| 3   | The AI voice parser already maps results to `ParsedSmsTransaction[]`                                            | ✅ Yes    | Confirmed in `apps/mobile/services/ai-voice-parser-service.ts` lines 172–188                                                                                                                                                                                                                                                                                                                                        |
+| 4   | The mic button remains globally accessible on all tabs                                                          | ✅ Yes    | Already in `CustomBottomTabBar.tsx`                                                                                                                                                                                                                                                                                                                                                                                 |
+| 5   | `expo-audio` is available for audio recording                                                                   | ❌ No     | NOT installed. Only `expo-speech-recognition` is installed, which does on-device STT, not raw audio recording. **Need to install `expo-audio`** (`expo-av` is deprecated and removed in SDK 54)                                                                                                                                                                                                                     |
+| 6   | No server-side changes are needed                                                                               | ❌ No     | **Several enhancements needed to `parse-voice` edge function**: (a) Accept categories from client like parse-sms does, (b) Accept account list for account matching, (c) Remove currency detection — currency set client-side, (d) Return transcript text, (e) Align CATEGORY_TREE format with parse-sms's L1/L2 hierarchy, (f) Add retry/backoff like parse-sms, (g) Reuse parse-sms's categorization instructions |
+
+## Clarifications
+
+### Session 2026-03-24
+
+- Q: What happens to audio data after AI analysis? → A: Audio is never stored
+  server-side. Processed in-memory only by Gemini. Local temp file is deleted
+  after submission.
+- Q: Should the AI extract dates from voice or default to current timestamp? →
+  A: AI extracts relative dates ("yesterday", "last Friday") when mentioned.
+  Defaults to current timestamp if no date mentioned.
+- Q: Where does the user navigate after saving voice transactions? → A: Back to
+  the tab the user was on before tapping the mic button.
+- Q: What if the user doesn't mention a counterparty? → A: AI returns empty
+  string. User can fill it in during review.
+- Q: Should there be a client-side AI timeout? → A: Yes, 30 seconds. Cancel and
+  show error with retry option.

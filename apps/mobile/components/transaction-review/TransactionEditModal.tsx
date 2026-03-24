@@ -1,5 +1,5 @@
 /**
- * SmsTransactionEditModal
+ * TransactionEditModal
  *
  * Inline bottom-sheet modal for editing a parsed SMS transaction directly
  * from the review page. Allows editing: amount, category, account, counterparty,
@@ -10,7 +10,7 @@
  * 2. Text input — when no accounts exist OR user taps "+ New"
  * 3. "+ New" toggle — creates a PendingAccount on save
  *
- * @module SmsTransactionEditModal
+ * @module TransactionEditModal
  */
 
 import { palette } from "@/constants/colors";
@@ -66,7 +66,7 @@ import { TypeTabs } from "../add-transaction/TypeTabs";
 // Types
 // ---------------------------------------------------------------------------
 
-interface SmsTransactionEditModalProps {
+interface TransactionEditModalProps {
   /** Whether the modal is visible */
   readonly visible: boolean;
   /** The transaction being edited */
@@ -112,7 +112,7 @@ interface AccountOption {
 // Component
 // ---------------------------------------------------------------------------
 
-export function SmsTransactionEditModal({
+export function TransactionEditModal({
   visible,
   transaction,
   currentAccountName,
@@ -126,7 +126,7 @@ export function SmsTransactionEditModal({
   onSave,
   onCreatePendingAccount,
   onClose,
-}: SmsTransactionEditModalProps): React.JSX.Element {
+}: TransactionEditModalProps): React.JSX.Element {
   // Local editable state
   const [amount, setAmount] = useState(transaction.amount.toString());
   const [counterparty, setCounterparty] = useState(transaction.counterparty);
@@ -976,4 +976,4 @@ export function SmsTransactionEditModal({
   );
 }
 
-export type { SmsTransactionEditModalProps, TransactionEdits };
+export type { TransactionEditModalProps, TransactionEdits };
