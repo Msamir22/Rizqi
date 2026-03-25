@@ -68,8 +68,8 @@ export function AlertThresholdSlider({
 
   const handleLayout = useCallback((e: LayoutChangeEvent): void => {
     trackWidthRef.current = e.nativeEvent.layout.width;
-    // Measure the absolute X position of the track
-    e.target.measure(
+    // Measure the absolute X position of the track using the ref
+    trackRef.current?.measure(
       (_x: number, _y: number, _w: number, _h: number, pageX: number) => {
         trackXRef.current = pageX;
         setIsMeasured(true);
@@ -91,8 +91,14 @@ export function AlertThresholdSlider({
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_evt, gestureState) => {
+        // Only capture horizontal drags that exceed a small threshold
+        return (
+          Math.abs(gestureState.dx) > Math.abs(gestureState.dy) &&
+          Math.abs(gestureState.dx) > 5
+        );
+      },
       onPanResponderGrant: (
         evt: GestureResponderEvent,
         _gestureState: PanResponderGestureState
