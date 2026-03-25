@@ -41,6 +41,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 
 export default function AddTransaction(): React.ReactNode {
   const router = useRouter();
@@ -89,6 +90,7 @@ export default function AddTransaction(): React.ReactNode {
   } = useCategories();
   const { latestRates } = useMarketRates();
   const { showToast } = useToast();
+  const { preferredCurrency } = usePreferredCurrency();
 
   // Derived Values
   const selectedAccount = accounts.find((a) => a.id === selectedAccountId);
@@ -461,7 +463,7 @@ export default function AddTransaction(): React.ReactNode {
               )}
             <AmountDisplay
               amount={amount}
-              currency={selectedAccount?.currency || "EGP"}
+              currency={selectedAccount?.currency ?? preferredCurrency}
               type={type}
               mainColor={selectedCategory?.color}
               onPress={
@@ -629,7 +631,7 @@ export default function AddTransaction(): React.ReactNode {
                       numberOfLines={1}
                       className="flex-1 text-sm font-semibold text-slate-900 dark:text-white"
                     >
-                      {selectedCategory?.displayName || "Select"}
+                      {selectedCategory?.displayName || "Select a category"}
                     </Text>
                   </TouchableOpacity>
                   {formErrors.categoryId && (

@@ -20,7 +20,7 @@ import { View } from "react-native";
 export default function BudgetsScreen(): React.JSX.Element {
   return (
     <View className="flex-1">
-      <PageHeader title="Budgets" showBackButton={true} showDrawer={false} />
+      <PageHeader title="Budgets" showBackButton={false} showDrawer={true} />
 
       <BudgetDashboard />
     </View>

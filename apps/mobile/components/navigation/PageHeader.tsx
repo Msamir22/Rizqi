@@ -9,6 +9,7 @@ import { AppDrawer } from "./AppDrawer";
 
 interface PageHeaderProps {
   title: string;
+  centerTitle?: boolean;
   showDrawer?: boolean;
   showBackButton?: boolean;
   selectionMode?: {
@@ -25,6 +26,7 @@ interface PageHeaderProps {
     onPress: () => void;
     disabled?: boolean;
     loading?: boolean;
+    transparent?: boolean;
   };
   /** Optional secondary icon action rendered before the primary rightAction. */
   secondaryAction?: {
@@ -129,6 +131,7 @@ function RightAction({
     onPress: () => void;
     disabled?: boolean;
     loading?: boolean;
+    transparent?: boolean;
   };
   isDark: boolean;
 }): React.ReactElement {
@@ -140,7 +143,9 @@ function RightAction({
       disabled={rightAction.disabled || rightAction.loading}
       className={`rounded-full items-center justify-center ${
         rightAction.icon
-          ? "w-14 h-10 bg-white elevation-[2] dark:bg-slate-800 shadow-sm"
+          ? rightAction.transparent
+            ? "w-10 h-10 bg-transparent"
+            : "w-14 h-10 bg-white elevation-[2] dark:bg-slate-800 shadow-sm"
           : "px-4 py-2"
       } ${rightAction.disabled ? "opacity-50" : ""}`}
     >
@@ -163,6 +168,7 @@ function RightAction({
 
 export function PageHeader({
   title,
+  centerTitle = false,
   showDrawer = true,
   showBackButton = false,
   selectionMode,
@@ -188,7 +194,23 @@ export function PageHeader({
         }}
       >
         {/* Top Navigation Row */}
-        <View className="flex-row items-center justify-between h-10 mb-4">
+        <View className="flex-row items-center justify-between h-10 mb-4 z-10">
+          {/* Centered Title */}
+          {centerTitle && !shouldShowSelectionMode && (
+            <View
+              className="absolute left-0 right-0 h-full items-center justify-center"
+              pointerEvents="none"
+              style={{ zIndex: -1 }}
+            >
+              <Text
+                className="text-2xl font-bold text-slate-800 dark:text-white px-12"
+                numberOfLines={1}
+              >
+                {title}
+              </Text>
+            </View>
+          )}
+
           <View className="flex-row items-center flex-1">
             {shouldShowSelectionMode ? (
               <ActiveSelection selectionMode={selectionMode} isDark={isDark} />
@@ -203,12 +225,14 @@ export function PageHeader({
                     setIsDrawerOpen={setIsDrawerOpen}
                   />
                 )}
-                <Text
-                  className="text-2xl font-bold text-slate-800 dark:text-white flex-1"
-                  numberOfLines={1}
-                >
-                  {title}
-                </Text>
+                {!centerTitle && (
+                  <Text
+                    className="text-2xl font-bold text-slate-800 dark:text-white flex-1"
+                    numberOfLines={1}
+                  >
+                    {title}
+                  </Text>
+                )}
               </>
             )}
           </View>

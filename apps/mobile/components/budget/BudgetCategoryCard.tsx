@@ -12,14 +12,14 @@
  * @module BudgetCategoryCard
  */
 
-import React from "react";
-import { Text, TouchableOpacity, View, type ViewStyle } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import type { BudgetWithMetrics } from "@/hooks/useBudgets";
-import { formatCurrency } from "@astik/logic";
-import type { CurrencyType } from "@astik/db";
 import { palette } from "@/constants/colors";
 import { useCategoryLookup } from "@/context/CategoriesContext";
+import type { BudgetWithMetrics } from "@/hooks/useBudgets";
+import type { CurrencyType } from "@astik/db";
+import { formatCurrency } from "@astik/logic";
+import { Ionicons } from "@expo/vector-icons";
+import React from "react";
+import { Text, TouchableOpacity, View, type ViewStyle } from "react-native";
 import { CircularProgress } from "./CircularProgress";
 
 // ---------------------------------------------------------------------------
@@ -74,7 +74,7 @@ export function BudgetCategoryCard({
   currency,
   onPress,
 }: BudgetCategoryCardProps): React.JSX.Element {
-  const { budget, metrics, daysLeft } = data;
+  const { budget, metrics } = data;
   const effectiveCurrency = budget.currency ?? currency;
   const isPaused = budget.status === "PAUSED";
   const isOverBudget = metrics.percentage >= 100;
@@ -90,80 +90,58 @@ export function BudgetCategoryCard({
     ? { borderLeftWidth: 3, borderLeftColor: palette.red[500] }
     : undefined;
 
+  // Spent/limit text color — red when over budget
+  const spentLimitColor = isOverBudget
+    ? "text-red-500"
+    : "text-slate-400 dark:text-slate-500";
+
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.9}
-      className="flex-1 rounded-2xl border p-4 mb-3 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+      className="flex-1 rounded-3xl border p-5 mb-4 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
       style={[
         CARD_SHADOW,
         overBudgetBorder,
         isPaused ? { opacity: 0.55 } : undefined,
       ]}
     >
-      {/* Top row: info + ring */}
-      <View className="flex-row items-center justify-between">
-        <View className="flex-1 mr-3">
-          {/* Budget name + warning badge */}
-          <View className="flex-row items-center">
-            <Text
-              className="text-base font-bold text-slate-800 dark:text-white"
-              numberOfLines={1}
-              style={{ flexShrink: 1 }}
-            >
-              {budget.name}
-            </Text>
-            {/* S-06: Warning badge for budgets at or above threshold */}
-            {isWarning && !isPaused && (
-              <Ionicons
-                name="warning"
-                size={14}
-                color={
-                  metrics.status === "danger"
-                    ? palette.red[500]
-                    : palette.gold[600]
-                }
-                style={{ marginLeft: 4 }}
-              />
-            )}
-          </View>
-
-          {categoryName ? (
-            <Text
-              className="text-[10px] text-slate-400 dark:text-slate-500 font-medium"
-              numberOfLines={1}
-            >
-              {categoryName}
-            </Text>
-          ) : null}
-
-          <Text className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            {isPaused ? "Paused" : `${daysLeft} days left`}
-          </Text>
-        </View>
-
-        {/* S-03: Small circular progress ring instead of bar */}
+      {/* Top row: ring (left) + warning icon (right) */}
+      <View className="flex-row items-start justify-between mb-5">
         <CircularProgress
           percentage={metrics.percentage}
           status={metrics.status}
           size={RING_SIZE}
           strokeWidth={RING_STROKE}
-          showPercentage={false}
+          showPercentage
         />
+
+        {/* S-06: Warning badge for budgets at or above threshold */}
+        {isWarning && !isPaused ? (
+          <Ionicons
+            name="warning"
+            size={18}
+            color={
+              metrics.status === "danger" ? palette.red[500] : palette.gold[600]
+            }
+          />
+        ) : null}
       </View>
 
-      {/* Bottom stats */}
-      <View className="flex-row items-center justify-between mt-3">
-        <Text className="text-sm font-bold text-slate-800 dark:text-white">
-          {formatCurrency({
-            amount: metrics.spent,
-            currency: effectiveCurrency,
-          })}
-        </Text>
-        <Text className="text-xs text-slate-500 dark:text-slate-400">
-          / {formatCompactAmount(metrics.limit)}
-        </Text>
-      </View>
+      {/* Bottom section: category name + spent/limit */}
+      <Text
+        className="text-base font-bold text-slate-800 dark:text-white"
+        numberOfLines={1}
+      >
+        {categoryName ?? budget.name}
+      </Text>
+      <Text className={`text-xs mt-1 ${spentLimitColor}`}>
+        {formatCurrency({
+          amount: metrics.spent,
+          currency: effectiveCurrency,
+        })}{" "}
+        / {formatCompactAmount(metrics.limit)}
+      </Text>
     </TouchableOpacity>
   );
 }

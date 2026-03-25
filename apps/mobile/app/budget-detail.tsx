@@ -143,10 +143,12 @@ export default function BudgetDetailScreen(): React.JSX.Element {
     <View className="flex-1">
       <PageHeader
         title={budget.name}
+        centerTitle
         showBackButton={true}
         showDrawer={false}
         rightAction={{
-          icon: "ellipsis-vertical",
+          icon: "ellipsis-horizontal",
+          transparent: true,
           onPress: () => setShowActions(true),
         }}
       />
@@ -187,7 +189,7 @@ export default function BudgetDetailScreen(): React.JSX.Element {
         <BudgetRecentTransactions transactions={recentTransactions} />
       </ScrollView>
 
-      {/* Actions Sheet */}
+      {/* Actions Sheet — uses absolute overlay, not Modal */}
       <BudgetActionsSheet
         visible={showActions}
         isPaused={budget.isPaused}

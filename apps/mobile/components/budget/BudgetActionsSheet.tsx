@@ -3,18 +3,29 @@
  *
  * Bottom sheet with budget management actions:
  * - Edit Budget
- * - Pause/Resume Budget
+ * - Pause/Resume Budget (with toggle switch)
  * - Delete Budget (with confirmation)
  *
  * Architecture & Design Rationale:
- * - Pattern: Modal Component with action dispatch
+ * - Uses absolute-positioned overlay instead of React Native Modal
+ *   because Modal has a known layout collapse issue on Android
+ *   with NativeWind v4 in this context.
+ * - Pattern: Overlay Component with action dispatch
  * - SOLID: SRP — only handles action selection, delegates execution to parent.
  *
  * @module BudgetActionsSheet
  */
 
-import React, { useCallback, useState } from "react";
-import { Modal, Pressable, Text, TouchableOpacity, View } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  BackHandler,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
@@ -30,8 +41,85 @@ interface BudgetActionsSheetProps {
   readonly visible: boolean;
   readonly isPaused: boolean;
   readonly onClose: () => void;
-  readonly onAction: (action: BudgetAction) => void;
+  readonly onAction: (action: BudgetAction) => void | Promise<void>;
 }
+
+// ---------------------------------------------------------------------------
+// Styles — StyleSheet to avoid NativeWind issues inside overlay
+// ---------------------------------------------------------------------------
+
+const styles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 999,
+    justifyContent: "flex-end",
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+  },
+  sheetLight: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  sheetDark: {
+    backgroundColor: palette.slate[800],
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  handleBar: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: "center" as const,
+    marginBottom: 16,
+  },
+  closeButton: {
+    position: "absolute" as const,
+    top: 16,
+    right: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  row: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    paddingVertical: 16,
+  },
+  divider: {
+    height: 1,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: "600" as const,
+    marginLeft: 16,
+  },
+  sublabel: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  toggleTrack: {
+    width: 48,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: "center" as const,
+    paddingHorizontal: 2,
+  },
+  toggleThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#fff",
+  },
+});
 
 // ---------------------------------------------------------------------------
 // Component
@@ -45,69 +133,157 @@ export function BudgetActionsSheet({
 }: BudgetActionsSheetProps): React.JSX.Element {
   const { isDark } = useTheme();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isToggling, setIsToggling] = useState(false);
+  const insets = useSafeAreaInsets();
+
+  // Dismiss on Android Back button
+  useEffect(() => {
+    if (!visible) return;
+
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        onClose();
+        return true; // Consume the event
+      }
+    );
+
+    return () => subscription.remove();
+  }, [visible, onClose]);
 
   const handleDelete = useCallback((): void => {
     setShowDeleteConfirm(false);
     onClose();
-    onAction("delete");
+    void onAction("delete");
   }, [onClose, onAction]);
+
+  const handlePauseToggle = useCallback(async (): Promise<void> => {
+    if (isToggling) return;
+    setIsToggling(true);
+    try {
+      await onAction(isPaused ? "resume" : "pause");
+      onClose();
+    } finally {
+      setIsToggling(false);
+    }
+  }, [isPaused, onAction, onClose, isToggling]);
+
+  // Colors based on theme
+  const textColor = isDark ? "#f8fafc" : "#1e293b";
+  const subtextColor = isDark ? palette.slate[500] : palette.slate[400];
+  const dividerColor = isDark ? palette.slate[700] : palette.slate[200];
+  const handleBarColor = isDark ? palette.slate[600] : palette.slate[300];
+  const closeBg = isDark ? palette.slate[700] : palette.slate[100];
+  const closeIcon = isDark ? palette.slate[300] : palette.slate[600];
+  const iconColor = isDark ? palette.slate[300] : palette.slate[600];
+
+  if (!visible && !showDeleteConfirm) {
+    return <></>;
+  }
 
   return (
     <>
-      <Modal
-        visible={visible}
-        transparent
-        animationType="fade"
-        onRequestClose={onClose}
-      >
-        <Pressable className="flex-1 bg-black/40" onPress={onClose}>
-          <View className="flex-1" />
-          <Pressable
-            className="bg-white dark:bg-slate-800 rounded-t-3xl px-5 pb-10 pt-6"
-            onPress={(e) => e.stopPropagation()}
+      {visible && (
+        <View style={styles.overlay}>
+          {/* Backdrop */}
+          <TouchableWithoutFeedback onPress={onClose}>
+            <View style={styles.backdrop} />
+          </TouchableWithoutFeedback>
+
+          {/* Sheet */}
+          <View
+            style={[
+              isDark ? styles.sheetDark : styles.sheetLight,
+              { paddingBottom: Math.max(insets.bottom + 16, 32) },
+            ]}
           >
-            {/* Handle */}
-            <View className="w-10 h-1 rounded-full bg-slate-300 dark:bg-slate-600 self-center mb-6" />
+            {/* Handle bar */}
+            <View
+              style={[styles.handleBar, { backgroundColor: handleBarColor }]}
+            />
+
+            {/* Close button */}
+            <TouchableOpacity
+              onPress={onClose}
+              activeOpacity={0.7}
+              style={[styles.closeButton, { backgroundColor: closeBg }]}
+            >
+              <Ionicons name="close" size={18} color={closeIcon} />
+            </TouchableOpacity>
 
             {/* Edit */}
             <TouchableOpacity
               onPress={() => {
                 onClose();
-                onAction("edit");
+                void onAction("edit");
               }}
-              className="flex-row items-center py-4"
+              activeOpacity={0.7}
+              style={styles.row}
             >
-              <View className="w-10 h-10 rounded-xl items-center justify-center bg-slate-100 dark:bg-slate-700 mr-4">
-                <Ionicons
-                  name="create-outline"
-                  size={20}
-                  color={isDark ? palette.slate[300] : palette.slate[600]}
-                />
-              </View>
-              <Text className="text-base font-semibold text-slate-800 dark:text-white">
+              <Ionicons name="create-outline" size={20} color={iconColor} />
+              <Text style={[styles.label, { color: textColor }]}>
                 Edit Budget
               </Text>
             </TouchableOpacity>
 
-            {/* Pause/Resume */}
-            <TouchableOpacity
-              onPress={() => {
-                onClose();
-                onAction(isPaused ? "resume" : "pause");
-              }}
-              className="flex-row items-center py-4"
-            >
-              <View className="w-10 h-10 rounded-xl items-center justify-center bg-slate-100 dark:bg-slate-700 mr-4">
-                <Ionicons
-                  name={isPaused ? "play-outline" : "pause-outline"}
-                  size={20}
-                  color={palette.gold[600]}
-                />
+            {/* Divider */}
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
+            {/* Pause/Resume with toggle */}
+            <View style={styles.row}>
+              <Ionicons
+                name={isPaused ? "play-circle" : "pause-circle"}
+                size={22}
+                color={palette.gold[500]}
+              />
+              <View style={{ flex: 1, marginLeft: 16 }}>
+                <Text
+                  style={[
+                    { fontSize: 16, fontWeight: "600" },
+                    { color: textColor },
+                  ]}
+                >
+                  {isPaused ? "Resume Budget" : "Pause Budget"}
+                </Text>
+                <Text style={[styles.sublabel, { color: subtextColor }]}>
+                  {isPaused
+                    ? "Continue tracking spending"
+                    : "Temporarily stop tracking"}
+                </Text>
               </View>
-              <Text className="text-base font-semibold text-slate-800 dark:text-white">
-                {isPaused ? "Resume Budget" : "Pause Budget"}
-              </Text>
-            </TouchableOpacity>
+              {/* Toggle */}
+              <TouchableOpacity
+                onPress={() => {
+                  void handlePauseToggle();
+                }}
+                disabled={isToggling}
+                activeOpacity={0.7}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: !isPaused, busy: isToggling }}
+                accessibilityLabel={isPaused ? "Resume budget" : "Pause budget"}
+                style={[
+                  styles.toggleTrack,
+                  {
+                    backgroundColor: !isPaused
+                      ? palette.nileGreen[500]
+                      : isDark
+                        ? palette.slate[600]
+                        : palette.slate[300],
+                  },
+                  isToggling && { opacity: 0.6 },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.toggleThumb,
+                    { alignSelf: !isPaused ? "flex-end" : "flex-start" },
+                  ]}
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Divider */}
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
             {/* Delete */}
             <TouchableOpacity
@@ -115,24 +291,23 @@ export function BudgetActionsSheet({
                 onClose();
                 setShowDeleteConfirm(true);
               }}
-              className="flex-row items-center py-4"
+              activeOpacity={0.7}
+              style={styles.row}
             >
-              <View className="w-10 h-10 rounded-xl items-center justify-center bg-red-50 dark:bg-red-900/20 mr-4">
-                <Ionicons
-                  name="trash-outline"
-                  size={20}
-                  color={palette.red[500]}
-                />
-              </View>
-              <Text className="text-base font-semibold text-red-500">
+              <Ionicons
+                name="trash-outline"
+                size={20}
+                color={palette.red[500]}
+              />
+              <Text style={[styles.label, { color: palette.red[500] }]}>
                 Delete Budget
               </Text>
             </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </Modal>
+          </View>
+        </View>
+      )}
 
-      {/* Delete Confirmation */}
+      {/* Delete Confirmation — this one uses Modal (ConfirmationModal works fine) */}
       <ConfirmationModal
         visible={showDeleteConfirm}
         title="Delete Budget"
