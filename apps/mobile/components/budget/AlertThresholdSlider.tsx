@@ -55,6 +55,7 @@ export function AlertThresholdSlider({
   onValueChange,
 }: AlertThresholdSliderProps): React.JSX.Element {
   const [isMeasured, setIsMeasured] = useState(false);
+  const [trackWidth, setTrackWidth] = useState(0);
   const trackWidthRef = useRef(0);
   const trackXRef = useRef(0);
   const trackRef = useRef<View>(null);
@@ -67,7 +68,10 @@ export function AlertThresholdSlider({
   valueRef.current = value;
 
   const handleLayout = useCallback((e: LayoutChangeEvent): void => {
-    trackWidthRef.current = e.nativeEvent.layout.width;
+    const width = e.nativeEvent.layout.width;
+    trackWidthRef.current = width;
+    setTrackWidth(width);
+
     // Measure the absolute X position of the track using the ref
     trackRef.current?.measure(
       (_x: number, _y: number, _w: number, _h: number, pageX: number) => {
@@ -124,7 +128,6 @@ export function AlertThresholdSlider({
 
   const normalizedValue =
     (value - MIN_THRESHOLD) / (MAX_THRESHOLD - MIN_THRESHOLD);
-  const trackWidth = trackWidthRef.current;
   const thumbLeft =
     trackWidth > 0 ? normalizedValue * (trackWidth - THUMB_SIZE) : 0;
   const fillWidth = trackWidth > 0 ? normalizedValue * trackWidth : 0;
