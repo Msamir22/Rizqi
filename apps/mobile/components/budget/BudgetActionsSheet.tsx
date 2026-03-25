@@ -16,8 +16,9 @@
  * @module BudgetActionsSheet
  */
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
+  BackHandler,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -40,7 +41,7 @@ interface BudgetActionsSheetProps {
   readonly visible: boolean;
   readonly isPaused: boolean;
   readonly onClose: () => void;
-  readonly onAction: (action: BudgetAction) => void;
+  readonly onAction: (action: BudgetAction) => void | Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -132,18 +133,40 @@ export function BudgetActionsSheet({
 }: BudgetActionsSheetProps): React.JSX.Element {
   const { isDark } = useTheme();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isToggling, setIsToggling] = useState(false);
   const insets = useSafeAreaInsets();
+
+  // Dismiss on Android Back button
+  useEffect(() => {
+    if (!visible) return;
+
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        onClose();
+        return true; // Consume the event
+      }
+    );
+
+    return () => subscription.remove();
+  }, [visible, onClose]);
 
   const handleDelete = useCallback((): void => {
     setShowDeleteConfirm(false);
     onClose();
-    onAction("delete");
+    void onAction("delete");
   }, [onClose, onAction]);
 
-  const handlePauseToggle = useCallback((): void => {
-    onAction(isPaused ? "resume" : "pause");
-    onClose();
-  }, [isPaused, onAction, onClose]);
+  const handlePauseToggle = useCallback(async (): Promise<void> => {
+    if (isToggling) return;
+    setIsToggling(true);
+    try {
+      await onAction(isPaused ? "resume" : "pause");
+      onClose();
+    } finally {
+      setIsToggling(false);
+    }
+  }, [isPaused, onAction, onClose, isToggling]);
 
   // Colors based on theme
   const textColor = isDark ? "#f8fafc" : "#1e293b";
@@ -192,7 +215,7 @@ export function BudgetActionsSheet({
             <TouchableOpacity
               onPress={() => {
                 onClose();
-                onAction("edit");
+                void onAction("edit");
               }}
               activeOpacity={0.7}
               style={styles.row}
@@ -230,23 +253,30 @@ export function BudgetActionsSheet({
               </View>
               {/* Toggle */}
               <TouchableOpacity
-                onPress={handlePauseToggle}
+                onPress={() => {
+                  void handlePauseToggle();
+                }}
+                disabled={isToggling}
                 activeOpacity={0.7}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: !isPaused, busy: isToggling }}
+                accessibilityLabel={isPaused ? "Resume budget" : "Pause budget"}
                 style={[
                   styles.toggleTrack,
                   {
-                    backgroundColor: isPaused
+                    backgroundColor: !isPaused
                       ? palette.nileGreen[500]
                       : isDark
                         ? palette.slate[600]
                         : palette.slate[300],
                   },
+                  isToggling && { opacity: 0.6 },
                 ]}
               >
                 <View
                   style={[
                     styles.toggleThumb,
-                    { alignSelf: isPaused ? "flex-end" : "flex-start" },
+                    { alignSelf: !isPaused ? "flex-end" : "flex-start" },
                   ]}
                 />
               </TouchableOpacity>

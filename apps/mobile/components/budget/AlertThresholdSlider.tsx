@@ -15,7 +15,7 @@
  */
 
 import { palette } from "@/constants/colors";
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   PanResponder,
   Text,
@@ -54,59 +54,80 @@ export function AlertThresholdSlider({
   value,
   onValueChange,
 }: AlertThresholdSliderProps): React.JSX.Element {
+  const [isMeasured, setIsMeasured] = useState(false);
+  const [trackWidth, setTrackWidth] = useState(0);
   const trackWidthRef = useRef(0);
   const trackXRef = useRef(0);
+  const trackRef = useRef<View>(null);
+
+  // Use refs for callbacks to avoid PanResponder stale closures
+  const onValueChangeRef = useRef(onValueChange);
+  onValueChangeRef.current = onValueChange;
+
+  const valueRef = useRef(value);
+  valueRef.current = value;
 
   const handleLayout = useCallback((e: LayoutChangeEvent): void => {
-    trackWidthRef.current = e.nativeEvent.layout.width;
-    // Measure the absolute X position of the track
-    e.target.measure(
+    const width = e.nativeEvent.layout.width;
+    trackWidthRef.current = width;
+    setTrackWidth(width);
+
+    // Measure the absolute X position of the track using the ref
+    trackRef.current?.measure(
       (_x: number, _y: number, _w: number, _h: number, pageX: number) => {
         trackXRef.current = pageX;
+        setIsMeasured(true);
       }
     );
   }, []);
 
-  const computeValueFromX = useCallback(
-    (pageX: number): number => {
-      const trackWidth = trackWidthRef.current;
-      if (trackWidth === 0) return value;
+  const computeValueFromX = useCallback((pageX: number): number => {
+    const trackWidth = trackWidthRef.current;
+    if (trackWidth === 0) return valueRef.current;
 
-      const relativeX = pageX - trackXRef.current;
-      const clampedX = Math.max(0, Math.min(relativeX, trackWidth));
-      const raw =
-        MIN_THRESHOLD +
-        (clampedX / trackWidth) * (MAX_THRESHOLD - MIN_THRESHOLD);
-      const stepped = Math.round(raw / STEP) * STEP;
-      return Math.max(MIN_THRESHOLD, Math.min(MAX_THRESHOLD, stepped));
-    },
-    [value]
-  );
+    const relativeX = pageX - trackXRef.current;
+    const clampedX = Math.max(0, Math.min(relativeX, trackWidth));
+    const raw =
+      MIN_THRESHOLD + (clampedX / trackWidth) * (MAX_THRESHOLD - MIN_THRESHOLD);
+    const stepped = Math.round(raw / STEP) * STEP;
+    return Math.max(MIN_THRESHOLD, Math.min(MAX_THRESHOLD, stepped));
+  }, []);
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_evt, gestureState) => {
+        // Only capture horizontal drags that exceed a small threshold
+        return (
+          Math.abs(gestureState.dx) > Math.abs(gestureState.dy) &&
+          Math.abs(gestureState.dx) > 5
+        );
+      },
       onPanResponderGrant: (
         evt: GestureResponderEvent,
         _gestureState: PanResponderGestureState
       ) => {
-        const newValue = computeValueFromX(evt.nativeEvent.pageX);
-        onValueChange(newValue);
+        // Re-measure on grant to ensure trackXRef is accurate even if view scrolled
+        trackRef.current?.measure(
+          (_x: number, _y: number, _w: number, _h: number, pageX: number) => {
+            trackXRef.current = pageX;
+            const newValue = computeValueFromX(evt.nativeEvent.pageX);
+            onValueChangeRef.current(newValue);
+          }
+        );
       },
       onPanResponderMove: (
         evt: GestureResponderEvent,
         _gestureState: PanResponderGestureState
       ) => {
         const newValue = computeValueFromX(evt.nativeEvent.pageX);
-        onValueChange(newValue);
+        onValueChangeRef.current(newValue);
       },
     })
   ).current;
 
   const normalizedValue =
     (value - MIN_THRESHOLD) / (MAX_THRESHOLD - MIN_THRESHOLD);
-  const trackWidth = trackWidthRef.current;
   const thumbLeft =
     trackWidth > 0 ? normalizedValue * (trackWidth - THUMB_SIZE) : 0;
   const fillWidth = trackWidth > 0 ? normalizedValue * trackWidth : 0;
@@ -126,6 +147,7 @@ export function AlertThresholdSlider({
       </View>
 
       <View
+        ref={trackRef}
         onLayout={handleLayout}
         className="justify-center"
         style={{ height: THUMB_SIZE + 8 }}
@@ -137,32 +159,36 @@ export function AlertThresholdSlider({
           style={{ height: TRACK_HEIGHT }}
         />
 
-        {/* Fill */}
-        <View
-          className="absolute rounded-full"
-          style={{
-            height: TRACK_HEIGHT,
-            width: fillWidth,
-            backgroundColor: palette.gold[600],
-          }}
-        />
+        {isMeasured && (
+          <>
+            {/* Fill */}
+            <View
+              className="absolute rounded-full"
+              style={{
+                height: TRACK_HEIGHT,
+                width: fillWidth,
+                backgroundColor: palette.gold[600],
+              }}
+            />
 
-        {/* Thumb */}
-        <View
-          className="absolute rounded-full"
-          // eslint-disable-next-line react-native/no-inline-styles
-          style={{
-            width: THUMB_SIZE,
-            height: THUMB_SIZE,
-            left: thumbLeft,
-            backgroundColor: palette.gold[600],
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.2,
-            shadowRadius: 3,
-            elevation: 3,
-          }}
-        />
+            {/* Thumb */}
+            <View
+              className="absolute rounded-full"
+              // eslint-disable-next-line react-native/no-inline-styles
+              style={{
+                width: THUMB_SIZE,
+                height: THUMB_SIZE,
+                left: thumbLeft,
+                backgroundColor: palette.gold[600],
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.2,
+                shadowRadius: 3,
+                elevation: 3,
+              }}
+            />
+          </>
+        )}
       </View>
 
       <View className="flex-row justify-between mt-1">
