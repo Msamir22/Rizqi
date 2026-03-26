@@ -14,6 +14,7 @@
  * @module voice-review
  */
 
+import { ConfirmationModal } from "@/components/modals/ConfirmationModal";
 import { PageHeader } from "@/components/navigation/PageHeader";
 import { TransactionReview } from "@/components/transaction-review/TransactionReview";
 import { useToast } from "@/components/ui/Toast";
@@ -23,7 +24,7 @@ import type { ParsedSmsTransaction } from "@astik/logic/src/types";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
-import { Alert, Text, TouchableOpacity, View } from "react-native";
+import { Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // ---------------------------------------------------------------------------
@@ -40,6 +41,7 @@ export default function VoiceReviewScreen(): React.JSX.Element {
   const { showToast } = useToast();
 
   const [isSaving, setIsSaving] = useState(false);
+  const [discardModalVisible, setDiscardModalVisible] = useState(false);
 
   // Parse transactions from route params
   const transactions = useMemo<readonly ParsedSmsTransaction[]>(() => {
@@ -121,20 +123,11 @@ export default function VoiceReviewScreen(): React.JSX.Element {
   // ── Discard ─────────────────────────────────────────────────────────
 
   const handleDiscard = useCallback((): void => {
-    Alert.alert(
-      "Discard All",
-      "Are you sure you want to discard all voice transactions?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Discard",
-          style: "destructive",
-          onPress: () => {
-            router.replace(originTabRoute as never);
-          },
-        },
-      ]
-    );
+    setDiscardModalVisible(true);
+  }, []);
+
+  const handleConfirmDiscard = useCallback((): void => {
+    router.replace(originTabRoute as never);
   }, [router, originTabRoute]);
 
   // ── No transactions guard ───────────────────────────────────────────
@@ -205,12 +198,23 @@ export default function VoiceReviewScreen(): React.JSX.Element {
         </View>
       )}
 
-      {/* Transaction review list (reuses SMS review component) */}
       <TransactionReview
         transactions={transactions as ParsedSmsTransaction[]}
         onSave={handleSave}
         onDiscard={handleDiscard}
         isSaving={isSaving}
+      />
+
+      <ConfirmationModal
+        visible={discardModalVisible}
+        onConfirm={handleConfirmDiscard}
+        onCancel={() => setDiscardModalVisible(false)}
+        title="Discard Transactions?"
+        message="Are you sure you want to discard all voice transactions? This action cannot be undone."
+        confirmLabel="Discard All"
+        cancelLabel="Keep Reviewing"
+        variant="danger"
+        icon="trash-outline"
       />
     </SafeAreaView>
   );
