@@ -202,7 +202,11 @@ export async function parseVoiceWithAi(
       // React Native's FormData natively supports { uri, type, name } objects
       // for file uploads. Using fetch(localUri).blob() doesn't work reliably
       // on Android (bare paths without file:// prefix cause "Network request failed").
-      const fileUri = options.audioUri.startsWith("file://")
+      //
+      // Only prepend file:// for bare absolute paths (starting with "/").
+      // Leave URIs with existing schemes (file://, content://, http://) untouched.
+      const hasScheme = options.audioUri.includes("://");
+      const fileUri = hasScheme
         ? options.audioUri
         : `file://${options.audioUri}`;
 

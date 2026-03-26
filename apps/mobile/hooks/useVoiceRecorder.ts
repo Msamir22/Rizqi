@@ -36,8 +36,19 @@ const TIMER_TICK_MS = 100;
 /**
  * Delay (ms) after calling `record()` before marking the recorder as ready.
  * Gives Android's MediaRecorder.start() time to transition on the native thread.
+ *
+ * Exported for test usage so tests reference the same constant.
  */
-const NATIVE_STABILIZATION_DELAY_MS = 300;
+export const NATIVE_STABILIZATION_DELAY_MS = 300;
+
+/**
+ * Maximum time (ms) stop() will wait for the native recorder to become ready
+ * before giving up. Prevents indefinite hangs if start() fails silently.
+ */
+const STOP_READINESS_TIMEOUT_MS = 2000;
+
+/** Polling interval (ms) for readiness checks in stop(). */
+const READINESS_POLL_INTERVAL_MS = 50;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -68,8 +79,39 @@ interface VoiceRecorderResult {
   readonly discard: () => Promise<void>;
   /** Request microphone permission */
   readonly requestPermission: () => Promise<boolean>;
-  /** Reset recorder back to idle state */
-  readonly reset: () => void;
+  /** Reset recorder back to idle state (delegates to discard if active) */
+  readonly reset: () => Promise<void>;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Polls until `conditionFn` returns true or `timeoutMs` elapses.
+ * Resolves `true` if the condition was met, `false` on timeout.
+ */
+function waitForCondition(
+  conditionFn: () => boolean,
+  timeoutMs: number,
+  pollMs: number
+): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
+    if (conditionFn()) {
+      resolve(true);
+      return;
+    }
+    const start = Date.now();
+    const interval = setInterval(() => {
+      if (conditionFn()) {
+        clearInterval(interval);
+        resolve(true);
+      } else if (Date.now() - start >= timeoutMs) {
+        clearInterval(interval);
+        resolve(false);
+      }
+    }, pollMs);
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -101,6 +143,13 @@ export function useVoiceRecorder(): VoiceRecorderResult {
    * issues in callbacks where React state hasn't re-rendered yet).
    */
   const statusRef = useRef<RecorderStatus>("idle");
+
+  /**
+   * Tracks the in-flight start promise so discard() can await it
+   * before attempting cleanup. Prevents race conditions where discard()
+   * clears state while start()'s stabilization delay is still pending.
+   */
+  const nativeStartPromiseRef = useRef<Promise<void> | null>(null);
 
   // ---------------------------------------------------------------------------
   // Permission
@@ -190,39 +239,55 @@ export function useVoiceRecorder(): VoiceRecorderResult {
   // ---------------------------------------------------------------------------
 
   const start = useCallback(async (): Promise<void> => {
+    const startPromise = (async (): Promise<void> => {
+      try {
+        // Set audio mode for recording
+        await setAudioModeAsync({
+          playsInSilentMode: true,
+          allowsRecording: true,
+        });
+
+        // Reset state
+        accumulatedMsRef.current = 0;
+        nativeReadyRef.current = false;
+        setDurationMs(0);
+        setAudioUri(null);
+
+        // Prepare and start recording
+        await audioRecorder.prepareToRecordAsync();
+        audioRecorder.record();
+
+        setStatus("recording");
+        statusRef.current = "recording";
+        startTimer();
+
+        // Allow the native MediaRecorder time to transition before
+        // accepting pause/stop commands. This prevents the
+        // IllegalStateException on Android when the user taps quickly.
+        await new Promise<void>((resolve) =>
+          setTimeout(resolve, NATIVE_STABILIZATION_DELAY_MS)
+        );
+
+        // Only set ready if we haven't been cancelled (discard during warmup)
+        if (
+          statusRef.current === "recording" ||
+          statusRef.current === "paused"
+        ) {
+          nativeReadyRef.current = true;
+        }
+      } catch (err: unknown) {
+        console.error("[useVoiceRecorder] Start failed:", err);
+        nativeReadyRef.current = false;
+        statusRef.current = "idle";
+        setStatus("idle");
+      }
+    })();
+
+    nativeStartPromiseRef.current = startPromise;
     try {
-      // Set audio mode for recording
-      await setAudioModeAsync({
-        playsInSilentMode: true,
-        allowsRecording: true,
-      });
-
-      // Reset state
-      accumulatedMsRef.current = 0;
-      nativeReadyRef.current = false;
-      setDurationMs(0);
-      setAudioUri(null);
-
-      // Prepare and start recording
-      await audioRecorder.prepareToRecordAsync();
-      audioRecorder.record();
-
-      setStatus("recording");
-      statusRef.current = "recording";
-      startTimer();
-
-      // Allow the native MediaRecorder time to transition before
-      // accepting pause/stop commands. This prevents the
-      // IllegalStateException on Android when the user taps quickly.
-      await new Promise<void>((resolve) =>
-        setTimeout(resolve, NATIVE_STABILIZATION_DELAY_MS)
-      );
-      nativeReadyRef.current = true;
-    } catch (err: unknown) {
-      console.error("[useVoiceRecorder] Start failed:", err);
-      nativeReadyRef.current = false;
-      statusRef.current = "idle";
-      setStatus("idle");
+      await startPromise;
+    } finally {
+      nativeStartPromiseRef.current = null;
     }
   }, [audioRecorder, startTimer]);
 
@@ -269,11 +334,32 @@ export function useVoiceRecorder(): VoiceRecorderResult {
       return null;
     }
 
+    // If native recorder isn't ready yet (user tapped stop during warmup),
+    // wait for readiness rather than silently returning null.
     if (!nativeReadyRef.current) {
-      console.warn(
-        "[useVoiceRecorder] Ignoring stop — native recorder still initializing"
+      // First, await any in-flight start promise
+      if (nativeStartPromiseRef.current) {
+        try {
+          await nativeStartPromiseRef.current;
+        } catch {
+          // Start failed — nothing to stop
+          return null;
+        }
+      }
+
+      // Poll until nativeReadyRef becomes true or timeout
+      const ready = await waitForCondition(
+        () => nativeReadyRef.current,
+        STOP_READINESS_TIMEOUT_MS,
+        READINESS_POLL_INTERVAL_MS
       );
-      return null;
+
+      if (!ready) {
+        console.warn(
+          "[useVoiceRecorder] Stop timed out waiting for native readiness"
+        );
+        return null;
+      }
     }
 
     try {
@@ -315,6 +401,16 @@ export function useVoiceRecorder(): VoiceRecorderResult {
     try {
       stopTimer();
 
+      // Await any in-flight start() so the stabilization delay doesn't
+      // flip nativeReadyRef back to true after we've cleared state.
+      if (nativeStartPromiseRef.current) {
+        try {
+          await nativeStartPromiseRef.current;
+        } catch {
+          // Start failed — proceed with cleanup anyway
+        }
+      }
+
       // Stop recording only if native recorder is ready (active)
       if (nativeReadyRef.current) {
         nativeReadyRef.current = false;
@@ -349,7 +445,21 @@ export function useVoiceRecorder(): VoiceRecorderResult {
     }
   }, [audioRecorder, audioUri, stopTimer, deleteAudioFile]);
 
-  const reset = useCallback((): void => {
+  /**
+   * Reset recorder back to idle. If the recorder is in an active state
+   * (recording/paused), delegates to discard() for proper native cleanup
+   * and temp file deletion.
+   */
+  const reset = useCallback(async (): Promise<void> => {
+    const currentStatus = statusRef.current;
+
+    if (currentStatus === "recording" || currentStatus === "paused") {
+      // Active state — must do proper native teardown + file cleanup
+      await discard();
+      return;
+    }
+
+    // Idle or completed — just clear JS state (no native cleanup needed)
     stopTimer();
     accumulatedMsRef.current = 0;
     nativeReadyRef.current = false;
@@ -357,7 +467,7 @@ export function useVoiceRecorder(): VoiceRecorderResult {
     setDurationMs(0);
     setAudioUri(null);
     setStatus("idle");
-  }, [stopTimer]);
+  }, [stopTimer, discard]);
 
   return {
     status,

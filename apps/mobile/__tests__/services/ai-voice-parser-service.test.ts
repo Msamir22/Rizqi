@@ -392,6 +392,24 @@ describe("ai-voice-parser-service", () => {
   // parseVoiceWithAi — Audio mode
   // =========================================================================
   describe("parseVoiceWithAi — audio mode", () => {
+    let appendSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      appendSpy = jest.spyOn(FormData.prototype, "append");
+    });
+
+    afterEach(() => {
+      appendSpy.mockRestore();
+    });
+
+    /** Extracts the "audio" entry from the spied FormData.append calls. */
+    function getAppendedAudioFile(): Record<string, unknown> | undefined {
+      const audioCall = appendSpy.mock.calls.find(
+        (call: unknown[]) => call[0] === "audio"
+      ) as [string, Record<string, unknown>] | undefined;
+      return audioCall?.[1];
+    }
+
     it("should send audio as FormData with ReactNativeFormDataFile when audioUri is provided", async () => {
       mockInvoke.mockResolvedValueOnce(
         makeSuccessResponse([makeValidTransaction()])
@@ -414,14 +432,17 @@ describe("ai-voice-parser-service", () => {
       const body = (callArgs[1] as { body: FormData }).body;
       expect(body).toBeInstanceOf(FormData);
 
-      // Verify the FormData contains the audio file entry
-      const audioEntry = body.get("audio");
-      expect(audioEntry).not.toBeNull();
+      // Verify the appended audio file has the correct URI (unchanged)
+      const audioFile = getAppendedAudioFile();
+      expect(audioFile).toBeDefined();
+      expect(audioFile?.uri).toBe("file:///tmp/recording.m4a");
+      expect(audioFile?.type).toBe("audio/mp4");
+      expect(audioFile?.name).toBe("recording.m4a");
 
       expect(isVoiceParserError(result)).toBe(false);
     });
 
-    it("should normalize bare file paths with file:// prefix", async () => {
+    it("should normalize bare file paths by prepending file:// prefix", async () => {
       mockInvoke.mockResolvedValueOnce(
         makeSuccessResponse([makeValidTransaction()])
       );
@@ -431,14 +452,30 @@ describe("ai-voice-parser-service", () => {
         preferredCurrency: "EGP",
       });
 
-      expect(mockInvoke).toHaveBeenCalledTimes(1);
-      const callArgs = mockInvoke.mock.calls[0] as unknown[];
-      const body = (callArgs[1] as { body: FormData }).body;
-      expect(body).toBeInstanceOf(FormData);
+      // Verify the URI was normalized with file:// prefix
+      const audioFile = getAppendedAudioFile();
+      expect(audioFile).toBeDefined();
+      expect(audioFile?.uri).toBe(
+        "file:///data/user/0/com.app/cache/recording.m4a"
+      );
+    });
 
-      // The audio entry should exist (file:// prefix added internally)
-      const audioEntry = body.get("audio");
-      expect(audioEntry).not.toBeNull();
+    it("should preserve content:// URIs without prepending file://", async () => {
+      mockInvoke.mockResolvedValueOnce(
+        makeSuccessResponse([makeValidTransaction()])
+      );
+
+      await parseVoiceWithAi({
+        audioUri: "content://com.android.providers.media/recording.m4a",
+        preferredCurrency: "EGP",
+      });
+
+      // Verify the content:// URI was NOT modified
+      const audioFile = getAppendedAudioFile();
+      expect(audioFile).toBeDefined();
+      expect(audioFile?.uri).toBe(
+        "content://com.android.providers.media/recording.m4a"
+      );
     });
   });
 
