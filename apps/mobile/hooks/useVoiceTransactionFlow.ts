@@ -142,6 +142,17 @@ export function useVoiceTransactionFlow(
   }, [recorder, updateFlowStatus]);
 
   const submitRecording = useCallback(async (): Promise<void> => {
+    // Minimum duration guard: recordings under 1.5s are too short to contain
+    // meaningful speech and tend to cause AI hallucinations on noise/silence.
+    const MIN_RECORDING_DURATION_MS = 1500;
+    if (recorder.durationMs < MIN_RECORDING_DURATION_MS) {
+      setErrorMessage(
+        "Recording too short. Please speak for at least 2 seconds."
+      );
+      updateFlowStatus("error");
+      return;
+    }
+
     // Stop recording
     const result = await recorder.stop();
     if (!result) {
@@ -171,6 +182,15 @@ export function useVoiceTransactionFlow(
       return;
     }
 
+    // Empty recording guard (FR-010): prevent navigation when no transactions parsed
+    if (aiResult.transactions.length === 0) {
+      setErrorMessage(
+        "We couldn't parse any transaction from the voice note. Please try again with clearer details."
+      );
+      updateFlowStatus("error");
+      return;
+    }
+
     // Success — navigate to review screen
     updateFlowStatus("success");
     setIsOverlayVisible(false);
@@ -181,6 +201,8 @@ export function useVoiceTransactionFlow(
       params: {
         transactions: JSON.stringify(aiResult.transactions),
         transcript: aiResult.transcript,
+        originalTranscript: aiResult.originalTranscript,
+        detectedLanguage: aiResult.detectedLanguage,
         originTabIndex: String(originTabIndexRef.current),
       },
     });

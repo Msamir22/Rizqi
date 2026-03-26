@@ -266,8 +266,13 @@ function VoiceRecordingOverlayComponent({
   }, [isPaused, safeOnPause, safeOnResume]);
 
   // Dynamic panel position based on tab bar height
+  // The mic button on the tab bar protrudes 24px above the tab bar bounds (top: -24).
+  // Adding 32px to paddingBottom ensures the overlay content comfortably clears the mic button.
   const panelStyle = useMemo(
-    () => [styles.panelShadow, { bottom: TAB_BAR_HEIGHT + bottomPadding }],
+    () => [
+      styles.panelShadow,
+      { bottom: 0, paddingBottom: bottomPadding + TAB_BAR_HEIGHT + 32 },
+    ],
     [bottomPadding]
   );
 
@@ -416,7 +421,7 @@ function VoiceRecordingOverlayComponent({
                   label="Done"
                   onPress={safeOnSubmit}
                   variant="primary"
-                  size={52}
+                  size={56}
                 />
               </View>
             </>

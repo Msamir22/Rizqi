@@ -11,17 +11,27 @@
  * - SOLID: SRP — recording only. OCP — extends via status callbacks
  *   without modifying existing consumers.
  *
+ * NOTE: We intentionally bypass `useAudioRecorder` (which uses
+ * `useReleasingSharedObject`) and manage the AudioRecorder lifecycle
+ * manually via refs. This avoids a known expo-audio@0.3.x bug where
+ * `useReleasingSharedObject` prematurely releases the native shared
+ * object on re-renders, causing "Cannot use shared object that was
+ * already released" → "Integer instead of AudioRecorder" errors.
+ * See: https://github.com/expo/expo/issues/35589
+ *
  * @module useVoiceRecorder
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  useAudioRecorder,
   AudioModule,
   RecordingPresets,
   setAudioModeAsync,
+  type AudioRecorder,
+  type RecordingOptions,
 } from "expo-audio";
 import * as FileSystem from "expo-file-system";
+import { Platform } from "react-native";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -135,12 +145,59 @@ function waitForCondition(
   });
 }
 
+/**
+ * Flattens a RecordingOptions preset into platform-specific options
+ * for the native AudioRecorder constructor.
+ *
+ * Mirrors the logic of expo-audio's internal `createRecordingOptions()`
+ * without importing from the library's private source paths.
+ */
+function flattenPlatformOptions(
+  options: RecordingOptions
+): Record<string, unknown> {
+  const common: Record<string, unknown> = {
+    extension: options.extension,
+    sampleRate: options.sampleRate,
+    numberOfChannels: options.numberOfChannels,
+    bitRate: options.bitRate,
+    isMeteringEnabled: options.isMeteringEnabled ?? false,
+  };
+
+  if (Platform.OS === "ios" && options.ios) {
+    return { ...common, ...options.ios };
+  }
+  if (Platform.OS === "android" && options.android) {
+    return { ...common, ...options.android };
+  }
+  return common;
+}
+
+/**
+ * Creates a fresh AudioRecorder shared object with HIGH_QUALITY preset.
+ * This is called on-demand (once per recording session) instead of keeping
+ * a long-lived instance, to avoid the SharedObject lifecycle issues.
+ */
+function createRecorder(): AudioRecorder {
+  const platformOptions = flattenPlatformOptions(RecordingPresets.HIGH_QUALITY);
+  // Cast: the flattened options match the native RecordingOptions structure
+  // (with android/ios fields merged to top-level), which differs from the
+  // TypeScript RecordingOptions type (nested android/ios sub-objects).
+  return new AudioModule.AudioRecorder(
+    platformOptions as Partial<RecordingOptions>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
 
 export function useVoiceRecorder(): VoiceRecorderResult {
-  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  /**
+   * Manually managed AudioRecorder ref. We create a fresh instance for each
+   * recording session and release it on cleanup. This avoids the
+   * `useReleasingSharedObject` lifecycle bug in expo-audio@0.3.x.
+   */
+  const recorderRef = useRef<AudioRecorder | null>(null);
 
   const [status, setStatus] = useState<RecorderStatus>("idle");
   const [durationMs, setDurationMs] = useState(0);
@@ -225,12 +282,43 @@ export function useVoiceRecorder(): VoiceRecorderResult {
     }
   }, []);
 
-  // Clean up timer and abort pending polls on unmount
+  // ---------------------------------------------------------------------------
+  // Recorder lifecycle helpers
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Safely releases the current AudioRecorder shared object and clears the ref.
+   * Swallows errors to prevent cascading failures during cleanup.
+   */
+  const releaseRecorder = useCallback((): void => {
+    if (recorderRef.current) {
+      try {
+        recorderRef.current.release();
+      } catch (releaseErr: unknown) {
+        console.warn(
+          "[useVoiceRecorder] Failed to release recorder:",
+          releaseErr
+        );
+      }
+      recorderRef.current = null;
+    }
+  }, []);
+
+  // Clean up timer, abort pending polls, and release recorder on unmount
   useEffect(() => {
     const abortController = unmountAbortRef.current;
     return () => {
       stopTimer();
       abortController.abort();
+      // Release on unmount — we manage the lifecycle manually
+      if (recorderRef.current) {
+        try {
+          recorderRef.current.release();
+        } catch {
+          // Swallow — component is unmounting
+        }
+        recorderRef.current = null;
+      }
     };
   }, [stopTimer]);
 
@@ -246,23 +334,26 @@ export function useVoiceRecorder(): VoiceRecorderResult {
       // Auto-stop but stay in overlay — user must choose Done or Discard
       void (async () => {
         if (!nativeReadyRef.current) return;
+        const recorder = recorderRef.current;
+        if (!recorder) return;
+
         try {
           stopTimer();
           nativeReadyRef.current = false;
           statusRef.current = "completed";
-          await audioRecorder.stop();
-          setAudioUri(audioRecorder.uri ?? null);
+          await recorder.stop();
+          setAudioUri(recorder.uri ?? null);
           setStatus("completed");
         } catch (err: unknown) {
           console.error("[useVoiceRecorder] Auto-stop failed:", err);
           // Recover: mark as completed anyway since we hit the limit
           nativeReadyRef.current = false;
-          setAudioUri(audioRecorder.uri ?? null);
+          setAudioUri(recorder.uri ?? null);
           setStatus("completed");
         }
       })();
     }
-  }, [status, durationMs, audioRecorder, stopTimer]);
+  }, [status, durationMs, stopTimer]);
 
   // ---------------------------------------------------------------------------
   // Recording controls
@@ -277,6 +368,13 @@ export function useVoiceRecorder(): VoiceRecorderResult {
           allowsRecording: true,
         });
 
+        // Release any previous recorder before creating a new one
+        releaseRecorder();
+
+        // Create a fresh AudioRecorder for this recording session
+        const recorder = createRecorder();
+        recorderRef.current = recorder;
+
         // Reset state
         accumulatedMsRef.current = 0;
         nativeReadyRef.current = false;
@@ -284,8 +382,8 @@ export function useVoiceRecorder(): VoiceRecorderResult {
         setAudioUri(null);
 
         // Prepare and start recording
-        await audioRecorder.prepareToRecordAsync();
-        audioRecorder.record();
+        await recorder.prepareToRecordAsync();
+        recorder.record();
 
         setStatus("recording");
         statusRef.current = "recording";
@@ -307,6 +405,7 @@ export function useVoiceRecorder(): VoiceRecorderResult {
         }
       } catch (err: unknown) {
         console.error("[useVoiceRecorder] Start failed:", err);
+        releaseRecorder();
         nativeReadyRef.current = false;
         statusRef.current = "idle";
         setStatus("idle");
@@ -319,7 +418,7 @@ export function useVoiceRecorder(): VoiceRecorderResult {
     } finally {
       nativeStartPromiseRef.current = null;
     }
-  }, [audioRecorder, startTimer]);
+  }, [startTimer, releaseRecorder]);
 
   const pause = useCallback((): void => {
     if (statusRef.current !== "recording") return;
@@ -331,21 +430,28 @@ export function useVoiceRecorder(): VoiceRecorderResult {
       return;
     }
 
+    const recorder = recorderRef.current;
+    if (!recorder) return;
+
     try {
       stopTimer();
-      audioRecorder.pause();
+      recorder.pause();
       statusRef.current = "paused";
       setStatus("paused");
     } catch (err: unknown) {
       console.error("[useVoiceRecorder] Pause failed:", err);
       // Don't change status — the recording may still be active natively
     }
-  }, [audioRecorder, stopTimer]);
+  }, [stopTimer]);
 
   const resume = useCallback((): void => {
     if (statusRef.current !== "paused") return;
+
+    const recorder = recorderRef.current;
+    if (!recorder) return;
+
     try {
-      audioRecorder.record();
+      recorder.record();
       statusRef.current = "recording";
       setStatus("recording");
       startTimer();
@@ -354,7 +460,7 @@ export function useVoiceRecorder(): VoiceRecorderResult {
     } catch (err: unknown) {
       console.error("[useVoiceRecorder] Resume failed:", err);
     }
-  }, [audioRecorder, startTimer]);
+  }, [startTimer]);
 
   const stop = useCallback(async (): Promise<{
     uri: string;
@@ -393,12 +499,15 @@ export function useVoiceRecorder(): VoiceRecorderResult {
       }
     }
 
+    const recorder = recorderRef.current;
+    if (!recorder) return null;
+
     try {
       stopTimer();
       nativeReadyRef.current = false;
       statusRef.current = "completed";
-      await audioRecorder.stop();
-      const uri = audioRecorder.uri;
+      await recorder.stop();
+      const uri = recorder.uri;
       if (!uri) return null;
 
       setAudioUri(uri);
@@ -411,7 +520,7 @@ export function useVoiceRecorder(): VoiceRecorderResult {
       setStatus("idle");
       return null;
     }
-  }, [audioRecorder, stopTimer]);
+  }, [stopTimer]);
 
   // ---------------------------------------------------------------------------
   // Cleanup (FR-021: temp file MUST be deleted)
@@ -442,11 +551,13 @@ export function useVoiceRecorder(): VoiceRecorderResult {
         }
       }
 
+      const recorder = recorderRef.current;
+
       // Stop recording only if native recorder is ready (active)
-      if (nativeReadyRef.current) {
+      if (recorder && nativeReadyRef.current) {
         nativeReadyRef.current = false;
         try {
-          await audioRecorder.stop();
+          await recorder.stop();
         } catch (stopErr: unknown) {
           // Swallow stop errors during discard — we're cleaning up anyway
           console.warn(
@@ -457,10 +568,13 @@ export function useVoiceRecorder(): VoiceRecorderResult {
       }
 
       // Delete the temp file (FR-021)
-      const uri = audioRecorder.uri ?? audioUri;
+      const uri = recorder?.uri ?? audioUri;
       if (uri) {
         await deleteAudioFile(uri);
       }
+
+      // Release the native recorder
+      releaseRecorder();
 
       // Reset state
       accumulatedMsRef.current = 0;
@@ -471,10 +585,11 @@ export function useVoiceRecorder(): VoiceRecorderResult {
       setStatus("idle");
     } catch (err: unknown) {
       console.error("[useVoiceRecorder] Discard failed:", err);
+      releaseRecorder();
       statusRef.current = "idle";
       setStatus("idle");
     }
-  }, [audioRecorder, audioUri, stopTimer, deleteAudioFile]);
+  }, [audioUri, stopTimer, deleteAudioFile, releaseRecorder]);
 
   /**
    * Reset recorder back to idle. If the recorder is in an active state
@@ -490,15 +605,16 @@ export function useVoiceRecorder(): VoiceRecorderResult {
       return;
     }
 
-    // Idle or completed — just clear JS state (no native cleanup needed)
+    // Idle or completed — just clear JS state and release recorder
     stopTimer();
+    releaseRecorder();
     accumulatedMsRef.current = 0;
     nativeReadyRef.current = false;
     statusRef.current = "idle";
     setDurationMs(0);
     setAudioUri(null);
     setStatus("idle");
-  }, [stopTimer, discard]);
+  }, [stopTimer, discard, releaseRecorder]);
 
   return {
     status,

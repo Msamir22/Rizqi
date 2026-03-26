@@ -19,15 +19,23 @@
 import { supabase } from "./supabase";
 import { z } from "zod";
 
-import type { ParsedSmsTransaction } from "@astik/logic/src/types";
-import type { TransactionType } from "@astik/db";
+import type {
+  ParsedVoiceTransaction,
+  VoiceParserError,
+} from "@astik/logic/src/types";
+import type { Category } from "@astik/db";
+import {
+  normalizeType,
+  parseAiDate,
+  clampConfidence,
+  parseCategory,
+  buildCategoryMap,
+} from "@astik/logic";
+import type { CategoryMap } from "@astik/logic/src/utils/ai-parser-utils";
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-
-/** Sender identifier for voice-input transactions (not from SMS). */
-const VOICE_INPUT_SENDER = "voice-input";
 
 /** Default category display name when AI doesn't provide one. */
 const DEFAULT_CATEGORY_DISPLAY_NAME = "other";
@@ -57,19 +65,15 @@ interface ParseVoiceOptions {
   readonly accounts?: readonly AccountInput[];
   /** User's preferred currency code (set client-side, not by AI) */
   readonly preferredCurrency: string;
+  /** User's categories from the database — used for AI category → ID resolution */
+  readonly categoryRecords?: readonly Category[];
 }
 
 interface ParseVoiceResult {
-  readonly transactions: readonly ParsedSmsTransaction[];
+  readonly transactions: readonly ParsedVoiceTransaction[];
   readonly transcript: string;
-}
-
-/** Error types for structured error handling */
-type VoiceParserErrorKind = "timeout" | "network" | "empty" | "unknown";
-
-interface VoiceParserError {
-  readonly kind: VoiceParserErrorKind;
-  readonly message: string;
+  readonly originalTranscript: string;
+  readonly detectedLanguage: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -91,62 +95,15 @@ type AiVoiceTransaction = z.infer<typeof AiVoiceTransactionSchema>;
 
 interface ParseVoiceResponse {
   readonly transcript?: string;
+  readonly original_transcript?: string;
+  readonly detected_language?: string;
   readonly transactions: readonly unknown[];
   readonly error?: string;
 }
 
 // ---------------------------------------------------------------------------
-// Validation Sets
+// Removed — normalizeType and parseAiDate are now imported from @astik/logic
 // ---------------------------------------------------------------------------
-
-const VALID_TYPES: ReadonlySet<string> = new Set(["EXPENSE", "INCOME"]);
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function normalizeType(raw: string): TransactionType {
-  const upper = raw.toUpperCase();
-  if (VALID_TYPES.has(upper)) {
-    return upper as TransactionType;
-  }
-  return "EXPENSE" as TransactionType;
-}
-
-/** Regex to detect date-only strings (YYYY-MM-DD) without time component. */
-const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
-
-/**
- * Parse an AI-returned date string into a Date object.
- * Bare YYYY-MM-DD strings are treated as local dates (not UTC) to avoid
- * off-by-one day errors in positive UTC offset timezones (e.g., Egypt UTC+2).
- * Falls back to current timestamp if empty or unparseable.
- */
-function parseAiDate(raw: string): Date {
-  if (!raw || raw.trim() === "") {
-    return new Date();
-  }
-
-  // Date-only strings: create in local timezone to avoid UTC midnight shift
-  if (DATE_ONLY_REGEX.test(raw.trim())) {
-    const [yearStr, monthStr, dayStr] = raw.trim().split("-");
-    const localDate = new Date(
-      Number(yearStr),
-      Number(monthStr) - 1,
-      Number(dayStr)
-    );
-    if (!isNaN(localDate.getTime())) {
-      return localDate;
-    }
-    return new Date();
-  }
-
-  const parsed = new Date(raw);
-  if (isNaN(parsed.getTime())) {
-    return new Date();
-  }
-  return parsed;
-}
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -263,8 +220,10 @@ export async function parseVoiceWithAi(
     }
 
     const transcript = data.transcript ?? "";
+    const originalTranscript = data.original_transcript ?? transcript;
+    const detectedLanguage = data.detected_language ?? "en";
 
-    // Validate and map AI response to ParsedSmsTransaction
+    // Validate and map AI response to ParsedVoiceTransaction
     const validTransactions: AiVoiceTransaction[] = [];
     for (const raw of data.transactions) {
       const parsed = AiVoiceTransactionSchema.safeParse(raw);
@@ -286,26 +245,43 @@ export async function parseVoiceWithAi(
       };
     }
 
-    const results: ParsedSmsTransaction[] = validTransactions.map(
-      (aiTx: AiVoiceTransaction): ParsedSmsTransaction => ({
-        amount: Math.abs(aiTx.amount),
-        currency: options.preferredCurrency as ParsedSmsTransaction["currency"],
-        type: normalizeType(aiTx.type),
-        counterparty: aiTx.counterparty ?? "",
-        merchant: aiTx.counterparty ?? "",
-        date: parseAiDate(aiTx.date),
-        smsBodyHash: "", // Not applicable for voice
-        senderDisplayName: VOICE_INPUT_SENDER,
-        categoryId: "", // Resolved by consumer via categorySystemName lookup
-        categoryDisplayName:
-          aiTx.categorySystemName || DEFAULT_CATEGORY_DISPLAY_NAME,
-        rawSmsBody: aiTx.description || "",
-        confidence: aiTx.confidenceScore,
-        accountId: aiTx.accountId || "",
-      })
+    // Build category map for lookup (if categories provided)
+    const categoryMap: CategoryMap | undefined = options.categoryRecords
+      ? buildCategoryMap(options.categoryRecords)
+      : undefined;
+
+    const results: ParsedVoiceTransaction[] = validTransactions.map(
+      (aiTx: AiVoiceTransaction): ParsedVoiceTransaction => {
+        const resolvedCategory = categoryMap
+          ? parseCategory(aiTx.categorySystemName, categoryMap)
+          : null;
+
+        return {
+          amount: Math.abs(aiTx.amount),
+          currency:
+            options.preferredCurrency as ParsedVoiceTransaction["currency"],
+          type: normalizeType(aiTx.type),
+          counterparty: aiTx.counterparty ?? "",
+          date: parseAiDate(aiTx.date),
+          categoryId: resolvedCategory?.id ?? "",
+          categoryDisplayName:
+            resolvedCategory?.displayName ??
+            (aiTx.categorySystemName || DEFAULT_CATEGORY_DISPLAY_NAME),
+          confidence: clampConfidence(aiTx.confidenceScore),
+          accountId: aiTx.accountId || "",
+          note: aiTx.description || "",
+          originalTranscript,
+          detectedLanguage,
+        };
+      }
     );
 
-    return { transactions: results, transcript };
+    return {
+      transactions: results,
+      transcript,
+      originalTranscript,
+      detectedLanguage,
+    };
   } catch (err: unknown) {
     clearTimeout(timeoutId);
 

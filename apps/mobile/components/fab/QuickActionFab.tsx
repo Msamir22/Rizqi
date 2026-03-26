@@ -67,7 +67,14 @@ const QUICK_ACTIONS: QuickAction[] = [
   },
 ];
 
-export function QuickActionFab(): React.JSX.Element {
+interface QuickActionFabProps {
+  /** When true, the FAB is hidden (e.g. during voice recording). */
+  readonly isRecordingActive?: boolean;
+}
+
+export function QuickActionFab({
+  isRecordingActive = false,
+}: QuickActionFabProps): React.JSX.Element | null {
   const insets = useSafeAreaInsets();
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -95,6 +102,9 @@ export function QuickActionFab(): React.JSX.Element {
   const fabIconStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${fabRotation.value}deg` }],
   }));
+
+  // Hide FAB during voice recording (US6) — placed AFTER all hooks
+  if (isRecordingActive) return null;
 
   return (
     <>
@@ -187,6 +197,7 @@ export function QuickActionFab(): React.JSX.Element {
             }}
           >
             <Animated.View style={fabIconStyle}>
+              {/* eslint-disable-next-line no-restricted-syntax */}
               <Ionicons name="add" size={30} color="#fff" />
             </Animated.View>
           </LinearGradient>

@@ -171,7 +171,7 @@ function CustomBottomTabBarComponent({
     <>
       {/* Main tab bar */}
       <View
-        className="absolute bottom-0 left-0 right-0 z-[15]"
+        className="absolute bottom-0 left-0 right-0 z-[25]"
         style={{ paddingBottom: bottomPadding, height: tabBarHeight }}
       >
         <BlurView
@@ -221,7 +221,7 @@ function CustomBottomTabBarComponent({
 
         {/* Center microphone button (elevated above tab bar) */}
         <View
-          className="absolute left-1/2 z-[25]"
+          className="absolute left-1/2 z-[30]"
           style={{
             top: -MIC_BUTTON_SIZE / 2 + 8,
             marginLeft: -MIC_BUTTON_SIZE / 2,

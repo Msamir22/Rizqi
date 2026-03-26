@@ -65,7 +65,7 @@ export default function TabLayout(): React.ReactElement {
         />
       </Tabs>
 
-      <QuickActionFab />
+      <QuickActionFab isRecordingActive={voiceFlow.flowStatus !== "idle"} />
 
       {/* Voice Recording Overlay — renders above tab bar */}
       <VoiceRecordingOverlay

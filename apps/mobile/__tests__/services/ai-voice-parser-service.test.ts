@@ -43,10 +43,17 @@ import {
 
 function makeSuccessResponse(
   transactions: ReadonlyArray<Record<string, unknown>>,
-  transcript = "test transcript"
+  transcript = "test transcript",
+  originalTranscript = "test original transcript",
+  detectedLanguage = "en"
 ): { data: Record<string, unknown>; error: null } {
   return {
-    data: { transactions, transcript },
+    data: {
+      transactions,
+      transcript,
+      original_transcript: originalTranscript,
+      detected_language: detectedLanguage,
+    },
     error: null,
   };
 }
@@ -87,7 +94,12 @@ describe("ai-voice-parser-service", () => {
     });
 
     it("should return false for success results with 'transactions'", () => {
-      const success = { transactions: [], transcript: "" };
+      const success = {
+        transactions: [],
+        transcript: "",
+        originalTranscript: "",
+        detectedLanguage: "en",
+      };
       expect(isVoiceParserError(success)).toBe(false);
     });
   });
@@ -203,9 +215,11 @@ describe("ai-voice-parser-service", () => {
       }
     });
 
-    it("should use senderDisplayName as 'voice-input'", async () => {
+    it("should populate note from AI description field", async () => {
       mockInvoke.mockResolvedValueOnce(
-        makeSuccessResponse([makeValidTransaction()])
+        makeSuccessResponse([
+          makeValidTransaction({ description: "Morning coffee" }),
+        ])
       );
 
       const result = await parseVoiceWithAi({
@@ -214,7 +228,9 @@ describe("ai-voice-parser-service", () => {
       });
 
       if (!isVoiceParserError(result)) {
-        expect(result.transactions[0].senderDisplayName).toBe("voice-input");
+        expect(result.transactions[0].note).toBe("Morning coffee");
+        expect(result.originalTranscript).toBe("test original transcript");
+        expect(result.detectedLanguage).toBe("en");
       }
     });
   });

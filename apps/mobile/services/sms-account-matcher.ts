@@ -409,7 +409,9 @@ function matchTransaction(
   accounts: readonly AccountWithBankDetails[]
 ): AccountMatch {
   const input: MatchInput = {
-    senderDisplayName: transaction.senderDisplayName,
+    // Voice-parsed transactions lack senderDisplayName (SMS-only field);
+    // fall back to empty string so isSenderMatch returns false cleanly.
+    senderDisplayName: transaction.senderDisplayName ?? "",
     cardLast4: transaction.cardLast4 ?? undefined,
     currency: transaction.currency ?? undefined,
   };

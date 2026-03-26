@@ -39,6 +39,7 @@ const mockRecord = jest.fn();
 const mockPause = jest.fn();
 const mockStop = jest.fn().mockResolvedValue(undefined);
 const mockPrepareToRecordAsync = jest.fn().mockResolvedValue(undefined);
+const mockRelease = jest.fn();
 const mockRequestPermissions = jest.fn().mockResolvedValue({ granted: true });
 const mockSetAudioModeAsync = jest.fn().mockResolvedValue(undefined);
 const mockDeleteAsync = jest.fn().mockResolvedValue(undefined);
@@ -49,20 +50,30 @@ const mockRecorder = {
   pause: mockPause,
   stop: mockStop,
   prepareToRecordAsync: mockPrepareToRecordAsync,
+  release: mockRelease,
   getUri: jest.fn().mockReturnValue("file:///tmp/recording.m4a"),
   uri: "file:///tmp/recording.m4a",
 };
 
 jest.mock("expo-audio", () => ({
-  useAudioRecorder: jest.fn(() => mockRecorder),
   AudioModule: {
+    AudioRecorder: jest.fn(() => mockRecorder),
     requestRecordingPermissionsAsync: (...args: unknown[]): Promise<unknown> =>
       mockRequestPermissions(...args) as Promise<unknown>,
     getRecordingPermissionsAsync: (): Promise<{ granted: boolean }> =>
       Promise.resolve({ granted: false }),
   },
   RecordingPresets: {
-    HIGH_QUALITY: {},
+    HIGH_QUALITY: {
+      extension: ".m4a",
+      sampleRate: 44100,
+      numberOfChannels: 2,
+      bitRate: 128000,
+      android: {
+        outputFormat: "mpeg4",
+        audioEncoder: "aac",
+      },
+    },
   },
   setAudioModeAsync: (...args: unknown[]): Promise<unknown> =>
     mockSetAudioModeAsync(...args) as Promise<unknown>,

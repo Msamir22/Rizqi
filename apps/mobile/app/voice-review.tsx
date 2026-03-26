@@ -36,6 +36,8 @@ export default function VoiceReviewScreen(): React.JSX.Element {
   const params = useLocalSearchParams<{
     transactions: string;
     transcript: string;
+    originalTranscript: string;
+    detectedLanguage: string;
     originTabIndex: string;
   }>();
   const { showToast } = useToast();
@@ -60,6 +62,8 @@ export default function VoiceReviewScreen(): React.JSX.Element {
   }, [params.transactions]);
 
   const transcript = params.transcript ?? "";
+  const originalTranscript = params.originalTranscript ?? transcript;
+  const detectedLanguage = (params.detectedLanguage ?? "en").toUpperCase();
 
   /** Map tab indices to route paths for post-save navigation */
   const originTabRoute = useMemo((): string => {
@@ -173,7 +177,7 @@ export default function VoiceReviewScreen(): React.JSX.Element {
       />
 
       {/* Transcript preview (S-04 + S-05) */}
-      {transcript.length > 0 && (
+      {originalTranscript.length > 0 && (
         <View className="mx-4 mb-3 rounded-xl bg-slate-100 px-4 py-3 dark:bg-slate-800">
           <View className="flex-row items-center justify-between mb-1">
             <View className="flex-row items-center">
@@ -188,18 +192,26 @@ export default function VoiceReviewScreen(): React.JSX.Element {
             </View>
             <View className="rounded px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700">
               <Text className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
-                EN
+                {detectedLanguage}
               </Text>
             </View>
           </View>
-          <Text className="text-sm text-slate-700 dark:text-slate-300">
-            {transcript}
+          <Text
+            className="text-sm text-slate-700 dark:text-slate-300"
+            // eslint-disable-next-line react-native/no-inline-styles
+            style={
+              detectedLanguage === "AR"
+                ? { writingDirection: "rtl" }
+                : undefined
+            }
+          >
+            {originalTranscript}
           </Text>
         </View>
       )}
 
       <TransactionReview
-        transactions={transactions as ParsedSmsTransaction[]}
+        transactions={transactions}
         onSave={handleSave}
         onDiscard={handleDiscard}
         isSaving={isSaving}

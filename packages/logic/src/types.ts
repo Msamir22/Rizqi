@@ -10,15 +10,58 @@ import type {
   TransactionType,
 } from "@astik/db";
 
-export interface ParsedVoiceTransaction {
-  amount: number;
-  currency: CurrencyType;
-  counterparty?: string;
-  description?: string;
-  detectedCategory?: string | null;
-  confidence: number; // 0-1, for category detection
-  isIncome?: boolean;
-  detectedLanguage?: "ar" | "en";
+// ---------------------------------------------------------------------------
+// Shared Transaction Interfaces
+// ---------------------------------------------------------------------------
+
+/**
+ * Common interface for parsed transactions shared by the generic
+ * TransactionReview component. Both SMS and Voice parsers produce
+ * types that satisfy this contract.
+ *
+ * Architecture & Design Rationale:
+ * - Pattern: Common Interface (ISP — Interface Segregation Principle)
+ * - Why: The review component needs a contract that works for both
+ *   SMS and Voice transactions without knowing the source.
+ */
+export interface ReviewableTransaction {
+  readonly amount: number;
+  readonly currency: CurrencyType;
+  readonly type: TransactionType;
+  readonly counterparty: string;
+  readonly date: Date;
+  readonly categoryId: Category["id"];
+  readonly categoryDisplayName: Category["displayName"];
+  /** Parsing confidence score (0–1) */
+  readonly confidence: number;
+  /** AI-matched account ID (undefined if no match) */
+  readonly accountId?: string;
+}
+
+/**
+ * Voice-specific parsed transaction.
+ * Extends ReviewableTransaction with fields unique to voice input.
+ */
+export interface ParsedVoiceTransaction extends ReviewableTransaction {
+  /** AI-extracted description/note */
+  readonly note: string;
+  /** Original spoken text in the user's language */
+  readonly originalTranscript: string;
+  /** ISO 639-1 language code detected by the AI (e.g., "ar", "en") */
+  readonly detectedLanguage: string;
+}
+
+// ---------------------------------------------------------------------------
+// Voice Parser Error
+// ---------------------------------------------------------------------------
+
+/** Error types for structured voice parser error handling */
+export type VoiceParserErrorKind = "timeout" | "network" | "empty" | "unknown";
+
+/** Structured error returned by parseVoiceWithAi instead of throwing. */
+export interface VoiceParserError {
+  readonly kind: VoiceParserErrorKind;
+  readonly message: string;
 }
 
 export interface ParsedNotification {

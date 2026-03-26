@@ -95,6 +95,16 @@ const RESPONSE_SCHEMA = {
       description:
         "Full text interpretation of the user's voice recording. Translate Arabic to English.",
     },
+    original_transcript: {
+      type: "string",
+      description:
+        "Original verbatim transcript of the user's voice recording in the language they spoke, without translation. If the user spoke in English, this will be the same as 'transcript'.",
+    },
+    detected_language: {
+      type: "string",
+      description:
+        "ISO 639-1 language code of the primary language detected in the voice recording (e.g., 'ar' for Arabic, 'en' for English). If code-switching is detected, return the dominant language.",
+    },
     transactions: {
       type: "array",
       description: "Array of extracted transactions from the voice input.",
@@ -155,7 +165,12 @@ const RESPONSE_SCHEMA = {
       },
     },
   },
-  required: ["transcript", "transactions"],
+  required: [
+    "transcript",
+    "original_transcript",
+    "detected_language",
+    "transactions",
+  ],
 };
 
 // ---------------------------------------------------------------------------
@@ -193,6 +208,8 @@ Listen to the user's voice input (or read their transcribed text) and extract fi
 The user might speak in English, Arabic (MSA or Egyptian dialect), a mix, or Franco-Arab.
 
 Also provide a full text transcript of what the user said, translated to English.
+Additionally, provide the original untranslated transcript (original_transcript) in exactly the language the user spoke.
+Detect the primary language of the recording and return its ISO 639-1 code (e.g., "ar", "en") in detected_language.
 
 PARSING RULES:
 1. A user may describe one or more transactions in a single recording.
@@ -221,10 +238,20 @@ EXAMPLES:
 CATEGORY TREE:
 ${categoryTree}
 
-IMPORTANT:
-- Return ONLY valid transactions. If the audio is unclear or non-financial, return an empty transactions array.
+ANTI-HALLUCINATION RULES (CRITICAL — YOU MUST FOLLOW THESE):
+- You are STRICTLY FORBIDDEN from fabricating, inventing, or guessing transactions.
+- Every transaction you return MUST correspond to something the user EXPLICITLY said in the recording.
+- If the audio contains only silence, background noise, breathing, music, or non-speech sounds, you MUST return an empty transactions array.
+- If the audio contains speech but NO financial information (e.g., greetings, questions, unrelated conversation), you MUST return an empty transactions array.
+- If you are unsure whether the user mentioned a transaction, DO NOT include it. Err on the side of returning fewer transactions.
+- NEVER generate example or placeholder transactions. Only extract what was clearly spoken.
+- The transcript field should reflect ONLY what was actually said. If nothing was said, return an empty string.
+- When in doubt, return { "transcript": "", "original_transcript": "", "detected_language": "en", "transactions": [] }.
+
+ADDITIONAL RULES:
 - Multiple transactions in one recording should each be a separate item in the array.
-- Always provide a transcript even if no transactions are found.
+- Always provide a transcript even if no transactions are found (unless the audio is pure silence/noise).
+- IMPORTANT: Return transcripts as clean, continuous PLAIN TEXT ONLY. Do NOT include ANY timestamps, speaker labels, or timing tags (e.g., "00:02", "[Speaker 1]") inside the transcript or original_transcript fields. The UI depends on these strings being clean.
 `;
 }
 
@@ -245,6 +272,8 @@ interface VoiceTransaction {
 
 interface AiResponse {
   readonly transcript: string;
+  readonly original_transcript: string;
+  readonly detected_language: string;
   readonly transactions: ReadonlyArray<VoiceTransaction>;
 }
 
@@ -352,11 +381,20 @@ async function processWithRetry(
       });
 
       const text = response.text ?? "";
-      if (!text) return { transcript: "", transactions: [] };
+      if (!text)
+        return {
+          transcript: "",
+          original_transcript: "",
+          detected_language: "en",
+          transactions: [],
+        };
 
       const parsed: AiResponse = JSON.parse(text);
       return {
         transcript: parsed.transcript ?? "",
+        original_transcript:
+          parsed.original_transcript ?? parsed.transcript ?? "",
+        detected_language: parsed.detected_language ?? "en",
         transactions: parsed.transactions ?? [],
       };
     } catch (err: unknown) {
@@ -573,6 +611,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // 7. Return results (no currency — set client-side)
     return jsonResponse({
       transcript: result.transcript,
+      original_transcript: result.original_transcript,
+      detected_language: result.detected_language,
       transactions: result.transactions,
     });
   } catch (error: unknown) {

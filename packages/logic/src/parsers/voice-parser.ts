@@ -1,10 +1,25 @@
 /**
  * Voice Transaction Parser for Astik
  * Parses Egyptian Arabic and English voice input to extract transaction details
+ *
+ * @deprecated This legacy regex-based parser is superseded by `ai-voice-parser-service.ts`.
+ * It has zero imports across the codebase and should be removed in a future cleanup.
+ * TODO: Remove this file entirely once voice parser migration is verified.
  */
 
-import { CurrencyType } from "@astik/db";
-import { ParsedVoiceTransaction } from "../types";
+import type { CurrencyType } from "@astik/db";
+
+/** @deprecated Legacy return type — do not use in new code. */
+interface LegacyParsedVoiceTransaction {
+  amount: number;
+  currency: CurrencyType;
+  counterparty?: string;
+  description?: string;
+  detectedCategory?: string | null;
+  confidence: number;
+  isIncome?: boolean;
+  detectedLanguage?: "ar" | "en";
+}
 
 // Arabic character detection regex
 const ARABIC_REGEX = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/;
@@ -170,7 +185,7 @@ function isIncomeTransaction(text: string): boolean {
  */
 export function parseVoiceTransaction(
   voiceText: string
-): ParsedVoiceTransaction | null {
+): LegacyParsedVoiceTransaction | null {
   if (!voiceText || voiceText.trim().length === 0) {
     return null;
   }
