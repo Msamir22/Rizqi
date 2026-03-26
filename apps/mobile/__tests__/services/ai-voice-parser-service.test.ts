@@ -392,11 +392,7 @@ describe("ai-voice-parser-service", () => {
   // parseVoiceWithAi — Audio mode
   // =========================================================================
   describe("parseVoiceWithAi — audio mode", () => {
-    it("should send audio as FormData when audioUri is provided", async () => {
-      const mockBlob = new Blob(["audio-data"], { type: "audio/m4a" });
-      mockFetch.mockResolvedValueOnce({
-        blob: () => Promise.resolve(mockBlob),
-      });
+    it("should send audio as FormData with ReactNativeFormDataFile when audioUri is provided", async () => {
       mockInvoke.mockResolvedValueOnce(
         makeSuccessResponse([makeValidTransaction()])
       );
@@ -409,7 +405,8 @@ describe("ai-voice-parser-service", () => {
         accounts: [{ id: "acc-1", name: "Cash" }],
       });
 
-      expect(mockFetch).toHaveBeenCalledWith("file:///tmp/recording.m4a");
+      // No fetch() call — ReactNativeFormDataFile pattern reads files natively
+      expect(mockFetch).not.toHaveBeenCalled();
       expect(mockInvoke).toHaveBeenCalledTimes(1);
 
       const callArgs = mockInvoke.mock.calls[0] as unknown[];
@@ -417,7 +414,31 @@ describe("ai-voice-parser-service", () => {
       const body = (callArgs[1] as { body: FormData }).body;
       expect(body).toBeInstanceOf(FormData);
 
+      // Verify the FormData contains the audio file entry
+      const audioEntry = body.get("audio");
+      expect(audioEntry).not.toBeNull();
+
       expect(isVoiceParserError(result)).toBe(false);
+    });
+
+    it("should normalize bare file paths with file:// prefix", async () => {
+      mockInvoke.mockResolvedValueOnce(
+        makeSuccessResponse([makeValidTransaction()])
+      );
+
+      await parseVoiceWithAi({
+        audioUri: "/data/user/0/com.app/cache/recording.m4a",
+        preferredCurrency: "EGP",
+      });
+
+      expect(mockInvoke).toHaveBeenCalledTimes(1);
+      const callArgs = mockInvoke.mock.calls[0] as unknown[];
+      const body = (callArgs[1] as { body: FormData }).body;
+      expect(body).toBeInstanceOf(FormData);
+
+      // The audio entry should exist (file:// prefix added internally)
+      const audioEntry = body.get("audio");
+      expect(audioEntry).not.toBeNull();
     });
   });
 
