@@ -22,8 +22,9 @@ import {
   normalizeType,
   parseCategory,
   type CategoryMap,
+  type ParsedSmsTransaction,
+  type SmsMessage,
 } from "@astik/logic";
-import type { ParsedSmsTransaction, SmsMessage } from "@astik/logic/src/types";
 
 // ---------------------------------------------------------------------------
 // Schemas — AI response validation

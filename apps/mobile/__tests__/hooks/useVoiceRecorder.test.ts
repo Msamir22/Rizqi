@@ -413,6 +413,7 @@ describe("useVoiceRecorder", () => {
       });
 
       expect(mockDeleteAsync).toHaveBeenCalled();
+      expect(mockRelease).toHaveBeenCalled();
       expect(unwrap(result).status).toBe("idle");
       expect(unwrap(result).audioUri).toBeNull();
     });

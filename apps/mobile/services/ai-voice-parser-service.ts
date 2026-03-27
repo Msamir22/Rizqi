@@ -19,21 +19,20 @@
 import { supabase } from "./supabase";
 import { z } from "zod";
 
-import type {
-  ParsedVoiceTransaction,
-  ReviewableTransaction,
-  VoiceParserError,
-} from "@astik/logic/src/types";
 import type { Category } from "@astik/db";
 import {
   computeSmsHash,
+  normalizeCurrency,
   normalizeType,
   parseAiDate,
   clampConfidence,
   parseCategory,
   buildCategoryMap,
+  type ParsedVoiceTransaction,
+  type ReviewableTransaction,
+  type VoiceParserError,
+  type CategoryMap,
 } from "@astik/logic";
-import type { CategoryMap } from "@astik/logic/src/utils/ai-parser-utils";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -257,6 +256,7 @@ export async function parseVoiceWithAi(
 
     // Compute a deduplication hash from the transcript (shared by all
     // transactions parsed from the same voice recording).
+    // TODO: Rename computeSmsHash → computeContentHash (name is SMS-specific but logic is source-agnostic)
     const transcriptHash = await computeSmsHash(transcript);
 
     const results: ReviewableTransaction[] = validTransactions.map(
@@ -265,10 +265,15 @@ export async function parseVoiceWithAi(
           ? parseCategory(aiTx.categorySystemName, categoryMap)
           : null;
 
+        // Validate currency via normalizeCurrency; fall back to preferredCurrency
+        // if it's already valid, otherwise default to EGP.
+        const validatedCurrency =
+          normalizeCurrency(options.preferredCurrency) ??
+          ("EGP" as ReviewableTransaction["currency"]);
+
         return {
           amount: Math.abs(aiTx.amount),
-          currency:
-            options.preferredCurrency as ReviewableTransaction["currency"],
+          currency: validatedCurrency,
           type: normalizeType(aiTx.type),
           counterparty: aiTx.counterparty ?? "",
           date: parseAiDate(aiTx.date),
@@ -279,7 +284,7 @@ export async function parseVoiceWithAi(
             resolvedCategory?.displayName ??
             (aiTx.categorySystemName || DEFAULT_CATEGORY_DISPLAY_NAME),
           confidence: clampConfidence(aiTx.confidenceScore),
-          accountId: aiTx.accountId || "",
+          accountId: aiTx.accountId || undefined,
           deduplicationHash: transcriptHash,
           // Voice-specific fields (available via runtime narrowing)
           note: aiTx.description ?? "",

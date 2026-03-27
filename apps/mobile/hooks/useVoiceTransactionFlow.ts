@@ -146,6 +146,8 @@ export function useVoiceTransactionFlow(
     // meaningful speech and tend to cause AI hallucinations on noise/silence.
     const MIN_RECORDING_DURATION_MS = 1500;
     if (recorder.durationMs < MIN_RECORDING_DURATION_MS) {
+      // Stop recording and clean up temp files before returning
+      await recorder.discard();
       setErrorMessage(
         "Recording too short. Please speak for at least 2 seconds."
       );

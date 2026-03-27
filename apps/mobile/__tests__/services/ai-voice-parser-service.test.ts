@@ -514,7 +514,7 @@ describe("ai-voice-parser-service", () => {
       if (!isVoiceParserError(result)) {
         const tx = result.transactions[0];
         expect(tx.categoryDisplayName).toBe("other");
-        expect(tx.accountId).toBe("");
+        expect(tx.accountId).toBeUndefined();
         expect(tx.confidence).toBe(0.8);
       }
     });

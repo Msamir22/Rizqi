@@ -43,7 +43,7 @@ npx supabase functions deploy parse-voice --project-ref <YOUR_PROJECT_REF>
 curl -X POST https://<YOUR_PROJECT_REF>.supabase.co/functions/v1/parse-voice \
   -H "Authorization: Bearer <ANON_KEY>" \
   -H "Content-Type: application/json" \
-  -d '{"query": "I spent 50 on coffee", "callerLocalDate": "2026-03-26"}'
+  -d '{"query": "I spent 50 on coffee", "callerLocalDate": "<YYYY-MM-DD>"}'
 ```
 
 ### 4. Phase 3 — Parser + Review Refactors

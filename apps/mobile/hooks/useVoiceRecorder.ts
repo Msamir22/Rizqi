@@ -310,17 +310,10 @@ export function useVoiceRecorder(): VoiceRecorderResult {
     return () => {
       stopTimer();
       abortController.abort();
-      // Release on unmount — we manage the lifecycle manually
-      if (recorderRef.current) {
-        try {
-          recorderRef.current.release();
-        } catch {
-          // Swallow — component is unmounting
-        }
-        recorderRef.current = null;
-      }
+      // Release on unmount — reuse the existing lifecycle helper
+      releaseRecorder();
     };
-  }, [stopTimer]);
+  }, [stopTimer, releaseRecorder]);
 
   // ---------------------------------------------------------------------------
   // Auto-stop at 60 seconds (FR-004: does NOT auto-submit)

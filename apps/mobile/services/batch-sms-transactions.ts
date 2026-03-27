@@ -117,7 +117,7 @@ export async function batchCreateTransactions(
     const tx = transactions[i];
     if (
       "isAtmWithdrawal" in tx &&
-      (tx as { isAtmWithdrawal?: boolean }).isAtmWithdrawal &&
+      tx.isAtmWithdrawal === true &&
       !toAccountMap?.has(i)
     ) {
       atmCurrencies.add(tx.currency);
@@ -159,10 +159,7 @@ export async function batchCreateTransactions(
     }
 
     // ── ATM Withdrawal: prepare as Transfer (bank → cash) ──
-    if (
-      "isAtmWithdrawal" in tx &&
-      (tx as { isAtmWithdrawal?: boolean }).isAtmWithdrawal
-    ) {
+    if ("isAtmWithdrawal" in tx && tx.isAtmWithdrawal === true) {
       // Prefer user-selected TO account, fall back to auto-resolved by currency
       const cashAccountId =
         toAccountMap?.get(i) ?? cashAccountIdByCurrency.get(tx.currency);

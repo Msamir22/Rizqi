@@ -68,9 +68,10 @@ export async function createTransactionFromVoice(
     });
   });
 
-  // Update account balance
+  // Update account balance — use Math.abs to match the stored amount (line 58).
+  // Without this, a negative AI amount (e.g. -50) would invert the balance direction.
   const isExpense = parsed.type === "EXPENSE";
-  await updateAccountBalance(accountId, parsed.amount, isExpense);
+  await updateAccountBalance(accountId, Math.abs(parsed.amount), isExpense);
 
   return newTransaction;
 }

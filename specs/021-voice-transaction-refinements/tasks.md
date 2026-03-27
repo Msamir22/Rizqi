@@ -302,7 +302,7 @@ clutter.
 
 ### Phase Dependencies
 
-```
+```text
 Phase 1 (Foundational) ─── BLOCKS ALL ──→ Phase 2 (US2: Parser Refactor)
                                               │
                                               ▼
@@ -330,7 +330,7 @@ Phase 1 ──→ Phase 7 (US6: FAB) ─────────────→ 
 
 ### Parallel Opportunities
 
-```
+```text
 After Phase 1:
   ┌─ US2 (sequential: T007→T017)
   ├─ US4 (parallel: T026, T027, T028)

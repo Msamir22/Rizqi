@@ -72,7 +72,7 @@ Already satisfies `ReviewableTransaction`. Has additional SMS-specific fields:
 
 No changes from existing design — only guard additions.
 
-```
+```text
 idle → recording → paused → recording (resume)
                  → analyzing → [0 txns] → error (overlay shows message)
                              → [≥1 txns] → idle (navigate to Review)

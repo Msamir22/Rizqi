@@ -174,6 +174,19 @@ describe("ai-parser-utils", () => {
       expect(result.getMonth()).toBe(0);
       expect(result.getDate()).toBe(1);
     });
+
+    it("should fall back to current date for invalid calendar date (Feb 31)", () => {
+      const before = Date.now();
+      const result = parseAiDate("2026-02-31");
+      expect(result.getTime()).toBeGreaterThanOrEqual(before);
+    });
+
+    it("should parse valid edge date (Feb 28 non-leap year)", () => {
+      const result = parseAiDate("2026-02-28");
+      expect(result.getFullYear()).toBe(2026);
+      expect(result.getMonth()).toBe(1);
+      expect(result.getDate()).toBe(28);
+    });
   });
 
   // =========================================================================

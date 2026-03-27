@@ -102,12 +102,20 @@ export function parseAiDate(raw: string): Date {
   // Date-only strings: create in local timezone to avoid UTC midnight shift
   if (DATE_ONLY_REGEX.test(raw.trim())) {
     const [yearStr, monthStr, dayStr] = raw.trim().split("-");
-    const localDate = new Date(
-      Number(yearStr),
-      Number(monthStr) - 1,
-      Number(dayStr)
-    );
-    if (!isNaN(localDate.getTime())) {
+    const year = Number(yearStr);
+    const month = Number(monthStr) - 1; // JS months are 0-indexed
+    const day = Number(dayStr);
+    const localDate = new Date(year, month, day);
+
+    // Guard against silent date rollover (e.g., Feb 31 → March 3).
+    // new Date(2025, 1, 31) is "valid" (non-NaN) but silently becomes March 3.
+    const isValidCalendarDate =
+      !isNaN(localDate.getTime()) &&
+      localDate.getFullYear() === year &&
+      localDate.getMonth() === month &&
+      localDate.getDate() === day;
+
+    if (isValidCalendarDate) {
       return localDate;
     }
     return new Date();

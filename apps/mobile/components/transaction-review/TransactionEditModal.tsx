@@ -283,7 +283,8 @@ export function TransactionEditModal({
   ]);
 
   const transactionIdentity =
-    transaction.deduplicationHash ?? transaction.counterparty;
+    transaction.deduplicationHash ??
+    `${transaction.counterparty}-${transaction.amount}-${transaction.date.getTime()}`;
 
   // Reset flag when transaction changes
   useEffect(() => {
