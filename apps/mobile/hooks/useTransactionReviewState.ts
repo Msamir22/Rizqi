@@ -271,6 +271,9 @@ export function useTransactionReviewState({
           ...(overrides.counterparty !== undefined && {
             counterparty: overrides.counterparty,
           }),
+          ...(overrides.note !== undefined && {
+            note: overrides.note,
+          }),
         };
       });
     }, [transactions, transactionOverrides, categoryMap]);

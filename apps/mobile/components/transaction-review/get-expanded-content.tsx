@@ -22,9 +22,11 @@ export function OriginalContentBlock({
   readonly body: string;
 }): React.JSX.Element {
   return (
-    <View className="bg-slate-900/60 rounded-xl p-3">
+    <View className="bg-slate-100 dark:bg-slate-900/60 rounded-xl p-3">
       <Text className="text-xs text-slate-500 mb-1 font-medium">{title}</Text>
-      <Text className="text-xs text-slate-400 leading-5">{body}</Text>
+      <Text className="text-xs text-slate-600 dark:text-slate-400 leading-5">
+        {body}
+      </Text>
     </View>
   );
 }

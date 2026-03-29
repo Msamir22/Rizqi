@@ -25,6 +25,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
+import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // ---------------------------------------------------------------------------
@@ -44,6 +45,7 @@ export default function VoiceReviewScreen(): React.JSX.Element {
 
   const [isSaving, setIsSaving] = useState(false);
   const [discardModalVisible, setDiscardModalVisible] = useState(false);
+  const [isTranscriptExpanded, setIsTranscriptExpanded] = useState(true);
 
   // Parse transactions from route params
   const transactions = useMemo<readonly ReviewableTransaction[]>(() => {
@@ -170,8 +172,10 @@ export default function VoiceReviewScreen(): React.JSX.Element {
         rightAction={{
           label: "Retry",
           onPress: () => {
-            router.replace(originTabRoute as never);
-            // User can re-trigger voice flow from the tab bar
+            router.replace({
+              pathname: originTabRoute as never,
+              params: { retry: "true" },
+            });
           },
         }}
       />
@@ -179,34 +183,53 @@ export default function VoiceReviewScreen(): React.JSX.Element {
       {/* Transcript preview (S-04 + S-05) */}
       {originalTranscript.length > 0 && (
         <View className="mx-4 mb-3 rounded-xl bg-slate-100 px-4 py-3 dark:bg-slate-800">
-          <View className="flex-row items-center justify-between mb-1">
-            <View className="flex-row items-center">
-              <Ionicons
-                name="mic-outline"
-                size={14}
-                color={palette.slate[500]}
-              />
-              <Text className="ml-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                What I heard
-              </Text>
-            </View>
-            <View className="rounded px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700">
-              <Text className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
-                {detectedLanguage}
-              </Text>
-            </View>
-          </View>
-          <Text
-            className="text-sm text-slate-700 dark:text-slate-300"
-            // eslint-disable-next-line react-native/no-inline-styles
-            style={
-              detectedLanguage === "AR"
-                ? { writingDirection: "rtl" }
-                : undefined
-            }
+          <TouchableOpacity
+            onPress={() => setIsTranscriptExpanded((prev) => !prev)}
+            activeOpacity={0.7}
           >
-            {originalTranscript}
-          </Text>
+            <View className="flex-row items-center justify-between mb-1">
+              <View className="flex-row items-center">
+                <Ionicons
+                  name="mic-outline"
+                  size={14}
+                  color={palette.slate[500]}
+                />
+                <Text className="ml-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  What I heard
+                </Text>
+              </View>
+              <View className="flex-row items-center gap-2">
+                <View className="rounded px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700">
+                  <Text className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                    {detectedLanguage}
+                  </Text>
+                </View>
+                <Ionicons
+                  name={isTranscriptExpanded ? "chevron-up" : "chevron-down"}
+                  size={16}
+                  color={palette.slate[500]}
+                />
+              </View>
+            </View>
+          </TouchableOpacity>
+          {isTranscriptExpanded && (
+            <Animated.View
+              entering={FadeIn.duration(200)}
+              exiting={FadeOut.duration(150)}
+            >
+              <Text
+                className="text-sm text-slate-700 dark:text-slate-300"
+                // eslint-disable-next-line react-native/no-inline-styles
+                style={
+                  detectedLanguage === "AR"
+                    ? { writingDirection: "rtl" }
+                    : undefined
+                }
+              >
+                {originalTranscript}
+              </Text>
+            </Animated.View>
+          )}
         </View>
       )}
 

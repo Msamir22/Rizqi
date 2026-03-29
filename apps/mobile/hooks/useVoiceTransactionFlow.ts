@@ -77,6 +77,8 @@ interface FlowConfig {
   readonly categoryRecords: readonly Category[];
   /** Origin tab index (for post-save navigation) */
   readonly originTabIndex?: number;
+  /** When true, automatically starts the voice recording on mount */
+  readonly autoStart?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -120,6 +122,12 @@ export function useVoiceTransactionFlow(
   }, [recorder.status, updateFlowStatus]);
 
   // ---------------------------------------------------------------------------
+  // Auto-start support (for retry flow from voice-review page)
+  // ---------------------------------------------------------------------------
+  const autoStartFiredRef = useRef(false);
+  const startFlowRef = useRef<(() => Promise<void>) | null>(null);
+
+  // ---------------------------------------------------------------------------
   // Actions
   // ---------------------------------------------------------------------------
 
@@ -148,6 +156,22 @@ export function useVoiceTransactionFlow(
 
     await recorder.start();
   }, [recorder, config.originTabIndex, updateFlowStatus]);
+
+  // Keep ref in sync so the auto-start effect can call it
+  startFlowRef.current = startFlow;
+
+  // Fire auto-start once when autoStart transitions to true
+  useEffect(() => {
+    if (
+      config.autoStart &&
+      !autoStartFiredRef.current &&
+      flowStatusRef.current === "idle" &&
+      startFlowRef.current
+    ) {
+      autoStartFiredRef.current = true;
+      void startFlowRef.current();
+    }
+  }, [config.autoStart]);
 
   const pauseRecording = useCallback((): void => {
     recorder.pause();

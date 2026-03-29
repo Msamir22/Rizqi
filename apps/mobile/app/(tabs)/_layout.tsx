@@ -1,6 +1,6 @@
 import { darkTheme, lightTheme } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
-import { Tabs } from "expo-router";
+import { Tabs, useLocalSearchParams } from "expo-router";
 import React, { useMemo } from "react";
 import { View } from "react-native";
 import { QuickActionFab } from "@/components/fab";
@@ -28,11 +28,14 @@ export default function TabLayout(): React.ReactElement {
     [accounts]
   );
 
+  const { retry } = useLocalSearchParams<{ retry?: string }>();
+
   const voiceFlow = useVoiceTransactionFlow({
     preferredCurrency,
     categories: categoryTree,
     accounts: accountInputs,
     categoryRecords: allCategories,
+    autoStart: retry === "true",
   });
 
   return (
