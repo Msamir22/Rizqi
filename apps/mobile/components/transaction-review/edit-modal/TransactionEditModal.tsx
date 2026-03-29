@@ -76,7 +76,7 @@ export function TransactionEditModal(
 ): React.JSX.Element {
   const { visible, onClose, latestRates, transaction } = props;
 
-  const { state, setters, handlers } = useTransactionEditState(props);
+  const { state, setters, accountHandlers } = useTransactionEditState(props);
 
   return (
     <Modal
@@ -112,7 +112,7 @@ export function TransactionEditModal(
               Edit Transaction
             </Text>
             <TouchableOpacity
-              onPress={handlers.handleSave}
+              onPress={accountHandlers.handleSave}
               activeOpacity={0.7}
               className="bg-nileGreen-500 px-5 py-1.5 rounded-full"
             >
@@ -316,7 +316,7 @@ export function TransactionEditModal(
               isSecondary={false}
               selectedId={state.selectedAccountId}
               selectedName={state.selectedAccountName}
-              onSelect={handlers.handleSelectAccount}
+              onSelect={accountHandlers.handleSelectAccount}
               isPickerOpen={state.isAccountPickerOpen}
               onTogglePicker={() =>
                 setters.setIsAccountPickerOpen(!state.isAccountPickerOpen)
@@ -333,8 +333,8 @@ export function TransactionEditModal(
                 });
               }}
               newAccountError={state.newAccountError}
-              onStartNew={handlers.handleStartNew}
-              onCancelNew={handlers.handleCancelNew}
+              onStartNew={accountHandlers.handleStartNew}
+              onCancelNew={accountHandlers.handleCancelNew}
             />
 
             {/* ── Cash Withdrawal TO account selector ──────────────────────────────────── */}

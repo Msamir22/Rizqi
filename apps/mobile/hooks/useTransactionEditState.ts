@@ -36,6 +36,7 @@ export interface UseTransactionEditStateReturn {
     readonly selectedToAccountName: string;
     readonly newToAccountName: string;
     readonly isToAccountPickerOpen: boolean;
+    readonly isCreatingNewToAccount: boolean;
     readonly isCategoryPickerOpen: boolean;
     readonly selectedCategoryId: string;
     readonly selectedCategoryDisplayName: string | null;
@@ -76,9 +77,11 @@ export interface UseTransactionEditStateReturn {
       React.SetStateAction<TransactionValidationErrors>
     >;
   };
-  readonly handlers: {
+  readonly accountHandlers: {
     readonly handleStartNew: () => void;
     readonly handleCancelNew: () => void;
+    readonly handleStartNewToAccount: () => void;
+    readonly handleCancelNewToAccount: () => void;
     readonly handleSave: () => void;
     readonly handleSelectAccount: (opt: AccountOption) => void;
   };
@@ -133,13 +136,13 @@ export function useTransactionEditState({
   const [newAccountName, setNewAccountName] = useState(transaction.originLabel);
   const [newAccountError, setNewAccountError] = useState<string | null>(null);
 
-  // ATM withdrawal TO account state
   const [selectedToAccountId, setSelectedToAccountId] = useState<string | null>(
     null
   );
   const [selectedToAccountName, setSelectedToAccountName] = useState("");
   const [newToAccountName, setNewToAccountName] = useState("Cash");
   const [isToAccountPickerOpen, setIsToAccountPickerOpen] = useState(false);
+  const [isCreatingNewToAccount, setIsCreatingNewToAccount] = useState(false);
 
   // Category state
   const [isCategoryPickerOpen, setIsCategoryPickerOpen] = useState(false);
@@ -233,7 +236,9 @@ export function useTransactionEditState({
 
     if (formConfig.showToAccount) {
       setIsToAccountPickerOpen(false);
-      if (cashAccountOptions.length > 0) {
+      const hasCash = cashAccountOptions.length > 0;
+      setIsCreatingNewToAccount(!hasCash);
+      if (hasCash) {
         const currencyMatch = cashAccountOptions.find(
           (o) => o.currency === transaction.currency
         );
@@ -343,8 +348,21 @@ export function useTransactionEditState({
       categoryId: selectedCategoryId,
     });
 
-    if (!isValid) {
-      setFormErrors(errors);
+    const requiresToAccount = formConfig.showToAccount;
+    const isToAccountValid =
+      !requiresToAccount ||
+      (isCreatingNewToAccount
+        ? newToAccountName.trim().length > 0
+        : !!selectedToAccountId);
+
+    if (!isValid || !isToAccountValid) {
+      const finalErrors = { ...errors };
+      if (!isToAccountValid) {
+        finalErrors.toAccountId = isCreatingNewToAccount
+          ? "Cash account name is required"
+          : "Cash account is required";
+      }
+      setFormErrors(finalErrors);
       return;
     }
 
@@ -362,14 +380,14 @@ export function useTransactionEditState({
       categoryId: selectedCategoryId,
       amount: parseFloat(parseAmountInput(amount)),
       toAccountId: formConfig.showToAccount
-        ? hasCashAccounts
-          ? selectedToAccountId
-          : null
+        ? isCreatingNewToAccount
+          ? null
+          : selectedToAccountId
         : undefined,
       toAccountName: formConfig.showToAccount
-        ? hasCashAccounts
-          ? selectedToAccountName
-          : newToAccountName.trim() || "Cash"
+        ? isCreatingNewToAccount
+          ? newToAccountName.trim() || "Cash"
+          : selectedToAccountName
         : undefined,
     });
 
@@ -390,10 +408,10 @@ export function useTransactionEditState({
     onSave,
     onCreatePendingAccount,
     formConfig.showToAccount,
-    hasCashAccounts,
     selectedToAccountId,
     selectedToAccountName,
     newToAccountName,
+    isCreatingNewToAccount,
   ]);
 
   return {
@@ -412,6 +430,7 @@ export function useTransactionEditState({
       selectedToAccountName,
       newToAccountName,
       isToAccountPickerOpen,
+      isCreatingNewToAccount,
       isCategoryPickerOpen,
       selectedCategoryId,
       selectedCategoryDisplayName,
@@ -438,15 +457,27 @@ export function useTransactionEditState({
       setNewToAccountName,
       setFormErrors,
     },
-    handlers: {
+    accountHandlers: {
       handleStartNew,
       handleCancelNew,
+      handleStartNewToAccount: useCallback(() => {
+        setIsCreatingNewToAccount(true);
+        setIsToAccountPickerOpen(false);
+      }, []),
+      handleCancelNewToAccount: useCallback(() => {
+        setIsCreatingNewToAccount(false);
+        setNewToAccountName("Cash");
+        setFormErrors((prev) => ({ ...prev, toAccountId: undefined }));
+      }, []),
       handleSave,
       handleSelectAccount: useCallback((opt: AccountOption) => {
         setSelectedAccountId(opt.id);
         setSelectedAccountName(opt.name);
         setIsAccountPickerOpen(false);
-        setFormErrors({});
+        setFormErrors((prev) => ({
+          ...prev,
+          accountId: undefined,
+        }));
       }, []),
     },
   };

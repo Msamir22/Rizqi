@@ -19,7 +19,7 @@ import {
 import { prepareSavePayload } from "@/services/sms-review-save-service";
 import { getCurrentUserId } from "@/services/supabase";
 import type { ReviewableTransaction } from "@astik/logic";
-import type { TransactionEdits } from "@/components/transaction-review/edit-modal/TransactionEditModal";
+import type { TransactionEdits } from "@/services/sms-edit-modal-service";
 
 export type ReviewListItem =
   | { readonly kind: "header"; readonly date: string; readonly key: string }
