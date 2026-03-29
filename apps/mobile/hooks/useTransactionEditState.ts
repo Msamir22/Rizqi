@@ -205,12 +205,15 @@ export function useTransactionEditState({
 
   const hasCurrencyMismatch = selectedAccountCurrency !== transaction.currency;
 
-  // Use a ref to prevent re-initialization when accountOptions recalculates
-  const hasInitializedRef = useRef(false);
+  // Track which transaction identity has been initialized
+  const initializedForIdentityRef = useRef<string | null>(null);
+  const transactionIdentity =
+    transaction.deduplicationHash ??
+    `${transaction.counterparty}-${transaction.amount}-${transaction.date.getTime()}`;
 
   useEffect(() => {
-    if (hasInitializedRef.current) return;
-    hasInitializedRef.current = true;
+    if (initializedForIdentityRef.current === transactionIdentity) return;
+    initializedForIdentityRef.current = transactionIdentity;
 
     setAmount(transaction.amount.toString());
     setCounterparty(transaction.counterparty || "");
@@ -253,6 +256,7 @@ export function useTransactionEditState({
       }
     }
   }, [
+    transactionIdentity,
     transaction,
     currentAccountId,
     currentAccountName,
@@ -261,14 +265,6 @@ export function useTransactionEditState({
     formConfig.showToAccount,
     cashAccountOptions,
   ]);
-
-  const transactionIdentity =
-    transaction.deduplicationHash ??
-    `${transaction.counterparty}-${transaction.amount}-${transaction.date.getTime()}`;
-
-  useEffect(() => {
-    hasInitializedRef.current = false;
-  }, [transactionIdentity]);
 
   const prevTypeRef = useRef(txType);
 
