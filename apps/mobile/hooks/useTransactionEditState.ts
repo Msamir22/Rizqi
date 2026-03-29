@@ -120,11 +120,15 @@ export function useTransactionEditState({
     [transaction]
   );
 
+  const readTransactionNote = (tx: ReviewableTransaction): string => {
+    const value = (tx as { note?: unknown }).note;
+    return typeof value === "string" ? value : "";
+  };
+
   // Local editable state
   const [amount, setAmount] = useState(transaction.amount.toString());
-  const [note, setNote] = useState(
-    "note" in transaction ? (transaction as { note: string }).note : ""
-  );
+  const [note, setNote] = useState(readTransactionNote(transaction));
+
   const [counterparty, setCounterparty] = useState(
     transaction.counterparty || ""
   );
@@ -221,9 +225,7 @@ export function useTransactionEditState({
     initializedForIdentityRef.current = transactionIdentity;
 
     setAmount(transaction.amount.toString());
-    setNote(
-      "note" in transaction ? (transaction as { note: string }).note : ""
-    );
+    setNote(readTransactionNote(transaction));
     setCounterparty(transaction.counterparty || "");
     setTxType(transaction.type);
 

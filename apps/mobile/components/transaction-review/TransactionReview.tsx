@@ -77,7 +77,8 @@ export function TransactionReview({
   const [isFiltersVisible, setIsFiltersVisible] = useState(false);
 
   const hasActiveFilters =
-    state.searchQuery.length > 0 || state.selectedTypes.length < 2;
+    state.searchQuery.trim().length > 0 ||
+    !(state.selectedTypes.length === 1 && state.selectedTypes[0] === "All");
 
   // ── Render ────────────────────────────────────────────────────────
   const renderItem = useCallback(

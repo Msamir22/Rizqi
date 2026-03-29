@@ -138,6 +138,10 @@ function TransactionItemInner({
     onToggleSelect(index);
   }, [onToggleSelect, index]);
 
+  const counterpartyText = isVoice
+    ? transaction.counterparty
+    : transaction.counterparty || "Unknown";
+
   return (
     <View className="bg-white dark:bg-slate-800/60 rounded-2xl mb-3 overflow-hidden border border-slate-200 dark:border-transparent">
       <TouchableOpacity
@@ -199,24 +203,16 @@ function TransactionItemInner({
 
           {/* Middle row: counterparty + date */}
           <View className="flex-row items-center justify-between mb-1">
-            {!isVoice && (
+            {counterpartyText ? (
               <Text
                 className="text-xs text-slate-400 flex-shrink"
                 numberOfLines={1}
               >
-                {transaction.counterparty || "Unknown"}
+                {counterpartyText}
               </Text>
-            )}
-            {isVoice && transaction.counterparty ? (
-              <Text
-                className="text-xs text-slate-400 flex-shrink"
-                numberOfLines={1}
-              >
-                {transaction.counterparty}
-              </Text>
-            ) : isVoice ? (
+            ) : (
               <View />
-            ) : null}
+            )}
             <Text className="text-xs text-slate-500">
               {formatDate(transaction.date)}
             </Text>

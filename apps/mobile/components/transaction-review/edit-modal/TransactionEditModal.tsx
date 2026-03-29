@@ -264,7 +264,7 @@ export function TransactionEditModal(
             )}
 
             {/* Note (for voice transactions) */}
-            {state.note !== undefined && (
+            {transaction.source === "VOICE" && (
               <View className="mb-4">
                 <Text className="text-xs text-slate-500 mb-2 font-medium uppercase tracking-wider">
                   Note

@@ -162,8 +162,11 @@ export function useVoiceTransactionFlow(
 
   // Fire auto-start once when autoStart transitions to true
   useEffect(() => {
+    if (!config.autoStart) {
+      autoStartFiredRef.current = false;
+      return;
+    }
     if (
-      config.autoStart &&
       !autoStartFiredRef.current &&
       flowStatusRef.current === "idle" &&
       startFlowRef.current
