@@ -100,6 +100,12 @@ const MENU_SECTIONS: MenuSection[] = [
         route: "/metals",
       },
       {
+        id: "live-rates",
+        label: "Live Rates",
+        icon: "trending-up-outline",
+        route: "/live-rates",
+      },
+      {
         id: "stats",
         label: "Stats",
         icon: "stats-chart-outline",

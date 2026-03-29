@@ -1,8 +1,15 @@
 import type { CurrencyType, MarketRate } from "@astik/db";
 import { CURRENCY_INFO_MAP, getMetalPrice } from "@astik/logic";
 import { FontAwesome5, Ionicons, MaterialIcons } from "@expo/vector-icons";
-import React from "react";
-import { ActivityIndicator, ScrollView, Text, View } from "react-native";
+import { router } from "expo-router";
+import React, { useCallback } from "react";
+import {
+  ActivityIndicator,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { formatTimeAgo } from "@/utils/dateHelpers";
@@ -183,28 +190,48 @@ export function LiveRates({
     preferredCurrency
   );
 
+  const handlePress = useCallback((): void => {
+    router.push("/live-rates" as never);
+  }, []);
+
   return (
     <View className="my-3">
-      <View className="mb-3 flex-row items-center">
-        <Text className="header-text ml-1 text-slate-800 dark:text-slate-50">
-          Live Rates
-        </Text>
-        {isLoading && (
-          <ActivityIndicator
-            size="small"
-            className="ml-2"
-            color={palette.nileGreen[500]}
-          />
-        )}
-        {isStale && (
-          <View className="ml-2 flex-row items-center">
-            <Ionicons
-              name="alert-circle-outline"
-              size={16}
-              color={palette.orange[500]}
+      <View className="mb-3 flex-row items-center justify-between">
+        <View className="flex-row items-center">
+          <Text className="header-text ml-1 text-slate-800 dark:text-slate-50">
+            Live Rates
+          </Text>
+          {isLoading && (
+            <ActivityIndicator
+              size="small"
+              className="ml-2"
+              color={palette.nileGreen[500]}
             />
-          </View>
-        )}
+          )}
+          {isStale && (
+            <View className="ml-2 flex-row items-center">
+              <Ionicons
+                name="alert-circle-outline"
+                size={16}
+                color={palette.orange[500]}
+              />
+            </View>
+          )}
+        </View>
+        <TouchableOpacity
+          onPress={handlePress}
+          activeOpacity={0.7}
+          className="flex-row items-center"
+        >
+          <Text className="text-sm font-medium text-nileGreen-600 dark:text-nileGreen-400">
+            View all
+          </Text>
+          <Ionicons
+            name="chevron-forward"
+            size={16}
+            color={isDark ? palette.nileGreen[400] : palette.nileGreen[600]}
+          />
+        </TouchableOpacity>
       </View>
       <ScrollView
         horizontal

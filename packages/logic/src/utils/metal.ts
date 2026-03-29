@@ -42,3 +42,23 @@ export function getMetalPrice(
   if (targetCurrency === "USD") return priceUsd;
   return convertCurrency(priceUsd, "USD", targetCurrency, marketRates);
 }
+
+/**
+ * Calculate the gold price for a specific purity (karat) level.
+ *
+ * Derives sub-24K prices by multiplying the pure (24K) gold price
+ * by the purity fraction (e.g., 21K = 24K × 0.875, 18K = 24K × 0.75).
+ *
+ * @param purityFraction - The purity as a fraction of pure gold (e.g., 0.875 for 21K)
+ * @param marketRates - Market rate data containing the 24K gold USD price
+ * @param targetCurrency - Currency to return the price in (defaults to "USD")
+ * @returns Price per gram for the given purity, expressed in `targetCurrency`
+ */
+export function getGoldPurityPrice(
+  purityFraction: number,
+  marketRates: NonNullable<MarketRate>,
+  targetCurrency: CurrencyType = "USD"
+): number {
+  const pure24kPrice = getMetalPrice("GOLD", marketRates, targetCurrency);
+  return pure24kPrice * purityFraction;
+}
