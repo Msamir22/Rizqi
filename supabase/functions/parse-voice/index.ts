@@ -241,7 +241,7 @@ EXAMPLES:
 - "last Friday I paid 500 rent from my CIB account" → { amount: 500, type: "EXPENSE", counterparty: null, categorySystemName: "rent", description: "Rent payment", accountId: "<CIB account ID>", date: "<last Friday's date>", confidenceScore: 0.85 }
 - "5adet 100 gnih taxi" (Franco-Arab) → { amount: 100, type: "EXPENSE", counterparty: null, categorySystemName: "private_transport", description: "Taxi ride", accountId: null, date: "<today's date>", confidenceScore: 0.8 }
 - "Someone sent me 2000 as a gift two days ago" → { amount: 2000, type: "INCOME", counterparty: null, categorySystemName: "gift_income", description: "Gift received", accountId: null, date: "<two days ago date>", confidenceScore: 0.85 }
-- "I paid exactly 1250 pounds to the dentist on March 15th" → { amount: 1250, type: "EXPENSE", counterparty: "Dentist", categorySystemName: "health", description: "Dentist visit", accountId: null, date: "2026-03-15", confidenceScore: 1.0 }
+- "I paid exactly 1250 pounds to the dentist on March 15th" → { amount: 1250, type: "EXPENSE", counterparty: "Dentist", categorySystemName: "dental", description: "Dentist visit", accountId: null, date: "2026-03-15", confidenceScore: 1.0 }
 
 CATEGORY TREE:
 ${categoryTree}

@@ -316,9 +316,13 @@ export function TransactionReview({
         return {
           ...tx,
           amount: overrides.amount,
-          counterparty: overrides.counterparty,
           type: overrides.type,
           categoryId: overrides.categoryId,
+          // Only apply optional overrides when explicitly set by the user.
+          // Spreading undefined would erase the original transaction value.
+          ...(overrides.counterparty !== undefined && {
+            counterparty: overrides.counterparty,
+          }),
         };
       });
     }, [transactions, transactionOverrides]);
@@ -377,11 +381,22 @@ export function TransactionReview({
     (edits: TransactionEdits) => {
       if (editModalIndex === null) return;
 
-      // Merge new edits into existing overrides for this index
+      // Merge new edits into existing overrides for this index.
+      // Strip undefined values so optional fields the user didn't touch
+      // (e.g. counterparty) don't overwrite previously saved edits.
       setTransactionOverrides((prev) => {
         const next = new Map(prev);
-        const existing = next.get(editModalIndex) ?? {};
-        next.set(editModalIndex, { ...existing, ...edits });
+        const existing = next.get(editModalIndex);
+        const definedEdits = Object.fromEntries(
+          Object.entries(edits).filter(([, v]) => v !== undefined)
+        );
+        // Object.assign preserves the target type without needing a cast
+        const merged: TransactionEdits = Object.assign(
+          {},
+          existing,
+          definedEdits
+        );
+        next.set(editModalIndex, merged);
         return next;
       });
 

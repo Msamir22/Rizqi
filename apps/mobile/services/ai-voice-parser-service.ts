@@ -256,23 +256,23 @@ export async function parseVoiceWithAi(
     // Build category map for lookup (if categories provided)
     const categoryMap: CategoryMap = buildCategoryMap(options.categoryRecords);
 
-    const results: ReviewableTransaction[] = validTransactions.map(
-      (aiTx: AiVoiceTransaction): ParsedVoiceTransaction => {
+    const validatedCurrency = normalizeCurrency(options.preferredCurrency);
+    const results: ParsedVoiceTransaction[] = [];
+
+    for (const aiTx of validTransactions) {
+      try {
         const resolvedCategory = parseCategory(
           aiTx.categorySystemName,
           categoryMap
         );
 
-        // Validate currency via normalizeCurrency
-        const validatedCurrency = normalizeCurrency(options.preferredCurrency);
-
-        return {
+        results.push({
           amount: Math.abs(aiTx.amount),
           currency: validatedCurrency,
           type: normalizeType(aiTx.type),
           counterparty: aiTx.counterparty ?? undefined,
           date: parseAiDate(aiTx.date),
-          source: "VOICE" as const,
+          source: "VOICE",
           originLabel: aiTx.counterparty || VOICE_INPUT_SENDER,
           categoryId: resolvedCategory.id,
           categoryDisplayName: resolvedCategory.displayName,
@@ -281,9 +281,22 @@ export async function parseVoiceWithAi(
           note: aiTx.description,
           originalTranscript,
           detectedLanguage,
-        };
+        });
+      } catch (error) {
+        console.warn(
+          "[ai-voice-parser] Skipping semantically invalid transaction:",
+          aiTx,
+          error
+        );
       }
-    );
+    }
+
+    if (results.length === 0) {
+      return {
+        kind: "empty",
+        message: "No transactions found in your recording. Try again?",
+      };
+    }
 
     return {
       transactions: results,
