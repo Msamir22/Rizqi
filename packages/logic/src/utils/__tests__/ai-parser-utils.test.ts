@@ -124,11 +124,19 @@ describe("ai-parser-utils", () => {
       expect(normalizeType("Income")).toBe("INCOME");
     });
 
-    it("should default unknown types to EXPENSE", () => {
-      expect(normalizeType("DEBIT")).toBe("EXPENSE");
-      expect(normalizeType("CREDIT")).toBe("EXPENSE");
-      expect(normalizeType("TRANSFER")).toBe("EXPENSE");
-      expect(normalizeType("")).toBe("EXPENSE");
+    it("should throw on unknown types", () => {
+      expect(() => normalizeType("DEBIT")).toThrow(
+        '[normalizeType] Invalid transaction type: "DEBIT"'
+      );
+      expect(() => normalizeType("CREDIT")).toThrow(
+        '[normalizeType] Invalid transaction type: "CREDIT"'
+      );
+      expect(() => normalizeType("TRANSFER")).toThrow(
+        '[normalizeType] Invalid transaction type: "TRANSFER"'
+      );
+      expect(() => normalizeType("")).toThrow(
+        '[normalizeType] Invalid transaction type: ""'
+      );
     });
   });
 
@@ -287,18 +295,20 @@ describe("ai-parser-utils", () => {
       });
     });
 
-    it("should return null when neither category nor 'other' exist", () => {
+    it("should throw when neither category nor 'other' exist (corrupted DB)", () => {
       const emptyMap: CategoryMap = new Map();
-      const result = parseCategory("food", emptyMap);
-      expect(result).toBeNull();
+      expect(() => parseCategory("food", emptyMap)).toThrow(
+        '[parseCategory] Fallback category "other" not found in CategoryMap'
+      );
     });
 
-    it("should return null for unknown category when no 'other' fallback exists", () => {
+    it("should throw for unknown category when no 'other' fallback exists", () => {
       const mapWithoutOther: CategoryMap = new Map([
         ["food", { name: "Food", id: "cat-1" }],
       ]);
-      const result = parseCategory("unknown", mapWithoutOther);
-      expect(result).toBeNull();
+      expect(() => parseCategory("unknown", mapWithoutOther)).toThrow(
+        '[parseCategory] Fallback category "other" not found in CategoryMap'
+      );
     });
   });
 });
