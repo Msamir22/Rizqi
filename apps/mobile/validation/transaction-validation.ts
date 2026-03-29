@@ -74,7 +74,7 @@ export type TransactionValidationErrors = Partial<
 export function validateTransactionForm(
   type: TransactionType | "TRANSFER",
   data:
-    | { amount: string; accountId: string; categoryId: string }
+    | { amount: string; accountId: string | null; categoryId: string }
     | { amount: string; fromAccountId: string; toAccountId: string }
 ): { isValid: boolean; errors: TransactionValidationErrors } {
   const schema = type === "TRANSFER" ? transferSchema : baseTransactionSchema;

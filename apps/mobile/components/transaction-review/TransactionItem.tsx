@@ -30,6 +30,11 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { memo, useCallback, useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
+import {
+  type BadgeColor,
+  getTransactionBadges,
+  type TransactionBadgeData,
+} from "./get-transaction-badges";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -68,8 +73,37 @@ function formatDate(date: Date): string {
   });
 }
 
-/** Confidence threshold — scores at or below this trigger a "Needs Review" tag. */
-const CONFIDENCE_REVIEW_THRESHOLD = 0.8;
+const BADGE_BG_COLORS: Record<BadgeColor, string> = {
+  amber: "bg-amber-500/20",
+  red: "bg-red-500/20",
+  emerald: "bg-emerald-500/20",
+  blue: "bg-blue-500/20",
+};
+
+const BADGE_TEXT_COLORS: Record<BadgeColor, string> = {
+  amber: "text-amber-400",
+  red: "text-red-400",
+  emerald: "text-emerald-400",
+  blue: "text-blue-400",
+};
+
+function TransactionBadge({
+  data,
+}: {
+  readonly data: TransactionBadgeData;
+}): React.JSX.Element {
+  return (
+    <View
+      className={`${BADGE_BG_COLORS[data.color]} px-1.5 py-0.5 rounded ml-2`}
+    >
+      <Text
+        className={`text-[10px] font-bold ${BADGE_TEXT_COLORS[data.color]}`}
+      >
+        {data.label}
+      </Text>
+    </View>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -87,7 +121,8 @@ function TransactionItemInner({
 }: TransactionItemProps): React.JSX.Element {
   const [isExpanded, setIsExpanded] = useState(false);
   const isExpense = transaction.type === "EXPENSE";
-  const needsReview = transaction.confidence <= CONFIDENCE_REVIEW_THRESHOLD;
+
+  const badges = getTransactionBadges(transaction, hasMissingInfo);
 
   const handleToggleExpand = useCallback(() => {
     setIsExpanded((prev) => !prev);
@@ -139,28 +174,9 @@ function TransactionItemInner({
               >
                 {transaction.originLabel}
               </Text>
-              {"isAtmWithdrawal" in transaction &&
-                transaction.isAtmWithdrawal === true && (
-                  <View className="bg-amber-500/20 px-1.5 py-0.5 rounded ml-2">
-                    <Text className="text-[10px] font-bold text-amber-400">
-                      Cash Withdrawal
-                    </Text>
-                  </View>
-                )}
-              {needsReview && (
-                <View className="bg-amber-500/20 px-1.5 py-0.5 rounded ml-2">
-                  <Text className="text-[10px] font-bold text-amber-400">
-                    Needs Review
-                  </Text>
-                </View>
-              )}
-              {hasMissingInfo && (
-                <View className="bg-red-500/20 px-1.5 py-0.5 rounded ml-2">
-                  <Text className="text-[10px] font-bold text-red-400">
-                    Missing Info
-                  </Text>
-                </View>
-              )}
+              {badges.map((badge, idx) => (
+                <TransactionBadge key={idx} data={badge} />
+              ))}
             </View>
             <Text
               className={`text-base font-bold ${
