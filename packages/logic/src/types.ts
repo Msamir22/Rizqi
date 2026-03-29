@@ -13,8 +13,22 @@ import type {
 // Voice Parser Error
 // ---------------------------------------------------------------------------
 
-/** Error types for structured voice parser error handling */
-export type VoiceParserErrorKind = "timeout" | "network" | "empty" | "unknown";
+/**
+ * Error types for structured voice parser error handling.
+ * - timeout: client-side AbortController timeout
+ * - network: Edge Function invocation failure
+ * - empty:   AI returned zero valid transactions
+ * - schema:  backend response doesn't match ParseVoiceResponseSchema
+ * - config:  client-side configuration error (e.g. empty category data)
+ * - unknown: unexpected exception
+ */
+export type VoiceParserErrorKind =
+  | "timeout"
+  | "network"
+  | "empty"
+  | "schema"
+  | "config"
+  | "unknown";
 
 /** Structured error returned by parseVoiceWithAi instead of throwing. */
 export interface VoiceParserError {

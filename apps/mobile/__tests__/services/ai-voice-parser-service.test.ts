@@ -38,7 +38,11 @@ jest.mock("@astik/logic", () => {
       id: "cat-other",
       displayName: "other",
     }),
-    buildCategoryMap: jest.fn().mockReturnValue(new Map()),
+    buildCategoryMap: jest
+      .fn()
+      .mockReturnValue(
+        new Map([["other", { name: "Other", id: "cat-other" }]])
+      ),
   };
 });
 
@@ -182,13 +186,27 @@ describe("ai-voice-parser-service", () => {
         makeSuccessResponse([makeValidTransaction()])
       );
 
-      await parseVoiceWithAi(makeDefaultOptions());
+      const opts = makeDefaultOptions();
+      await parseVoiceWithAi(opts);
 
       expect(mockInvoke).toHaveBeenCalledTimes(1);
       const callArgs = mockInvoke.mock.calls[0] as unknown[];
       expect(callArgs[0]).toBe("parse-voice");
       const body = (callArgs[1] as { body: FormData }).body;
       expect(body).toBeInstanceOf(FormData);
+
+      // Verify required fields are appended to FormData
+      const categoriesCall = appendSpy.mock.calls.find(
+        (call: unknown[]) => call[0] === "categories"
+      ) as [string, string] | undefined;
+      expect(categoriesCall).toBeDefined();
+      expect(categoriesCall?.[1]).toBe(opts.categories);
+
+      const accountsCall = appendSpy.mock.calls.find(
+        (call: unknown[]) => call[0] === "accounts"
+      ) as [string, string] | undefined;
+      expect(accountsCall).toBeDefined();
+      expect(accountsCall?.[1]).toBe(JSON.stringify(opts.accounts));
     });
 
     it("should return multiple parsed transactions", async () => {
@@ -222,7 +240,8 @@ describe("ai-voice-parser-service", () => {
     });
 
     it("should skip transactions with invalid types (normalizeType throws)", async () => {
-      // normalizeType now throws on invalid types instead of defaulting
+      // normalizeType now throws on invalid types instead of defaulting.
+      // The per-item try/catch in the mapper skips the invalid tx.
       const validTx = makeValidTransaction({ amount: 100 });
       const invalidTx = makeValidTransaction({ type: "DEBIT", amount: 50 });
       mockInvoke.mockResolvedValueOnce(
@@ -231,12 +250,10 @@ describe("ai-voice-parser-service", () => {
 
       const result = await parseVoiceWithAi(makeDefaultOptions());
 
-      // The invalid tx should be skipped, valid one kept
+      expect(isVoiceParserError(result)).toBe(false);
       if (!isVoiceParserError(result)) {
-        // If normalizeType throws, the transaction mapping itself throws,
-        // and only valid transactions survive. The exact behavior depends
-        // on whether the mapper catches per-item errors.
-        expect(result.transactions.length).toBeGreaterThanOrEqual(0);
+        expect(result.transactions).toHaveLength(1);
+        expect(result.transactions[0].amount).toBe(100);
       }
     });
 
@@ -366,7 +383,7 @@ describe("ai-voice-parser-service", () => {
       }
     });
 
-    it("should return 'empty' error when response has no transactions array", async () => {
+    it("should return 'schema' error when response is missing required fields", async () => {
       mockInvoke.mockResolvedValueOnce({
         data: { transcript: "test" },
         error: null,
@@ -376,7 +393,7 @@ describe("ai-voice-parser-service", () => {
 
       expect(isVoiceParserError(result)).toBe(true);
       if (isVoiceParserError(result)) {
-        expect(result.kind).toBe("empty");
+        expect(result.kind).toBe("schema");
       }
     });
 

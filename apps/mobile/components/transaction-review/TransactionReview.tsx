@@ -318,6 +318,10 @@ export function TransactionReview({
           amount: overrides.amount,
           type: overrides.type,
           categoryId: overrides.categoryId,
+          // Refresh display name when category changes so the UI label stays in sync.
+          categoryDisplayName:
+            categoryMap.get(overrides.categoryId)?.displayName ??
+            tx.categoryDisplayName,
           // Only apply optional overrides when explicitly set by the user.
           // Spreading undefined would erase the original transaction value.
           ...(overrides.counterparty !== undefined && {
@@ -325,7 +329,7 @@ export function TransactionReview({
           }),
         };
       });
-    }, [transactions, transactionOverrides]);
+    }, [transactions, transactionOverrides, categoryMap]);
 
   // Apply filters before grouping
   const filteredTransactions = useMemo(
@@ -504,6 +508,15 @@ export function TransactionReview({
                 </Text>
                 <Text className="text-xs text-slate-400 leading-5">
                   {tx.rawSmsBody as string}
+                </Text>
+              </View>
+            ) : "originalTranscript" in tx && tx.originalTranscript ? (
+              <View className="bg-slate-900/60 rounded-xl p-3">
+                <Text className="text-xs text-slate-500 mb-1 font-medium">
+                  Original Note
+                </Text>
+                <Text className="text-xs text-slate-400 leading-5">
+                  {tx.originalTranscript as string}
                 </Text>
               </View>
             ) : undefined

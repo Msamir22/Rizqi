@@ -388,14 +388,16 @@ async function processWithRetry(
         },
       });
 
-      const text = response.text ?? "";
-      if (!text)
-        return {
-          transcript: "",
-          original_transcript: "",
-          detected_language: "en",
-          transactions: [],
-        };
+      const text = response.text;
+      if (!text) {
+        // Throw so the retry/backoff loop retries the Gemini call.
+        // A genuinely silent recording will still produce a transcript
+        // (e.g., "[silence]") from the model — an empty string indicates
+        // a transient upstream failure, not valid silence.
+        throw new Error(
+          "Empty model response — Gemini returned no text. Retrying."
+        );
+      }
 
       const parsed: AiResponse = JSON.parse(text);
       return {

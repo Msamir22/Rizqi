@@ -208,13 +208,16 @@ export async function parseVoiceWithAi(
     const rawData = response.data;
     const parsed = ParseVoiceResponseSchema.safeParse(rawData);
     if (!parsed.success) {
-      console.warn(
-        "[ai-voice-parser] Malformed response from edge function:",
-        parsed.error.issues
+      console.error(
+        "[ai-voice-parser] Malformed backend response shape:",
+        parsed.error.issues,
+        "rawData:",
+        rawData
       );
       return {
-        kind: "empty",
-        message: "No transactions found in your recording. Try again?",
+        kind: "schema",
+        message:
+          "The server returned an unexpected response format. Please try again.",
       };
     }
 
@@ -253,8 +256,22 @@ export async function parseVoiceWithAi(
       };
     }
 
-    // Build category map for lookup (if categories provided)
+    // Build category map for lookup — fail fast if category data is missing/empty.
+    // An empty category map would cause every parseCategory() call to throw,
+    // silently dropping all transactions and returning a misleading "empty" error.
     const categoryMap: CategoryMap = buildCategoryMap(options.categoryRecords);
+    if (categoryMap.size === 0) {
+      console.error(
+        "[ai-voice-parser] Category data unavailable — categoryMap is empty.",
+        "categoryRecords length:",
+        options.categoryRecords.length
+      );
+      return {
+        kind: "config",
+        message:
+          "Category data is unavailable. Please restart the app and try again.",
+      };
+    }
 
     const validatedCurrency = normalizeCurrency(options.preferredCurrency);
     const results: ParsedVoiceTransaction[] = [];
