@@ -26,9 +26,9 @@ import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import type { ReviewableTransaction } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import { FlatList, Text, TouchableOpacity, View } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import Animated, { FadeIn, FadeInDown, FadeOut } from "react-native-reanimated";
 import { TransactionEditModal } from "./edit-modal/TransactionEditModal";
 import { TransactionItem } from "./TransactionItem";
 import { TransactionFiltersBar } from "@/components/transactions/TransactionFiltersBar";
@@ -74,6 +74,11 @@ export function TransactionReview({
   const { isDark } = useTheme();
 
   const state = useTransactionReviewState({ transactions, onSave });
+  const [isFiltersVisible, setIsFiltersVisible] = useState(false);
+
+  const hasActiveFilters =
+    state.searchQuery.trim().length > 0 ||
+    !(state.selectedTypes.length === 1 && state.selectedTypes[0] === "All");
 
   // ── Render ────────────────────────────────────────────────────────
   const renderItem = useCallback(
@@ -127,18 +132,25 @@ export function TransactionReview({
 
   return (
     <View className="flex-1">
-      {/* ── Filters & Search ────────────────────────────────────── */}
-      <TransactionFiltersBar
-        period={state.period}
-        onPeriodPress={() => state.setPeriodModalVisible(true)}
-        selectedTypes={state.selectedTypes}
-        allTypesCount={2}
-        onTypePress={() => state.setTypeModalVisible(true)}
-        searchQuery={state.searchQuery}
-        onSearchChange={state.setSearchQuery}
-        searchPlaceholder="Search counterparty, sender..."
-        containerClassName="px-5 pb-2"
-      />
+      {/* ── Filters & Search (collapsible) ────────────────────── */}
+      {isFiltersVisible && (
+        <Animated.View
+          entering={FadeIn.duration(200)}
+          exiting={FadeOut.duration(150)}
+        >
+          <TransactionFiltersBar
+            period={state.period}
+            onPeriodPress={() => state.setPeriodModalVisible(true)}
+            selectedTypes={state.selectedTypes}
+            allTypesCount={2}
+            onTypePress={() => state.setTypeModalVisible(true)}
+            searchQuery={state.searchQuery}
+            onSearchChange={state.setSearchQuery}
+            searchPlaceholder="Search counterparty, sender..."
+            containerClassName="px-5 pb-2"
+          />
+        </Animated.View>
+      )}
 
       {/* ── Summary bar ─────────────────────────────────────────── */}
       <Animated.View
@@ -156,22 +168,43 @@ export function TransactionReview({
           selected
         </Text>
 
-        <TouchableOpacity
-          onPress={state.handleToggleAll}
-          className="flex-row items-center"
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name={state.allSelected ? "checkbox" : "square-outline"}
-            size={18}
-            color={
-              state.allSelected ? palette.nileGreen[400] : palette.slate[400]
-            }
-          />
-          <Text className="text-xs text-slate-400 ml-1.5">
-            {state.allSelected ? "Deselect All" : "Select All"}
-          </Text>
-        </TouchableOpacity>
+        <View className="flex-row items-center gap-3">
+          {/* Filter toggle */}
+          <TouchableOpacity
+            onPress={() => setIsFiltersVisible((prev) => !prev)}
+            activeOpacity={0.7}
+            className="relative"
+          >
+            <Ionicons
+              name={isFiltersVisible ? "funnel" : "funnel-outline"}
+              size={18}
+              color={
+                hasActiveFilters ? palette.nileGreen[400] : palette.slate[400]
+              }
+            />
+            {hasActiveFilters && !isFiltersVisible && (
+              <View className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-nileGreen-400" />
+            )}
+          </TouchableOpacity>
+
+          {/* Select All toggle */}
+          <TouchableOpacity
+            onPress={state.handleToggleAll}
+            className="flex-row items-center"
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name={state.allSelected ? "checkbox" : "square-outline"}
+              size={18}
+              color={
+                state.allSelected ? palette.nileGreen[400] : palette.slate[400]
+              }
+            />
+            <Text className="text-xs text-slate-400 ml-1.5">
+              {state.allSelected ? "Deselect All" : "Select All"}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </Animated.View>
 
       {/* ── Transaction list ────────────────────────────────────── */}

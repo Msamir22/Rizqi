@@ -17,7 +17,7 @@
  * @module useVoiceTransactionFlow
  */
 
-import { useCallback, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { router } from "expo-router";
 import { useVoiceRecorder } from "./useVoiceRecorder";
 import {
@@ -77,6 +77,8 @@ interface FlowConfig {
   readonly categoryRecords: readonly Category[];
   /** Origin tab index (for post-save navigation) */
   readonly originTabIndex?: number;
+  /** When true, automatically starts the voice recording on mount */
+  readonly autoStart?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -103,6 +105,27 @@ export function useVoiceTransactionFlow(
     flowStatusRef.current = next;
     setFlowStatus(next);
   }, []);
+
+  // ---------------------------------------------------------------------------
+  // Sync recorder auto-stop to flow status (FR-004)
+  // ---------------------------------------------------------------------------
+  // When useVoiceRecorder internally auto-stops at 60s, its status becomes
+  // "completed" but the flow's own flowStatus stays "recording". This effect
+  // bridges the gap so the overlay UI transitions to the completed state.
+  useEffect(() => {
+    if (
+      recorder.status === "completed" &&
+      flowStatusRef.current === "recording"
+    ) {
+      updateFlowStatus("completed");
+    }
+  }, [recorder.status, updateFlowStatus]);
+
+  // ---------------------------------------------------------------------------
+  // Auto-start support (for retry flow from voice-review page)
+  // ---------------------------------------------------------------------------
+  const autoStartFiredRef = useRef(false);
+  const startFlowRef = useRef<(() => Promise<void>) | null>(null);
 
   // ---------------------------------------------------------------------------
   // Actions
@@ -134,6 +157,25 @@ export function useVoiceTransactionFlow(
     await recorder.start();
   }, [recorder, config.originTabIndex, updateFlowStatus]);
 
+  // Keep ref in sync so the auto-start effect can call it
+  startFlowRef.current = startFlow;
+
+  // Fire auto-start once when autoStart transitions to true
+  useEffect(() => {
+    if (!config.autoStart) {
+      autoStartFiredRef.current = false;
+      return;
+    }
+    if (
+      !autoStartFiredRef.current &&
+      flowStatusRef.current === "idle" &&
+      startFlowRef.current
+    ) {
+      autoStartFiredRef.current = true;
+      void startFlowRef.current();
+    }
+  }, [config.autoStart]);
+
   const pauseRecording = useCallback((): void => {
     recorder.pause();
     updateFlowStatus("paused");
@@ -158,12 +200,22 @@ export function useVoiceTransactionFlow(
       return;
     }
 
-    // Stop recording
-    const result = await recorder.stop();
-    if (!result) {
-      setErrorMessage("Failed to finalize recording. Please try again.");
-      updateFlowStatus("error");
-      return;
+    // Resolve audio URI — either from an already-completed auto-stop (FR-004)
+    // or by explicitly stopping the recorder now.
+    let audioUri: string;
+
+    if (recorder.status === "completed" && recorder.audioUri) {
+      // Recorder already auto-stopped at 60s — use the finalized URI directly
+      audioUri = recorder.audioUri;
+    } else {
+      // Normal path: stop recording and get the finalized URI
+      const result = await recorder.stop();
+      if (!result) {
+        setErrorMessage("Failed to finalize recording. Please try again.");
+        updateFlowStatus("error");
+        return;
+      }
+      audioUri = result.uri;
     }
 
     // Show analyzing state
@@ -171,7 +223,7 @@ export function useVoiceTransactionFlow(
 
     // Submit to AI
     const aiResult = await parseVoiceWithAi({
-      audioUri: result.uri,
+      audioUri,
       preferredCurrency: config.preferredCurrency,
       categories: config.categories,
       accounts: config.accounts,

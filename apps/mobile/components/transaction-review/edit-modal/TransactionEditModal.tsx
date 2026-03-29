@@ -97,18 +97,20 @@ export function TransactionEditModal(
         />
 
         {/* Modal content */}
-        <View className="bg-slate-900 rounded-t-3xl max-h-[85%]">
+        <View className="bg-white dark:bg-slate-900 rounded-t-3xl max-h-[85%]">
           {/* Handle */}
           <View className="items-center pt-3 pb-2">
-            <View className="w-10 h-1 rounded-full bg-slate-700" />
+            <View className="w-10 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
           </View>
 
           {/* Header */}
-          <View className="flex-row items-center justify-between px-6 py-4 border-b border-slate-700/50 mb-6">
+          <View className="flex-row items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700/50 mb-6">
             <TouchableOpacity onPress={onClose} activeOpacity={0.7}>
-              <Text className="text-slate-400 text-base font-bold">Cancel</Text>
+              <Text className="text-slate-500 dark:text-slate-400 text-base font-bold">
+                Cancel
+              </Text>
             </TouchableOpacity>
-            <Text className="text-white text-lg font-bold">
+            <Text className="text-slate-800 dark:text-white text-lg font-bold">
               Edit Transaction
             </Text>
             <TouchableOpacity
@@ -116,7 +118,7 @@ export function TransactionEditModal(
               activeOpacity={0.7}
               className="bg-nileGreen-500 px-5 py-1.5 rounded-full"
             >
-              <Text className="text-slate-900 text-sm font-semibold">Save</Text>
+              <Text className="text-white text-sm font-semibold">Save</Text>
             </TouchableOpacity>
           </View>
 
@@ -126,7 +128,7 @@ export function TransactionEditModal(
             showsVerticalScrollIndicator={false}
           >
             {/* Sender info (read-only) */}
-            <View className="mb-4 bg-slate-800/60 rounded-2xl gap-3 px-4 py-3 flex-row items-center border border-slate-700/50">
+            <View className="mb-4 bg-slate-100 dark:bg-slate-800/60 rounded-2xl gap-3 px-4 py-3 flex-row items-center border border-slate-200 dark:border-slate-700/50">
               <View className="w-10 h-10 rounded-full bg-emerald-500/20 items-center justify-center mr-3">
                 <Ionicons
                   name="business-outline"
@@ -139,7 +141,7 @@ export function TransactionEditModal(
                   From
                 </Text>
                 <Text
-                  className="text-sm text-white font-semibold flex-shrink"
+                  className="text-sm text-slate-800 dark:text-white font-semibold flex-shrink"
                   numberOfLines={1}
                 >
                   {transaction.originLabel}
@@ -191,13 +193,13 @@ export function TransactionEditModal(
                 Amount
               </Text>
               <View
-                className={`w-full bg-slate-800/60 border rounded-xl py-4 px-4 flex-row items-center ${
+                className={`w-full bg-slate-100 dark:bg-slate-800/60 border rounded-xl py-4 px-4 flex-row items-center ${
                   state.formErrors.amount
                     ? "border-red-500/60"
-                    : "border-slate-700/50"
+                    : "border-slate-200 dark:border-slate-700/50"
                 }`}
               >
-                <Text className="text-white font-bold text-base mr-3">
+                <Text className="text-slate-800 dark:text-white font-bold text-base mr-3">
                   {transaction.currency}
                 </Text>
                 <TextInput
@@ -212,7 +214,7 @@ export function TransactionEditModal(
                     }
                   }}
                   keyboardType="numeric"
-                  className="flex-1 text-white text-xl font-bold m-0 p-0"
+                  className="flex-1 text-slate-800 dark:text-white text-xl font-bold m-0 p-0"
                   placeholderTextColor={palette.slate[600]}
                   placeholder="0.00"
                 />
@@ -254,9 +256,26 @@ export function TransactionEditModal(
                 <TextInput
                   value={state.counterparty}
                   onChangeText={setters.setCounterparty}
-                  className="bg-slate-800/60 rounded-xl px-4 py-3 text-white text-base font-semibold border border-slate-700/50"
+                  className="bg-slate-100 dark:bg-slate-800/60 rounded-xl px-4 py-3 text-slate-800 dark:text-white text-base font-semibold border border-slate-200 dark:border-slate-700/50"
                   placeholderTextColor={palette.slate[600]}
                   placeholder="e.g., Carrefour, Amazon"
+                />
+              </View>
+            )}
+
+            {/* Note (for voice transactions) */}
+            {transaction.source === "VOICE" && (
+              <View className="mb-4">
+                <Text className="text-xs text-slate-500 mb-2 font-medium uppercase tracking-wider">
+                  Note
+                </Text>
+                <TextInput
+                  value={state.note}
+                  onChangeText={setters.setNote}
+                  className="bg-slate-100 dark:bg-slate-800/60 rounded-xl px-4 py-3 text-slate-800 dark:text-white text-base font-semibold border border-slate-200 dark:border-slate-700/50"
+                  placeholderTextColor={palette.slate[600]}
+                  placeholder="e.g., groceries, lunch"
+                  multiline
                 />
               </View>
             )}
@@ -278,10 +297,10 @@ export function TransactionEditModal(
                     setters.setIsCategoryPickerOpen(true);
                   }}
                   activeOpacity={0.7}
-                  className={`bg-slate-800/60 rounded-xl px-4 py-3 flex-row items-center justify-between border ${!state.selectedCategoryId || state.formErrors.categoryId ? "border-red-500/60" : "border-slate-700/50"}`}
+                  className={`bg-slate-100 dark:bg-slate-800/60 rounded-xl px-4 py-3 flex-row items-center justify-between border ${!state.selectedCategoryId || state.formErrors.categoryId ? "border-red-500/60" : "border-slate-200 dark:border-slate-700/50"}`}
                 >
                   <Text
-                    className={`text-base font-semibold ${!state.selectedCategoryId ? "text-slate-500" : "text-white"}`}
+                    className={`text-base font-semibold ${!state.selectedCategoryId ? "text-slate-500" : "text-slate-800 dark:text-white"}`}
                     numberOfLines={1}
                   >
                     {state.selectedCategoryDisplayName ?? "Select Category"}

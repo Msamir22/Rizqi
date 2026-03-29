@@ -1,22 +1,23 @@
-import { darkTheme, lightTheme } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
-import { Tabs } from "expo-router";
-import React, { useMemo } from "react";
-import { View } from "react-native";
 import { QuickActionFab } from "@/components/fab";
 import { CustomBottomTabBar } from "@/components/tab-bar/CustomBottomTabBar";
 import { VoiceRecordingOverlay } from "@/components/voice/VoiceRecordingOverlay";
-import { useVoiceTransactionFlow } from "@/hooks/useVoiceTransactionFlow";
-import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
-import { useCategories } from "@/hooks/useCategories";
+import { darkTheme, lightTheme } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
 import { useAccounts } from "@/hooks/useAccounts";
+import { useCategories } from "@/hooks/useCategories";
+import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
+import { useVoiceTransactionFlow } from "@/hooks/useVoiceTransactionFlow";
 import { buildCategoryTree } from "@astik/logic";
+import { Tabs, useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useMemo } from "react";
+import { View } from "react-native";
 
 export default function TabLayout(): React.ReactElement {
   const { isDark } = useTheme();
   const { preferredCurrency } = usePreferredCurrency();
   const { categories: allCategories } = useCategories({ topLevelOnly: false });
   const { accounts } = useAccounts();
+  const router = useRouter();
 
   const categoryTree = useMemo(
     () => buildCategoryTree(allCategories),
@@ -28,11 +29,21 @@ export default function TabLayout(): React.ReactElement {
     [accounts]
   );
 
+  const { retry } = useLocalSearchParams<{ retry?: string }>();
+  const autoStart = retry === "true";
+
+  useEffect(() => {
+    if (autoStart) {
+      router.setParams({ retry: undefined });
+    }
+  }, [autoStart, router]);
+
   const voiceFlow = useVoiceTransactionFlow({
     preferredCurrency,
     categories: categoryTree,
     accounts: accountInputs,
     categoryRecords: allCategories,
+    autoStart,
   });
 
   return (

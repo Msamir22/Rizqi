@@ -23,6 +23,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 export interface UseTransactionEditStateReturn {
   readonly state: {
     readonly amount: string;
+    readonly note: string;
     readonly counterparty: string;
     readonly txType: TransactionType;
     readonly selectedAccountId: string | null;
@@ -51,6 +52,7 @@ export interface UseTransactionEditStateReturn {
   };
   readonly setters: {
     readonly setAmount: React.Dispatch<React.SetStateAction<string>>;
+    readonly setNote: React.Dispatch<React.SetStateAction<string>>;
     readonly setCounterparty: React.Dispatch<React.SetStateAction<string>>;
     readonly setTxType: React.Dispatch<React.SetStateAction<TransactionType>>;
     readonly setIsAccountPickerOpen: React.Dispatch<
@@ -118,8 +120,15 @@ export function useTransactionEditState({
     [transaction]
   );
 
+  const readTransactionNote = (tx: ReviewableTransaction): string => {
+    const value = (tx as { note?: unknown }).note;
+    return typeof value === "string" ? value : "";
+  };
+
   // Local editable state
   const [amount, setAmount] = useState(transaction.amount.toString());
+  const [note, setNote] = useState(readTransactionNote(transaction));
+
   const [counterparty, setCounterparty] = useState(
     transaction.counterparty || ""
   );
@@ -216,6 +225,7 @@ export function useTransactionEditState({
     initializedForIdentityRef.current = transactionIdentity;
 
     setAmount(transaction.amount.toString());
+    setNote(readTransactionNote(transaction));
     setCounterparty(transaction.counterparty || "");
     setTxType(transaction.type);
 
@@ -375,6 +385,7 @@ export function useTransactionEditState({
       type: txType,
       categoryId: selectedCategoryId,
       amount: parseFloat(parseAmountInput(amount)),
+      note: note.trim() || undefined,
       toAccountId: formConfig.showToAccount
         ? isCreatingNewToAccount
           ? null
@@ -390,6 +401,7 @@ export function useTransactionEditState({
     onSave(edits);
   }, [
     amount,
+    note,
     counterparty,
     txType,
     selectedAccountId,
@@ -413,6 +425,7 @@ export function useTransactionEditState({
   return {
     state: {
       amount,
+      note,
       counterparty,
       txType,
       selectedAccountId,
@@ -441,6 +454,7 @@ export function useTransactionEditState({
     },
     setters: {
       setAmount,
+      setNote,
       setCounterparty,
       setTxType,
       setIsAccountPickerOpen,

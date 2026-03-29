@@ -121,6 +121,8 @@ function TransactionItemInner({
 }: TransactionItemProps): React.JSX.Element {
   const [isExpanded, setIsExpanded] = useState(false);
   const isExpense = transaction.type === "EXPENSE";
+  const isVoice = transaction.source === "VOICE";
+  const hasExpandableContent = !isVoice && !!expandedContent;
 
   const badges = getTransactionBadges(transaction, hasMissingInfo);
 
@@ -136,8 +138,12 @@ function TransactionItemInner({
     onToggleSelect(index);
   }, [onToggleSelect, index]);
 
+  const counterpartyText = isVoice
+    ? transaction.counterparty
+    : transaction.counterparty || "Unknown";
+
   return (
-    <View className="bg-slate-800/60 rounded-2xl mb-3 overflow-hidden">
+    <View className="bg-white dark:bg-slate-800/60 rounded-2xl mb-3 overflow-hidden border border-slate-200 dark:border-transparent">
       <TouchableOpacity
         onPress={handlePress}
         className="flex-row items-center p-4"
@@ -154,7 +160,7 @@ function TransactionItemInner({
             className={`w-6 h-6 rounded-lg items-center justify-center border-2 ${
               isSelected
                 ? "bg-emerald-500 border-emerald-500"
-                : "border-slate-500"
+                : "border-slate-300 dark:border-slate-500"
             }`}
           >
             {isSelected && (
@@ -169,10 +175,14 @@ function TransactionItemInner({
           <View className="flex-row items-center justify-between mb-1">
             <View className="flex-row items-center flex-shrink">
               <Text
-                className="text-sm font-semibold text-white flex-shrink"
+                className="text-sm font-semibold text-slate-800 dark:text-white flex-shrink"
                 numberOfLines={1}
               >
-                {transaction.originLabel}
+                {isVoice && "note" in transaction
+                  ? (transaction as { note: string }).note ||
+                    transaction.counterparty ||
+                    transaction.originLabel
+                  : transaction.originLabel}
               </Text>
               {badges.map((badge, idx) => (
                 <TransactionBadge key={idx} data={badge} />
@@ -193,12 +203,16 @@ function TransactionItemInner({
 
           {/* Middle row: counterparty + date */}
           <View className="flex-row items-center justify-between mb-1">
-            <Text
-              className="text-xs text-slate-400 flex-shrink"
-              numberOfLines={1}
-            >
-              {transaction.counterparty || "Unknown"}
-            </Text>
+            {counterpartyText ? (
+              <Text
+                className="text-xs text-slate-400 flex-shrink"
+                numberOfLines={1}
+              >
+                {counterpartyText}
+              </Text>
+            ) : (
+              <View />
+            )}
             <Text className="text-xs text-slate-500">
               {formatDate(transaction.date)}
             </Text>
@@ -206,36 +220,40 @@ function TransactionItemInner({
 
           {/* Bottom row: category + account chips */}
           <View className="flex-row items-center flex-wrap gap-1.5">
-            <View className="bg-slate-700/60 px-2.5 py-1 rounded-lg">
-              <Text className="text-xs text-slate-300">
+            <View className="bg-slate-200 dark:bg-slate-700/60 px-2.5 py-1 rounded-lg">
+              <Text className="text-xs text-slate-600 dark:text-slate-300">
                 {transaction.categoryDisplayName}
               </Text>
             </View>
 
             {accountName && (
-              <View className="bg-blue-900/40 px-2.5 py-1 rounded-lg">
-                <Text className="text-xs text-blue-300">{accountName}</Text>
+              <View className="bg-blue-100 dark:bg-blue-900/40 px-2.5 py-1 rounded-lg">
+                <Text className="text-xs text-blue-600 dark:text-blue-300">
+                  {accountName}
+                </Text>
               </View>
             )}
 
-            <TouchableOpacity
-              onPress={handleToggleExpand}
-              hitSlop={14}
-              className="flex-row items-center ml-auto p-1"
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name={isExpanded ? "chevron-up" : "chevron-down"}
-                size={16}
-                color={palette.slate[500]}
-              />
-            </TouchableOpacity>
+            {hasExpandableContent && (
+              <TouchableOpacity
+                onPress={handleToggleExpand}
+                hitSlop={14}
+                className="flex-row items-center ml-auto p-1"
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name={isExpanded ? "chevron-up" : "chevron-down"}
+                  size={16}
+                  color={palette.slate[500]}
+                />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </TouchableOpacity>
 
       {/* Expanded: source-specific content */}
-      {isExpanded && expandedContent && (
+      {isExpanded && hasExpandableContent && (
         <Animated.View
           entering={FadeIn.duration(200)}
           exiting={FadeOut.duration(150)}
