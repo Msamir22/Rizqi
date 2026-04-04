@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(npm install:*)",
+      "Bash(npm list:*)",
+      "mcp__github__get_issue",
+      "Bash(grep -E \"^d|\\\\.json$|\\\\.yaml$|\\\\.yml$\")",
+      "Bash(ls -la /e/Work/\"My Projects\"/Astik/apps/mobile/app/\\\\\\(tabs\\\\\\)/)",
+      "Bash(mkdir -p \"E:/Work/My Projects/Astik/.claude/commands\")",
+      "Bash(mkdir -p \"E:/Work/My Projects/Astik/.claude/rules\")",
+      "WebSearch",
+      "Bash(npm search:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:api.github.com)",
+      "Read(//c/Users/Mohamed/.claude/**)",
+      "Bash(where claude:*)",
+      "Bash(chmod +x ~/.local/bin/glm)",
+      "Bash(claude mcp:*)",
+      "Bash(xargs grep:*)",
+      "mcp__supabase__list_projects",
+      "mcp__supabase__list_tables",
+      "WebFetch(domain:x.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
+    ]
+  }
+}

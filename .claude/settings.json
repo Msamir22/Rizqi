@@ -1,0 +1,38 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/block-no-verify.js"
+          }
+        ],
+        "description": "Block --no-verify flag to protect pre-commit and pre-push hooks"
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/config-protection.js"
+          }
+        ],
+        "description": "Block modifications to linter/formatter/tsconfig files — fix code instead"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/console-log-warn.js"
+          }
+        ],
+        "description": "Warn about console.log in production code after edits"
+      }
+    ]
+  }
+}
