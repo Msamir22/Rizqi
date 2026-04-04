@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo } from "react";
+import { createContext, useContext, useMemo, useState, useEffect } from "react";
 import { I18nManager } from "react-native";
 import i18n from "../i18n";
 import { getLocaleFontFamily } from "../constants/typography";
@@ -28,6 +28,15 @@ interface LocaleContextType {
 const LocaleContext = createContext<LocaleContextType | undefined>(undefined);
 
 /**
+ * Helper to get current language from i18n instance
+ */
+function getCurrentI18nLanguage(): SupportedLanguage {
+  const instance = i18n as unknown as { language: string };
+  const lang = instance.language;
+  return lang === "ar" ? "ar" : "en";
+}
+
+/**
  * LocaleProvider component that provides locale information to the app.
  *
  * This context exposes the current language, RTL state, and locale-appropriate
@@ -37,17 +46,29 @@ const LocaleContext = createContext<LocaleContextType | undefined>(undefined);
 export const LocaleProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  const [currentLanguage, setCurrentLanguage] = useState<"en" | "ar">(() =>
+    getCurrentI18nLanguage()
+  );
+
+  // Listen for language changes
+  useEffect(() => {
+    const handleLanguageChange = (): void => {
+      setCurrentLanguage(getCurrentI18nLanguage());
+    };
+
+    // i18next doesn't have a built-in event for language changes,
+    // so we use a polling approach or manual updates
+    const interval = setInterval(handleLanguageChange, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   const value = useMemo<LocaleContextType>(
     () => ({
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      language:
-        (i18n as Record<string, unknown>).language === "ar" ? "ar" : "en",
+      language: currentLanguage,
       isRTL: I18nManager.isRTL,
       fontFamily: getLocaleFontFamily(),
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    [(i18n as Record<string, unknown>).language]
+    [currentLanguage]
   );
 
   return (

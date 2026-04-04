@@ -1,5 +1,5 @@
-// eslint-disable-next-line import/no-named-as-default-member
-import i18next, { type i18n as I18nInstance } from "i18next";
+/* eslint-disable import/no-named-as-default-member */
+import i18next from "i18next";
 import { initReactI18next } from "react-i18next";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Localization from "expo-localization";
@@ -93,9 +93,7 @@ async function detectInitialLanguage(): Promise<"en" | "ar"> {
 export async function initI18n(): Promise<void> {
   const language = await detectInitialLanguage();
 
-  const instance: I18nInstance = i18next.use(initReactI18next);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-  await instance.init({
+  await i18next.use(initReactI18next).init({
     resources,
     lng: language,
     fallbackLng: "en",
