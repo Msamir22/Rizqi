@@ -13,5 +13,10 @@
   "ounce": "Ounce",
   "price_per_gram": "Price per Gram",
   "total_value": "Total Value",
-  "holdings": "Holdings"
+  "holdings": "Holdings",
+  "my_metals": "My Metals",
+  "add_gold": "Add Gold",
+  "add_silver": "Add Silver",
+  "no_gold_holdings": "No gold holdings yet",
+  "no_silver_holdings": "No silver holdings yet"
 }

@@ -13,5 +13,10 @@
   "ounce": "أوقية",
   "price_per_gram": "السعر للغرام",
   "total_value": "إجمالي القيمة",
-  "holdings": "المقتنيات"
+  "holdings": "المقتنيات",
+  "my_metals": "معادني",
+  "add_gold": "إضافة ذهب",
+  "add_silver": "إضافة فضة",
+  "no_gold_holdings": "لا توجد مقتنيات ذهب بعد",
+  "no_silver_holdings": "لا توجد مقتنيات فضة بعد"
 }

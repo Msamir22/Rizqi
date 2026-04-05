@@ -15,6 +15,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import React, { useCallback, useState } from "react";
 import { FlatList, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -127,6 +128,7 @@ const FLAT_LIST_CONTENT_STYLE = { paddingBottom: 100 };
  */
 export default function MyMetalsScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation("metals");
   const { latestRates, previousDayRate } = useMarketRates();
   const { preferredCurrency } = usePreferredCurrency();
   const {
@@ -227,7 +229,7 @@ export default function MyMetalsScreen(): React.JSX.Element {
         >
           <Ionicons name="add" size={18} color={palette.slate[400]} />
           <Text className="ml-1 text-sm font-semibold text-slate-400 dark:text-slate-500">
-            Add {activeTab === "gold" ? "Gold" : "Silver"}
+            {activeTab === "gold" ? t("add_gold") : t("add_silver")}
           </Text>
         </TouchableOpacity>
       </View>
@@ -242,6 +244,7 @@ export default function MyMetalsScreen(): React.JSX.Element {
       goldHoldings.length,
       silverHoldings.length,
       handleOpenModal,
+      t,
     ]
   );
 
@@ -249,11 +252,13 @@ export default function MyMetalsScreen(): React.JSX.Element {
     (): React.JSX.Element => (
       <View className="items-center py-8 px-5">
         <Text className="text-sm text-slate-400 dark:text-slate-500">
-          No {activeTab === "gold" ? "gold" : "silver"} holdings yet
+          {activeTab === "gold"
+            ? t("no_gold_holdings")
+            : t("no_silver_holdings")}
         </Text>
       </View>
     ),
-    [activeTab]
+    [activeTab, t]
   );
 
   // ---------------------------------------------------------------------------
@@ -263,7 +268,7 @@ export default function MyMetalsScreen(): React.JSX.Element {
   return (
     <View className="flex-1">
       <PageHeader
-        title="My Metals"
+        title={t("my_metals")}
         rightAction={{
           icon: "add-circle-outline",
           onPress: () => handleOpenModal(),
