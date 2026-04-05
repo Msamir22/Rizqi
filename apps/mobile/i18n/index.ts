@@ -1,11 +1,10 @@
 /* eslint-disable import/no-named-as-default-member */
-import i18next from "i18next";
+import i18next, { type InitOptions } from "i18next";
 import { initReactI18next } from "react-i18next";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Localization from "expo-localization";
 
 import { LANGUAGE_KEY } from "@/constants/storage-keys";
-import type { TranslationResources } from "./translation-schema";
 
 // Import translation files
 import enCommon from "../locales/en/common.json";
@@ -36,7 +35,7 @@ import arCategories from "../locales/ar/categories.json";
  * - Type-safe translation keys via TypeScript module augmentation
  * - Fallback to English for missing keys
  */
-const resources: Record<"en" | "ar", TranslationResources> = {
+const resources = {
   en: {
     common: enCommon,
     transactions: enTransactions,
@@ -94,18 +93,22 @@ async function detectInitialLanguage(): Promise<"en" | "ar"> {
 export async function initI18n(): Promise<void> {
   const language = await detectInitialLanguage();
 
-  await i18next.use(initReactI18next).init({
+  i18next.use(initReactI18next);
+
+  const options: InitOptions = {
     resources,
     lng: language,
     fallbackLng: "en",
-    compatibilityJSON: "v3", // Use i18next v4 format
+    compatibilityJSON: "v4",
     interpolation: {
       escapeValue: false, // React already escapes values
     },
     react: {
       useSuspense: false, // Disable suspense (we await initI18n before rendering)
     },
-  });
+  };
+
+  await i18next.init(options);
 }
 
 /**
