@@ -38,6 +38,7 @@ import type {
 import { formatAmountInput } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -47,6 +48,7 @@ export default function AddTransaction(): React.ReactNode {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const budgetAlert = useBudgetAlert();
+  const { t } = useTranslation("transactions");
 
   const { accounts } = useAccounts();
 
@@ -279,13 +281,13 @@ export default function AddTransaction(): React.ReactNode {
 
   const validateAndCreateTransfer = async (amount: number): Promise<void> => {
     if (!toAccountId) {
-      setFormErrors({ toAccountId: "Please select a destination account" });
+      setFormErrors({ toAccountId: t("please_select_destination_account") });
       setIsSubmitting(false);
       return;
     }
 
     if (!selectedAccount) {
-      setFormErrors({ fromAccountId: "Please select source account" });
+      setFormErrors({ fromAccountId: t("please_select_source_account") });
       setIsSubmitting(false);
       return;
     }
@@ -305,15 +307,15 @@ export default function AddTransaction(): React.ReactNode {
     }).catch(() => {
       showToast({
         type: "error",
-        title: "Error",
-        message: "Transaction creation failed",
+        title: t("update_error"),
+        message: t("transaction_creation_failed"),
       });
     });
 
     showToast({
       type: "success",
-      title: "Created",
-      message: "Transaction Created successfully",
+      title: t("transaction_created"),
+      message: t("transaction_created_message"),
     });
   };
 
@@ -329,7 +331,7 @@ export default function AddTransaction(): React.ReactNode {
     linkedRecurringId?: string;
   }): Promise<Transaction | undefined> => {
     if (!selectedAccount) {
-      setFormErrors({ accountId: "Please select an account" });
+      setFormErrors({ accountId: t("please_select_an_account") });
       setIsSubmitting(false);
       return undefined;
     }
@@ -398,8 +400,8 @@ export default function AddTransaction(): React.ReactNode {
         // F-02: Show success feedback immediately before non-critical alert check
         showToast({
           type: "success",
-          title: "Created",
-          message: "Transaction Created successfully",
+          title: t("transaction_created"),
+          message: t("transaction_created_message"),
         });
 
         // Check budget alerts for expense transactions (non-blocking to the success flow)
@@ -424,11 +426,11 @@ export default function AddTransaction(): React.ReactNode {
     <View className="flex-1">
       {/* Header */}
       <PageHeader
-        title="New Transaction"
+        title={t("new_transaction")}
         showBackButton={true}
         backIcon="arrow"
         rightAction={{
-          label: "Save",
+          label: t("save"),
           onPress: handleSave,
           loading: isSubmitting,
         }}
@@ -454,7 +456,7 @@ export default function AddTransaction(): React.ReactNode {
               !isNaN(parseFloat(amount)) &&
               parseFloat(amount) > selectedAccount.balance && (
                 <Text className="text-amber-500 text-xs font-medium text-center mb-1">
-                  ⚠️ This will put your balance at -
+                  ⚠️ {t("warning_negative_balance")} -
                   {formatAmountInput(
                     (parseFloat(amount) - selectedAccount.balance).toFixed(2)
                   )}{" "}
@@ -511,9 +513,8 @@ export default function AddTransaction(): React.ReactNode {
                 <EmptyStateCard
                   onPress={() => router.push("/add-account")}
                   icon="swap-horizontal-outline"
-                  title="Need more accounts"
-                  description={`Add account to make transfers.
-                  Tap here to add`}
+                  title={t("need_more_accounts")}
+                  description={t("need_more_accounts_description")}
                   height={160}
                   borderRadius={20}
                   className="w-full"
@@ -565,15 +566,15 @@ export default function AddTransaction(): React.ReactNode {
                         numberOfLines={1}
                         className="flex-1 text-sm font-semibold text-slate-900 dark:text-white"
                       >
-                        {selectedAccount?.name || "Select"}
+                        {selectedAccount?.name || t("select")}
                       </Text>
                     </TouchableOpacity>
                   ) : (
                     <EmptyStateCard
                       onPress={() => router.push("/add-account")}
                       icon="wallet-outline"
-                      title="No accounts found"
-                      description="Tap here to add one"
+                      title={t("no_accounts_found")}
+                      description={t("tap_here_to_add_one")}
                       height={56}
                       borderRadius={16}
                       className="mt-0.5"
@@ -631,7 +632,7 @@ export default function AddTransaction(): React.ReactNode {
                       numberOfLines={1}
                       className="flex-1 text-sm font-semibold text-slate-900 dark:text-white"
                     >
-                      {selectedCategory?.displayName || "Select a category"}
+                      {selectedCategory?.displayName || t("select_category")}
                     </Text>
                   </TouchableOpacity>
                   {formErrors.categoryId && (
@@ -699,7 +700,7 @@ export default function AddTransaction(): React.ReactNode {
             color={isDark ? palette.nileGreen[400] : palette.nileGreen[600]}
           />
           <Text className="ml-1.5 text-sm font-bold text-nileGreen-600 dark:text-nileGreen-400">
-            Add more details
+            {t("add_more_details")}
           </Text>
           <Ionicons
             name="chevron-down"

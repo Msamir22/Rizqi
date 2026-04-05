@@ -35,5 +35,22 @@
   "delete_failed": "Delete Failed",
   "delete_success_message": "{{count}} transaction(s) deleted successfully",
   "delete_error_message": "Something went wrong. Please try again.",
-  "edit_template_not_supported": "Editing template is not yet supported in Quick Edit"
+  "edit_template_not_supported": "Editing template is not yet supported in Quick Edit",
+  "new_transaction": "New Transaction",
+  "save": "Save",
+  "select": "Select",
+  "select_category": "Select a category",
+  "need_more_accounts": "Need more accounts",
+  "need_more_accounts_description": "Add account to make transfers.\nTap here to add",
+  "no_accounts_found": "No accounts found",
+  "tap_here_to_add_one": "Tap here to add one",
+  "warning_negative_balance": "This will put your balance at",
+  "transaction_created": "Created",
+  "transaction_created_message": "Transaction Created successfully",
+  "transaction_creation_failed": "Transaction creation failed",
+  "please_select_destination_account": "Please select a destination account",
+  "please_select_source_account": "Please select source account",
+  "please_select_an_account": "Please select an account",
+  "add_more_details": "Add more details",
+  "optional_details": "Optional details"
 }

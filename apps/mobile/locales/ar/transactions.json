@@ -35,5 +35,22 @@
   "delete_failed": "فشل الحذف",
   "delete_success_message": "تم حذف {{count}} معاملة بنجاح",
   "delete_error_message": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
-  "edit_template_not_supported": "تعديل القالب غير مدعوم بعد في التعديل السريع"
+  "edit_template_not_supported": "تعديل القالب غير مدعوم بعد في التعديل السريع",
+  "new_transaction": "معاملة جديدة",
+  "save": "حفظ",
+  "select": "اختيار",
+  "select_category": "اختيار فئة",
+  "need_more_accounts": "تحتاج إلى المزيد من الحسابات",
+  "need_more_accounts_description": "أضف حساباً لإجراء التحويلات.\nاضغط هنا للإضافة",
+  "no_accounts_found": "لم يتم العثور على حسابات",
+  "tap_here_to_add_one": "اضغط هنا للإضافة",
+  "warning_negative_balance": "سيؤدي هذا إلى وضع رصيدك عند",
+  "transaction_created": "تم الإنشاء",
+  "transaction_created_message": "تم إنشاء المعاملة بنجاح",
+  "transaction_creation_failed": "فشل إنشاء المعاملة",
+  "please_select_destination_account": "الرجاء اختيار حساب الوجهة",
+  "please_select_source_account": "الرجاء اختيار حساب المصدر",
+  "please_select_an_account": "الرجاء اختيار حساب",
+  "add_more_details": "إضافة المزيد من التفاصيل",
+  "optional_details": "تفاصيل اختيارية"
 }
