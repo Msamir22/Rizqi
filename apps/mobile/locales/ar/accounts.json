@@ -8,6 +8,9 @@
   },
   "balance": "الرصيد",
   "account_name": "اسم الحساب",
+  "account_name_placeholder_cash": "مثال: محفظتي",
+  "account_name_placeholder_bank": "مثال: حساب توفير CIB",
+  "account_name_placeholder_wallet": "مثال: فودافون كاش",
   "account_type": "نوع الحساب",
   "type_cash": "كاش",
   "type_bank": "حساب بنكي",
@@ -22,5 +25,17 @@
   "no_accounts_title": "لا توجد حسابات بعد",
   "no_accounts_message": "ابدأ في تتبع ثروتك عن طريق إضافة حسابك الأول.",
   "no_accounts_type_title": "لا توجد حسابات {{type}}",
-  "no_accounts_type_message": "لم تقم بإضافة أي حسابات {{type}} بعد."
+  "no_accounts_type_message": "لم تقم بإضافة أي حسابات {{type}} بعد.",
+  "add_account_hero_title": "أضف حسابك",
+  "add_account_hero_subtitle": "تتبع أموالك عن طريق إضافة حساب",
+  "creating": "جاري الإنشاء...",
+  "currency": "العملة",
+  "account_not_found": "لم يتم العثور على الحساب",
+  "save_changes": "حفظ التغييرات",
+  "saving": "جاري الحفظ...",
+  "danger_zone": "منطقة الخطر",
+  "default_account": "الحساب الافتراضي",
+  "default_account_description": "سيتم اختيار هذا الحساب افتراضياً للمعاملات الجديدة.",
+  "delete_account": "حذف الحساب",
+  "delete_account_warning": "سيؤدي هذا إلى حذف هذا الحساب وجميع معاملاته نهائياً."
 }

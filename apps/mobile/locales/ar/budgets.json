@@ -1,6 +1,9 @@
 {
   "create_budget": "إنشاء ميزانية",
   "edit_budget": "تعديل الميزانية",
+  "new_budget": "ميزانية جديدة",
+  "budgets": "الميزانيات",
+  "budget_detail": "تفاصيل الميزانية",
   "budget_count": {
     "_one": "{{count}} ميزانية",
     "_two": "{{count}} ميزانيتان",
@@ -20,5 +23,13 @@
   "no_budgets": "لا توجد ميزانيات بعد. أنشئ ميزانية لتتبع إنفاقك.",
   "budget_alert": "تنبيه الميزانية",
   "budget_threshold": "تنبيه عندما أنفق أكثر من",
-  "categories": "الفئات"
+  "categories": "الفئات",
+  "budget_deleted": "تم حذف الميزانية",
+  "budget_deleted_hint": "تمت إزالة الميزانية",
+  "budget_not_found": "لم يتم العثور على الميزانية",
+  "budget_paused": "تم إيقاف الميزانية",
+  "budget_resumed": "تم استئناف الميزانية",
+  "paused": "متوقفة",
+  "resumed": "مستأنفة",
+  "load_budget_error": "فشل تحميل الميزانية"
 }

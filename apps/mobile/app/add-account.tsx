@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -28,6 +29,8 @@ export default function AddAccount(): React.ReactNode {
   const insets = useSafeAreaInsets();
   const isKeyboardVisible = useKeyboardVisibility();
   const { isDark } = useTheme();
+  const { t } = useTranslation("accounts");
+  const { t: tCommon } = useTranslation("common");
 
   // Custom hooks for form state and business logic
   const { formData, errors, updateField, validate } = useAccountForm();
@@ -57,11 +60,11 @@ export default function AddAccount(): React.ReactNode {
         backgroundColor="transparent"
       />
       <PageHeader
-        title="New Account"
+        title={t("add_account")}
         showBackButton={true}
         backIcon="arrow"
         rightAction={{
-          label: "Save",
+          label: tCommon("save"),
           onPress: handleSave,
           loading: isSubmitting,
         }}
@@ -87,10 +90,10 @@ export default function AddAccount(): React.ReactNode {
               />
             </View>
             <Text className="mb-2 text-center text-xl font-black text-slate-900 dark:text-white">
-              Where&apos;s your money?
+              {t("add_account_hero_title")}
             </Text>
             <Text className="text-center text-sm font-bold text-slate-500 dark:text-slate-400">
-              Add an account to start tracking
+              {t("add_account_hero_subtitle")}
             </Text>
           </View>
         </View>
@@ -161,13 +164,13 @@ export default function AddAccount(): React.ReactNode {
         <View className="px-4">
           {/* Account Name */}
           <TextField
-            label="Account Name"
+            label={t("account_name")}
             placeholder={
               formData.accountType === "BANK"
-                ? "e.g., CIB Checking"
+                ? t("account_name_placeholder_bank")
                 : formData.accountType === "DIGITAL_WALLET"
-                  ? "e.g., Vodafone Cash"
-                  : "e.g., My Wallet"
+                  ? t("account_name_placeholder_wallet")
+                  : t("account_name_placeholder_cash")
             }
             value={formData.name}
             onChangeText={(text) => updateField("name", text)}
@@ -177,7 +180,7 @@ export default function AddAccount(): React.ReactNode {
 
           {/* Currency Selector */}
           <Dropdown
-            label="Currency"
+            label={t("currency")}
             items={CURRENCIES}
             value={formData.currency}
             onChange={(val) => updateField("currency", val)}
@@ -188,7 +191,7 @@ export default function AddAccount(): React.ReactNode {
 
           {/* Initial Balance */}
           <TextField
-            label="Initial Balance"
+            label={t("initial_balance")}
             placeholder="0"
             value={formData.balance}
             onChangeText={(text) => {
@@ -228,7 +231,7 @@ export default function AddAccount(): React.ReactNode {
           style={{ paddingBottom: insets.bottom + 16 }}
         >
           <Button
-            title={isSubmitting ? "Creating..." : "Add Account"}
+            title={isSubmitting ? t("creating") : t("add_new_account")}
             onPress={handleSave}
             isLoading={isSubmitting}
             variant="primary"

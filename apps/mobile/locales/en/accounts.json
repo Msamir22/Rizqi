@@ -8,6 +8,9 @@
   },
   "balance": "Balance",
   "account_name": "Account Name",
+  "account_name_placeholder_cash": "e.g., My Wallet",
+  "account_name_placeholder_bank": "e.g., CIB Savings",
+  "account_name_placeholder_wallet": "e.g., Vodafone Cash",
   "account_type": "Account Type",
   "type_cash": "Cash",
   "type_bank": "Bank Account",
@@ -22,5 +25,17 @@
   "no_accounts_title": "No accounts yet",
   "no_accounts_message": "Start tracking your wealth by adding your first account.",
   "no_accounts_type_title": "No {{type}} accounts",
-  "no_accounts_type_message": "You haven't added any {{type}} accounts yet."
+  "no_accounts_type_message": "You haven't added any {{type}} accounts yet.",
+  "add_account_hero_title": "Add Your Account",
+  "add_account_hero_subtitle": "Track your finances by adding an account",
+  "creating": "Creating...",
+  "currency": "Currency",
+  "account_not_found": "Account not found",
+  "save_changes": "Save Changes",
+  "saving": "Saving...",
+  "danger_zone": "Danger Zone",
+  "default_account": "Default Account",
+  "default_account_description": "This account will be selected by default for new transactions.",
+  "delete_account": "Delete Account",
+  "delete_account_warning": "This will permanently delete this account and all its transactions."
 }

@@ -1,6 +1,9 @@
 {
   "create_budget": "Create Budget",
   "edit_budget": "Edit Budget",
+  "new_budget": "New Budget",
+  "budgets": "Budgets",
+  "budget_detail": "Budget Detail",
   "budget_count": {
     "_one": "{{count}} budget",
     "_two": "{{count}} budgets",
@@ -20,5 +23,13 @@
   "no_budgets": "No budgets yet. Create a budget to track your spending.",
   "budget_alert": "Budget Alert",
   "budget_threshold": "Alert when I spend over",
-  "categories": "Categories"
+  "categories": "Categories",
+  "budget_deleted": "Budget Deleted",
+  "budget_deleted_hint": "Budget has been removed",
+  "budget_not_found": "Budget not found",
+  "budget_paused": "Budget Paused",
+  "budget_resumed": "Budget Resumed",
+  "paused": "Paused",
+  "resumed": "Resumed",
+  "load_budget_error": "Failed to load budget"
 }

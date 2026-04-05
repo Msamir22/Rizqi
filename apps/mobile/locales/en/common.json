@@ -53,5 +53,8 @@
   "info": "Info",
   "select_language": "Select Your Language",
   "select_language_description": "Choose your preferred language to continue",
-  "continue": "Continue"
+  "continue": "Continue",
+  "select": "Select",
+  "coming_soon": "Coming Soon",
+  "charts_subtitle": "Visualize your spending patterns"
 }

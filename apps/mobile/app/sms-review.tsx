@@ -33,6 +33,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import { Alert, Text, TouchableOpacity } from "react-native";
+import { useTranslation } from "react-i18next";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // ---------------------------------------------------------------------------
@@ -40,6 +41,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 // ---------------------------------------------------------------------------
 
 export default function SmsReviewScreen(): React.JSX.Element {
+  const { t } = useTranslation("transactions");
   const router = useRouter();
   const { transactions, clearTransactions } = useSmsScanContext();
   const { markSyncComplete } = useSmsSync();
@@ -79,16 +81,20 @@ export default function SmsReviewScreen(): React.JSX.Element {
         if (result.failedCount > 0) {
           showToast({
             type: "error",
-            title: "Save Error",
-            message: `${result.savedCount} saved, ${result.failedCount} failed: ${result.errors.join(", ")}`,
+            title: t("save_error"),
+            message: t("save_partial", {
+              saved: result.savedCount,
+              failed: result.failedCount,
+              errors: result.errors.join(", "),
+            }),
           });
           return;
         }
 
         showToast({
           type: "success",
-          title: "Saved!",
-          message: `Saved ${result.savedCount} transaction${result.savedCount !== 1 ? "s" : ""} from SMS!`,
+          title: t("saved"),
+          message: t("saved_from_sms", { count: result.savedCount }),
         });
 
         markSyncComplete().catch(console.error);
@@ -97,8 +103,8 @@ export default function SmsReviewScreen(): React.JSX.Element {
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         showToast({
-          message: `Failed to save transactions: ${message}`,
-          title: "Error",
+          message: t("failed_to_save_transactions", { message }),
+          title: t("save_error"),
           type: "error",
         });
       } finally {
@@ -111,21 +117,17 @@ export default function SmsReviewScreen(): React.JSX.Element {
   // ── Discard ─────────────────────────────────────────────────────────
 
   const handleDiscard = useCallback(() => {
-    Alert.alert(
-      "Discard All",
-      "Are you sure you want to discard all scanned transactions?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Discard",
-          style: "destructive",
-          onPress: () => {
-            clearTransactions();
-            router.replace("/(tabs)");
-          },
+    Alert.alert(t("discard_all"), t("discard_all_confirm"), [
+      { text: t("cancel"), style: "cancel" },
+      {
+        text: t("discard"),
+        style: "destructive",
+        onPress: () => {
+          clearTransactions();
+          router.replace("/(tabs)");
         },
-      ]
-    );
+      },
+    ]);
   }, [clearTransactions, router]);
 
   // ── No transactions guard ───────────────────────────────────────────
@@ -139,13 +141,15 @@ export default function SmsReviewScreen(): React.JSX.Element {
           color={palette.slate[400]}
         />
         <Text className="text-lg text-slate-400 mt-4 text-center">
-          No transactions to review. Run a scan first.
+          {t("no_transactions_to_review")}
         </Text>
         <TouchableOpacity
           onPress={() => router.replace("/(tabs)" as never)}
           className="mt-6 px-6 py-3 bg-slate-800 rounded-2xl"
         >
-          <Text className="text-white font-semibold">Back to Dashboard</Text>
+          <Text className="text-white font-semibold">
+            {t("back_to_dashboard")}
+          </Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -157,7 +161,7 @@ export default function SmsReviewScreen(): React.JSX.Element {
     <SafeAreaView className="flex-1 bg-background dark:bg-background-dark">
       {/* Header */}
       <PageHeader
-        title="Review Transactions"
+        title={t("sms_review_title")}
         showDrawer={false}
         showBackButton={true}
       />

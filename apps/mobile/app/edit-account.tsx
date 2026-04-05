@@ -18,6 +18,7 @@ import type { Account } from "@astik/db";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -56,6 +57,8 @@ export default function EditAccount(): React.ReactNode {
   const { isDark } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const isKeyboardVisible = useKeyboardVisibility();
+  const { t } = useTranslation("accounts");
+  const { t: tCommon } = useTranslation("common");
 
   // ---------------------------------------------------------------------------
   // Data Hooks
@@ -85,13 +88,13 @@ export default function EditAccount(): React.ReactNode {
           color={palette.slate[400]}
         />
         <Text className="mt-4 text-lg font-semibold text-slate-500 dark:text-slate-400 text-center">
-          Account not found
+          {t("account_not_found")}
         </Text>
         <TouchableOpacity
           onPress={() => router.back()}
           className="mt-4 px-6 py-3 rounded-xl bg-nileGreen-500"
         >
-          <Text className="text-white font-semibold">Go Back</Text>
+          <Text className="text-white font-semibold">{tCommon("back")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -134,6 +137,8 @@ function EditAccountForm({
   isKeyboardVisible,
   bottomInset,
 }: EditAccountFormProps): React.JSX.Element {
+  const { t } = useTranslation("accounts");
+  const { t: tCommon } = useTranslation("common");
   const {
     formData,
     errors,
@@ -269,11 +274,11 @@ function EditAccountForm({
         backgroundColor="transparent"
       />
       <PageHeader
-        title="Edit Account"
+        title={t("edit_account")}
         showBackButton={true}
         backIcon="arrow"
         rightAction={{
-          label: "Save",
+          label: tCommon("save"),
           onPress: () => {
             handleSave();
           },
@@ -320,22 +325,22 @@ function EditAccountForm({
         <View className="px-4">
           {/* Account Type (Read-Only) */}
           <ReadOnlyDropdown
-            label="Account Type"
+            label={t("account_type")}
             displayValue={accountTypeLabel}
             icon={accountTypeIcon}
           />
 
           {/* Currency (Read-Only) */}
           <ReadOnlyDropdown
-            label="Currency"
+            label={t("currency")}
             displayValue={currencyLabel}
             icon={currencyIcon}
           />
 
           {/* Account Name */}
           <TextField
-            label="Account Name"
-            placeholder="e.g., CIB Checking"
+            label={t("account_name")}
+            placeholder={t("account_name_placeholder_bank")}
             value={formData.name}
             onChangeText={(text) => updateField("name", text)}
             error={errors.name}
@@ -344,7 +349,7 @@ function EditAccountForm({
 
           {/* Balance */}
           <TextField
-            label="Balance"
+            label={t("balance")}
             placeholder="0"
             value={formData.balance}
             onChangeText={(text) => {
@@ -376,10 +381,10 @@ function EditAccountForm({
               />
               <View className="ms-3 flex-1">
                 <Text className="text-base font-semibold text-slate-800 dark:text-white">
-                  Default Account
+                  {t("default_account")}
                 </Text>
                 <Text className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                  Used as the pre-selected account for new transactions
+                  {t("default_account_description")}
                 </Text>
               </View>
             </View>
@@ -429,11 +434,10 @@ function EditAccountForm({
           {/* Danger Zone */}
           <View className="mt-8 rounded-2xl border border-red-200 dark:border-red-800/30 bg-red-50/50 dark:bg-red-900/10 p-4">
             <Text className="text-sm font-bold text-red-600 dark:text-red-400 uppercase tracking-wider mb-2">
-              Danger Zone
+              {t("danger_zone")}
             </Text>
             <Text className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-              Deleting this account will remove all associated transactions,
-              transfers, debts, and recurring payments.
+              {t("delete_account_warning")}
             </Text>
             <TouchableOpacity
               onPress={() => setShowDeleteSheet(true)}
@@ -446,7 +450,7 @@ function EditAccountForm({
                 color={palette.red[500]}
               />
               <Text className="ms-2 text-base font-semibold text-red-500">
-                Delete Account
+                {t("delete_account")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -460,7 +464,7 @@ function EditAccountForm({
           style={{ paddingBottom: bottomInset + 16 }}
         >
           <Button
-            title={isSubmitting ? "Saving..." : "Save Changes"}
+            title={isSubmitting ? t("saving") : t("save_changes")}
             onPress={() => {
               handleSave();
             }}

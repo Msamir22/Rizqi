@@ -14,12 +14,15 @@ import { useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import { palette } from "@/constants/colors";
+import { useTranslation } from "react-i18next";
 
 // =============================================================================
 // Screen
 // =============================================================================
 
 export default function CreateBudgetScreen(): React.JSX.Element {
+  const { t } = useTranslation("budgets");
+
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEdit = !!id;
 
@@ -44,7 +47,7 @@ export default function CreateBudgetScreen(): React.JSX.Element {
 
         if (!isNotFound) {
           console.error("[CreateBudget] Failed to load budget:", error);
-          setLoadError("Failed to load budget. Please try again.");
+          setLoadError(t("load_budget_error"));
         }
         // If not found, budget stays undefined → BudgetForm renders in create mode
       } finally {
@@ -58,7 +61,7 @@ export default function CreateBudgetScreen(): React.JSX.Element {
   return (
     <View className="flex-1">
       <PageHeader
-        title={isEdit ? "Edit Budget" : "New Budget"}
+        title={isEdit ? t("edit_budget") : t("new_budget")}
         showBackButton={true}
         showDrawer={false}
       />

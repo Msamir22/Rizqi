@@ -31,6 +31,7 @@ import {
   resumeBudget,
 } from "@/services/budget-service";
 import { palette } from "@/constants/colors";
+import { useTranslation } from "react-i18next";
 
 // =============================================================================
 // Screen
@@ -52,6 +53,9 @@ export default function BudgetDetailScreen(): React.JSX.Element {
     isLoading,
   } = useBudgetDetail(id ?? "");
 
+  const { t } = useTranslation("budgets");
+  const { t: tCommon } = useTranslation("common");
+
   const [showActions, setShowActions] = useState(false);
 
   const handleAction = useCallback(
@@ -67,24 +71,24 @@ export default function BudgetDetailScreen(): React.JSX.Element {
             await pauseBudget(budget.id);
             showToast({
               type: "success",
-              title: "Paused",
-              message: "Budget paused",
+              title: t("paused"),
+              message: t("budget_paused"),
             });
             break;
           case "resume":
             await resumeBudget(budget.id);
             showToast({
               type: "success",
-              title: "Resumed",
-              message: "Budget resumed",
+              title: t("resumed"),
+              message: t("budget_resumed"),
             });
             break;
           case "delete":
             await deleteBudget(budget.id);
             showToast({
               type: "success",
-              title: "Deleted",
-              message: "Budget deleted",
+              title: tCommon("delete"),
+              message: t("budget_deleted"),
             });
             router.back();
             break;
@@ -92,8 +96,9 @@ export default function BudgetDetailScreen(): React.JSX.Element {
       } catch (err) {
         showToast({
           type: "error",
-          title: "Error",
-          message: err instanceof Error ? err.message : "Something went wrong",
+          title: tCommon("error"),
+          message:
+            err instanceof Error ? err.message : tCommon("error_generic"),
         });
       }
     },
@@ -105,7 +110,7 @@ export default function BudgetDetailScreen(): React.JSX.Element {
     return (
       <View className="flex-1">
         <PageHeader
-          title="Budget Detail"
+          title={t("budget_detail")}
           showBackButton={true}
           showDrawer={false}
         />
@@ -121,16 +126,16 @@ export default function BudgetDetailScreen(): React.JSX.Element {
     return (
       <View className="flex-1">
         <PageHeader
-          title="Budget Detail"
+          title={t("budget_detail")}
           showBackButton={true}
           showDrawer={false}
         />
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-lg font-semibold text-slate-600 dark:text-slate-400 text-center">
-            Budget not found
+            {t("budget_not_found")}
           </Text>
           <Text className="text-sm text-slate-400 dark:text-slate-500 mt-1 text-center">
-            This budget may have been deleted.
+            {t("budget_deleted_hint")}
           </Text>
         </View>
       </View>

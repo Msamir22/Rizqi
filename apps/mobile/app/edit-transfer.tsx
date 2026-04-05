@@ -37,6 +37,7 @@ import { Ionicons } from "@expo/vector-icons";
 import type { TransactionType } from "@astik/db";
 import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import React, {
   useCallback,
   useEffect,
@@ -86,6 +87,8 @@ export default function EditTransfer(): React.ReactNode {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { showToast } = useToast();
   const { isDark } = useTheme();
+  const { t } = useTranslation("transactions");
+  const { t: tCommon } = useTranslation("common");
 
   // ---------------------------------------------------------------------------
   // Data Hooks
@@ -238,18 +241,18 @@ export default function EditTransfer(): React.ReactNode {
     // Basic validation
     const parsedAmount = calculateResult(amount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      setAmountError("Please enter a valid amount");
+      setAmountError(t("invalid_amount"));
       return;
     }
 
     // --- Branch: Convert to Transaction ---
     if (!isTransferMode) {
       if (!selectedAccountId) {
-        showToast({ type: "error", title: "Please select an account" });
+        showToast({ type: "error", title: t("please_select_an_account") });
         return;
       }
       if (!selectedCategoryId) {
-        showToast({ type: "error", title: "Please select a category" });
+        showToast({ type: "error", title: t("select_category") });
         return;
       }
 
@@ -269,7 +272,7 @@ export default function EditTransfer(): React.ReactNode {
         ).catch(console.error);
         showToast({
           type: "success",
-          title: `Converted to ${selectedType.toLowerCase()}`,
+          title: t("converted_to_type", { type: selectedType.toLowerCase() }),
         });
         router.back();
       } catch (err) {
@@ -277,7 +280,7 @@ export default function EditTransfer(): React.ReactNode {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(
           console.error
         );
-        showToast({ type: "error", title: "Failed to convert" });
+        showToast({ type: "error", title: t("convert_error") });
       } finally {
         setIsSubmitting(false);
       }
@@ -286,20 +289,20 @@ export default function EditTransfer(): React.ReactNode {
 
     // --- Branch: Regular Transfer Update ---
     if (!fromAccountId) {
-      showToast({ type: "error", title: "Please select a source account" });
+      showToast({ type: "error", title: t("please_select_source_account") });
       return;
     }
 
     if (!toAccountId) {
       showToast({
         type: "error",
-        title: "Please select a destination account",
+        title: t("please_select_destination_account"),
       });
       return;
     }
 
     if (fromAccountId === toAccountId) {
-      showToast({ type: "error", title: "Accounts must be different" });
+      showToast({ type: "error", title: t("accounts_must_be_different") });
       return;
     }
 
@@ -318,14 +321,14 @@ export default function EditTransfer(): React.ReactNode {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
         console.error
       );
-      showToast({ type: "success", title: "Transfer updated" });
+      showToast({ type: "success", title: t("update_success") });
       router.back();
     } catch (err) {
       console.error("[EditTransfer] Save error:", err);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(
         console.error
       );
-      showToast({ type: "error", title: "Failed to save changes" });
+      showToast({ type: "error", title: t("update_error") });
     } finally {
       setIsSubmitting(false);
     }
@@ -409,14 +412,14 @@ export default function EditTransfer(): React.ReactNode {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(
         console.error
       );
-      showToast({ type: "success", title: "Transfer deleted" });
+      showToast({ type: "success", title: t("delete_success") });
       router.back();
     } catch (err) {
       console.error("[EditTransfer] Delete error:", err);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(
         console.error
       );
-      showToast({ type: "error", title: "Failed to delete transfer" });
+      showToast({ type: "error", title: t("delete_failed") });
     }
   };
 
@@ -435,13 +438,13 @@ export default function EditTransfer(): React.ReactNode {
     return (
       <View className="flex-1 items-center justify-center px-6">
         <Text className="text-lg font-semibold text-slate-500 dark:text-slate-400 text-center">
-          Transfer not found
+          {t("transfer_not_found")}
         </Text>
         <TouchableOpacity
           onPress={() => router.back()}
           className="mt-4 px-6 py-3 rounded-xl bg-nileGreen-500"
         >
-          <Text className="text-white font-semibold">Go Back</Text>
+          <Text className="text-white font-semibold">{tCommon("back")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -454,7 +457,7 @@ export default function EditTransfer(): React.ReactNode {
     <View className="flex-1">
       {/* Header */}
       <PageHeader
-        title="Edit Transfer"
+        title={t("edit_transfer")}
         showBackButton={true}
         backIcon="arrow"
         secondaryAction={{
@@ -463,7 +466,7 @@ export default function EditTransfer(): React.ReactNode {
           color: palette.red[500],
         }}
         rightAction={{
-          label: "Save",
+          label: tCommon("save"),
           onPress: () => {
             handleSave().catch((err: unknown) =>
               console.error("[EditTransfer] Save failed:", err)
@@ -519,7 +522,7 @@ export default function EditTransfer(): React.ReactNode {
             {/* From Account */}
             <View className="mb-4">
               <Text className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">
-                From Account
+                {t("from_account")}
               </Text>
               <TouchableOpacity
                 onPress={() => setIsFromAccountModalOpen(true)}
@@ -536,7 +539,7 @@ export default function EditTransfer(): React.ReactNode {
                   numberOfLines={1}
                   className="flex-1 text-sm font-semibold text-slate-900 dark:text-white"
                 >
-                  {fromAccount?.name || "Select account"}
+                  {fromAccount?.name || tCommon("select")}
                 </Text>
                 <Ionicons
                   name="chevron-forward"
@@ -566,7 +569,7 @@ export default function EditTransfer(): React.ReactNode {
             {/* To Account */}
             <View className="mt-4">
               <Text className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">
-                To Account
+                {t("to_account")}
               </Text>
               <TouchableOpacity
                 onPress={() => setIsToAccountModalOpen(true)}
@@ -585,7 +588,7 @@ export default function EditTransfer(): React.ReactNode {
                   numberOfLines={1}
                   className="flex-1 text-sm font-semibold text-slate-900 dark:text-white"
                 >
-                  {toAccount?.name || "Select account"}
+                  {toAccount?.name || tCommon("select")}
                 </Text>
                 <Ionicons
                   name="chevron-forward"
@@ -601,7 +604,7 @@ export default function EditTransfer(): React.ReactNode {
               fromAccount.currency !== toAccount.currency && (
                 <View className="mt-4">
                   <Text className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">
-                    Received ({toAccount.currency})
+                    {t("received_currency", { currency: toAccount.currency })}
                   </Text>
                   <TouchableOpacity
                     onPress={() => setActiveAmountField("targetAmount")}
@@ -627,7 +630,9 @@ export default function EditTransfer(): React.ReactNode {
             <View className="flex-row gap-4 mb-4">
               {/* Account Field */}
               <View className="flex-1">
-                <Text className="input-label">ACCOUNT</Text>
+                <Text className="input-label">
+                  {t("account").toUpperCase()}
+                </Text>
                 <TouchableOpacity
                   onPress={() => setIsAccountModalOpen(true)}
                   activeOpacity={0.7}
@@ -660,14 +665,16 @@ export default function EditTransfer(): React.ReactNode {
                     numberOfLines={1}
                     className="flex-1 text-sm font-semibold text-slate-900 dark:text-white"
                   >
-                    {selectedAccount?.name || "Select"}
+                    {selectedAccount?.name || tCommon("select")}
                   </Text>
                 </TouchableOpacity>
               </View>
 
               {/* Category Field */}
               <View className="flex-1">
-                <Text className="input-label">CATEGORY</Text>
+                <Text className="input-label">
+                  {t("category").toUpperCase()}
+                </Text>
                 <TouchableOpacity
                   onPress={() => setIsCategoryModalOpen(true)}
                   activeOpacity={0.7}
@@ -706,7 +713,7 @@ export default function EditTransfer(): React.ReactNode {
                     numberOfLines={1}
                     className="flex-1 text-sm font-semibold text-slate-900 dark:text-white"
                   >
-                    {selectedCategory?.displayName || "Select"}
+                    {selectedCategory?.displayName || tCommon("select")}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -749,7 +756,7 @@ export default function EditTransfer(): React.ReactNode {
             color={isDark ? palette.nileGreen[400] : palette.nileGreen[600]}
           />
           <Text className="ms-1.5 text-sm font-bold text-nileGreen-600 dark:text-nileGreen-400">
-            More details
+            {t("add_more_details")}
           </Text>
           <Ionicons
             name="chevron-down"
@@ -764,7 +771,7 @@ export default function EditTransfer(): React.ReactNode {
       <CalculatorKeypad
         onKeyPress={handleKeyPress}
         hide={isOptionalExpanded}
-        actionLabel="Save Changes"
+        actionLabel={t("save_changes")}
       />
 
       {/* Safe area spacer when keypad hidden */}
@@ -820,9 +827,9 @@ export default function EditTransfer(): React.ReactNode {
           );
         }}
         onCancel={() => setIsDeleteModalOpen(false)}
-        title="Delete Transfer?"
-        message="This will delete the transfer and revert all associated changes to account balances. This action cannot be undone."
-        confirmLabel="Delete"
+        title={t("delete_transfer_title")}
+        message={t("delete_transfer_message")}
+        confirmLabel={tCommon("delete")}
         variant="danger"
       />
 
@@ -831,9 +838,9 @@ export default function EditTransfer(): React.ReactNode {
         visible={isDiscardModalOpen}
         onConfirm={() => router.back()}
         onCancel={() => setIsDiscardModalOpen(false)}
-        title="Discard Changes?"
-        message="You have unsaved changes. Are you sure you want to discard them?"
-        confirmLabel="Discard"
+        title={t("discard_changes_title")}
+        message={t("discard_changes_message")}
+        confirmLabel={t("discard")}
         variant="warning"
         icon="alert-circle-outline"
       />

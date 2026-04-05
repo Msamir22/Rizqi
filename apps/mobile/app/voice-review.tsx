@@ -23,6 +23,7 @@ import { batchCreateTransactions } from "@/services/batch-create-transactions";
 import type { ReviewableTransaction } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import React, { useCallback, useMemo, useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
@@ -42,6 +43,8 @@ export default function VoiceReviewScreen(): React.JSX.Element {
     originTabIndex: string;
   }>();
   const { showToast } = useToast();
+  const { t } = useTranslation("transactions");
+  const { t: tCommon } = useTranslation("common");
 
   const [isSaving, setIsSaving] = useState(false);
   const [discardModalVisible, setDiscardModalVisible] = useState(false);
@@ -98,16 +101,20 @@ export default function VoiceReviewScreen(): React.JSX.Element {
         if (result.failedCount > 0) {
           showToast({
             type: "error",
-            title: "Save Error",
-            message: `${result.savedCount} saved, ${result.failedCount} failed: ${result.errors.join(", ")}`,
+            title: tCommon("error"),
+            message: t("voice_save_partial", {
+              saved: result.savedCount,
+              failed: result.failedCount,
+              errors: result.errors.join(", "),
+            }),
           });
           return;
         }
 
         showToast({
           type: "success",
-          title: "Saved!",
-          message: `Saved ${result.savedCount} transaction${result.savedCount !== 1 ? "s" : ""} from voice!`,
+          title: tCommon("success"),
+          message: t("voice_saved_count", { count: result.savedCount }),
         });
 
         // Navigate back to origin tab (FR-024: post-save navigation)
@@ -115,8 +122,8 @@ export default function VoiceReviewScreen(): React.JSX.Element {
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         showToast({
-          message: `Failed to save transactions: ${message}`,
-          title: "Error",
+          message: t("voice_save_error", { message }),
+          title: tCommon("error"),
           type: "error",
         });
       } finally {
@@ -147,14 +154,16 @@ export default function VoiceReviewScreen(): React.JSX.Element {
           color={palette.slate[400]}
         />
         <Text className="text-lg text-slate-400 mt-4 text-center">
-          No transactions to review.
+          {t("no_transactions_to_review")}
         </Text>
         <TouchableOpacity
           onPress={() => router.replace(originTabRoute as never)}
           className="mt-6 px-6 py-3 rounded-2xl"
           style={{ backgroundColor: palette.slate[800] }}
         >
-          <Text className="text-white font-semibold">Back to Dashboard</Text>
+          <Text className="text-white font-semibold">
+            {t("back_to_dashboard")}
+          </Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -166,11 +175,11 @@ export default function VoiceReviewScreen(): React.JSX.Element {
     <SafeAreaView className="flex-1 bg-background dark:bg-background-dark">
       {/* Header (S-03 + S-06) */}
       <PageHeader
-        title="Review Transactions"
+        title={t("voice_review_title")}
         showDrawer={false}
         showBackButton={true}
         rightAction={{
-          label: "Retry",
+          label: t("voice_retry"),
           onPress: () => {
             router.replace({
               pathname: originTabRoute as never,
@@ -195,7 +204,7 @@ export default function VoiceReviewScreen(): React.JSX.Element {
                   color={palette.slate[500]}
                 />
                 <Text className="ms-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  What I heard
+                  {t("voice_what_i_heard")}
                 </Text>
               </View>
               <View className="flex-row items-center gap-2">
@@ -244,10 +253,10 @@ export default function VoiceReviewScreen(): React.JSX.Element {
         visible={discardModalVisible}
         onConfirm={handleConfirmDiscard}
         onCancel={() => setDiscardModalVisible(false)}
-        title="Discard Transactions?"
-        message="Are you sure you want to discard all voice transactions? This action cannot be undone."
-        confirmLabel="Discard All"
-        cancelLabel="Keep Reviewing"
+        title={t("discard_voice_title")}
+        message={t("discard_voice_message")}
+        confirmLabel={t("discard_all")}
+        cancelLabel={t("keep_reviewing")}
         variant="danger"
         icon="trash-outline"
       />

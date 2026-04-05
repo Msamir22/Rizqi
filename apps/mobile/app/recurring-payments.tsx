@@ -23,6 +23,7 @@ import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   FlatList,
@@ -106,17 +107,19 @@ function HeroSummary({
   thisMonth,
   currencyCode,
 }: HeroSummaryProps): React.JSX.Element {
+  const { t } = useTranslation("transactions");
+
   return (
     <View className="rounded-3xl border p-6 mb-6 bg-white/60 dark:bg-slate-800 border-slate-200 dark:border-slate-700">
       {/* Context label */}
       <Text className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-3 text-center">
-        Upcoming Expenses
+        {t("upcoming_expenses")}
       </Text>
 
       <View className="flex-row">
         <View className="flex-1 items-center border-r border-slate-200 dark:border-slate-700 pe-4">
           <Text className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">
-            Next 7 days
+            {t("next_7_days")}
           </Text>
           <Text className="text-xl font-bold mt-1 text-red-500">
             {formatCurrency({ amount: next7Days, currency: currencyCode })}
@@ -124,7 +127,7 @@ function HeroSummary({
         </View>
         <View className="flex-1 items-center ps-4">
           <Text className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">
-            This Month
+            {t("this_month")}
           </Text>
           <Text className="text-xl font-bold mt-1 text-red-500">
             {formatCurrency({ amount: thisMonth, currency: currencyCode })}
@@ -238,6 +241,7 @@ function PaymentCard({
  */
 
 export default function RecurringPaymentsScreen(): React.JSX.Element {
+  const { t } = useTranslation("transactions");
   const insets = useSafeAreaInsets();
   const {
     filteredPayments,
@@ -266,7 +270,11 @@ export default function RecurringPaymentsScreen(): React.JSX.Element {
 
   return (
     <View className="flex-1">
-      <PageHeader title="My Bills" showBackButton={true} showDrawer={false} />
+      <PageHeader
+        title={t("my_bills")}
+        showBackButton={true}
+        showDrawer={false}
+      />
 
       <View className="flex-1 px-5 pt-4">
         {/* Hero Summary */}
@@ -292,8 +300,10 @@ export default function RecurringPaymentsScreen(): React.JSX.Element {
           <EmptyStateCard
             onPress={() => router.push("/create-recurring-payment")}
             icon="receipt-outline"
-            title={`No ${statusFilter.toLowerCase()} payments`}
-            description="Tap to add your first recurring payment"
+            title={t("no_status_payments", {
+              status: statusFilter.toLowerCase(),
+            })}
+            description={t("tap_to_add_recurring")}
             height={120}
           />
         ) : (

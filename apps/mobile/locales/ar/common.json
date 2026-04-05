@@ -53,5 +53,8 @@
   "info": "معلومات",
   "select_language": "اختر لغتك",
   "select_language_description": "اختر لغتك المفضلة للمتابعة",
-  "continue": "متابعة"
+  "continue": "متابعة",
+  "select": "اختيار",
+  "coming_soon": "قريباً",
+  "charts_subtitle": "تصور أنماط إنفاقك"
 }

@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
 import { ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 /**
  * Charts Screen - Analytics and charts view
@@ -14,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 export default function ChartsScreen(): React.ReactElement {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation("common");
 
   return (
     <View className="flex-1" style={{ backgroundColor: theme.background }}>
@@ -37,13 +39,13 @@ export default function ChartsScreen(): React.ReactElement {
               className="text-2xl font-bold"
               style={{ color: theme.text.primary }}
             >
-              Charts
+              {t("stats")}
             </Text>
             <Text
               className="mt-1 text-sm"
               style={{ color: theme.text.secondary }}
             >
-              View your financial analytics
+              {t("charts_subtitle")}
             </Text>
           </View>
 
@@ -56,7 +58,7 @@ export default function ChartsScreen(): React.ReactElement {
               className="text-center text-base"
               style={{ color: theme.text.muted }}
             >
-              Charts and analytics coming soon...
+              {t("coming_soon")}
             </Text>
           </View>
         </ScrollView>

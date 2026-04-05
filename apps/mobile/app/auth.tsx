@@ -25,6 +25,7 @@ import { HAS_ONBOARDED_KEY } from "@/constants/storage-keys";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -67,6 +68,8 @@ export default function AuthScreen(): React.JSX.Element {
   const { isDark, theme } = useTheme();
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const { showToast } = useToast();
+  const { t } = useTranslation("auth");
+  const { t: tCommon } = useTranslation("common");
 
   const [screenState, setScreenState] = useState<ScreenState>("form");
   const [pendingEmail, setPendingEmail] = useState("");
@@ -144,7 +147,7 @@ export default function AuthScreen(): React.JSX.Element {
           }
 
           // Rare: email already verified (shouldn't happen normally)
-          showToast({ type: "success", title: "Account created!" });
+          showToast({ type: "success", title: t("account_created") });
         } else {
           const result = await signInWithEmail(email, password);
 
@@ -153,10 +156,10 @@ export default function AuthScreen(): React.JSX.Element {
             return;
           }
 
-          showToast({ type: "success", title: "Signed in successfully!" });
+          showToast({ type: "success", title: t("signed_in_success") });
         }
       } catch {
-        setEmailError("Something went wrong. Please try again.");
+        setEmailError(tCommon("error_generic"));
       } finally {
         setEmailLoading(false);
       }
@@ -171,7 +174,7 @@ export default function AuthScreen(): React.JSX.Element {
       if (!email) {
         showToast({
           type: "info",
-          title: "Enter your email first, then tap Forgot Password.",
+          title: t("forgot_password_hint"),
         });
         return;
       }
@@ -188,7 +191,7 @@ export default function AuthScreen(): React.JSX.Element {
         .catch(() => {
           showToast({
             type: "error",
-            title: "Failed to send reset email. Please try again.",
+            title: t("reset_email_failed"),
           });
         });
     },
@@ -203,12 +206,12 @@ export default function AuthScreen(): React.JSX.Element {
       if (result.error) {
         showToast({ type: "error", title: result.error.message });
       } else {
-        showToast({ type: "success", title: "Verification email sent!" });
+        showToast({ type: "success", title: t("verification_email_sent") });
       }
     } catch {
       showToast({
         type: "error",
-        title: "Failed to resend verification email. Please try again.",
+        title: t("resend_verification_failed"),
       });
     }
   }, [pendingEmail, showToast]);

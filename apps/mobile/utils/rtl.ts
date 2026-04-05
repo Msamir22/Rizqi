@@ -64,7 +64,11 @@ export function isDeviceLanguageArabic(): boolean {
 export async function getCurrentLanguage(): Promise<"en" | "ar"> {
   try {
     const stored = await AsyncStorage.getItem(LANGUAGE_KEY);
-    return stored === "ar" ? "ar" : "en";
+    if (stored === "en" || stored === "ar") {
+      return stored;
+    }
+    // No stored preference — fall back to device locale
+    return isDeviceLanguageArabic() ? "ar" : "en";
   } catch {
     // If AsyncStorage fails, fall back to device locale
     return isDeviceLanguageArabic() ? "ar" : "en";

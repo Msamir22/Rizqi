@@ -147,7 +147,10 @@ export default function RootLayout(): React.ReactNode {
   return (
     <ErrorBoundary>
       <I18nextProvider i18n={i18n}>
-        <GestureHandlerRootView className="flex-1">
+        <GestureHandlerRootView
+          className="flex-1"
+          accessibilityLanguage={i18n.language === "ar" ? "ar" : "en"}
+        >
           <QueryProvider>
             <DatabaseProvider>
               <AuthProvider>

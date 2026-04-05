@@ -41,6 +41,7 @@ import type { TransactionType } from "@astik/db";
 import { formatAmountInput } from "@astik/logic";
 import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import React, {
   useCallback,
   useEffect,
@@ -94,6 +95,8 @@ export default function EditTransaction(): React.ReactNode {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { showToast } = useToast();
   const { isDark } = useTheme();
+  const { t } = useTranslation("transactions");
+  const { t: tCommon } = useTranslation("common");
 
   // ---------------------------------------------------------------------------
   // Data Hooks
@@ -259,22 +262,22 @@ export default function EditTransaction(): React.ReactNode {
 
     const parsedAmount = calculateResult(amount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      setFormErrors({ amount: "Please enter a valid amount" });
+      setFormErrors({ amount: t("invalid_amount") });
       return;
     }
 
     // --- Branch: Convert to Transfer ---
     if (isTransferMode) {
       if (!selectedAccountId) {
-        setFormErrors({ accountId: "Select a source account" });
+        setFormErrors({ accountId: t("please_select_source_account") });
         return;
       }
       if (!toAccountId) {
-        setFormErrors({ accountId: "Select a destination account" });
+        setFormErrors({ accountId: t("please_select_destination_account") });
         return;
       }
       if (selectedAccountId === toAccountId) {
-        setFormErrors({ accountId: "From and To accounts must be different" });
+        setFormErrors({ accountId: t("accounts_must_be_different") });
         return;
       }
 
@@ -315,14 +318,14 @@ export default function EditTransaction(): React.ReactNode {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
         console.error
       );
-      showToast({ type: "success", title: "Transaction updated" });
+      showToast({ type: "success", title: t("update_success") });
       router.back();
     } catch (err) {
       console.error("[EditTransaction] Save error:", err);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(
         console.error
       );
-      showToast({ type: "error", title: "Failed to save changes" });
+      showToast({ type: "error", title: t("update_error") });
     } finally {
       setIsSubmitting(false);
     }
@@ -347,14 +350,14 @@ export default function EditTransaction(): React.ReactNode {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
         console.error
       );
-      showToast({ type: "success", title: "Converted to transfer" });
+      showToast({ type: "success", title: t("converted_to_transfer") });
       router.back();
     } catch (err) {
       console.error("[EditTransaction] Conversion error:", err);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(
         console.error
       );
-      showToast({ type: "error", title: "Failed to convert to transfer" });
+      showToast({ type: "error", title: t("convert_to_transfer_error") });
     } finally {
       setIsSubmitting(false);
     }
@@ -432,14 +435,14 @@ export default function EditTransaction(): React.ReactNode {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(
         console.error
       );
-      showToast({ type: "success", title: "Transaction deleted" });
+      showToast({ type: "success", title: t("delete_success") });
       router.back();
     } catch (err) {
       console.error("[EditTransaction] Delete error:", err);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(
         console.error
       );
-      showToast({ type: "error", title: "Failed to delete transaction" });
+      showToast({ type: "error", title: t("delete_failed") });
     }
   };
 
@@ -458,13 +461,13 @@ export default function EditTransaction(): React.ReactNode {
     return (
       <View className="flex-1 items-center justify-center px-6">
         <Text className="text-lg font-semibold text-slate-500 dark:text-slate-400 text-center">
-          Transaction not found
+          {t("transaction_not_found")}
         </Text>
         <TouchableOpacity
           onPress={() => router.back()}
           className="mt-4 px-6 py-3 rounded-xl bg-nileGreen-500"
         >
-          <Text className="text-white font-semibold">Go Back</Text>
+          <Text className="text-white font-semibold">{tCommon("back")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -477,7 +480,7 @@ export default function EditTransaction(): React.ReactNode {
     <View className="flex-1">
       {/* Header */}
       <PageHeader
-        title="Edit Transaction"
+        title={t("edit_transaction")}
         showBackButton={true}
         backIcon="arrow"
         secondaryAction={{
@@ -486,7 +489,7 @@ export default function EditTransaction(): React.ReactNode {
           color: palette.red[500],
         }}
         rightAction={{
-          label: "Save",
+          label: tCommon("save"),
           onPress: () => {
             handleSave().catch((err: unknown) =>
               console.error("[EditTransaction] Save failed:", err)
@@ -556,7 +559,9 @@ export default function EditTransaction(): React.ReactNode {
               <View className="flex-row gap-4 mb-4">
                 {/* From Account */}
                 <View className="flex-1">
-                  <Text className="input-label">FROM</Text>
+                  <Text className="input-label">
+                    {t("transfer_from").toUpperCase()}
+                  </Text>
                   <TouchableOpacity
                     onPress={() => {
                       setFormErrors((prev) => ({
@@ -585,7 +590,7 @@ export default function EditTransaction(): React.ReactNode {
                       numberOfLines={1}
                       className="flex-1 text-sm font-semibold text-slate-900 dark:text-white"
                     >
-                      {selectedAccount?.name || "Select"}
+                      {selectedAccount?.name || tCommon("select")}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -610,7 +615,9 @@ export default function EditTransaction(): React.ReactNode {
 
                 {/* To Account */}
                 <View className="flex-1">
-                  <Text className="input-label">TO</Text>
+                  <Text className="input-label">
+                    {t("transfer_to").toUpperCase()}
+                  </Text>
                   <TouchableOpacity
                     onPress={() => {
                       setFormErrors((prev) => ({
@@ -639,7 +646,7 @@ export default function EditTransaction(): React.ReactNode {
                       numberOfLines={1}
                       className="flex-1 text-sm font-semibold text-slate-900 dark:text-white"
                     >
-                      {selectedToAccount?.name || "Select"}
+                      {selectedToAccount?.name || tCommon("select")}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -657,7 +664,9 @@ export default function EditTransaction(): React.ReactNode {
               <View className="flex-row gap-4 mb-4">
                 {/* Account Field */}
                 <View className="flex-1">
-                  <Text className="input-label">ACCOUNT</Text>
+                  <Text className="input-label">
+                    {t("account").toUpperCase()}
+                  </Text>
                   <TouchableOpacity
                     onPress={() => {
                       setFormErrors((prev) => ({
@@ -696,7 +705,7 @@ export default function EditTransaction(): React.ReactNode {
                       numberOfLines={1}
                       className="flex-1 text-sm font-semibold text-slate-900 dark:text-white"
                     >
-                      {selectedAccount?.name || "Select"}
+                      {selectedAccount?.name || tCommon("select")}
                     </Text>
                   </TouchableOpacity>
                   {formErrors.accountId && (
@@ -708,7 +717,9 @@ export default function EditTransaction(): React.ReactNode {
 
                 {/* Category Field */}
                 <View className="flex-1">
-                  <Text className="input-label">CATEGORY</Text>
+                  <Text className="input-label">
+                    {t("category").toUpperCase()}
+                  </Text>
                   <TouchableOpacity
                     onPress={() => {
                       setFormErrors((prev) => ({
@@ -755,7 +766,7 @@ export default function EditTransaction(): React.ReactNode {
                       numberOfLines={1}
                       className="flex-1 text-sm font-semibold text-slate-900 dark:text-white"
                     >
-                      {selectedCategory?.displayName || "Select"}
+                      {selectedCategory?.displayName || tCommon("select")}
                     </Text>
                   </TouchableOpacity>
                   {formErrors.categoryId && (
@@ -816,7 +827,7 @@ export default function EditTransaction(): React.ReactNode {
             color={isDark ? palette.nileGreen[400] : palette.nileGreen[600]}
           />
           <Text className="ms-1.5 text-sm font-bold text-nileGreen-600 dark:text-nileGreen-400">
-            More details
+            {t("add_more_details")}
           </Text>
           <Ionicons
             name="chevron-down"
@@ -831,7 +842,7 @@ export default function EditTransaction(): React.ReactNode {
       <CalculatorKeypad
         onKeyPress={handleKeyPress}
         hide={isOptionalExpanded}
-        actionLabel="Save Changes"
+        actionLabel={t("save_changes")}
       />
 
       {/* Safe area spacer when keypad hidden */}
@@ -876,9 +887,9 @@ export default function EditTransaction(): React.ReactNode {
           );
         }}
         onCancel={() => setIsDeleteModalOpen(false)}
-        title="Delete Transaction?"
-        message="This will delete the transaction and revert all associated changes to account balances. This action cannot be undone."
-        confirmLabel="Delete"
+        title={t("delete_transaction_title")}
+        message={t("delete_transaction_message")}
+        confirmLabel={tCommon("delete")}
         variant="danger"
       />
 
@@ -887,9 +898,9 @@ export default function EditTransaction(): React.ReactNode {
         visible={isDiscardModalOpen}
         onConfirm={() => router.back()}
         onCancel={() => setIsDiscardModalOpen(false)}
-        title="Discard Changes?"
-        message="You have unsaved changes. Are you sure you want to discard them?"
-        confirmLabel="Discard"
+        title={t("discard_changes_title")}
+        message={t("discard_changes_message")}
+        confirmLabel={t("discard")}
         variant="warning"
         icon="alert-circle-outline"
       />
@@ -904,18 +915,18 @@ export default function EditTransaction(): React.ReactNode {
           );
         }}
         onCancel={() => setIsConversionWarningOpen(false)}
-        title="Linked Data Warning"
+        title={t("linked_data_warning_title")}
         message={[
-          "Converting to a transfer will affect linked data:",
-          transaction?.linkedDebtId ? "• Linked debt record" : "",
-          transaction?.linkedAssetId ? "• Linked asset record" : "",
-          transaction?.linkedRecurringId ? "• Linked recurring payment" : "",
-          "\nLinkages will be preserved on the original record for audit purposes.",
+          t("linked_data_warning_converting"),
+          transaction?.linkedDebtId ? t("linked_data_debt") : "",
+          transaction?.linkedAssetId ? t("linked_data_asset") : "",
+          transaction?.linkedRecurringId ? t("linked_data_recurring") : "",
+          `\n${t("linked_data_warning_preserved")}`,
         ]
           .filter(Boolean)
           .join("\n")}
-        confirmLabel="Convert Anyway"
-        cancelLabel="Cancel"
+        confirmLabel={t("convert_anyway")}
+        cancelLabel={tCommon("cancel")}
         variant="warning"
         icon="link-outline"
       />
