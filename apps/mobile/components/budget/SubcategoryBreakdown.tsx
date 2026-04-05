@@ -60,7 +60,7 @@ export function SubcategoryBreakdown({
             <View className="flex-row items-center justify-between mb-2">
               <View className="flex-row items-center flex-1">
                 <View
-                  className="w-2.5 h-2.5 rounded-full mr-2"
+                  className="w-2.5 h-2.5 rounded-full me-2"
                   style={{ backgroundColor: COLORS[index % COLORS.length] }}
                 />
                 <Text
@@ -71,7 +71,7 @@ export function SubcategoryBreakdown({
                 </Text>
               </View>
               <View className="flex-row items-center">
-                <Text className="text-sm font-bold text-slate-800 dark:text-white mr-2">
+                <Text className="text-sm font-bold text-slate-800 dark:text-white me-2">
                   {formatCurrency({ amount: item.amount, currency })}
                 </Text>
                 <Text className="text-xs text-slate-500 dark:text-slate-400">

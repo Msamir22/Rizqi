@@ -220,7 +220,7 @@ export default function SettingsScreen(): React.JSX.Element {
       <ScrollView contentContainerClassName="px-5">
         {/* Language Section */}
         <View className="mb-8">
-          <Text className="text-[13px] font-semibold mb-3 ml-1 uppercase text-slate-500 dark:text-slate-400">
+          <Text className="text-[13px] font-semibold mb-3 ms-1 uppercase text-slate-500 dark:text-slate-400">
             {t("language")}
           </Text>
 
@@ -280,7 +280,7 @@ export default function SettingsScreen(): React.JSX.Element {
 
         {/* Appearance Section */}
         <View className="mb-8">
-          <Text className="text-[13px] font-semibold mb-3 ml-1 uppercase text-slate-500 dark:text-slate-400">
+          <Text className="text-[13px] font-semibold mb-3 ms-1 uppercase text-slate-500 dark:text-slate-400">
             {t("appearance")}
           </Text>
 
@@ -308,7 +308,7 @@ export default function SettingsScreen(): React.JSX.Element {
 
         {/* Currency Section */}
         <View className="mb-8">
-          <Text className="text-[13px] font-semibold mb-3 ml-1 uppercase text-slate-500 dark:text-slate-400">
+          <Text className="text-[13px] font-semibold mb-3 ms-1 uppercase text-slate-500 dark:text-slate-400">
             {t("currency")}
           </Text>
 
@@ -345,7 +345,7 @@ export default function SettingsScreen(): React.JSX.Element {
         {/* {t("sms_sync")} Section (Android only) */}
         {isAndroid && (
           <View className="mb-8">
-            <Text className="text-[13px] font-semibold mb-3 ml-1 uppercase text-slate-500 dark:text-slate-400">
+            <Text className="text-[13px] font-semibold mb-3 ms-1 uppercase text-slate-500 dark:text-slate-400">
               {t("sms_sync")}
             </Text>
 
@@ -413,7 +413,7 @@ export default function SettingsScreen(): React.JSX.Element {
         {/* Live SMS Detection Section (Android only) */}
         {isAndroid && (
           <View className="mb-8">
-            <Text className="text-[13px] font-semibold mb-3 ml-1 uppercase text-slate-500 dark:text-slate-400">
+            <Text className="text-[13px] font-semibold mb-3 ms-1 uppercase text-slate-500 dark:text-slate-400">
               {t("live_detection")}
             </Text>
 

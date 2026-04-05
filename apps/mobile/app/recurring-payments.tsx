@@ -114,7 +114,7 @@ function HeroSummary({
       </Text>
 
       <View className="flex-row">
-        <View className="flex-1 items-center border-r border-slate-200 dark:border-slate-700 pr-4">
+        <View className="flex-1 items-center border-r border-slate-200 dark:border-slate-700 pe-4">
           <Text className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">
             Next 7 days
           </Text>
@@ -122,7 +122,7 @@ function HeroSummary({
             {formatCurrency({ amount: next7Days, currency: currencyCode })}
           </Text>
         </View>
-        <View className="flex-1 items-center pl-4">
+        <View className="flex-1 items-center ps-4">
           <Text className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">
             This Month
           </Text>
@@ -163,7 +163,7 @@ function PaymentCard({
     >
       {/* Icon */}
       <View
-        className={`w-12 h-12 rounded-2xl items-center justify-center mr-4 ${
+        className={`w-12 h-12 rounded-2xl items-center justify-center me-4 ${
           payment.isIncome
             ? "bg-nileGreen-500/10"
             : "bg-slate-100 dark:bg-slate-700/50"

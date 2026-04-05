@@ -173,11 +173,11 @@ export function DeleteAccountSheet({
                         size={18}
                         color={palette.gold[500]}
                       />
-                      <Text className="ml-2 text-sm font-bold text-amber-700 dark:text-amber-300">
+                      <Text className="ms-2 text-sm font-bold text-amber-700 dark:text-amber-300">
                         The following will also be deleted:
                       </Text>
                     </View>
-                    <Text className="text-sm text-amber-600 dark:text-amber-400 ml-6">
+                    <Text className="text-sm text-amber-600 dark:text-amber-400 ms-6">
                       {buildLinkedSummary(linkedRecords)}
                     </Text>
                   </View>

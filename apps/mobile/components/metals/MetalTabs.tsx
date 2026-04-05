@@ -208,7 +208,7 @@ export function MetalTabs({
         >
           <FontAwesome5 name="coins" size={14} color={goldIconColor} />
           <Animated.Text
-            className="ml-2 text-sm font-semibold"
+            className="ms-2 text-sm font-semibold"
             style={goldTextStyle}
           >
             Gold ({goldCount})
@@ -233,7 +233,7 @@ export function MetalTabs({
             style={{ backgroundColor: silverIconColor }}
           />
           <Animated.Text
-            className="ml-2 text-sm font-semibold"
+            className="ms-2 text-sm font-semibold"
             style={silverTextStyle}
           >
             Silver ({silverCount})

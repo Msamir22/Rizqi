@@ -238,7 +238,7 @@ function AddButton(): React.JSX.Element {
       className="button"
     >
       <Feather name="plus" size={14} color="#FFFFFF" />
-      <Text className="button-text ml-1">Add</Text>
+      <Text className="button-text ms-1">Add</Text>
     </TouchableOpacity>
   );
 }
@@ -328,7 +328,7 @@ export function AccountsCarousel({
 
   return (
     <View className="my-3">
-      <View className="mb-3 ml-1 flex-row items-center justify-between">
+      <View className="mb-3 ms-1 flex-row items-center justify-between">
         <Text className="header-text">{headerText}</Text>
         {activeIndex === 0 && <AddButton />}
       </View>

@@ -224,7 +224,7 @@ export default function AddAccount(): React.ReactNode {
       {/* Fixed Bottom Button - Hidden when keyboard is visible to prevent covering screen */}
       {!isKeyboardVisible && (
         <View
-          className="absolute bottom-0 left-0 right-0 px-6 pt-6 pb-10 bg-white dark:bg-background-dark border-t border-slate-200 dark:border-slate-800"
+          className="absolute bottom-0 start-0 end-0 px-6 pt-6 pb-10 bg-white dark:bg-background-dark border-t border-slate-200 dark:border-slate-800"
           style={{ paddingBottom: insets.bottom + 16 }}
         >
           <Button

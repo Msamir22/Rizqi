@@ -198,18 +198,18 @@ export function LiveRates({
     <View className="my-3">
       <View className="mb-3 flex-row items-center justify-between">
         <View className="flex-row items-center">
-          <Text className="header-text ml-1 text-slate-800 dark:text-slate-50">
+          <Text className="header-text ms-1 text-slate-800 dark:text-slate-50">
             Live Rates
           </Text>
           {isLoading && (
             <ActivityIndicator
               size="small"
-              className="ml-2"
+              className="ms-2"
               color={palette.nileGreen[500]}
             />
           )}
           {isStale && (
-            <View className="ml-2 flex-row items-center">
+            <View className="ms-2 flex-row items-center">
               <Ionicons
                 name="alert-circle-outline"
                 size={16}
@@ -254,11 +254,11 @@ export function LiveRates({
               key={rate.id}
               className={`flex-row items-center rounded-full px-3 py-2 ${config.container}`}
             >
-              <View className="mr-1.5">
+              <View className="me-1.5">
                 {getPillIcon(rate.type, iconColor, preferredCurrency)}
               </View>
 
-              <Text className={`mr-1 text-[13px] font-medium ${config.label}`}>
+              <Text className={`me-1 text-[13px] font-medium ${config.label}`}>
                 {rate.label}:
               </Text>
               <Text className="text-[13px] font-semibold text-slate-800 dark:text-slate-100">
@@ -284,7 +284,7 @@ export function LiveRates({
         })}
       </ScrollView>
       {lastUpdated && (
-        <Text className="ml-1 mt-2 text-xs text-slate-500 dark:text-slate-400">
+        <Text className="ms-1 mt-2 text-xs text-slate-500 dark:text-slate-400">
           Last updated {formatTimeAgo(lastUpdated)}
         </Text>
       )}

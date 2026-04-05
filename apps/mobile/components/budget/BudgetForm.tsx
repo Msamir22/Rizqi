@@ -387,7 +387,7 @@ export function BudgetForm({
             />
             <Text
               numberOfLines={1}
-              className="flex-1 ml-3 text-base font-medium text-slate-800 dark:text-white"
+              className="flex-1 ms-3 text-base font-medium text-slate-800 dark:text-white"
             >
               {selectedCategory?.displayName ?? "Select a category"}
             </Text>
@@ -412,7 +412,7 @@ export function BudgetForm({
         </Text>
         <View className="flex-row items-center bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
           <Text
-            className="text-base font-bold pl-4"
+            className="text-base font-bold ps-4"
             style={{ color: palette.nileGreen[500] }}
           >
             {preferredCurrency}

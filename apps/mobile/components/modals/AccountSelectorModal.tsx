@@ -88,7 +88,7 @@ export function AccountSelectorModal({
                         }}
                       >
                         <View
-                          className={`w-12 h-12 rounded-2xl items-center justify-center mr-4 ${
+                          className={`w-12 h-12 rounded-2xl items-center justify-center me-4 ${
                             isSelected
                               ? "bg-nileGreen-500"
                               : "bg-slate-200 dark:bg-slate-700"

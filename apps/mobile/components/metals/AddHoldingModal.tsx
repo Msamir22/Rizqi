@@ -396,7 +396,7 @@ export function AddHoldingModal({
                       size={18}
                       color={isDark ? palette.slate[400] : palette.slate[500]}
                     />
-                    <Text className="ml-2 text-base text-slate-800 dark:text-white">
+                    <Text className="ms-2 text-base text-slate-800 dark:text-white">
                       {purchaseDate.toLocaleDateString()}
                     </Text>
                   </TouchableOpacity>
@@ -453,7 +453,7 @@ export function AddHoldingModal({
                         size={18}
                         color={palette.red[500]}
                       />
-                      <Text className="ml-2 flex-1 text-sm text-red-700 dark:text-red-400">
+                      <Text className="ms-2 flex-1 text-sm text-red-700 dark:text-red-400">
                         {errorMessage}
                       </Text>
                       <TouchableOpacity onPress={handleSave}>

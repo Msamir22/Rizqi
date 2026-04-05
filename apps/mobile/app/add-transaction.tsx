@@ -540,7 +540,7 @@ export default function AddTransaction(): React.ReactNode {
                       className="flex-row items-center bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700"
                     >
                       <View
-                        className="w-8 h-8 rounded-xl items-center justify-center mr-2 bg-slate-100 dark:bg-slate-700/50"
+                        className="w-8 h-8 rounded-xl items-center justify-center me-2 bg-slate-100 dark:bg-slate-700/50"
                         style={{
                           backgroundColor: selectedCategory?.color
                             ? `${selectedCategory.color}20`
@@ -602,7 +602,7 @@ export default function AddTransaction(): React.ReactNode {
                     className="flex-row items-center bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700"
                   >
                     <View
-                      className="w-8 h-8 rounded-xl items-center justify-center mr-2 bg-slate-100 dark:bg-slate-700/50"
+                      className="w-8 h-8 rounded-xl items-center justify-center me-2 bg-slate-100 dark:bg-slate-700/50"
                       style={{
                         backgroundColor: selectedCategory?.color
                           ? `${selectedCategory.color}20`
@@ -699,14 +699,14 @@ export default function AddTransaction(): React.ReactNode {
             size={16}
             color={isDark ? palette.nileGreen[400] : palette.nileGreen[600]}
           />
-          <Text className="ml-1.5 text-sm font-bold text-nileGreen-600 dark:text-nileGreen-400">
+          <Text className="ms-1.5 text-sm font-bold text-nileGreen-600 dark:text-nileGreen-400">
             {t("add_more_details")}
           </Text>
           <Ionicons
             name="chevron-down"
             size={14}
             color={isDark ? palette.nileGreen[400] : palette.nileGreen[600]}
-            className="ml-1"
+            className="ms-1"
           />
         </TouchableOpacity>
       )}

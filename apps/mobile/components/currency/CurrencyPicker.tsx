@@ -68,7 +68,7 @@ function CurrencyRow({
             {item.name}
           </Text>
         </View>
-        <Text className="text-sm text-slate-400 dark:text-slate-500 mr-2">
+        <Text className="text-sm text-slate-400 dark:text-slate-500 me-2">
           {item.symbol}
         </Text>
       </View>
@@ -84,7 +84,7 @@ function CurrencyRow({
 }
 
 function CurrencyListSeparator(): React.JSX.Element {
-  return <View className="h-[0.5px] bg-slate-100 dark:bg-white/5 ml-16" />;
+  return <View className="h-[0.5px] bg-slate-100 dark:bg-white/5 ms-16" />;
 }
 
 /**

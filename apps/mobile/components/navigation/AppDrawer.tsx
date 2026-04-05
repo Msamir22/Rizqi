@@ -322,7 +322,7 @@ export function AppDrawer({
                         size={22}
                         color={isDark ? palette.slate[300] : palette.slate[600]}
                       />
-                      <Text className="ml-4 text-base text-slate-800 dark:text-white">
+                      <Text className="ms-4 text-base text-slate-800 dark:text-white">
                         {item.label}
                       </Text>
                     </TouchableOpacity>
@@ -344,7 +344,7 @@ export function AppDrawer({
                     size={22}
                     color={isDark ? palette.slate[300] : palette.slate[600]}
                   />
-                  <Text className="ml-4 text-base text-slate-800 dark:text-white">
+                  <Text className="ms-4 text-base text-slate-800 dark:text-white">
                     Dark Mode
                   </Text>
                 </View>
@@ -374,7 +374,7 @@ export function AppDrawer({
                     color={palette.red[400]}
                   />
                 )}
-                <Text className="ml-4 text-base text-red-400">
+                <Text className="ms-4 text-base text-red-400">
                   {isLoggingOut ? "Logging out..." : "Logout"}
                 </Text>
               </TouchableOpacity>

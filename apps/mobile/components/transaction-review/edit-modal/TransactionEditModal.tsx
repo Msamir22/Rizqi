@@ -131,7 +131,7 @@ export function TransactionEditModal(
           >
             {/* Sender info (read-only) */}
             <View className="mb-4 bg-slate-100 dark:bg-slate-800/60 rounded-2xl gap-3 px-4 py-3 flex-row items-center border border-slate-200 dark:border-slate-700/50">
-              <View className="w-10 h-10 rounded-full bg-emerald-500/20 items-center justify-center mr-3">
+              <View className="w-10 h-10 rounded-full bg-emerald-500/20 items-center justify-center me-3">
                 <Ionicons
                   name="business-outline"
                   size={25}
@@ -182,7 +182,7 @@ export function TransactionEditModal(
                     size={18}
                     color={palette.gold[500]}
                   />
-                  <Text className="text-sm font-bold text-amber-400 ml-2">
+                  <Text className="text-sm font-bold text-amber-400 ms-2">
                     {state.formConfig.sourceTypeBadge.label}
                   </Text>
                 </View>
@@ -201,7 +201,7 @@ export function TransactionEditModal(
                     : "border-slate-200 dark:border-slate-700/50"
                 }`}
               >
-                <View className="bg-slate-200 dark:bg-slate-700/60 rounded-lg px-2.5 py-1 mr-3">
+                <View className="bg-slate-200 dark:bg-slate-700/60 rounded-lg px-2.5 py-1 me-3">
                   <Text className="text-slate-800 dark:text-white font-bold text-xs">
                     {state.selectedAccountCurrency}
                   </Text>
@@ -224,7 +224,7 @@ export function TransactionEditModal(
                 />
               </View>
               {state.formErrors.amount && (
-                <Text className="text-xs text-red-400 mt-1.5 ml-1">
+                <Text className="text-xs text-red-400 mt-1.5 ms-1">
                   {state.formErrors.amount}
                 </Text>
               )}
@@ -239,7 +239,7 @@ export function TransactionEditModal(
                     size={16}
                     color={palette.blue[500]}
                   />
-                  <Text className="text-xs text-blue-400 font-medium ml-2 flex-shrink">
+                  <Text className="text-xs text-blue-400 font-medium ms-2 flex-shrink">
                     {formatConversionPreview(
                       state.amount,
                       transaction.currency,
@@ -316,7 +316,7 @@ export function TransactionEditModal(
                   />
                 </TouchableOpacity>
                 {state.formErrors.categoryId && (
-                  <Text className="text-xs text-red-400 mt-1.5 ml-1">
+                  <Text className="text-xs text-red-400 mt-1.5 ms-1">
                     {state.formErrors.categoryId}
                   </Text>
                 )}
@@ -372,7 +372,7 @@ export function TransactionEditModal(
               {state.isCurrencyLocked ? (
                 /* Locked: show as a static read-only badge */
                 <View className="bg-slate-100 dark:bg-slate-800/60 rounded-xl px-4 py-3 flex-row items-center border border-slate-200 dark:border-slate-700/50 opacity-60">
-                  <Text className="text-lg mr-2">
+                  <Text className="text-lg me-2">
                     {CURRENCY_INFO_MAP[state.selectedAccountCurrency]?.flag ??
                       "💱"}
                   </Text>
@@ -396,7 +396,7 @@ export function TransactionEditModal(
                   className="bg-slate-100 dark:bg-slate-800/60 rounded-xl px-4 py-3 flex-row items-center justify-between border border-nileGreen-500/40"
                 >
                   <View className="flex-row items-center">
-                    <Text className="text-lg mr-2">
+                    <Text className="text-lg me-2">
                       {CURRENCY_INFO_MAP[state.selectedAccountCurrency]?.flag ??
                         "💱"}
                     </Text>

@@ -63,7 +63,7 @@ export function MetalCard({
       {/* Metal name with icon */}
       <View className="flex-row items-center mb-1.5">
         <FontAwesome5 name="coins" size={12} color={borderColor} solid />
-        <Text className="ml-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">
+        <Text className="ms-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">
           {metalName}
         </Text>
       </View>

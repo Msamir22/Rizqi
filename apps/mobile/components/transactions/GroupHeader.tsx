@@ -41,7 +41,7 @@ export const GroupHeader = React.memo(function GroupHeader({
       )}
 
       <View className="flex-row justify-between items-center px-4 py-2.5">
-        <Text className="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide flex-1 mr-2">
+        <Text className="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide flex-1 me-2">
           {title}
         </Text>
 

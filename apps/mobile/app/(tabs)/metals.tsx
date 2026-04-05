@@ -228,7 +228,7 @@ export default function MyMetalsScreen(): React.JSX.Element {
           className="flex-row items-center justify-center rounded-xl border border-dashed py-3 mb-3 border-slate-200 dark:border-slate-600"
         >
           <Ionicons name="add" size={18} color={palette.slate[400]} />
-          <Text className="ml-1 text-sm font-semibold text-slate-400 dark:text-slate-500">
+          <Text className="ms-1 text-sm font-semibold text-slate-400 dark:text-slate-500">
             {activeTab === "gold" ? t("add_gold") : t("add_silver")}
           </Text>
         </TouchableOpacity>

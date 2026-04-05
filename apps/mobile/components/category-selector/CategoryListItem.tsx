@@ -61,7 +61,7 @@ export const CategoryListItem = memo(function CategoryListItem({
       >
         {/* Icon */}
         <View
-          className="w-10 h-10 rounded-full items-center justify-center mr-3"
+          className="w-10 h-10 rounded-full items-center justify-center me-3"
           style={{ backgroundColor: `${category.color}20` }}
         >
           <CategoryIcon

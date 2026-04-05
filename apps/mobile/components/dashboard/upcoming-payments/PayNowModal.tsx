@@ -163,7 +163,7 @@ export function PayNowModal({
                     name="wallet-outline"
                     size={18}
                     color={palette.slate[500]}
-                    className="mr-2"
+                    className="me-2"
                   />
                   <Text className="text-base font-medium text-slate-800 dark:text-white">
                     {selectedAccount?.name || "Select account"}

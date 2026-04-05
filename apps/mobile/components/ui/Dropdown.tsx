@@ -77,7 +77,7 @@ function DropdownItemRow<T extends string | number>({
       } ${isSelected ? "bg-nileGreen-50/50 dark:bg-nileGreen-900/10" : ""}`}
     >
       {item.icon && (
-        <View className="mr-3 w-8 items-center">
+        <View className="me-3 w-8 items-center">
           {item.iconType === "ionicons" ? (
             <Ionicons
               name={item.icon as keyof typeof Ionicons.glyphMap}
@@ -243,7 +243,7 @@ export function Dropdown<T extends string | number>({
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center">
               {selectedItem?.icon && (
-                <View className="mr-3 w-8 items-center">
+                <View className="me-3 w-8 items-center">
                   {selectedItem.iconType === "ionicons" ? (
                     <Ionicons
                       name={selectedItem.icon as keyof typeof Ionicons.glyphMap}

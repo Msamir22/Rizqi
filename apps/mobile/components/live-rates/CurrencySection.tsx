@@ -126,7 +126,7 @@ export function CurrencySection({
           {/* Search icon */}
           <TouchableOpacity
             onPress={toggleSearch}
-            className="p-1.5 mr-2"
+            className="p-1.5 me-2"
             activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel={
@@ -165,7 +165,7 @@ export function CurrencySection({
           />
           <TextInput
             ref={inputRef}
-            className="flex-1 py-2.5 ml-2 text-sm text-slate-800 dark:text-white"
+            className="flex-1 py-2.5 ms-2 text-sm text-slate-800 dark:text-white"
             placeholder="Search currencies..."
             placeholderTextColor={palette.slate[400]}
             value={searchQuery}

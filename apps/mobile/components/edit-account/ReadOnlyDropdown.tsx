@@ -81,7 +81,7 @@ export function ReadOnlyDropdown({
       <View className="flex-row items-center justify-between px-4 py-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/50">
         {/* Left: Icon + Value */}
         <View className="flex-row items-center flex-1">
-          {icon ? <Text className="text-lg mr-2">{icon}</Text> : null}
+          {icon ? <Text className="text-lg me-2">{icon}</Text> : null}
           <Text className="text-base font-medium text-slate-500 dark:text-slate-400">
             {displayValue}
           </Text>

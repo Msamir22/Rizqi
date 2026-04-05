@@ -42,7 +42,7 @@ export function DrilldownCategoryItem({
       className="flex-row items-center py-2"
     >
       <View
-        className="w-3 h-3 rounded-full mr-3"
+        className="w-3 h-3 rounded-full me-3"
         style={{ backgroundColor: category.color }}
       />
       <View className="flex-1">
@@ -53,7 +53,7 @@ export function DrilldownCategoryItem({
           {category.displayName}
         </Text>
       </View>
-      <Text className="text-sm font-semibold mr-2 text-slate-600 dark:text-slate-300">
+      <Text className="text-sm font-semibold me-2 text-slate-600 dark:text-slate-300">
         {formatCurrency({
           amount: category.amount,
           currency: preferredCurrency,

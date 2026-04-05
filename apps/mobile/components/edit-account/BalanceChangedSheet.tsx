@@ -215,7 +215,7 @@ export function BalanceChangedSheet({
                     }`}
                   >
                     <View
-                      className={`w-5 h-5 rounded-full border-2 mr-3 items-center justify-center ${
+                      className={`w-5 h-5 rounded-full border-2 me-3 items-center justify-center ${
                         selectedOption === "silent"
                           ? "border-nileGreen-500"
                           : "border-slate-300 dark:border-slate-600"
@@ -251,7 +251,7 @@ export function BalanceChangedSheet({
                     }`}
                   >
                     <View
-                      className={`w-5 h-5 rounded-full border-2 mr-3 items-center justify-center ${
+                      className={`w-5 h-5 rounded-full border-2 me-3 items-center justify-center ${
                         selectedOption === "tracked"
                           ? "border-nileGreen-500"
                           : "border-slate-300 dark:border-slate-600"

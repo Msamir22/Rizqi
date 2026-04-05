@@ -36,7 +36,7 @@ export function LiveRatesFooter({
   return (
     <View className="py-4 items-center flex-row justify-center">
       <Ionicons name="time-outline" size={14} color={palette.slate[500]} />
-      <Text className="ml-1.5 text-xs text-slate-500 dark:text-slate-400">
+      <Text className="ms-1.5 text-xs text-slate-500 dark:text-slate-400">
         {lastUpdatedText}
       </Text>
     </View>

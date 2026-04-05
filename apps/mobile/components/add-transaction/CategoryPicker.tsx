@@ -60,7 +60,7 @@ function CategoryChip({
       />
       <Text
         numberOfLines={1}
-        className={`ml-1.5 text-xs font-medium ${
+        className={`ms-1.5 text-xs font-medium ${
           isSelected
             ? "text-nileGreen-700 dark:text-nileGreen-400"
             : "text-slate-600 dark:text-slate-300"
@@ -99,7 +99,7 @@ export function CategoryPicker({
           className="flex-row items-center bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 mb-3"
         >
           <View
-            className="w-10 h-10 rounded-2xl items-center justify-center mr-3 bg-slate-100 dark:bg-slate-700/50"
+            className="w-10 h-10 rounded-2xl items-center justify-center me-3 bg-slate-100 dark:bg-slate-700/50"
             style={{
               backgroundColor: selectedCategory?.color
                 ? `${selectedCategory.color}20`

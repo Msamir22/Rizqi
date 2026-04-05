@@ -29,7 +29,7 @@ export function CategorySearchBar({
         name="search-outline"
         size={18}
         color={isDark ? palette.slate[400] : palette.slate[500]}
-        className="mr-2"
+        className="me-2"
       />
       <TextInput
         value={value}
@@ -46,7 +46,7 @@ export function CategorySearchBar({
           name="close-circle"
           size={18}
           color={isDark ? palette.slate[400] : palette.slate[500]}
-          className="ml-1"
+          className="ms-1"
           onPress={() => onChangeText("")}
         />
       )}

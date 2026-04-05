@@ -135,7 +135,7 @@ export function CurrencyPickerStep({
           activeOpacity={0.7}
         >
           {/* Flag */}
-          <View className="w-10 h-10 rounded-full items-center justify-center bg-slate-700/30 mr-3">
+          <View className="w-10 h-10 rounded-full items-center justify-center bg-slate-700/30 me-3">
             <Text className="text-xl">{item.flag}</Text>
           </View>
 
@@ -216,7 +216,7 @@ export function CurrencyPickerStep({
             color={isDark ? palette.slate[400] : palette.slate[500]}
           />
           <TextInput
-            className="flex-1 ml-2 text-base text-text-primary dark:text-text-primary-dark"
+            className="flex-1 ms-2 text-base text-text-primary dark:text-text-primary-dark"
             placeholder="Search currency"
             placeholderTextColor={
               isDark ? palette.slate[500] : palette.slate[400]

@@ -55,7 +55,7 @@ export function TopNav({
             onPress={onMenuPress}
             accessibilityLabel={t("open_menu")}
             accessibilityRole="button"
-            className="mr-3"
+            className="me-3"
           >
             <Ionicons
               name="menu-outline"

@@ -101,7 +101,7 @@ export function TotalNetWorthCard({
         className="relative min-h-[180px] w-full items-center overflow-hidden rounded-2xl border border-white/10 p-6 shadow-lg"
       >
         {/* Geometric Background Pattern */}
-        <View className="absolute bottom-0 left-0 right-0 top-0 overflow-hidden rounded-[24px]">
+        <View className="absolute bottom-0 start-0 end-0 top-0 overflow-hidden rounded-[24px]">
           <View className="absolute -bottom-20 -right-10 h-64 w-64 rotate-45 transform bg-white/5" />
           <View className="absolute bottom-10 -right-4 h-32 w-32 rotate-12 transform bg-white/5" />
           <View className="absolute -bottom-10 right-20 h-32 w-32 -rotate-12 transform bg-white/5" />

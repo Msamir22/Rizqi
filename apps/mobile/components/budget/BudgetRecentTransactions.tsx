@@ -57,7 +57,7 @@ export function BudgetRecentTransactions({
               }`}
             >
               {/* Category icon */}
-              <View className="w-10 h-10 rounded-xl items-center justify-center mr-3 bg-slate-100 dark:bg-slate-700/50">
+              <View className="w-10 h-10 rounded-xl items-center justify-center me-3 bg-slate-100 dark:bg-slate-700/50">
                 {category ? (
                   <CategoryIcon
                     iconName={category.iconConfig.iconName}

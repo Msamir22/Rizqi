@@ -104,9 +104,7 @@ export function MetalsHeroCard({
   const plColor = getProfitLossColor(profitLossAmount, isDark);
   const plIcon = getProfitLossIcon(profitLossAmount);
 
-  const gradientColors = isDark
-    ? DARK_GRADIENT_COLORS
-    : LIGHT_GRADIENT_COLORS;
+  const gradientColors = isDark ? DARK_GRADIENT_COLORS : LIGHT_GRADIENT_COLORS;
 
   return (
     <View className="mb-6 rounded-3xl overflow-hidden bg-white dark:bg-slate-800 border border-amber-200/30 dark:border-amber-500/10">
@@ -133,7 +131,7 @@ export function MetalsHeroCard({
         <View className="flex-row items-center mt-3">
           <Ionicons name={plIcon} size={14} color={plColor} />
           <Text
-            className="ml-1 text-sm font-semibold"
+            className="ms-1 text-sm font-semibold"
             style={{ color: plColor }}
           >
             {sign}
@@ -141,7 +139,7 @@ export function MetalsHeroCard({
           </Text>
 
           {/* Info icon + Tooltip */}
-          <View className="relative ml-2">
+          <View className="relative ms-2">
             <Pressable
               onPress={handleInfoPress}
               hitSlop={8}

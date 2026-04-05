@@ -150,7 +150,7 @@ export function BudgetEmptyState({
           size={20}
           color={palette.slate[50]}
         />
-        <Text className="ml-2 text-base font-bold text-white">
+        <Text className="ms-2 text-base font-bold text-white">
           Create First Budget
         </Text>
       </TouchableOpacity>

@@ -68,14 +68,14 @@ export function OptionalSection({
           size={18}
           color={isDark ? palette.nileGreen[400] : palette.nileGreen[600]}
         />
-        <Text className="ml-2 text-sm font-bold text-nileGreen-600 dark:text-nileGreen-400">
+        <Text className="ms-2 text-sm font-bold text-nileGreen-600 dark:text-nileGreen-400">
           Add more details
         </Text>
         <Ionicons
           name="chevron-down"
           size={16}
           color={isDark ? palette.nileGreen[400] : palette.nileGreen[600]}
-          className="ml-1"
+          className="ms-1"
         />
       </TouchableOpacity>
     );
@@ -94,7 +94,7 @@ export function OptionalSection({
           name="chevron-up"
           size={14}
           color={isDark ? palette.slate[500] : palette.slate[400]}
-          className="ml-1"
+          className="ms-1"
         />
       </TouchableOpacity>
 
@@ -131,7 +131,7 @@ export function OptionalSection({
               name="calendar-outline"
               size={20}
               color={isDark ? palette.slate[400] : palette.slate[500]}
-              className="mr-2"
+              className="me-2"
             />
             <Text className="text-base font-medium text-slate-900 dark:text-white">
               {fields.date.toLocaleDateString("en-US", {
@@ -163,7 +163,7 @@ export function OptionalSection({
           <>
             <View className="flex-row items-center justify-between bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
               <View className="flex-row items-center">
-                <View className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 items-center justify-center mr-3">
+                <View className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 items-center justify-center me-3">
                   <Ionicons
                     name="repeat"
                     size={16}
@@ -239,8 +239,8 @@ export function OptionalSection({
 
                 <View>
                   {/* Auto-create Toggle */}
-                  <View className="flex-row items-center ml-1 justify-between mt-2">
-                    <View className="flex-1 mr-4">
+                  <View className="flex-row items-center ms-1 justify-between mt-2">
+                    <View className="flex-1 me-4">
                       <Text className="text-sm font-semibold text-slate-900 dark:text-white">
                         Auto-create transaction
                       </Text>

@@ -142,7 +142,7 @@ export function QuickActionFab({
                 accessibilityRole="button"
               >
                 <Text
-                  className="mr-2.5 text-sm font-semibold text-white"
+                  className="me-2.5 text-sm font-semibold text-white"
                   // eslint-disable-next-line react-native/no-inline-styles
                   style={{
                     textShadowColor: "rgba(0,0,0,0.3)",

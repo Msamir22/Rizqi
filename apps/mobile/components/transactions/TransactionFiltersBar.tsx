@@ -106,7 +106,7 @@ export function TransactionFiltersBar({
         />
         <TextInput
           testID="search-input"
-          className="flex-1 ml-3 text-slate-800 dark:text-slate-100 text-[16px]"
+          className="flex-1 ms-3 text-slate-800 dark:text-slate-100 text-[16px]"
           placeholder={searchPlaceholder}
           placeholderTextColor={palette.slate[400]}
           value={searchQuery}

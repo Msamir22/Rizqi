@@ -97,13 +97,13 @@ export function MonthlyExpenseChart(): React.JSX.Element {
       {/* Legend */}
       <View className="flex-row gap-4 mb-3">
         <View className="flex-row items-center">
-          <View className="w-3 h-3 rounded-sm mr-1 bg-nileGreen-500" />
+          <View className="w-3 h-3 rounded-sm me-1 bg-nileGreen-500" />
           <Text className="text-xs text-slate-500 dark:text-slate-400">
             Income
           </Text>
         </View>
         <View className="flex-row items-center">
-          <View className="w-3 h-3 rounded-sm mr-1 bg-red-400" />
+          <View className="w-3 h-3 rounded-sm me-1 bg-red-400" />
           <Text className="text-xs text-slate-500 dark:text-slate-400">
             Expenses
           </Text>

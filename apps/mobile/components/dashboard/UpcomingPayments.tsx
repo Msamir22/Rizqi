@@ -135,7 +135,7 @@ export function UpcomingPayments(): React.JSX.Element {
             name="arrow-forward"
             size={14}
             color={palette.nileGreen[500]}
-            className="ml-1"
+            className="ms-1"
           />
         </TouchableOpacity>
       </View>

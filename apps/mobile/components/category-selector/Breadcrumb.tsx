@@ -43,7 +43,7 @@ export function Breadcrumb({
       <TouchableOpacity
         onPress={onGoBack}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        className="mr-1 p-1"
+        className="me-1 p-1"
         accessibilityLabel="Go back"
         accessibilityRole="button"
       >

@@ -63,7 +63,7 @@ function FeatureBullet({
       entering={FadeInDown.delay(delay).springify()}
       className="flex-row items-start mb-4"
     >
-      <View className="w-10 h-10 rounded-full items-center justify-center mr-3 bg-nileGreen-500/15">
+      <View className="w-10 h-10 rounded-full items-center justify-center me-3 bg-nileGreen-500/15">
         <Ionicons name={icon} size={20} color={palette.nileGreen[500]} />
       </View>
       <View className="flex-1">

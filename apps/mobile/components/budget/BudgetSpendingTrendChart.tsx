@@ -120,7 +120,7 @@ export function BudgetSpendingTrendChart({
         <View style={{ height: BAR_MAX_HEIGHT + 24 }}>
           {/* Average line */}
           <View
-            className="absolute left-0 right-0 border-dashed"
+            className="absolute start-0 end-0 border-dashed"
             style={{
               bottom: averageLineBottom,
               borderBottomWidth: 1,

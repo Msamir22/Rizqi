@@ -85,7 +85,7 @@ export function AccountCard({
       <View className="flex-row items-center p-4">
         {/* Icon Container with subtle background */}
         <View
-          className="w-12 h-12 rounded-2xl items-center justify-center mr-4"
+          className="w-12 h-12 rounded-2xl items-center justify-center me-4"
           style={{ backgroundColor: `${config.color}15` }}
         >
           <Ionicons name={config.icon} size={24} color={config.color} />

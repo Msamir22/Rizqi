@@ -109,7 +109,7 @@ function HoldingCardInner({
           </View>
 
           {/* Name + Weight */}
-          <View className="ml-3 flex-1">
+          <View className="ms-3 flex-1">
             <Text
               numberOfLines={1}
               className="text-sm font-semibold text-slate-800 dark:text-white"
@@ -123,14 +123,14 @@ function HoldingCardInner({
         </View>
 
         {/* Right: Value + P/L */}
-        <View className="items-end ml-3">
+        <View className="items-end ms-3">
           <Text className="text-sm font-semibold text-slate-800 dark:text-white">
             {formattedValue}
           </Text>
           <View className="flex-row items-center mt-0.5">
             <Ionicons name={plIcon} size={10} color={plColor} />
             <Text
-              className="ml-0.5 text-xs font-medium"
+              className="ms-0.5 text-xs font-medium"
               style={{ color: plColor }}
             >
               {percentText}

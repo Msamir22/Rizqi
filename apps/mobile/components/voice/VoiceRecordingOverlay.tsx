@@ -320,7 +320,7 @@ function VoiceRecordingOverlayComponent({
       <Animated.View
         entering={SlideInDown.springify().damping(18).stiffness(120)}
         exiting={SlideOutDown.duration(200)}
-        className="absolute left-0 right-0 z-[22] rounded-t-3xl bg-white dark:bg-slate-800"
+        className="absolute start-0 right-0 z-[22] rounded-t-3xl bg-white dark:bg-slate-800"
         style={panelStyle}
       >
         <View className="px-6 pb-4 pt-5">
@@ -379,7 +379,7 @@ function VoiceRecordingOverlayComponent({
               <View className="mb-4 flex-row items-center justify-between">
                 <View className="flex-row items-center">
                   <View
-                    className="mr-2 h-2 w-2 rounded-full"
+                    className="me-2 h-2 w-2 rounded-full"
                     style={dotStyle}
                   />
                   <Text className="text-sm text-slate-500 dark:text-slate-400">
@@ -407,7 +407,7 @@ function VoiceRecordingOverlayComponent({
               <View className="mb-1 h-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
                 <View className="h-full rounded-full" style={progressStyle} />
               </View>
-              <Text className="mb-5 text-right text-xs text-slate-400 dark:text-slate-500">
+              <Text className="mb-5 text-end text-xs text-slate-400 dark:text-slate-500">
                 {elapsedSeconds}s / {MAX_DURATION_S}s
               </Text>
 

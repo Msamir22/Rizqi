@@ -30,7 +30,7 @@ export function MiniPaymentItem({
   return (
     <View className="flex-row items-center rounded-xl p-3 bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
       {/* Icon */}
-      <View className="w-10 h-10 rounded-lg items-center justify-center mr-3 bg-slate-200 dark:bg-slate-700/50">
+      <View className="w-10 h-10 rounded-lg items-center justify-center me-3 bg-slate-200 dark:bg-slate-700/50">
         <Ionicons name={iconName} size={20} color={palette.nileGreen[400]} />
       </View>
 

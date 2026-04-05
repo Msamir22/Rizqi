@@ -137,7 +137,7 @@ export function AccountSelector({
             className="flex-row items-center bg-red-500/15 px-2.5 py-1 rounded-full"
           >
             <Ionicons name="close" size={14} color={palette.red[400]} />
-            <Text className="text-xs text-red-400 font-semibold ml-0.5">
+            <Text className="text-xs text-red-400 font-semibold ms-0.5">
               Cancel
             </Text>
           </TouchableOpacity>
@@ -156,7 +156,7 @@ export function AccountSelector({
           >
             {iconName && (
               <View
-                className={`w-6 h-6 rounded-full items-center justify-center mr-2 ${themeClasses.pillBg}`}
+                className={`w-6 h-6 rounded-full items-center justify-center me-2 ${themeClasses.pillBg}`}
               >
                 <Ionicons
                   name={iconName}
@@ -175,7 +175,7 @@ export function AccountSelector({
             />
           </View>
           {newAccountError && (
-            <Text className="text-xs text-red-400 mt-1.5 ml-1">
+            <Text className="text-xs text-red-400 mt-1.5 ms-1">
               {newAccountError}
             </Text>
           )}
@@ -189,7 +189,7 @@ export function AccountSelector({
               color={themeClasses.hintIcon}
             />
             <Text
-              className={`text-[10px] font-bold ml-2 flex-1 leading-4 pt-0.5 uppercase ${themeClasses.pillText}`}
+              className={`text-[10px] font-bold ms-2 flex-1 leading-4 pt-0.5 uppercase ${themeClasses.pillText}`}
             >
               {hintMessage}
             </Text>
@@ -208,7 +208,7 @@ export function AccountSelector({
             <View className="flex-row items-center flex-1">
               {iconName && (
                 <View
-                  className={`w-6 h-6 rounded-full items-center justify-center mr-2 ${themeClasses.pillBg}`}
+                  className={`w-6 h-6 rounded-full items-center justify-center me-2 ${themeClasses.pillBg}`}
                 >
                   <Ionicons
                     name={iconName}
@@ -231,7 +231,7 @@ export function AccountSelector({
             />
           </TouchableOpacity>
           {errorMsg && (
-            <Text className="text-xs text-red-400 mt-1.5 ml-1">{errorMsg}</Text>
+            <Text className="text-xs text-red-400 mt-1.5 ms-1">{errorMsg}</Text>
           )}
 
           {isPickerOpen && (
@@ -261,7 +261,7 @@ export function AccountSelector({
                     <View className="flex-row items-center flex-1">
                       {iconName && (
                         <View
-                          className={`w-5 h-5 rounded-full items-center justify-center mr-2 ${themeClasses.pillBg}`}
+                          className={`w-5 h-5 rounded-full items-center justify-center me-2 ${themeClasses.pillBg}`}
                         >
                           <Ionicons
                             name={iconName}
@@ -280,12 +280,12 @@ export function AccountSelector({
                       >
                         {opt.name}
                       </Text>
-                      <Text className="text-slate-500 text-xs ml-1.5">
+                      <Text className="text-slate-500 text-xs ms-1.5">
                         ({opt.currency})
                       </Text>
 
                       {opt.isPending && (
-                        <View className="bg-amber-500/20 px-1.5 py-0.5 rounded ml-2">
+                        <View className="bg-amber-500/20 px-1.5 py-0.5 rounded ms-2">
                           <Text className="text-[10px] font-bold text-amber-400">
                             NEW
                           </Text>
@@ -325,7 +325,7 @@ export function AccountSelector({
                           <View className="flex-row items-center flex-1">
                             {iconName && (
                               <View
-                                className={`w-5 h-5 rounded-full items-center justify-center mr-2 ${themeClasses.pillBg}`}
+                                className={`w-5 h-5 rounded-full items-center justify-center me-2 ${themeClasses.pillBg}`}
                               >
                                 <Ionicons
                                   name={iconName}
@@ -344,11 +344,11 @@ export function AccountSelector({
                             >
                               {opt.name}
                             </Text>
-                            <Text className="text-slate-500 text-xs ml-1.5">
+                            <Text className="text-slate-500 text-xs ms-1.5">
                               ({opt.currency})
                             </Text>
                             {opt.isPending && (
-                              <View className="bg-amber-500/20 px-1.5 py-0.5 rounded ml-2">
+                              <View className="bg-amber-500/20 px-1.5 py-0.5 rounded ms-2">
                                 <Text className="text-[10px] font-bold text-amber-400">
                                   NEW
                                 </Text>
@@ -378,7 +378,7 @@ export function AccountSelector({
                   className="px-4 py-3 flex-row items-center border-t border-slate-700/40"
                 >
                   <View
-                    className={`w-5 h-5 rounded-full items-center justify-center mr-2 ${themeClasses.pillBg}`}
+                    className={`w-5 h-5 rounded-full items-center justify-center me-2 ${themeClasses.pillBg}`}
                   >
                     <Ionicons
                       name="add"

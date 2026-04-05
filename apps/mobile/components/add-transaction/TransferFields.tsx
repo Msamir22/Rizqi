@@ -176,7 +176,7 @@ export function TransferFields({
                 : "border-blue-200 dark:border-blue-900/50"
             }`}
           >
-            <Text className="text-lg font-bold text-slate-400 mr-2">
+            <Text className="text-lg font-bold text-slate-400 me-2">
               {toAccount?.currency}
             </Text>
             <Text

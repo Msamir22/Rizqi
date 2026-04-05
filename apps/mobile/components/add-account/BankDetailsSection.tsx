@@ -42,7 +42,7 @@ export function BankDetailsSection({
           size={20}
           color={palette.nileGreen[500]}
         />
-        <Text className="ml-2.5 text-sm font-bold text-slate-700 dark:text-slate-300">
+        <Text className="ms-2.5 text-sm font-bold text-slate-700 dark:text-slate-300">
           Add bank details (Optional)
         </Text>
         <Ionicons
@@ -101,7 +101,7 @@ export function BankDetailsSection({
           maxLength={4}
           error={cardLast4Error}
         />
-        <Text className="mt-2 ml-2 text-[11px] font-bold text-slate-500 dark:text-slate-600">
+        <Text className="mt-2 ms-2 text-[11px] font-bold text-slate-500 dark:text-slate-600">
           Found on your card: ****1234
         </Text>
       </View>
@@ -114,7 +114,7 @@ export function BankDetailsSection({
           onChangeText={onSmsSenderNameChange}
           maxLength={100}
         />
-        <Text className="mt-2 ml-2 text-[11px] font-bold text-slate-500 dark:text-slate-600">
+        <Text className="mt-2 ms-2 text-[11px] font-bold text-slate-500 dark:text-slate-600">
           The name that appears as the SMS sender when your bank sends you
           transaction notifications. This helps us automatically match SMS
           transactions to this account.

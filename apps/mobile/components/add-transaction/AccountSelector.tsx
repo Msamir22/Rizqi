@@ -67,7 +67,7 @@ export function AccountSelector({
               }
             >
               <View
-                className="w-10 h-10 rounded-2xl items-center justify-center mr-3 bg-slate-100 dark:bg-slate-700/50"
+                className="w-10 h-10 rounded-2xl items-center justify-center me-3 bg-slate-100 dark:bg-slate-700/50"
                 style={{
                   backgroundColor: isSelected ? mainColor : undefined,
                 }}
@@ -102,7 +102,7 @@ export function AccountSelector({
               </View>
 
               {isSelected && (
-                <View className="ml-2 bg-white dark:bg-slate-900 rounded-full">
+                <View className="ms-2 bg-white dark:bg-slate-900 rounded-full">
                   <Ionicons
                     name="checkmark-circle"
                     size={22}

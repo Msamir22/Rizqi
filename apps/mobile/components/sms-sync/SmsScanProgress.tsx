@@ -86,7 +86,7 @@ export function SmsScanProgress({
         >
           <Ionicons name="chevron-back" size={24} color={palette.slate[400]} />
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-base font-bold text-white -ml-10">
+        <Text className="flex-1 text-center text-base font-bold text-white -ms-10">
           SMS Scan
         </Text>
       </View>
@@ -281,7 +281,7 @@ function ScanningState({
               size={14}
               color={palette.slate[400]}
             />
-            <Text className="text-sm text-slate-400 ml-1">
+            <Text className="text-sm text-slate-400 ms-1">
               Reading from {senderName}
             </Text>
           </View>
@@ -295,7 +295,7 @@ function ScanningState({
               size={14}
               color={palette.slate[500]}
             />
-            <Text className="text-xs text-slate-500 ml-1">
+            <Text className="text-xs text-slate-500 ms-1">
               {formatDuration(elapsedMs)} elapsed
             </Text>
           </View>
@@ -309,7 +309,7 @@ function ScanningState({
                 color={palette.nileGreen[400]}
               />
               <Text
-                className="text-xs ml-1"
+                className="text-xs ms-1"
                 // eslint-disable-next-line react-native/no-inline-styles
                 style={{ color: palette.nileGreen[400] }}
               >
@@ -496,7 +496,7 @@ function SuccessState({
 
       {/* ── Category Chips ──────────────────────────────────── */}
       {topCategories.length > 0 && (
-        <Animated.View entering={FadeInDown.delay(300)} className="mt-5 ml-2">
+        <Animated.View entering={FadeInDown.delay(300)} className="mt-5 ms-2">
           <Text className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
             Identified Categories
           </Text>
@@ -631,7 +631,7 @@ function ErrorState({
       <View className="bg-slate-800 rounded-2xl p-4 w-full mb-4">
         <View className="flex-row items-start">
           <View
-            className="w-2 h-2 rounded-full mt-1.5 mr-2"
+            className="w-2 h-2 rounded-full mt-1.5 me-2"
             // eslint-disable-next-line react-native/no-inline-styles
             style={{ backgroundColor: palette.red[500] }}
           />
@@ -749,7 +749,7 @@ function PipelineStep({
   return (
     <View className="flex-row">
       {/* Indicator column */}
-      <View className="items-center mr-3" style={{ width: 24 }}>
+      <View className="items-center me-3" style={{ width: 24 }}>
         {status === "completed" ? (
           <View
             className="w-6 h-6 rounded-full items-center justify-center"
@@ -859,7 +859,7 @@ function CategoryChip({
   return (
     <View className="flex-row items-center bg-slate-800 rounded-xl px-3 py-2">
       <Ionicons name={icon} size={14} color={palette.nileGreen[400]} />
-      <Text className="text-xs text-white ml-1.5">{displayName}</Text>
+      <Text className="text-xs text-white ms-1.5">{displayName}</Text>
     </View>
   );
 }
@@ -869,7 +869,7 @@ function ReasonBullet({ text }: { readonly text: string }): React.JSX.Element {
   return (
     <View className="flex-row items-start mb-2">
       <View
-        className="w-1.5 h-1.5 rounded-full mt-1.5 mr-2"
+        className="w-1.5 h-1.5 rounded-full mt-1.5 me-2"
         // eslint-disable-next-line react-native/no-inline-styles
         style={{ backgroundColor: palette.nileGreen[400] }}
       />

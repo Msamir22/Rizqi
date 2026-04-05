@@ -56,7 +56,7 @@ export function IconPickerField({
       >
         {/* Icon Preview */}
         <View
-          className="mr-3 h-12 w-12 items-center justify-center rounded-xl"
+          className="me-3 h-12 w-12 items-center justify-center rounded-xl"
           style={{ backgroundColor: `${iconColor}20` }}
         >
           <CategoryIcon

@@ -98,7 +98,7 @@ function TypeToggle({ value, onChange }: TypeToggleProps): React.JSX.Element {
             key={option.value}
             onPress={() => onChange(option.value)}
             className={`flex-1 py-3 rounded-full flex-row items-center justify-center border ${
-              index === 0 ? "mr-2" : ""
+              index === 0 ? "me-2" : ""
             } ${
               isSelected
                 ? "bg-nileGreen-700/80 border-nileGreen-500"
@@ -118,7 +118,7 @@ function TypeToggle({ value, onChange }: TypeToggleProps): React.JSX.Element {
               }
             />
             <Text
-              className={`ml-2 font-semibold text-sm ${
+              className={`ms-2 font-semibold text-sm ${
                 isSelected ? "text-white" : "text-slate-400 dark:text-slate-400"
               }`}
             >
@@ -385,7 +385,7 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
               }`}
             >
               <View className="flex-row items-center">
-                <View className="w-10 h-10 rounded-lg items-center justify-center mr-3 bg-slate-200 dark:bg-slate-700">
+                <View className="w-10 h-10 rounded-lg items-center justify-center me-3 bg-slate-200 dark:bg-slate-700">
                   <Ionicons
                     name="card-outline"
                     size={20}
@@ -410,7 +410,7 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
               />
             </TouchableOpacity>
             {formErrors.accountId && (
-              <Text className="text-red-500 text-xs mb-4 ml-1">
+              <Text className="text-red-500 text-xs mb-4 ms-1">
                 {formErrors.accountId}
               </Text>
             )}
@@ -436,7 +436,7 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
               />
             </TouchableOpacity>
             {formErrors.categoryId && (
-              <Text className="text-red-500 text-xs mb-4 ml-1">
+              <Text className="text-red-500 text-xs mb-4 ms-1">
                 {formErrors.categoryId}
               </Text>
             )}

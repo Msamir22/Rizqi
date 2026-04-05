@@ -37,7 +37,7 @@ function TransactionItem({
       <TouchableOpacity className="flex-row items-center py-3">
         {/* Icon Circle */}
         <View
-          className={`mr-3 h-10 w-10 items-center justify-center rounded-full ${
+          className={`me-3 h-10 w-10 items-center justify-center rounded-full ${
             isExpense ? "bg-red-500/10" : "bg-nileGreen-500/10"
           }`}
         >

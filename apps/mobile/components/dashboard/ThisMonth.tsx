@@ -175,7 +175,7 @@ export function ThisMonth(): React.JSX.Element {
             name="arrow-forward"
             size={14}
             color={palette.nileGreen[500]}
-            className="ml-1"
+            className="ms-1"
           />
         </TouchableOpacity>
       </View>
@@ -191,10 +191,10 @@ export function ThisMonth(): React.JSX.Element {
           <RingGauge percentage={data.spentPercentage} />
 
           {/* Stats */}
-          <View className="flex-1 ml-5 gap-2">
+          <View className="flex-1 ms-5 gap-2">
             {/* Income */}
             <View className="flex-row items-center">
-              <Text className="text-[13px] font-medium mr-1.5 text-slate-500 dark:text-slate-400">
+              <Text className="text-[13px] font-medium me-1.5 text-slate-500 dark:text-slate-400">
                 Income:
               </Text>
               <Text className="text-sm font-semibold text-nileGreen-500">
@@ -208,7 +208,7 @@ export function ThisMonth(): React.JSX.Element {
 
             {/* Expenses */}
             <View className="flex-row items-center">
-              <Text className="text-[13px] font-medium mr-1.5 text-slate-500 dark:text-slate-400">
+              <Text className="text-[13px] font-medium me-1.5 text-slate-500 dark:text-slate-400">
                 Expenses:
               </Text>
               <Text className="text-sm font-semibold text-red-500">
@@ -222,7 +222,7 @@ export function ThisMonth(): React.JSX.Element {
 
             {/* Saved */}
             <View className="flex-row items-center">
-              <Text className="text-[13px] font-medium mr-1.5 text-slate-500 dark:text-slate-400">
+              <Text className="text-[13px] font-medium me-1.5 text-slate-500 dark:text-slate-400">
                 Saved:
               </Text>
               <Text className="text-sm font-semibold text-gold-600">

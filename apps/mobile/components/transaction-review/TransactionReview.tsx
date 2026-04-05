@@ -200,7 +200,7 @@ export function TransactionReview({
                 state.allSelected ? palette.nileGreen[400] : palette.slate[400]
               }
             />
-            <Text className="text-xs text-slate-400 ml-1.5">
+            <Text className="text-xs text-slate-400 ms-1.5">
               {state.allSelected ? "Deselect All" : "Select All"}
             </Text>
           </TouchableOpacity>

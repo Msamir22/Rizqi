@@ -374,7 +374,7 @@ function EditAccountForm({
                       : palette.slate[500]
                 }
               />
-              <View className="ml-3 flex-1">
+              <View className="ms-3 flex-1">
                 <Text className="text-base font-semibold text-slate-800 dark:text-white">
                   Default Account
                 </Text>
@@ -445,7 +445,7 @@ function EditAccountForm({
                 size={18}
                 color={palette.red[500]}
               />
-              <Text className="ml-2 text-base font-semibold text-red-500">
+              <Text className="ms-2 text-base font-semibold text-red-500">
                 Delete Account
               </Text>
             </TouchableOpacity>
@@ -456,7 +456,7 @@ function EditAccountForm({
       {/* Fixed Bottom Save Button */}
       {!isKeyboardVisible && (
         <View
-          className="absolute bottom-0 left-0 right-0 px-6 pt-6 pb-10 bg-white dark:bg-background-dark border-t border-slate-200 dark:border-slate-800"
+          className="absolute bottom-0 start-0 end-0 px-6 pt-6 pb-10 bg-white dark:bg-background-dark border-t border-slate-200 dark:border-slate-800"
           style={{ paddingBottom: bottomInset + 16 }}
         >
           <Button

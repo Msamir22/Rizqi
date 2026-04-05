@@ -70,7 +70,7 @@ export function CurrencyRow({
       style={{ height: ROW_HEIGHT }}
     >
       {/* Flag */}
-      <Text className="text-lg mr-2.5">{flag}</Text>
+      <Text className="text-lg me-2.5">{flag}</Text>
 
       {/* Code + Name */}
       <View className="flex-1">

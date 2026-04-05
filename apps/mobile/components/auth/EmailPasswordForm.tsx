@@ -160,7 +160,7 @@ export function EmailPasswordForm({
       {/* Password Input */}
       <View className="relative">
         <TextInput
-          className="py-4 px-4 pr-14 rounded-2xl border text-base bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600"
+          className="py-4 px-4 pe-14 rounded-2xl border text-base bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600"
           placeholder="Password"
           placeholderTextColor={placeholderColor}
           style={{ color: inputTextColor }}

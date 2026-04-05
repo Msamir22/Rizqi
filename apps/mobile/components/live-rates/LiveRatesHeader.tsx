@@ -68,7 +68,7 @@ export function LiveRatesHeader({
       <View className="flex-row items-center justify-between h-10">
         {/* Centered Title */}
         <View
-          className="absolute left-0 right-0 h-full items-center justify-center"
+          className="absolute start-0 end-0 h-full items-center justify-center"
           pointerEvents="none"
         >
           <Text
@@ -97,7 +97,7 @@ export function LiveRatesHeader({
         {/* Connection indicator */}
         <View className="flex-row items-center">
           <View
-            className="w-2 h-2 rounded-full mr-1.5"
+            className="w-2 h-2 rounded-full me-1.5"
             style={{ backgroundColor: dotColor }}
           />
           <Text className="text-sm font-medium" style={{ color: labelColor }}>

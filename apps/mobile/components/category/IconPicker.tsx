@@ -199,7 +199,7 @@ export function IconPicker({
               color={palette.slate[400]}
             />
             <TextInput
-              className="ml-2 flex-1 text-base text-slate-800 dark:text-white"
+              className="ms-2 flex-1 text-base text-slate-800 dark:text-white"
               placeholder="Search icons..."
               placeholderTextColor={palette.slate[400]}
               value={searchQuery}

@@ -14,7 +14,13 @@
 
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback } from "react";
-import { Image, Text, TouchableOpacity, View, type ViewStyle } from "react-native";
+import {
+  Image,
+  Text,
+  TouchableOpacity,
+  View,
+  type ViewStyle,
+} from "react-native";
 
 import { palette } from "@/constants/colors";
 
@@ -32,7 +38,8 @@ interface EmptyMetalsStateProps {
 // ---------------------------------------------------------------------------
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const EMPTY_ILLUSTRATION = require("@/assets/images/empty-metals.png") as number;
+const EMPTY_ILLUSTRATION =
+  require("@/assets/images/empty-metals.png") as number;
 
 const ILLUSTRATION_SIZE = { width: 200, height: 140 };
 
@@ -94,7 +101,7 @@ export function EmptyMetalsState({
           size={20}
           color={palette.slate[50]}
         />
-        <Text className="ml-2 text-base font-bold text-white">
+        <Text className="ms-2 text-base font-bold text-white">
           Add to Savings
         </Text>
       </TouchableOpacity>

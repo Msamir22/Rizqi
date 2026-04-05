@@ -72,7 +72,7 @@ function PurityChip({
 }): React.JSX.Element {
   return (
     <View
-      className="rounded-lg px-3 py-2 mr-2"
+      className="rounded-lg px-3 py-2 me-2"
       style={{ backgroundColor: `${palette.gold[600]}20` }}
     >
       <Text className="text-[10px] font-medium text-slate-400 mb-0.5">
@@ -102,7 +102,7 @@ export function GoldHeroCard({
       <View className="flex-row items-center mb-1">
         <FontAwesome5 name="coins" size={14} color={palette.gold[400]} />
         <Text
-          className="ml-1.5 text-sm font-semibold"
+          className="ms-1.5 text-sm font-semibold"
           style={{ color: palette.gold[400] }}
         >
           Gold

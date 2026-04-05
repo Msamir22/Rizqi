@@ -194,7 +194,7 @@ export default function VoiceReviewScreen(): React.JSX.Element {
                   size={14}
                   color={palette.slate[500]}
                 />
-                <Text className="ml-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <Text className="ms-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   What I heard
                 </Text>
               </View>

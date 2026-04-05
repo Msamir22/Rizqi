@@ -42,7 +42,7 @@ export function EmptyStateCard({
         color={isDark ? palette.slate[500] : palette.slate[400]}
       />
       {isCompact ? (
-        <View className="ml-2 flex-1">
+        <View className="ms-2 flex-1">
           <Text
             numberOfLines={1}
             className="text-xs font-semibold text-slate-500 dark:text-slate-400"

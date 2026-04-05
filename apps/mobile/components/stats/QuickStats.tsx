@@ -83,7 +83,7 @@ export function QuickStats(): React.JSX.Element {
                 }
               />
               <Text
-                className={`text-base font-bold ml-1 ${
+                className={`text-base font-bold ms-1 ${
                   percentageChange >= 0 ? "text-red-400" : "text-nileGreen-500"
                 }`}
               >
