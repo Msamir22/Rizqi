@@ -62,7 +62,7 @@ export function LanguagePickerStep({
   onLanguageSelected,
 }: LanguagePickerStepProps): React.JSX.Element {
   const insets = useSafeAreaInsets();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const { t } = useTranslation("common");
   const [selectedCode, setSelectedCode] = useState<SupportedLanguage>("en");
 
@@ -77,11 +77,9 @@ export function LanguagePickerStep({
   return (
     <View className="flex-1 bg-background dark:bg-background-dark">
       {/* Background Gradient for Dark Mode */}
-      {theme.isDark && (
+      {isDark && (
         <LinearGradient
-          colors={
-            (theme as { backgroundGradient: string[] }).backgroundGradient
-          }
+          colors={theme.backgroundGradient}
           style={StyleSheet.absoluteFill}
         />
       )}
