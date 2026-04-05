@@ -184,20 +184,17 @@ export function getDaysUntil(date: Date): number {
 
 export function getDueText(date: Date): string {
   const days = getDaysUntil(date);
-  const isArabic = getCurrentLanguage() === "ar";
 
   if (days < 0) {
-    return isArabic
-      ? `متأخر ${Math.abs(days)} أيام`
-      : `${Math.abs(days)}d overdue`;
+    return i18n.t("common:due_overdue", { count: Math.abs(days) });
   }
   if (days === 0) {
-    return isArabic ? "اليوم" : "Due today";
+    return i18n.t("common:due_today");
   }
   if (days === 1) {
-    return isArabic ? "غداً" : "Due tomorrow";
+    return i18n.t("common:due_tomorrow");
   }
-  return isArabic ? `خلال ${days} أيام` : `Due in ${days} days`;
+  return i18n.t("common:due_in_days", { count: days });
 }
 
 export function calculateDaysUntilDue(dueDate: Date): number {
@@ -242,14 +239,17 @@ export function formatDate(date: Date, format: DateFormat): string {
 
 /** Format a Date as a readable string */
 export function formatToLocalDateString(date: Date, locale?: string): string {
-  const currentLocale =
-    locale ||
-    (getCurrentLanguage() === "ar" ? ARABIC_DATE_LOCALE : DEFAULT_DATE_LOCALE);
-  const formatOptions =
-    getCurrentLanguage() === "ar"
-      ? LOCAL_DATE_FORMAT_OPTIONS_AR
-      : LOCAL_DATE_FORMAT_OPTIONS_EN;
-  return date.toLocaleDateString(currentLocale, formatOptions);
+  const isArabic = getCurrentLanguage() === "ar";
+  const baseLocale =
+    locale || (isArabic ? ARABIC_DATE_LOCALE : DEFAULT_DATE_LOCALE);
+  // Enforce Western Arabic numerals (FR-009) via Unicode numbering system extension
+  const effectiveLocale = baseLocale.startsWith("ar")
+    ? `${baseLocale}-u-nu-latn`
+    : baseLocale;
+  const formatOptions = isArabic
+    ? LOCAL_DATE_FORMAT_OPTIONS_AR
+    : LOCAL_DATE_FORMAT_OPTIONS_EN;
+  return date.toLocaleDateString(effectiveLocale, formatOptions);
 }
 
 export function formatTimeAgo(date: Date): string {

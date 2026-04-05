@@ -115,7 +115,7 @@ function SplitCardInner({
 
       {/* Count */}
       <Text className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-        {itemCount} {itemCount === 1 ? t("holding") : t("holdings")}
+        {t("holding", { count: itemCount })}
       </Text>
     </View>
   );

@@ -408,6 +408,21 @@ interface MetalsTranslations {
   readonly add_silver: string;
   readonly no_gold_holdings: string;
   readonly no_silver_holdings: string;
+  readonly add_new_holding: string;
+  readonly name: string;
+  readonly name_placeholder: string;
+  readonly weight_grams: string;
+  readonly weight_placeholder: string;
+  readonly purchase_price_currency: string;
+  readonly purchase_price_placeholder: string;
+  readonly purchase_date: string;
+  readonly form_optional: string;
+  readonly form_coin: string;
+  readonly form_bar: string;
+  readonly form_jewelry: string;
+  readonly error_save_failed: string;
+  readonly add_to_savings: string;
+  readonly holding: PluralKeys;
 }
 
 /** Root translation resources type */

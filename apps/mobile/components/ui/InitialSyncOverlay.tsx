@@ -13,6 +13,7 @@
  */
 
 import { palette } from "@/constants/colors";
+import { getLocaleFontFamily } from "@/constants/typography";
 import { useSync } from "@/providers/SyncProvider";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
@@ -60,8 +61,19 @@ export function InitialSyncOverlay(): React.ReactNode {
     >
       <View style={styles.card}>
         <ActivityIndicator size="large" color={palette.nileGreen[500]} />
-        <Text style={styles.title}>{t("syncing_your_data")}</Text>
-        <Text style={styles.subtitle}>{t("syncing_subtitle")}</Text>
+        <Text
+          style={[styles.title, { fontFamily: getLocaleFontFamily().semiBold }]}
+        >
+          {t("syncing_your_data")}
+        </Text>
+        <Text
+          style={[
+            styles.subtitle,
+            { fontFamily: getLocaleFontFamily().regular },
+          ]}
+        >
+          {t("syncing_subtitle")}
+        </Text>
       </View>
     </Animated.View>
   );
