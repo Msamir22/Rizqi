@@ -3,6 +3,7 @@ import type { CurrencyType } from "@astik/db";
 import { CURRENCY_INFO_MAP } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -12,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useLocale } from "../context/LocaleContext";
 
 import { CurrencyPicker } from "../components/currency/CurrencyPicker";
 import { GradientBackground } from "../components/ui/GradientBackground";
@@ -20,6 +22,7 @@ import { useTheme } from "../context/ThemeContext";
 import { usePreferredCurrency } from "../hooks/usePreferredCurrency";
 import { useDatabase } from "../providers/DatabaseProvider";
 import { performLogout } from "../services/logout-service";
+import { changeLanguage } from "../i18n/changeLanguage";
 import { useSmsPermission } from "../hooks/useSmsPermission";
 import { useSmsSync } from "../hooks/useSmsSync";
 import { useSmsScanContext } from "../context/SmsScanContext";
@@ -47,6 +50,9 @@ export default function SettingsScreen(): React.JSX.Element {
   const { theme, isDark, toggleTheme } = useTheme();
   const { user } = useAuth();
   const { preferredCurrency, setPreferredCurrency } = usePreferredCurrency();
+  const { t } = useTranslation("settings");
+  const { t: tCommon } = useTranslation("common");
+  const { language } = useLocale();
   const [isCurrencyPickerVisible, setIsCurrencyPickerVisible] = useState(false);
   const {
     status: smsPermissionStatus,
@@ -192,6 +198,13 @@ export default function SettingsScreen(): React.JSX.Element {
     setShowForceLogoutError(true);
   }, [database]);
 
+  const handleLanguageChange = useCallback(
+    async (lang: "en" | "ar"): Promise<void> => {
+      await changeLanguage(lang);
+    },
+    []
+  );
+
   return (
     <GradientBackground className="flex-1">
       {/* Header */}
@@ -200,15 +213,75 @@ export default function SettingsScreen(): React.JSX.Element {
           <Ionicons name="arrow-back" size={24} color={theme.text.primary} />
         </TouchableOpacity>
         <Text className="text-xl font-bold text-slate-900 dark:text-slate-50">
-          Settings
+          {t("title")}
         </Text>
         <View className="w-6" />
       </View>
       <ScrollView contentContainerClassName="px-5">
+        {/* Language Section */}
+        <View className="mb-8">
+          <Text className="text-[13px] font-semibold mb-3 ml-1 uppercase text-slate-500 dark:text-slate-400">
+            {t("language")}
+          </Text>
+
+          <View className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800">
+            <View className="flex-row items-center gap-3">
+              <View className="w-8 bg-blue-600 dark:bg-blue-500 h-8 rounded-lg justify-center items-center">
+                <Ionicons name="language" size={20} color="#FFF" />
+              </View>
+              <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
+                {t("language")}
+              </Text>
+            </View>
+            <View className="flex-row items-center gap-2">
+              <TouchableOpacity
+                onPress={() => {
+                  handleLanguageChange("en").catch(() => {});
+                }}
+                className={`px-3 py-1.5 rounded-lg ${
+                  language === "en"
+                    ? "bg-nileGreen-600"
+                    : "bg-slate-200 dark:bg-slate-700"
+                }`}
+              >
+                <Text
+                  className={`text-sm font-semibold ${
+                    language === "en"
+                      ? "text-white"
+                      : "text-slate-700 dark:text-slate-300"
+                  }`}
+                >
+                  {t("language_english")}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  handleLanguageChange("ar").catch(() => {});
+                }}
+                className={`px-3 py-1.5 rounded-lg ${
+                  language === "ar"
+                    ? "bg-nileGreen-600"
+                    : "bg-slate-200 dark:bg-slate-700"
+                }`}
+              >
+                <Text
+                  className={`text-sm font-semibold ${
+                    language === "ar"
+                      ? "text-white"
+                      : "text-slate-700 dark:text-slate-300"
+                  }`}
+                >
+                  {t("language_arabic")}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
         {/* Appearance Section */}
         <View className="mb-8">
           <Text className="text-[13px] font-semibold mb-3 ml-1 uppercase text-slate-500 dark:text-slate-400">
-            Appearance
+            {t("appearance")}
           </Text>
 
           <View className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800">
@@ -221,7 +294,7 @@ export default function SettingsScreen(): React.JSX.Element {
                 />
               </View>
               <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
-                Dark Mode
+                {t("dark_mode")}
               </Text>
             </View>
             <Switch
@@ -236,7 +309,7 @@ export default function SettingsScreen(): React.JSX.Element {
         {/* Currency Section */}
         <View className="mb-8">
           <Text className="text-[13px] font-semibold mb-3 ml-1 uppercase text-slate-500 dark:text-slate-400">
-            Currency
+            {t("currency")}
           </Text>
 
           <TouchableOpacity
@@ -249,7 +322,7 @@ export default function SettingsScreen(): React.JSX.Element {
               </View>
               <View>
                 <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
-                  Preferred Currency
+                  {t("preferred_currency")}
                 </Text>
                 <Text className="text-xs text-slate-500 dark:text-slate-400">
                   {currencyInfo?.name ?? preferredCurrency}
@@ -269,14 +342,14 @@ export default function SettingsScreen(): React.JSX.Element {
           </TouchableOpacity>
         </View>
 
-        {/* SMS Sync Section (Android only) */}
+        {/* {t("sms_sync")} Section (Android only) */}
         {isAndroid && (
           <View className="mb-8">
             <Text className="text-[13px] font-semibold mb-3 ml-1 uppercase text-slate-500 dark:text-slate-400">
-              SMS Sync
+              {t("sms_sync")}
             </Text>
 
-            {/* Sync New Messages (incremental) */}
+            {/* {t("sync_new")} (incremental) */}
             <TouchableOpacity
               onPress={() => {
                 handleIncrementalSync().catch(() => {});
@@ -293,7 +366,7 @@ export default function SettingsScreen(): React.JSX.Element {
                 </View>
                 <View>
                   <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
-                    Sync New Messages
+                    {t("sync_new")}
                   </Text>
                   <Text className="text-xs text-slate-500 dark:text-slate-400">
                     {hasSynced && lastSyncTimestamp
@@ -317,25 +390,15 @@ export default function SettingsScreen(): React.JSX.Element {
                 onPress={() => {
                   setIsFullRescanModalOpen(true);
                 }}
-                className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800 mt-0.5"
+                className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800"
               >
                 <View className="flex-row items-center gap-3">
-                  <View className="w-8 bg-amber-600 dark:bg-amber-500 h-8 rounded-lg justify-center items-center">
-                    <Ionicons
-                      name="refresh"
-                      size={20}
-                      color={palette.slate[25]}
-                    />
+                  <View className="w-8 bg-orange-600 dark:bg-orange-500 h-8 rounded-lg justify-center items-center">
+                    <Ionicons name="refresh" size={20} color="#FFF" />
                   </View>
-                  <View>
-                    <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
-                      Full Re-scan
-                    </Text>
-                    <Text className="text-xs text-slate-500 dark:text-slate-400">
-                      Scan all messages (Previously scanned messages
-                      auto-skipped)
-                    </Text>
-                  </View>
+                  <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
+                    {t("full_rescan")}
+                  </Text>
                 </View>
                 <Ionicons
                   name="chevron-forward"
@@ -351,7 +414,7 @@ export default function SettingsScreen(): React.JSX.Element {
         {isAndroid && (
           <View className="mb-8">
             <Text className="text-[13px] font-semibold mb-3 ml-1 uppercase text-slate-500 dark:text-slate-400">
-              Live Detection
+              {t("live_detection")}
             </Text>
 
             {/* Live Detection Toggle */}
@@ -362,69 +425,49 @@ export default function SettingsScreen(): React.JSX.Element {
                 </View>
                 <View className="flex-1">
                   <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
-                    Live SMS Detection
+                    {t("live_detection")}
                   </Text>
                   <Text className="text-xs text-slate-500 dark:text-slate-400">
-                    Detect transactions from incoming SMS
+                    Automatically detect transactions from new SMS
                   </Text>
                 </View>
               </View>
               <Switch
                 value={liveDetection}
-                onValueChange={(v) => {
-                  // TODO: Replace with structured logging (e.g., Sentry)
-                  handleToggleLiveDetection(v).catch(console.error);
-                }}
+                onValueChange={handleToggleLiveDetection}
                 trackColor={{ false: "#767577", true: palette.nileGreen[500] }}
                 thumbColor={liveDetection ? "#FFF" : "#f4f3f4"}
               />
             </View>
 
-            {/* Auto-confirm Toggle (only when live detection is on) */}
-            {liveDetection && (
-              <View className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800 mt-0.5">
-                <View className="flex-row items-center gap-3 flex-1">
-                  <View className="w-8 bg-sky-600 dark:bg-sky-500 h-8 rounded-lg justify-center items-center">
-                    <Ionicons
-                      name="checkmark-done"
-                      size={20}
-                      color={palette.slate[25]}
-                    />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
-                      Auto-confirm
-                    </Text>
-                    <Text className="text-xs text-slate-500 dark:text-slate-400">
-                      {autoConfirmSms
-                        ? "Transactions saved automatically"
-                        : "Ask me each time (notification)"}
-                    </Text>
-                  </View>
+            {/* Auto Confirm Toggle */}
+            <View className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800 mt-0.5">
+              <View className="flex-row items-center gap-3 flex-1">
+                <View className="w-8 bg-indigo-600 dark:bg-indigo-500 h-8 rounded-lg justify-center items-center">
+                  <Ionicons name="checkmark-circle" size={20} color="#FFF" />
                 </View>
-                <Switch
-                  value={autoConfirmSms}
-                  onValueChange={(v) => {
-                    // TODO: Replace with structured logging (e.g., Sentry)
-                    handleToggleAutoConfirm(v).catch(console.error);
-                  }}
-                  trackColor={{
-                    false: "#767577",
-                    true: palette.nileGreen[500],
-                  }}
-                  thumbColor={autoConfirmSms ? "#FFF" : "#f4f3f4"}
-                />
+                <View className="flex-1">
+                  <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
+                    {t("auto_confirm")}
+                  </Text>
+                  <Text className="text-xs text-slate-500 dark:text-slate-400">
+                    Skip review and auto-add detected transactions
+                  </Text>
+                </View>
               </View>
-            )}
+              <Switch
+                value={autoConfirmSms}
+                onValueChange={handleToggleAutoConfirm}
+                trackColor={{ false: "#767577", true: palette.nileGreen[500] }}
+                thumbColor={autoConfirmSms ? "#FFF" : "#f4f3f4"}
+              />
+            </View>
           </View>
         )}
 
-        {/* General Section */}
+        {/* Profile & Notifications Section */}
         <View className="mb-8">
-          <Text className="text-[13px] font-semibold mb-3 ml-1 uppercase text-slate-500 dark:text-slate-400">
-            General
-          </Text>
-
+          {/* Profile */}
           <TouchableOpacity className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800">
             <View className="flex-row items-center gap-3">
               <View className="w-8 dark:bg-[#3b82f6] bg-[#fb923c] h-8 rounded-lg justify-center items-center">
@@ -432,7 +475,7 @@ export default function SettingsScreen(): React.JSX.Element {
               </View>
               <View className="flex-1">
                 <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
-                  Profile
+                  {t("profile")}
                 </Text>
                 {user?.email && (
                   <Text
@@ -452,38 +495,14 @@ export default function SettingsScreen(): React.JSX.Element {
             />
           </TouchableOpacity>
 
+          {/* Notifications */}
           <TouchableOpacity className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800 mt-0.5">
             <View className="flex-row items-center gap-3">
               <View className="w-8 dark:bg-[#f43f5e] bg-[#fb923c] h-8 rounded-lg justify-center items-center">
                 <Ionicons name="notifications" size={20} color="#FFF" />
               </View>
               <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
-                Notifications
-              </Text>
-            </View>
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color={theme.text.secondary}
-            />
-          </TouchableOpacity>
-
-          {/* Logout */}
-          <TouchableOpacity
-            onPress={handleLogoutPress}
-            disabled={isLoggingOut}
-            className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800 mt-0.5"
-          >
-            <View className="flex-row items-center gap-3">
-              <View className="w-8 bg-red-600 dark:bg-red-500 h-8 rounded-lg justify-center items-center">
-                {isLoggingOut ? (
-                  <ActivityIndicator size={16} color="#FFF" />
-                ) : (
-                  <Ionicons name="log-out-outline" size={20} color="#FFF" />
-                )}
-              </View>
-              <Text className="text-base font-medium text-red-600 dark:text-red-400">
-                {isLoggingOut ? "Logging out..." : "Logout"}
+                {t("notifications")}
               </Text>
             </View>
             <Ionicons
@@ -493,8 +512,32 @@ export default function SettingsScreen(): React.JSX.Element {
             />
           </TouchableOpacity>
         </View>
+
+        {/* Logout */}
+        <TouchableOpacity
+          onPress={handleLogoutPress}
+          className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800"
+        >
+          <View className="flex-row items-center gap-3">
+            <View className="w-8 dark:bg-red-700 bg-red-600 h-8 rounded-lg justify-center items-center">
+              {isLoggingOut ? (
+                <ActivityIndicator size={16} color="#FFF" />
+              ) : (
+                <Ionicons name="log-out-outline" size={20} color="#FFF" />
+              )}
+            </View>
+            <Text className="text-base font-medium text-red-600 dark:text-red-400">
+              {isLoggingOut ? tCommon("loading") : t("logout")}
+            </Text>
+          </View>
+          <Ionicons
+            name="chevron-forward"
+            size={20}
+            color={theme.text.secondary}
+          />
+        </TouchableOpacity>
       </ScrollView>
-      {/* Full Rescan Confirmation Modal */}
+      {/* {t("full_rescan")} Confirmation Modal */}
       <ConfirmationModal
         visible={isFullRescanModalOpen}
         onConfirm={() => {
@@ -528,10 +571,10 @@ export default function SettingsScreen(): React.JSX.Element {
         visible={showForceLogoutError}
         variant="warning"
         icon="alert-circle-outline"
-        title="Logout Failed"
-        message="Could not complete logout. Your data may still be on this device."
-        confirmLabel="Retry"
-        cancelLabel="Cancel"
+        title={t("logout_failed")}
+        message={t("logout_failed_message")}
+        confirmLabel={tCommon("retry")}
+        cancelLabel={tCommon("cancel")}
         onConfirm={() => {
           setShowForceLogoutError(false);
           handleForceLogout().catch(console.error);

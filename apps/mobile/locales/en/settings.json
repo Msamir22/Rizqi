@@ -19,5 +19,7 @@
   "about": "About",
   "version": "Version",
   "delete_account": "Delete Account",
-  "confirm_logout": "Are you sure you want to logout?"
+  "confirm_logout": "Are you sure you want to logout?",
+  "logout_failed": "Logout Failed",
+  "logout_failed_message": "Could not complete logout. Your data may still be on this device."
 }
