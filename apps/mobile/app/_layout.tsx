@@ -13,7 +13,7 @@ import {
 } from "@expo-google-fonts/noto-sans-arabic";
 import { useFonts } from "expo-font";
 import { I18nextProvider } from "react-i18next";
-import { router, Stack, useSegments } from "expo-router";
+import { router, Stack, useRootNavigation, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -201,26 +201,26 @@ function AuthGuard({
 }): React.ReactNode {
   const { isAuthenticated, isLoading } = useAuth();
   const segments = useSegments();
+  const rootNavigation = useRootNavigation();
   const isPublicRoute = PUBLIC_ROUTES.has(segments[0] ?? "");
 
   useEffect(() => {
-    if (isLoading) {
+    // Wait until auth is resolved AND the navigator is mounted
+    if (isLoading || !rootNavigation?.isReady()) {
       return;
     }
 
     if (!isAuthenticated && !isPublicRoute) {
       router.replace("/auth");
     }
-  }, [isAuthenticated, isLoading, isPublicRoute]);
+  }, [isAuthenticated, isLoading, isPublicRoute, rootNavigation]);
 
   if (isLoading) {
     return null;
   }
 
-  if (!isAuthenticated && !isPublicRoute) {
-    return null;
-  }
-
+  // Always render children so the Stack navigator stays mounted.
+  // The useEffect above handles the redirect once navigation is ready.
   return <>{children}</>;
 }
 
