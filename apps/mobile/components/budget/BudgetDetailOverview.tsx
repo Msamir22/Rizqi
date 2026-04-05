@@ -23,6 +23,7 @@ interface BudgetDetailOverviewProps {
   readonly metrics: SpendingMetrics;
   readonly currency: CurrencyType;
   readonly daysLeft: number;
+  readonly isPaused: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -33,11 +34,21 @@ export function BudgetDetailOverview({
   metrics,
   currency,
   daysLeft,
+  isPaused,
 }: BudgetDetailOverviewProps): React.JSX.Element {
   const { t } = useTranslation("budgets");
 
   return (
     <View className="rounded-3xl border p-6 mb-4 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+      {/* Paused indicator */}
+      {isPaused && (
+        <View className="bg-slate-500 rounded-full px-3 py-1 mb-3 self-center">
+          <Text className="text-xs font-medium text-white">
+            {t("paused")}
+          </Text>
+        </View>
+      )}
+
       {/* Ring + Label */}
       <View className="items-center mb-6">
         <CircularProgress

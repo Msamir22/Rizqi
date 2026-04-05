@@ -156,9 +156,9 @@ export function BudgetActionsSheet({
 
   const handleDelete = useCallback((): void => {
     setShowDeleteConfirm(false);
-    onClose();
+    // Don't call onClose() — parent navigates away after successful delete
     void onAction("delete");
-  }, [onClose, onAction]);
+  }, [onAction]);
 
   const handlePauseToggle = useCallback(async (): Promise<void> => {
     if (isToggling) return;

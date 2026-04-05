@@ -73,5 +73,7 @@
   "accessibility_create_budget": "إنشاء ميزانية",
   "accessibility_create_budget_hint": "يفتح نموذج إنشاء ميزانية جديدة",
   "accessibility_resume_budget": "استئناف الميزانية",
-  "accessibility_pause_budget": "إيقاف الميزانية"
+  "accessibility_pause_budget": "إيقاف الميزانية",
+  "no_budgets_for_filter": "لا توجد ميزانيات تطابق هذا الفلتر",
+  "try_different_filter": "جرب اختيار فلتر فترة مختلف"
 }

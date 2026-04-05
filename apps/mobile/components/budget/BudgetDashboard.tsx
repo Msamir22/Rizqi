@@ -32,7 +32,7 @@ import { useTranslation } from "react-i18next";
 import { palette } from "@/constants/colors";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import { useBudgets, type BudgetWithMetrics } from "@/hooks/useBudgets";
-import { useTheme } from "@/context/ThemeContext";
+
 import { formatCurrency } from "@astik/logic";
 import { PeriodFilterChips } from "./PeriodFilterChips";
 import { BudgetHeroCard } from "./BudgetHeroCard";
@@ -45,13 +45,13 @@ import { BudgetEmptyState } from "./BudgetEmptyState";
 
 export function BudgetDashboard(): React.JSX.Element {
   const insets = useSafeAreaInsets();
-  const { isDark } = useTheme();
   const { t } = useTranslation("budgets");
   const { preferredCurrency } = usePreferredCurrency();
   const {
     globalBudget,
     categoryBudgets,
     isLoading,
+    totalCount,
     periodFilter,
     setPeriodFilter,
     budgets,
@@ -105,8 +105,22 @@ export function BudgetDashboard(): React.JSX.Element {
       <PeriodFilterChips selected={periodFilter} onSelect={setPeriodFilter} />
 
       {/* Budget Content or Empty State */}
-      {budgets.length === 0 ? (
+      {budgets.length === 0 && totalCount === 0 ? (
         <BudgetEmptyState onCreateBudget={handleCreateBudget} />
+      ) : budgets.length === 0 && periodFilter !== "ALL" ? (
+        <View className="flex-1 items-center justify-center px-6">
+          <Ionicons
+            name="filter-outline"
+            size={40}
+            color={palette.slate[400]}
+          />
+          <Text className="text-base font-semibold text-slate-500 dark:text-slate-400 mt-3 text-center">
+            {t("no_budgets_for_filter")}
+          </Text>
+          <Text className="text-sm text-slate-400 dark:text-slate-500 mt-1 text-center">
+            {t("try_different_filter")}
+          </Text>
+        </View>
       ) : (
         <FlatList
           data={categoryBudgets as BudgetWithMetrics[]}
@@ -136,15 +150,10 @@ export function BudgetDashboard(): React.JSX.Element {
 
               {/* S-04: CATEGORIES section header */}
               {categoryBudgets.length > 0 && (
-                <View className="flex-row items-center justify-between px-5 mb-3 mt-2">
+                <View className="px-5 mb-3 mt-2">
                   <Text className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-500">
                     {t("categories")}
                   </Text>
-                  <Ionicons
-                    name="options-outline"
-                    size={16}
-                    color={isDark ? palette.slate[500] : palette.slate[400]}
-                  />
                 </View>
               )}
             </>

@@ -57,6 +57,8 @@ interface UseBudgetsResult {
   readonly pausedBudgets: readonly BudgetWithMetrics[];
   /** Whether data is loading */
   readonly isLoading: boolean;
+  /** Total unfiltered budget count (for distinguishing empty vs filtered-empty) */
+  readonly totalCount: number;
   /** Selected period filter */
   readonly periodFilter: PeriodFilter;
   /** Update the period filter */
@@ -185,6 +187,7 @@ export function useBudgets(): UseBudgetsResult {
     categoryBudgets,
     pausedBudgets,
     isLoading,
+    totalCount: budgetsWithMetrics.length,
     periodFilter,
     setPeriodFilter,
     refresh,

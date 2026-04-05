@@ -70,5 +70,7 @@
   "accessibility_create_budget": "Create budget",
   "accessibility_create_budget_hint": "Opens the form to create a new budget",
   "accessibility_resume_budget": "Resume budget",
-  "accessibility_pause_budget": "Pause budget"
+  "accessibility_pause_budget": "Pause budget",
+  "no_budgets_for_filter": "No budgets match this filter",
+  "try_different_filter": "Try selecting a different period filter"
 }

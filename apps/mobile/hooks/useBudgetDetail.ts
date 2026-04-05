@@ -7,7 +7,8 @@
  * @module useBudgetDetail
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useFocusEffect } from "expo-router";
 import { Budget, database, Transaction, Category } from "@astik/db";
 import { Q } from "@nozbe/watermelondb";
 import {
@@ -82,6 +83,14 @@ export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
     recentTransactions: [],
     isLoading: true,
   });
+
+  // ── Re-trigger spending computation on screen focus ──
+  const [refreshCounter, setRefreshCounter] = useState(0);
+  useFocusEffect(
+    useCallback(() => {
+      setRefreshCounter((c) => c + 1);
+    }, [])
+  );
 
   // ── Subscribe to budget changes ──
   useEffect(() => {
@@ -278,7 +287,7 @@ export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
     return () => {
       cancelled = true;
     };
-  }, [budget]);
+  }, [budget, refreshCounter]);
 
   return {
     budget,
