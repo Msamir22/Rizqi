@@ -1,11 +1,8 @@
 {
   "add_account": "Add Account",
   "edit_account": "Edit Account",
-  "account_count": {
-    "_one": "{{count}} account",
-    "_two": "{{count}} accounts",
-    "_other": "{{count}} accounts"
-  },
+  "account_count_one": "{{count}} account",
+  "account_count_other": "{{count}} accounts",
   "balance": "Balance",
   "account_name": "Account Name",
   "account_name_placeholder_cash": "e.g., My Wallet",

@@ -33,6 +33,7 @@
   "form_jewelry": "مجوهرات",
   "error_save_failed": "فشل الحفظ. يرجى المحاولة مرة أخرى.",
   "add_to_savings": "إضافة إلى المدخرات",
-  "holding": "مقتنى",
-  "holdings": "مقتنيات"
+  "holding_one": "مقتنى واحد",
+  "holding_two": "مقتنيان",
+  "holding_other": "{{count}} مقتنيات"
 }

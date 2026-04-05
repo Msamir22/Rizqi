@@ -324,7 +324,139 @@ interface OnboardingTranslations {
 
 /** Categories namespace — keyed by system_name */
 interface CategoriesTranslations {
-  readonly [systemName: string]: string;
+  // Food & Drinks
+  readonly food_drinks: string;
+  readonly groceries: string;
+  readonly restaurant: string;
+  readonly coffee_tea: string;
+  readonly snacks: string;
+  readonly drinks: string;
+  readonly food_other: string;
+
+  // Transportation
+  readonly transportation: string;
+  readonly public_transport: string;
+  readonly private_transport: string;
+  readonly transport_other: string;
+
+  // Vehicle
+  readonly vehicle: string;
+  readonly fuel: string;
+  readonly parking: string;
+  readonly rental: string;
+  readonly license_fees: string;
+  readonly vehicle_tax: string;
+  readonly traffic_fine: string;
+  readonly vehicle_buy: string;
+  readonly vehicle_sell: string;
+  readonly vehicle_maintenance: string;
+  readonly vehicle_other: string;
+
+  // Shopping
+  readonly shopping: string;
+  readonly clothes: string;
+  readonly electronics_appliances: string;
+  readonly accessories: string;
+  readonly footwear: string;
+  readonly bags: string;
+  readonly kids_baby: string;
+  readonly beauty: string;
+  readonly home_garden: string;
+  readonly pets: string;
+  readonly sports_fitness: string;
+  readonly toys_games: string;
+  readonly wedding: string;
+  readonly detergents: string;
+  readonly decorations: string;
+  readonly personal_care: string;
+  readonly shopping_other: string;
+
+  // Health & Medical
+  readonly health_medical: string;
+  readonly doctor: string;
+  readonly medicine: string;
+  readonly surgery: string;
+  readonly dental: string;
+  readonly health_other: string;
+
+  // Utilities & Bills
+  readonly utilities_bills: string;
+  readonly electricity: string;
+  readonly water: string;
+  readonly internet: string;
+  readonly phone: string;
+  readonly gas: string;
+  readonly trash: string;
+  readonly online_subscription: string;
+  readonly streaming: string;
+  readonly taxes: string;
+  readonly utilities_other: string;
+
+  // Entertainment
+  readonly entertainment: string;
+  readonly trips_holidays: string;
+  readonly events: string;
+  readonly tickets: string;
+  readonly entertainment_other: string;
+
+  // Charity
+  readonly charity: string;
+  readonly donations: string;
+  readonly fundraising: string;
+  readonly charity_gifts: string;
+  readonly charity_other: string;
+
+  // Education
+  readonly education: string;
+  readonly books: string;
+  readonly tuition: string;
+  readonly education_fees: string;
+  readonly education_other: string;
+
+  // Housing
+  readonly housing: string;
+  readonly rent: string;
+  readonly housing_maintenance: string;
+  readonly housing_tax: string;
+  readonly housing_buy: string;
+  readonly housing_sell: string;
+  readonly housing_other: string;
+
+  // Travel
+  readonly travel: string;
+  readonly vacation: string;
+  readonly business_travel: string;
+  readonly holiday: string;
+  readonly travel_other: string;
+
+  // Income
+  readonly income: string;
+  readonly salary: string;
+  readonly bonus: string;
+  readonly commission: string;
+  readonly refund: string;
+  readonly loan_income: string;
+  readonly gift_income: string;
+  readonly check: string;
+  readonly rental_income: string;
+  readonly income_other: string;
+
+  // Debt & Loans
+  readonly debt_loans: string;
+  readonly lent_money: string;
+  readonly borrowed_money: string;
+  readonly debt_repayment_paid: string;
+  readonly debt_repayment_received: string;
+  readonly debt_other: string;
+
+  // Assets & Other
+  readonly asset_purchase: string;
+  readonly asset_sale: string;
+  readonly other: string;
+  readonly uncategorized: string;
+
+  // Allow custom categories added by users in future
+  readonly [customCategory: string]: string;
 }
 
 /** Budgets namespace */
@@ -408,6 +540,21 @@ interface MetalsTranslations {
   readonly add_silver: string;
   readonly no_gold_holdings: string;
   readonly no_silver_holdings: string;
+  readonly add_new_holding: string;
+  readonly name: string;
+  readonly name_placeholder: string;
+  readonly weight_grams: string;
+  readonly weight_placeholder: string;
+  readonly purchase_price_currency: string;
+  readonly purchase_price_placeholder: string;
+  readonly purchase_date: string;
+  readonly form_optional: string;
+  readonly form_coin: string;
+  readonly form_bar: string;
+  readonly form_jewelry: string;
+  readonly error_save_failed: string;
+  readonly add_to_savings: string;
+  readonly holding: PluralKeys;
 }
 
 /** Root translation resources type */

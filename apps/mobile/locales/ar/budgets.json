@@ -4,11 +4,9 @@
   "new_budget": "ميزانية جديدة",
   "budgets": "الميزانيات",
   "budget_detail": "تفاصيل الميزانية",
-  "budget_count": {
-    "_one": "{{count}} ميزانية",
-    "_two": "{{count}} ميزانيتان",
-    "_other": "{{count}} ميزانيات"
-  },
+  "budget_count_one": "{{count}} ميزانية",
+  "budget_count_two": "{{count}} ميزانيتان",
+  "budget_count_other": "{{count}} ميزانيات",
   "budget_name": "اسم الميزانية",
   "budget_amount": "مبلغ الميزانية",
   "period": "الفترة",
@@ -68,7 +66,10 @@
   "budget_created_message": "تم إنشاء الميزانية بنجاح",
 
   "limit_label": "حد",
-  "days_remaining": "{{count}} أيام متبقية",
+  "days_remaining_zero": "لا أيام متبقية",
+  "days_remaining_one": "يوم واحد متبقي",
+  "days_remaining_two": "يومان متبقيان",
+  "days_remaining_other": "{{count}} أيام متبقية",
   "accessibility_create_budget": "إنشاء ميزانية",
   "accessibility_create_budget_hint": "يفتح نموذج إنشاء ميزانية جديدة",
   "accessibility_resume_budget": "استئناف الميزانية",

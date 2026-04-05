@@ -4,11 +4,8 @@
   "new_budget": "New Budget",
   "budgets": "Budgets",
   "budget_detail": "Budget Detail",
-  "budget_count": {
-    "_one": "{{count}} budget",
-    "_two": "{{count}} budgets",
-    "_other": "{{count}} budgets"
-  },
+  "budget_count_one": "{{count}} budget",
+  "budget_count_other": "{{count}} budgets",
   "budget_name": "Budget Name",
   "budget_amount": "Budget Amount",
   "period": "Period",
@@ -68,7 +65,8 @@
   "budget_created_message": "Budget created successfully",
 
   "limit_label": "limit",
-  "days_remaining": "{{count}} days remaining",
+  "days_remaining_one": "{{count}} day remaining",
+  "days_remaining_other": "{{count}} days remaining",
   "accessibility_create_budget": "Create budget",
   "accessibility_create_budget_hint": "Opens the form to create a new budget",
   "accessibility_resume_budget": "Resume budget",
