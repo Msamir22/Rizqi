@@ -342,14 +342,14 @@ export default function SettingsScreen(): React.JSX.Element {
           </TouchableOpacity>
         </View>
 
-        {/* {t("sms_sync")} Section (Android only) */}
+        {/* SMS Sync Section (Android only) */}
         {isAndroid && (
           <View className="mb-8">
             <Text className="text-[13px] font-semibold mb-3 ms-1 uppercase text-slate-500 dark:text-slate-400">
               {t("sms_sync")}
             </Text>
 
-            {/* {t("sync_new")} (incremental) */}
+            {/* Sync New Messages (incremental) */}
             <TouchableOpacity
               onPress={() => {
                 handleIncrementalSync().catch(() => {});

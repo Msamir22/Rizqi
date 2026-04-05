@@ -75,8 +75,9 @@ async function detectInitialLanguage(): Promise<"en" | "ar"> {
     if (stored === "en" || stored === "ar") {
       return stored;
     }
-  } catch (error) {
-    console.warn("Failed to read language from AsyncStorage:", error);
+  } catch {
+    // TODO: Replace with structured logging (e.g., Sentry)
+    // Silently fall through to device locale detection
   }
 
   // Fallback to device locale
@@ -108,7 +109,7 @@ export async function initI18n(): Promise<void> {
 }
 
 /**
- * Export i18n instance for direct access if needed.
+ * Export i18next instance for direct access (e.g., language change, event listeners).
  * Most components should use useTranslation() hook instead.
  */
-export { default } from "react-i18next";
+export default i18next;

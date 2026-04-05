@@ -1,27 +1,11 @@
-import type { TFunction } from "i18next";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import i18n from "./index";
 
 import { LANGUAGE_KEY } from "@/constants/storage-keys";
 import { applyRTL } from "@/utils/rtl";
 
-/**
- * Supported languages in the app.
- */
-export type SupportedLanguage = "en" | "ar";
-
-/**
- * Get the i18n instance with proper typing
- */
-function getI18n(): {
-  language: string;
-  changeLanguage: (lang: string) => Promise<TFunction>;
-} {
-  return i18n as unknown as {
-    language: string;
-    changeLanguage: (lang: string) => Promise<TFunction>;
-  };
-}
+export type { SupportedLanguage } from "./translation-schema";
+import type { SupportedLanguage } from "./translation-schema";
 
 /**
  * Change the app language and apply RTL if needed.
@@ -41,8 +25,7 @@ export async function changeLanguage(lang: SupportedLanguage): Promise<void> {
   await AsyncStorage.setItem(LANGUAGE_KEY, lang);
 
   // Update i18next language
-  const instance = getI18n();
-  await instance.changeLanguage(lang);
+  await i18n.changeLanguage(lang);
 
   // Apply RTL layout (will trigger reload if changing to/from Arabic)
   await applyRTL(lang === "ar");
@@ -54,8 +37,7 @@ export async function changeLanguage(lang: SupportedLanguage): Promise<void> {
  * @returns Current language code ("en" or "ar")
  */
 export function getCurrentLanguage(): SupportedLanguage {
-  const instance = getI18n();
-  return instance.language === "ar" ? "ar" : "en";
+  return i18n.language === "ar" ? "ar" : "en";
 }
 
 /**

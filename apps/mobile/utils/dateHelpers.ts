@@ -5,9 +5,7 @@ import i18n from "../i18n";
  * Returns 'en' or 'ar' with proper type safety.
  */
 function getCurrentLanguage(): "en" | "ar" {
-  const instance = i18n as unknown as { language: string };
-  const lang = instance.language;
-  return lang === "ar" ? "ar" : "en";
+  return i18n.language === "ar" ? "ar" : "en";
 }
 
 const SHORT_MONTHS_EN = [
@@ -50,22 +48,8 @@ const DAYS_EN = [
   "Saturday",
 ];
 
-const SHORT_MONTHS_AR = [
-  "يناير",
-  "فبراير",
-  "مارس",
-  "أبريل",
-  "مايو",
-  "يونيو",
-  "يوليو",
-  "أغسطس",
-  "سبتمبر",
-  "أكتوبر",
-  "نوفمبر",
-  "ديسمبر",
-];
-
-const FULL_MONTHS_AR = [
+// Arabic month names (same for short and full — Arabic doesn't abbreviate month names)
+const MONTHS_AR = [
   "يناير",
   "فبراير",
   "مارس",
@@ -92,11 +76,11 @@ const DAYS_AR = [
 
 // Get localized month and day names based on current language
 function getShortMonths(): string[] {
-  return getCurrentLanguage() === "ar" ? SHORT_MONTHS_AR : SHORT_MONTHS_EN;
+  return getCurrentLanguage() === "ar" ? MONTHS_AR : SHORT_MONTHS_EN;
 }
 
 function getFullMonths(): string[] {
-  return getCurrentLanguage() === "ar" ? FULL_MONTHS_AR : FULL_MONTHS_EN;
+  return getCurrentLanguage() === "ar" ? MONTHS_AR : FULL_MONTHS_EN;
 }
 
 function getDays(): string[] {

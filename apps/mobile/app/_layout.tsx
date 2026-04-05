@@ -27,7 +27,6 @@ import { LocaleProvider } from "../context/LocaleContext";
 import i18n, { initI18n } from "../i18n";
 
 import "../global.css";
-import type { i18n as I18nInstance } from "i18next";
 
 import { ToastProvider } from "../components/ui/Toast";
 import { InitialSyncOverlay } from "../components/ui/InitialSyncOverlay";
@@ -147,7 +146,7 @@ export default function RootLayout(): React.ReactNode {
 
   return (
     <ErrorBoundary>
-      <I18nextProvider i18n={i18n as unknown as I18nInstance}>
+      <I18nextProvider i18n={i18n}>
         <GestureHandlerRootView className="flex-1">
           <QueryProvider>
             <DatabaseProvider>

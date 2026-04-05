@@ -29,6 +29,16 @@ export const arabicFontFamily = {
 } as const;
 
 /**
+ * Shared font family shape for locale-specific font selection.
+ */
+export interface FontFamily {
+  readonly regular: string;
+  readonly medium: string;
+  readonly semiBold: string;
+  readonly bold: string;
+}
+
+/**
  * Get locale-appropriate font family based on current RTL state.
  *
  * This function automatically returns the correct font family (Inter for LTR,
@@ -36,7 +46,7 @@ export const arabicFontFamily = {
  *
  * @returns Font family object for the current locale
  */
-export function getLocaleFontFamily(): Readonly<typeof fontFamily> {
+export function getLocaleFontFamily(): FontFamily {
   return I18nManager.isRTL ? arabicFontFamily : fontFamily;
 }
 

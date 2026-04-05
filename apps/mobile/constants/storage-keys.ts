@@ -30,5 +30,5 @@ export const LOGOUT_IN_PROGRESS_KEY = "@astik/logout-in-progress";
  */
 export const CLEARABLE_USER_KEYS: readonly string[] = [
   FIRST_USE_DATE_KEY,
-  LANGUAGE_KEY,
+  // LANGUAGE_KEY intentionally excluded — language preference persists across accounts
 ] as const;
