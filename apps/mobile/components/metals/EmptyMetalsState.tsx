@@ -23,6 +23,8 @@ import {
 } from "react-native";
 
 import { palette } from "@/constants/colors";
+import EMPTY_ILLUSTRATION from "@/assets/images/empty-metals.png";
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -35,13 +37,6 @@ interface EmptyMetalsStateProps {
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-
-// Static require is the correct pattern for local image assets in React Native.
-// The type assertion to `number` is required because Metro bundler resolves
-// local image imports to a numeric asset ID at runtime.
-// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
-const EMPTY_ILLUSTRATION =
-  require("@/assets/images/empty-metals.png") as number;
 
 const ILLUSTRATION_SIZE = { width: 200, height: 140 };
 
