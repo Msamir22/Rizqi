@@ -26,6 +26,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { CurrencyRow } from "./CurrencyRow";
 
@@ -72,6 +73,7 @@ export function CurrencySection({
 }: CurrencySectionProps): React.JSX.Element {
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const inputRef = useRef<TextInput>(null);
+  const { t } = useTranslation("common");
 
   const toggleSearch = useCallback((): void => {
     if (isSearchVisible) {
@@ -119,7 +121,7 @@ export function CurrencySection({
       {/* Section header */}
       <View className="flex-row items-center justify-between mb-2">
         <Text className="text-lg font-bold text-slate-800 dark:text-white">
-          Currencies
+          {t("currencies")}
         </Text>
 
         <View className="flex-row items-center">
@@ -149,7 +151,7 @@ export function CurrencySection({
               className="text-xs font-semibold"
               style={{ color: palette.nileGreen[500] }}
             >
-              vs {preferredCurrencyLabel}
+              {t("vs_currency", { currency: preferredCurrencyLabel })}
             </Text>
           </View>
         </View>
@@ -166,7 +168,7 @@ export function CurrencySection({
           <TextInput
             ref={inputRef}
             className="flex-1 py-2.5 ms-2 text-sm text-slate-800 dark:text-white"
-            placeholder="Search currencies..."
+            placeholder={t("search_currencies")}
             placeholderTextColor={palette.slate[400]}
             value={searchQuery}
             onChangeText={onSearchChange}
@@ -185,7 +187,7 @@ export function CurrencySection({
             color={palette.slate[400]}
           />
           <Text className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            No currencies found
+            {t("no_currencies_found")}
           </Text>
         </View>
       ) : (
@@ -210,7 +212,7 @@ export function CurrencySection({
             className="text-sm font-semibold"
             style={{ color: palette.nileGreen[500] }}
           >
-            See all currencies →
+            {t("see_all_currencies")}
           </Text>
         </TouchableOpacity>
       )}
@@ -226,7 +228,7 @@ export function CurrencySection({
             className="text-sm font-semibold"
             style={{ color: palette.nileGreen[500] }}
           >
-            Show less ↑
+            {t("show_less")}
           </Text>
         </TouchableOpacity>
       )}

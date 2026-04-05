@@ -245,7 +245,7 @@ export default function OnboardingScreen(): React.JSX.Element | null {
     } else {
       carouselRef.current?.next();
     }
-  }, [currentIndex, handleCarouselFinish]);
+  }, [currentIndex, slides.length, handleCarouselFinish]);
 
   const renderCarouselItem = useCallback(
     ({ item }: { item: OnboardingSlide; index: number }): React.JSX.Element => {

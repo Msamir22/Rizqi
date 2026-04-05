@@ -27,6 +27,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 import { palette } from "@/constants/colors";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
@@ -45,6 +46,7 @@ import { BudgetEmptyState } from "./BudgetEmptyState";
 export function BudgetDashboard(): React.JSX.Element {
   const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
+  const { t } = useTranslation("budgets");
   const { preferredCurrency } = usePreferredCurrency();
   const {
     globalBudget,
@@ -136,7 +138,7 @@ export function BudgetDashboard(): React.JSX.Element {
               {categoryBudgets.length > 0 && (
                 <View className="flex-row items-center justify-between px-5 mb-3 mt-2">
                   <Text className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-500">
-                    Categories
+                    {t("categories")}
                   </Text>
                   <Ionicons
                     name="options-outline"
@@ -158,7 +160,7 @@ export function BudgetDashboard(): React.JSX.Element {
         >
           <View className="items-center flex-1">
             <Text className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-500">
-              Safe to Spend
+              {t("safe_to_spend")}
             </Text>
             <Text
               className="text-base font-bold"
@@ -177,7 +179,7 @@ export function BudgetDashboard(): React.JSX.Element {
 
           <View className="items-center flex-1">
             <Text className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-500">
-              Daily Limit
+              {t("daily_limit")}
             </Text>
             <Text className="text-base font-bold text-slate-800 dark:text-white">
               {formatCurrency({
@@ -196,8 +198,8 @@ export function BudgetDashboard(): React.JSX.Element {
           onPress={handleCreateBudget}
           className="absolute end-5 bg-nileGreen-500 w-14 h-14 rounded-full items-center justify-center"
           accessibilityRole="button"
-          accessibilityLabel="Create budget"
-          accessibilityHint="Opens the form to create a new budget"
+          accessibilityLabel={t("accessibility_create_budget")}
+          accessibilityHint={t("accessibility_create_budget_hint")}
           // NativeWind v4 shadow limitation — requires inline style on interactive components
           style={{
             bottom: globalBudget

@@ -130,7 +130,7 @@ export default function VoiceReviewScreen(): React.JSX.Element {
         setIsSaving(false);
       }
     },
-    [router, showToast, originTabRoute]
+    [router, showToast, originTabRoute, t, tCommon]
   );
 
   // ── Discard ─────────────────────────────────────────────────────────

@@ -37,6 +37,7 @@ import {
   stopSmsListener,
 } from "../services/sms-live-listener-service";
 import { ConfirmationModal } from "@/components/modals/ConfirmationModal";
+import { Dropdown, type DropdownItem } from "@/components/ui/Dropdown";
 import { useToast } from "@/components/ui/Toast";
 
 /**
@@ -54,6 +55,7 @@ export default function SettingsScreen(): React.JSX.Element {
   const { t: tCommon } = useTranslation("common");
   const { language } = useLocale();
   const [isCurrencyPickerVisible, setIsCurrencyPickerVisible] = useState(false);
+  const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const {
     status: smsPermissionStatus,
     isAndroid,
@@ -115,7 +117,7 @@ export default function SettingsScreen(): React.JSX.Element {
       if (!isAndroid) {
         showToast({
           type: "info",
-          title: "SMS transaction sync is only available on Android devices.",
+          title: t("sms_android_only"),
         });
         return;
       }
@@ -132,7 +134,14 @@ export default function SettingsScreen(): React.JSX.Element {
         router.push("/sms-scan");
       }
     },
-    [isAndroid, smsPermissionStatus, requestPermission, setScanMode, showToast]
+    [
+      isAndroid,
+      smsPermissionStatus,
+      requestPermission,
+      setScanMode,
+      showToast,
+      t,
+    ]
   );
 
   const handleIncrementalSync = useCallback(async (): Promise<void> => {
@@ -163,8 +172,7 @@ export default function SettingsScreen(): React.JSX.Element {
     if (result.error === "no_network") {
       showToast({
         type: "error",
-        title:
-          "No internet connection. Please check your network and try again.",
+        title: t("no_network_logout"),
       });
       return;
     }
@@ -177,9 +185,9 @@ export default function SettingsScreen(): React.JSX.Element {
     // "unknown" or any other unhandled error
     showToast({
       type: "error",
-      title: "Something went wrong while logging out. Please try again.",
+      title: t("logout_error"),
     });
-  }, [database, showToast]);
+  }, [database, showToast, t]);
 
   const handleForceLogout = useCallback(async (): Promise<void> => {
     setShowSyncWarning(false);
@@ -224,56 +232,28 @@ export default function SettingsScreen(): React.JSX.Element {
             {t("language")}
           </Text>
 
-          <View className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800">
+          <View className="p-4 rounded-2xl bg-white dark:bg-slate-800">
             <View className="flex-row items-center gap-3">
               <View className="w-8 bg-blue-600 dark:bg-blue-500 h-8 rounded-lg justify-center items-center">
                 <Ionicons name="language" size={20} color="#FFF" />
               </View>
-              <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
-                {t("language")}
-              </Text>
-            </View>
-            <View className="flex-row items-center gap-2">
-              <TouchableOpacity
-                onPress={() => {
-                  handleLanguageChange("en").catch(() => {});
-                }}
-                className={`px-3 py-1.5 rounded-lg ${
-                  language === "en"
-                    ? "bg-nileGreen-600"
-                    : "bg-slate-200 dark:bg-slate-700"
-                }`}
-              >
-                <Text
-                  className={`text-sm font-semibold ${
-                    language === "en"
-                      ? "text-white"
-                      : "text-slate-700 dark:text-slate-300"
-                  }`}
-                >
-                  {t("language_english")}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  handleLanguageChange("ar").catch(() => {});
-                }}
-                className={`px-3 py-1.5 rounded-lg ${
-                  language === "ar"
-                    ? "bg-nileGreen-600"
-                    : "bg-slate-200 dark:bg-slate-700"
-                }`}
-              >
-                <Text
-                  className={`text-sm font-semibold ${
-                    language === "ar"
-                      ? "text-white"
-                      : "text-slate-700 dark:text-slate-300"
-                  }`}
-                >
-                  {t("language_arabic")}
-                </Text>
-              </TouchableOpacity>
+              <View className="flex-1">
+                <Dropdown<string>
+                  label=""
+                  items={
+                    [
+                      { value: "en", label: t("language_english") },
+                      { value: "ar", label: t("language_arabic") },
+                    ] as ReadonlyArray<DropdownItem<string>>
+                  }
+                  value={language}
+                  onChange={(val) => {
+                    handleLanguageChange(val as "en" | "ar").catch(() => {});
+                  }}
+                  isOpen={isLanguageDropdownOpen}
+                  onToggle={() => setIsLanguageDropdownOpen((prev) => !prev)}
+                />
+              </View>
             </View>
           </View>
         </View>
@@ -370,10 +350,14 @@ export default function SettingsScreen(): React.JSX.Element {
                   </Text>
                   <Text className="text-xs text-slate-500 dark:text-slate-400">
                     {hasSynced && lastSyncTimestamp
-                      ? `Last synced ${new Date(lastSyncTimestamp).toLocaleDateString()}`
+                      ? t("last_synced", {
+                          date: new Date(
+                            lastSyncTimestamp
+                          ).toLocaleDateString(),
+                        })
                       : smsPermissionStatus === "granted"
-                        ? "Scan inbox for financial SMS"
-                        : "Grant permission to read SMS"}
+                        ? t("scan_inbox")
+                        : t("grant_sms_permission")}
                   </Text>
                 </View>
               </View>
@@ -428,7 +412,7 @@ export default function SettingsScreen(): React.JSX.Element {
                     {t("live_detection")}
                   </Text>
                   <Text className="text-xs text-slate-500 dark:text-slate-400">
-                    Automatically detect transactions from new SMS
+                    {t("auto_detect_description")}
                   </Text>
                 </View>
               </View>
@@ -451,7 +435,7 @@ export default function SettingsScreen(): React.JSX.Element {
                     {t("auto_confirm")}
                   </Text>
                   <Text className="text-xs text-slate-500 dark:text-slate-400">
-                    Skip review and auto-add detected transactions
+                    {t("auto_confirm_description")}
                   </Text>
                 </View>
               </View>
@@ -545,9 +529,9 @@ export default function SettingsScreen(): React.JSX.Element {
           navigateToScan("full").catch(console.error);
         }}
         onCancel={() => setIsFullRescanModalOpen(false)}
-        title="Full Re-scan"
-        message="This will scan all SMS messages from scratch. Previously scanned messages will be automatically skipped."
-        confirmLabel="Re-scan"
+        title={t("rescan_title")}
+        message={t("rescan_message")}
+        confirmLabel={t("rescan_confirm")}
         variant="warning"
       />
 
@@ -556,10 +540,10 @@ export default function SettingsScreen(): React.JSX.Element {
         visible={showSyncWarning}
         variant="warning"
         icon="cloud-offline-outline"
-        title="Sync Failed"
-        message="Some data may not have been saved to the cloud. If you proceed, any unsynced data will be lost."
-        confirmLabel="Proceed Anyway"
-        cancelLabel="Cancel"
+        title={t("sync_failed_title")}
+        message={t("sync_failed_message")}
+        confirmLabel={t("proceed_anyway")}
+        cancelLabel={tCommon("cancel")}
         onConfirm={() => {
           // TODO: Replace with structured logging (e.g., Sentry)
           handleForceLogout().catch(console.error);

@@ -23,6 +23,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { useCategories } from "@/hooks/useCategories";
@@ -40,6 +41,7 @@ import { router } from "expo-router";
 import { useCategoryLookup } from "@/context/CategoriesContext";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
+import { formatDate } from "@/utils/dateHelpers";
 
 // =============================================================================
 // Types
@@ -73,11 +75,13 @@ interface FormErrors {
 // Constants
 // =============================================================================
 
-const PERIODS: Array<{ key: BudgetPeriod; label: string }> = [
-  { key: "WEEKLY", label: "Weekly" },
-  { key: "MONTHLY", label: "Monthly" },
-  { key: "CUSTOM", label: "Custom" },
-];
+const PERIOD_LABELS: Record<BudgetPeriod, string> = {
+  WEEKLY: "weekly",
+  MONTHLY: "monthly",
+  CUSTOM: "custom_period",
+};
+
+const PERIOD_KEYS: BudgetPeriod[] = ["WEEKLY", "MONTHLY", "CUSTOM"];
 
 const DEFAULT_THRESHOLD = 80;
 
@@ -90,6 +94,7 @@ export function BudgetForm({
 }: BudgetFormProps): React.JSX.Element {
   const isEditMode = !!existingBudget;
   const { isDark } = useTheme();
+  const { t } = useTranslation("budgets");
   const { expenseCategories } = useCategories();
   const categoryMap = useCategoryLookup();
   const { showToast } = useToast();
@@ -151,27 +156,27 @@ export function BudgetForm({
     const newErrors: FormErrors = {};
 
     if (!form.name.trim()) {
-      newErrors.name = "Budget name is required";
+      newErrors.name = t("validation_name_required");
     }
 
     const parsedAmount = parseFloat(form.amount);
     if (!form.amount || isNaN(parsedAmount) || parsedAmount <= 0) {
-      newErrors.amount = "Enter a valid amount greater than 0";
+      newErrors.amount = t("validation_amount_invalid");
     }
 
     if (form.type === "CATEGORY" && !form.categoryId) {
-      newErrors.category = "Select a category";
+      newErrors.category = t("validation_category_required");
     }
 
     if (form.period === "CUSTOM") {
       if (form.periodEnd.getTime() <= form.periodStart.getTime()) {
-        newErrors.period = "End date must be after start date";
+        newErrors.period = t("validation_date_order");
       }
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [form]);
+  }, [form, t]);
 
   // ── Submit ──
   const handleSubmit = useCallback(async (): Promise<void> => {
@@ -198,8 +203,8 @@ export function BudgetForm({
         await updateBudget(existingBudget.id, input);
         showToast({
           type: "success",
-          title: "Updated",
-          message: "Budget updated successfully",
+          title: t("budget_updated"),
+          message: t("budget_updated_message"),
         });
       } else {
         const input: CreateBudgetInput = {
@@ -218,8 +223,8 @@ export function BudgetForm({
         await createBudget(input);
         showToast({
           type: "success",
-          title: "Created",
-          message: "Budget created successfully",
+          title: t("budget_created"),
+          message: t("budget_created_message"),
         });
       }
 
@@ -231,7 +236,7 @@ export function BudgetForm({
     } finally {
       setIsSubmitting(false);
     }
-  }, [validate, isEditMode, existingBudget, form, showToast]);
+  }, [validate, isEditMode, existingBudget, form, showToast, t]);
 
   return (
     <ScrollView
@@ -255,7 +260,7 @@ export function BudgetForm({
       {!isEditMode && (
         <View className="mb-5">
           <Text className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-2">
-            Budget Type
+            {t("budget_type")}
           </Text>
           <View className="flex-row gap-3">
             <TouchableOpacity
@@ -298,7 +303,7 @@ export function BudgetForm({
                     : undefined
                 }
               >
-                Category
+                {t("category_type")}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -341,7 +346,7 @@ export function BudgetForm({
                     : undefined
                 }
               >
-                Global
+                {t("global_type")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -351,12 +356,12 @@ export function BudgetForm({
       {/* Budget Name */}
       <View className="mb-5">
         <Text className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-2">
-          Budget Name
+          {t("budget_name")}
         </Text>
         <TextInput
           value={form.name}
           onChangeText={(v) => updateField("name", v)}
-          placeholder="e.g., Monthly Food Budget"
+          placeholder={t("budget_name_placeholder")}
           placeholderTextColor={
             isDark ? palette.slate[600] : palette.slate[400]
           }
@@ -373,7 +378,7 @@ export function BudgetForm({
       {form.type === "CATEGORY" && (
         <View className="mb-5">
           <Text className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-2">
-            Category
+            {t("category_type")}
           </Text>
           <TouchableOpacity
             onPress={() => setIsCategoryModalOpen(true)}
@@ -389,7 +394,7 @@ export function BudgetForm({
               numberOfLines={1}
               className="flex-1 ms-3 text-base font-medium text-slate-800 dark:text-white"
             >
-              {selectedCategory?.displayName ?? "Select a category"}
+              {selectedCategory?.displayName ?? t("select_a_category")}
             </Text>
             <Ionicons
               name="chevron-down"
@@ -408,7 +413,7 @@ export function BudgetForm({
       {/* Amount */}
       <View className="mb-5">
         <Text className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-2">
-          Budget Limit
+          {t("budget_limit")}
         </Text>
         <View className="flex-row items-center bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
           <Text
@@ -438,30 +443,30 @@ export function BudgetForm({
       {/* Period */}
       <View className="mb-5">
         <Text className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-2">
-          Period
+          {t("period")}
         </Text>
         <View className="flex-row gap-2">
-          {PERIODS.map((p) => (
+          {PERIOD_KEYS.map((key) => (
             <TouchableOpacity
-              key={p.key}
-              onPress={() => updateField("period", p.key)}
+              key={key}
+              onPress={() => updateField("period", key)}
               className={`flex-1 py-3 rounded-2xl items-center ${
-                form.period === p.key ? "" : "bg-slate-100 dark:bg-slate-800"
+                form.period === key ? "" : "bg-slate-100 dark:bg-slate-800"
               }`}
               style={
-                form.period === p.key
+                form.period === key
                   ? { backgroundColor: palette.nileGreen[500] }
                   : undefined
               }
             >
               <Text
                 className={`text-sm font-bold ${
-                  form.period === p.key
+                  form.period === key
                     ? "text-white"
                     : "text-slate-600 dark:text-slate-300"
                 }`}
               >
-                {p.label}
+                {t(PERIOD_LABELS[key])}
               </Text>
             </TouchableOpacity>
           ))}
@@ -474,27 +479,27 @@ export function BudgetForm({
           <View className="flex-row gap-3">
             <View className="flex-1">
               <Text className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-2">
-                Start Date
+                {t("start_date")}
               </Text>
               <TouchableOpacity
                 onPress={() => setShowStartPicker(true)}
                 className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700"
               >
                 <Text className="text-sm font-medium text-slate-800 dark:text-white">
-                  {form.periodStart.toLocaleDateString()}
+                  {formatDate(form.periodStart, "MMM d, yyyy")}
                 </Text>
               </TouchableOpacity>
             </View>
             <View className="flex-1">
               <Text className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-2">
-                End Date
+                {t("end_date")}
               </Text>
               <TouchableOpacity
                 onPress={() => setShowEndPicker(true)}
                 className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700"
               >
                 <Text className="text-sm font-medium text-slate-800 dark:text-white">
-                  {form.periodEnd.toLocaleDateString()}
+                  {formatDate(form.periodEnd, "MMM d, yyyy")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -534,7 +539,7 @@ export function BudgetForm({
       {/* Alert Threshold */}
       <View className="mb-8">
         <Text className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-2">
-          Alert When Spending Reaches
+          {t("alert_when_spending_reaches")}
         </Text>
         <AlertThresholdSlider
           value={form.alertThreshold}
@@ -554,7 +559,7 @@ export function BudgetForm({
           <ActivityIndicator color="white" />
         ) : (
           <Text className="text-base font-bold text-white">
-            {isEditMode ? "Save Changes" : "Create Budget"}
+            {isEditMode ? t("save_changes") : t("create_budget")}
           </Text>
         )}
       </TouchableOpacity>

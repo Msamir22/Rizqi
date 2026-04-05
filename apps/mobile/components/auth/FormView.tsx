@@ -16,6 +16,7 @@ import { palette } from "@/constants/colors";
 import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import {
   EmailPasswordForm,
@@ -30,7 +31,7 @@ import type { OAuthProvider } from "@/services/supabase";
 
 interface TrustBadge {
   readonly icon: keyof typeof MaterialCommunityIcons.glyphMap;
-  readonly label: string;
+  readonly translationKey: string;
 }
 
 export interface FormViewProps {
@@ -55,9 +56,9 @@ export interface FormViewProps {
 // =============================================================================
 
 const TRUST_BADGES: readonly TrustBadge[] = [
-  { icon: "lock-outline", label: "Encrypted" },
-  { icon: "cloud-check-outline", label: "Backed Up" },
-  { icon: "shield-check-outline", label: "Private" },
+  { icon: "lock-outline", translationKey: "trust_encrypted" },
+  { icon: "cloud-check-outline", translationKey: "trust_backed_up" },
+  { icon: "shield-check-outline", translationKey: "trust_private" },
 ];
 
 // =============================================================================
@@ -76,6 +77,7 @@ export function FormView({
   onClearError,
   onRetry,
 }: FormViewProps): React.JSX.Element {
+  const { t } = useTranslation("auth");
   return (
     <>
       {/* Top Section: Trust messaging */}
@@ -91,18 +93,18 @@ export function FormView({
 
         {/* Title */}
         <Text className="text-[28px] font-bold text-center text-text-primary dark:text-text-primary-dark">
-          Welcome to Astik
+          {t("welcome_title")}
         </Text>
 
         {/* Subtitle */}
         <Text className="text-base text-center text-text-secondary dark:text-text-secondary-dark max-w-[320px] leading-6">
-          Your financial companion. Sign in or create an account to get started.
+          {t("welcome_subtitle")}
         </Text>
 
         {/* Trust Badges */}
         <View className="flex-row justify-center gap-6 mt-2">
           {TRUST_BADGES.map((badge) => (
-            <View key={badge.label} className="items-center gap-2">
+            <View key={badge.translationKey} className="items-center gap-2">
               <View className="w-12 h-12 rounded-xl bg-nileGreen-500/10 items-center justify-center">
                 <MaterialCommunityIcons
                   name={badge.icon}
@@ -113,7 +115,7 @@ export function FormView({
                 />
               </View>
               <Text className="text-xs font-medium text-text-secondary dark:text-text-secondary-dark">
-                {badge.label}
+                {t(badge.translationKey)}
               </Text>
             </View>
           ))}

@@ -10,5 +10,9 @@
   "get_started": "ابدأ",
   "select_currency": "اختر عملتك",
   "create_wallet": "إنشاء محفظتك",
-  "skip": "تخطي"
+  "skip": "تخطي",
+  "choose_your_currency": "اختر عملتك",
+  "currency_description": "سننشئ لك محفظة ونعرض جميع المبالغ بهذه العملة. يمكنك تغييرها لاحقاً من الإعدادات.",
+  "search_currency": "بحث عن عملة",
+  "suggested": "مقترحة"
 }

@@ -33,6 +33,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -69,6 +70,8 @@ export function CurrencyPickerStep({
   const insets = useSafeAreaInsets();
   const { theme, isDark } = useTheme();
   const [searchQuery, setSearchQuery] = useState("");
+  const { t } = useTranslation("onboarding");
+  const { t: tCommon } = useTranslation("common");
 
   // Detect suggested currency from timezone (one-time on mount)
   const suggestedCurrency = useMemo(
@@ -148,7 +151,7 @@ export function CurrencyPickerStep({
               {isSuggested && (
                 <View className="px-2 py-0.5 rounded-full bg-nileGreen-500/20">
                   <Text className="text-[10px] font-bold text-nileGreen-500">
-                    Suggested
+                    {t("suggested")}
                   </Text>
                 </View>
               )}
@@ -171,7 +174,7 @@ export function CurrencyPickerStep({
         </TouchableOpacity>
       );
     },
-    [selectedCode, handleSelect, suggestedCurrency, searchQuery]
+    [selectedCode, handleSelect, suggestedCurrency, searchQuery, t]
   );
 
   const keyExtractor = useCallback(
@@ -193,17 +196,16 @@ export function CurrencyPickerStep({
       <View className="px-6 pb-4" style={{ paddingTop: insets.top + 16 }}>
         <View className="flex-row items-center justify-between mb-2">
           <Text className="text-3xl font-bold text-text-primary dark:text-text-primary-dark">
-            Choose Your Currency
+            {t("choose_your_currency")}
           </Text>
           <TouchableOpacity onPress={onSkip} activeOpacity={0.7}>
             <Text className="text-base text-text-secondary dark:text-text-secondary-dark">
-              Skip
+              {t("skip")}
             </Text>
           </TouchableOpacity>
         </View>
         <Text className="text-sm text-text-secondary dark:text-text-secondary-dark leading-5">
-          We&apos;ll create a wallet and show all amounts in this currency. You
-          can change it later in settings.
+          {t("currency_description")}
         </Text>
       </View>
 
@@ -217,7 +219,7 @@ export function CurrencyPickerStep({
           />
           <TextInput
             className="flex-1 ms-2 text-base text-text-primary dark:text-text-primary-dark"
-            placeholder="Search currency"
+            placeholder={t("search_currency")}
             placeholderTextColor={
               isDark ? palette.slate[500] : palette.slate[400]
             }
@@ -262,7 +264,9 @@ export function CurrencyPickerStep({
           }}
           activeOpacity={0.8}
         >
-          <Text className="text-white font-semibold text-lg">Continue</Text>
+          <Text className="text-white font-semibold text-lg">
+            {tCommon("continue")}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>

@@ -18,5 +18,21 @@
   "add_gold": "إضافة ذهب",
   "add_silver": "إضافة فضة",
   "no_gold_holdings": "لا توجد مقتنيات ذهب بعد",
-  "no_silver_holdings": "لا توجد مقتنيات فضة بعد"
+  "no_silver_holdings": "لا توجد مقتنيات فضة بعد",
+  "add_new_holding": "إضافة مقتنى جديد",
+  "name": "الاسم",
+  "name_placeholder": "مثال: \"خاتم الزواج\"",
+  "weight_grams": "الوزن (غرام)",
+  "weight_placeholder": "0.0",
+  "purchase_price_currency": "سعر الشراء ({{currency}})",
+  "purchase_price_placeholder": "0.00",
+  "purchase_date": "تاريخ الشراء",
+  "form_optional": "الشكل (اختياري)",
+  "form_coin": "عملة",
+  "form_bar": "سبائك",
+  "form_jewelry": "مجوهرات",
+  "error_save_failed": "فشل الحفظ. يرجى المحاولة مرة أخرى.",
+  "add_to_savings": "إضافة إلى المدخرات",
+  "holding": "مقتنى",
+  "holdings": "مقتنيات"
 }

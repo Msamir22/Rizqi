@@ -56,7 +56,7 @@ export default function CreateBudgetScreen(): React.JSX.Element {
     }
 
     void loadBudget();
-  }, [id]);
+  }, [id, t]);
 
   return (
     <View className="flex-1">

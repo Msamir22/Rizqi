@@ -14,6 +14,7 @@
 
 import React, { memo } from "react";
 import { Text, View, type ViewStyle } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import type { CurrencyType } from "@astik/db";
 import { formatCurrency } from "@astik/logic";
@@ -53,6 +54,7 @@ function SplitCardInner({
   barStyle,
   isGold,
 }: SplitCardProps): React.JSX.Element {
+  const { t } = useTranslation("metals");
   const formattedValue = formatCurrency({
     amount: totalValue,
     currency,
@@ -113,7 +115,7 @@ function SplitCardInner({
 
       {/* Count */}
       <Text className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-        {itemCount} {itemCount === 1 ? "holding" : "holdings"}
+        {itemCount} {itemCount === 1 ? t("holding") : t("holdings")}
       </Text>
     </View>
   );
@@ -140,11 +142,12 @@ export function MetalSplitCards({
   currency,
 }: MetalSplitCardsProps): React.JSX.Element {
   const { gold, silver } = portfolioSplit;
+  const { t } = useTranslation("metals");
 
   return (
     <View className="flex-row gap-3 mb-6">
       <SplitCard
-        label="Gold"
+        label={t("gold")}
         percentage={gold.percentage}
         totalValue={gold.totalValue}
         itemCount={gold.itemCount}
@@ -153,7 +156,7 @@ export function MetalSplitCards({
         isGold
       />
       <SplitCard
-        label="Silver"
+        label={t("silver")}
         percentage={silver.percentage}
         totalValue={silver.totalValue}
         itemCount={silver.itemCount}

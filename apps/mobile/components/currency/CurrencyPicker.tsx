@@ -23,6 +23,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 interface CurrencyPickerProps {
   readonly visible: boolean;
@@ -109,6 +110,7 @@ export function CurrencyPicker({
 }: CurrencyPickerProps): React.JSX.Element {
   const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState("");
+  const { t } = useTranslation("common");
 
   const filteredCurrencies = useMemo(() => {
     if (!searchQuery.trim()) return [...SUPPORTED_CURRENCIES];
@@ -168,14 +170,14 @@ export function CurrencyPicker({
 
               {/* Title */}
               <Text className="text-xl font-bold text-center text-slate-800 dark:text-white mb-3 px-5">
-                Select Currency
+                {t("select_currency")}
               </Text>
 
               {/* Search */}
               <View className="mx-5 mb-3 flex-row items-center bg-slate-100 dark:bg-slate-700 rounded-xl px-3">
                 <Ionicons name="search" size={18} color={palette.slate[400]} />
                 <TextInput
-                  placeholder="Search by name or code..."
+                  placeholder={t("search_currency_name_code")}
                   placeholderTextColor={palette.slate[400]}
                   value={searchQuery}
                   onChangeText={setSearchQuery}

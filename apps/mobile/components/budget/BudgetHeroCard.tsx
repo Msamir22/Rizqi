@@ -14,6 +14,7 @@
 
 import React from "react";
 import { Text, TouchableOpacity, View, type ViewStyle } from "react-native";
+import { useTranslation } from "react-i18next";
 import { CircularProgress } from "./CircularProgress";
 import type { BudgetWithMetrics } from "@/hooks/useBudgets";
 import { formatCurrency } from "@astik/logic";
@@ -53,6 +54,7 @@ export function BudgetHeroCard({
   currency,
   onPress,
 }: BudgetHeroCardProps): React.JSX.Element {
+  const { t } = useTranslation("budgets");
   const { budget, metrics, daysLeft } = data;
   const effectiveCurrency = budget.currency ?? currency;
   const isPaused = budget.status === "PAUSED";
@@ -69,7 +71,9 @@ export function BudgetHeroCard({
         {/* Paused badge */}
         {isPaused && (
           <View className="bg-slate-500 rounded-full px-3 py-1 mb-3">
-            <Text className="text-xs font-medium text-white">Paused</Text>
+            <Text className="text-xs font-medium text-white">
+              {t("paused")}
+            </Text>
           </View>
         )}
 
@@ -79,7 +83,7 @@ export function BudgetHeroCard({
           status={metrics.status}
           size={160}
           strokeWidth={12}
-          label="spent"
+          label={t("spent")}
         />
 
         {/* Budget name */}
@@ -93,7 +97,7 @@ export function BudgetHeroCard({
             amount: metrics.limit,
             currency: effectiveCurrency,
           })}{" "}
-          limit · {daysLeft} days remaining
+          {t("limit_label")} · {t("days_remaining", { count: daysLeft })}
         </Text>
       </View>
     </TouchableOpacity>

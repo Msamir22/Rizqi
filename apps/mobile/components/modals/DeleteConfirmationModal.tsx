@@ -6,6 +6,8 @@
  */
 
 import React from "react";
+import { useTranslation } from "react-i18next";
+
 import { ConfirmationModal } from "./ConfirmationModal";
 
 interface DeleteConfirmationModalProps {
@@ -21,8 +23,8 @@ export function DeleteConfirmationModal({
   onCancel,
   count,
 }: DeleteConfirmationModalProps): React.JSX.Element {
+  const { t } = useTranslation("common");
   const isPlural = count > 1;
-  const noun = isPlural ? "Transactions" : "Transaction";
 
   return (
     <ConfirmationModal
@@ -30,13 +32,13 @@ export function DeleteConfirmationModal({
       onConfirm={onConfirm}
       onCancel={onCancel}
       variant="danger"
-      title={`Delete ${noun}?`}
+      title={isPlural ? t("delete_transactions") : t("delete_transaction")}
       message={
         isPlural
-          ? `This will delete ${count} transactions and revert all associated changes to account balances. This action cannot be undone.`
-          : "This will delete the transaction and revert all associated changes to account balances. This action cannot be undone."
+          ? t("delete_transactions_message", { count })
+          : t("delete_transaction_message")
       }
-      confirmLabel="Delete"
+      confirmLabel={t("delete")}
     />
   );
 }

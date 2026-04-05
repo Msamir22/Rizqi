@@ -27,6 +27,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { ConfirmationModal } from "@/components/modals/ConfirmationModal";
@@ -132,6 +133,8 @@ export function BudgetActionsSheet({
   onAction,
 }: BudgetActionsSheetProps): React.JSX.Element {
   const { isDark } = useTheme();
+  const { t } = useTranslation("budgets");
+  const { t: tCommon } = useTranslation("common");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
   const insets = useSafeAreaInsets();
@@ -222,7 +225,7 @@ export function BudgetActionsSheet({
             >
               <Ionicons name="create-outline" size={20} color={iconColor} />
               <Text style={[styles.label, { color: textColor }]}>
-                Edit Budget
+                {t("edit_budget")}
               </Text>
             </TouchableOpacity>
 
@@ -243,12 +246,12 @@ export function BudgetActionsSheet({
                     { color: textColor },
                   ]}
                 >
-                  {isPaused ? "Resume Budget" : "Pause Budget"}
+                  {isPaused ? t("resume_budget") : t("pause_budget")}
                 </Text>
                 <Text style={[styles.sublabel, { color: subtextColor }]}>
                   {isPaused
-                    ? "Continue tracking spending"
-                    : "Temporarily stop tracking"}
+                    ? t("continue_tracking_spending")
+                    : t("temporarily_stop_tracking")}
                 </Text>
               </View>
               {/* Toggle */}
@@ -260,7 +263,11 @@ export function BudgetActionsSheet({
                 activeOpacity={0.7}
                 accessibilityRole="switch"
                 accessibilityState={{ checked: !isPaused, busy: isToggling }}
-                accessibilityLabel={isPaused ? "Resume budget" : "Pause budget"}
+                accessibilityLabel={
+                  isPaused
+                    ? t("accessibility_resume_budget")
+                    : t("accessibility_pause_budget")
+                }
                 style={[
                   styles.toggleTrack,
                   {
@@ -300,7 +307,7 @@ export function BudgetActionsSheet({
                 color={palette.red[500]}
               />
               <Text style={[styles.label, { color: palette.red[500] }]}>
-                Delete Budget
+                {t("delete_budget_title")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -310,9 +317,9 @@ export function BudgetActionsSheet({
       {/* Delete Confirmation — this one uses Modal (ConfirmationModal works fine) */}
       <ConfirmationModal
         visible={showDeleteConfirm}
-        title="Delete Budget"
-        message="Are you sure you want to delete this budget? This action cannot be undone."
-        confirmLabel="Delete"
+        title={t("delete_budget_title")}
+        message={t("delete_budget_message")}
+        confirmLabel={tCommon("delete")}
         variant="danger"
         onConfirm={handleDelete}
         onCancel={() => setShowDeleteConfirm(false)}

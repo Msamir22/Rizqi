@@ -16,6 +16,7 @@ import Carousel from "react-native-reanimated-carousel";
 import Svg, { Circle, G } from "react-native-svg";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
+import { useTranslation } from "react-i18next";
 
 const { width } = Dimensions.get("window");
 
@@ -227,6 +228,7 @@ function RingChart({ data, isDark }: RingChartProps): React.JSX.Element {
 }
 
 function AddButton(): React.JSX.Element {
+  const { t } = useTranslation("common");
   const handleAddPress = (): void => {
     router.push("/add-account");
   };
@@ -238,7 +240,7 @@ function AddButton(): React.JSX.Element {
       className="button"
     >
       <Feather name="plus" size={14} color="#FFFFFF" />
-      <Text className="button-text ms-1">Add</Text>
+      <Text className="button-text ms-1">{t("add")}</Text>
     </TouchableOpacity>
   );
 }
@@ -253,10 +255,11 @@ export function AccountsCarousel({
   isLoading,
 }: AccountsCarouselProps): React.JSX.Element {
   const { isDark } = useTheme();
+  const { t } = useTranslation("common");
   const [activeIndex, setActiveIndex] = useState(0);
 
   // Dynamic header based on carousel position
-  const headerText = activeIndex === 0 ? "Accounts" : "Asset Breakdown";
+  const headerText = activeIndex === 0 ? t("accounts") : t("asset_breakdown");
 
   // Transform accounts to card data
   const accountCards: AccountCardData[] = useMemo(() => {
@@ -297,7 +300,7 @@ export function AccountsCarousel({
         return (
           <View className="flex-1 items-center justify-center">
             <Text className="text-sm text-slate-500 dark:text-slate-400">
-              No accounts yet. Tap Add to create one.
+              {t("no_accounts_carousel")}
             </Text>
           </View>
         );

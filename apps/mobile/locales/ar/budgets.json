@@ -31,5 +31,46 @@
   "budget_resumed": "تم استئناف الميزانية",
   "paused": "متوقفة",
   "resumed": "مستأنفة",
-  "load_budget_error": "فشل تحميل الميزانية"
+  "load_budget_error": "فشل تحميل الميزانية",
+
+  "resume_budget": "استئناف الميزانية",
+  "continue_tracking_spending": "متابعة تتبع الإنفاق",
+  "pause_budget": "إيقاف الميزانية",
+  "temporarily_stop_tracking": "إيقاف التتبع مؤقتاً",
+  "delete_budget_title": "حذف الميزانية",
+  "delete_budget_message": "هل أنت متأكد من حذف هذه الميزانية؟ لا يمكن التراجع عن هذا الإجراء.",
+
+  "safe_to_spend": "آمن للإنفاق",
+  "daily_limit": "الحد اليومي",
+
+  "of_budget": "من {{amount}} ميزانية",
+  "daily_avg": "المتوسط اليومي",
+  "days_left": "الأيام المتبقية",
+
+  "budget_type": "نوع الميزانية",
+  "category_type": "فئة",
+  "global_type": "عامة",
+  "budget_name_placeholder": "مثال: ميزانية الطعام الشهرية",
+  "budget_limit": "حد الميزانية",
+  "custom_period": "مخصص",
+  "start_date": "تاريخ البدء",
+  "end_date": "تاريخ الانتهاء",
+  "alert_when_spending_reaches": "تنبيه عند وصول الإنفاق إلى",
+  "select_a_category": "اختر فئة",
+  "save_changes": "حفظ التغييرات",
+  "validation_name_required": "اسم الميزانية مطلوب",
+  "validation_amount_invalid": "أدخل مبلغاً صحيحاً أكبر من 0",
+  "validation_category_required": "اختر فئة",
+  "validation_date_order": "يجب أن يكون تاريخ الانتهاء بعد تاريخ البدء",
+  "budget_updated": "تم التحديث",
+  "budget_updated_message": "تم تحديث الميزانية بنجاح",
+  "budget_created": "تم الإنشاء",
+  "budget_created_message": "تم إنشاء الميزانية بنجاح",
+
+  "limit_label": "حد",
+  "days_remaining": "{{count}} أيام متبقية",
+  "accessibility_create_budget": "إنشاء ميزانية",
+  "accessibility_create_budget_hint": "يفتح نموذج إنشاء ميزانية جديدة",
+  "accessibility_resume_budget": "استئناف الميزانية",
+  "accessibility_pause_budget": "إيقاف الميزانية"
 }

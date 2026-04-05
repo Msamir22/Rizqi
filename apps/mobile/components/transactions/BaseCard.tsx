@@ -1,5 +1,6 @@
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
+import { formatDate } from "@/utils/dateHelpers";
 import type { CurrencyType } from "@astik/db";
 import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
@@ -241,10 +242,7 @@ export const BaseCard = React.memo(function BaseCard({
                 </Text>
               </View>
               <Text className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
-                {date.toLocaleDateString("en-US", {
-                  day: "numeric",
-                  month: "short",
-                })}
+                {formatDate(date, "MMM d")}
               </Text>
             </View>
           </View>

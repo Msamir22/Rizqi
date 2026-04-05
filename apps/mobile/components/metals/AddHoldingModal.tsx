@@ -36,6 +36,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 import type { MetalType } from "@astik/db";
 import { FINENESS_OPTIONS, GOLD_PURITY_OPTIONS } from "@astik/logic";
@@ -43,6 +44,7 @@ import { FINENESS_OPTIONS, GOLD_PURITY_OPTIONS } from "@astik/logic";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
+import { formatDate } from "@/utils/dateHelpers";
 import {
   createMetalHolding,
   type CreateMetalHoldingData,
@@ -70,10 +72,10 @@ const SCROLL_CONTENT_STYLE = { padding: 24 };
 const PURITY_SCROLL_STYLE = { gap: 8 };
 const WHITE_COLOR = palette.slate[50];
 
-const ITEM_FORMS: ReadonlyArray<{ value: ItemForm; label: string }> = [
-  { value: "COIN", label: "Coin" },
-  { value: "BAR", label: "Bar" },
-  { value: "JEWELRY", label: "Jewelry" },
+const ITEM_FORMS: ReadonlyArray<{ value: ItemForm; labelKey: string }> = [
+  { value: "COIN", labelKey: "form_coin" },
+  { value: "BAR", labelKey: "form_bar" },
+  { value: "JEWELRY", labelKey: "form_jewelry" },
 ];
 
 const ERROR_DISPLAY_DURATION_MS = 5000;
@@ -93,6 +95,8 @@ export function AddHoldingModal({
   const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { preferredCurrency } = usePreferredCurrency();
+  const { t } = useTranslation("metals");
+  const { t: tCommon } = useTranslation("common");
 
   // Sync metalType when initialMetalType changes (e.g., opening from different tab)
   useEffect(() => {
@@ -205,9 +209,7 @@ export function AddHoldingModal({
       handleClose();
     } catch (err: unknown) {
       const message =
-        err instanceof Error
-          ? err.message
-          : "Failed to save. Please try again.";
+        err instanceof Error ? err.message : t("error_save_failed");
       setErrorMessage(message);
       // Auto-dismiss is handled by the useEffect above
     } finally {
@@ -226,6 +228,7 @@ export function AddHoldingModal({
     preferredCurrency,
     selectedItemForm,
     handleClose,
+    t,
   ]);
 
   const handleSave = useCallback((): void => {
@@ -259,7 +262,7 @@ export function AddHoldingModal({
 
                   {/* Title */}
                   <Text className="mb-6 self-center text-xl font-bold text-slate-800 dark:text-white">
-                    Add New Holding
+                    {t("add_new_holding")}
                   </Text>
 
                   {/* Metal Type Toggle */}
@@ -298,7 +301,7 @@ export function AddHoldingModal({
 
                   {/* Purity Selection */}
                   <Text className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2">
-                    Purity
+                    {t("purity")}
                   </Text>
                   <ScrollView
                     horizontal
@@ -340,12 +343,12 @@ export function AddHoldingModal({
 
                   {/* Name Input */}
                   <Text className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2">
-                    Name
+                    {t("name")}
                   </Text>
                   <TextInput
                     value={name}
                     onChangeText={setName}
-                    placeholder='e.g. "Wedding Ring"'
+                    placeholder={t("name_placeholder")}
                     placeholderTextColor={
                       isDark ? palette.slate[500] : palette.slate[400]
                     }
@@ -355,12 +358,12 @@ export function AddHoldingModal({
 
                   {/* Weight Input */}
                   <Text className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2">
-                    Weight (grams)
+                    {t("weight_grams")}
                   </Text>
                   <TextInput
                     value={weightGrams}
                     onChangeText={setWeightGrams}
-                    placeholder="0.0"
+                    placeholder={t("weight_placeholder")}
                     placeholderTextColor={
                       isDark ? palette.slate[500] : palette.slate[400]
                     }
@@ -370,12 +373,14 @@ export function AddHoldingModal({
 
                   {/* Purchase Price Input */}
                   <Text className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2">
-                    Purchase Price ({preferredCurrency})
+                    {t("purchase_price_currency", {
+                      currency: preferredCurrency,
+                    })}
                   </Text>
                   <TextInput
                     value={purchasePrice}
                     onChangeText={setPurchasePrice}
-                    placeholder="0.00"
+                    placeholder={t("purchase_price_placeholder")}
                     placeholderTextColor={
                       isDark ? palette.slate[500] : palette.slate[400]
                     }
@@ -385,7 +390,7 @@ export function AddHoldingModal({
 
                   {/* Purchase Date */}
                   <Text className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2">
-                    Purchase Date
+                    {t("purchase_date")}
                   </Text>
                   <TouchableOpacity
                     onPress={() => setShowDatePicker(true)}
@@ -397,7 +402,7 @@ export function AddHoldingModal({
                       color={isDark ? palette.slate[400] : palette.slate[500]}
                     />
                     <Text className="ms-2 text-base text-slate-800 dark:text-white">
-                      {purchaseDate.toLocaleDateString()}
+                      {formatDate(purchaseDate, "MMM d, yyyy")}
                     </Text>
                   </TouchableOpacity>
                   {showDatePicker && (
@@ -411,7 +416,7 @@ export function AddHoldingModal({
 
                   {/* Item Form (Optional) */}
                   <Text className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2">
-                    Form (Optional)
+                    {t("form_optional")}
                   </Text>
                   <View className="flex-row gap-2 mb-6">
                     {ITEM_FORMS.map((form) => {
@@ -438,7 +443,7 @@ export function AddHoldingModal({
                                 : "text-slate-500 dark:text-slate-400"
                             }`}
                           >
-                            {form.label}
+                            {t(form.labelKey)}
                           </Text>
                         </TouchableOpacity>
                       );
@@ -458,7 +463,7 @@ export function AddHoldingModal({
                       </Text>
                       <TouchableOpacity onPress={handleSave}>
                         <Text className="text-sm font-bold text-red-600 dark:text-red-400">
-                          Retry
+                          {tCommon("retry")}
                         </Text>
                       </TouchableOpacity>
                     </View>
@@ -483,7 +488,7 @@ export function AddHoldingModal({
                       <ActivityIndicator color={WHITE_COLOR} />
                     ) : (
                       <Text className="text-lg font-bold text-white">
-                        Add to Savings
+                        {t("add_to_savings")}
                       </Text>
                     )}
                   </TouchableOpacity>

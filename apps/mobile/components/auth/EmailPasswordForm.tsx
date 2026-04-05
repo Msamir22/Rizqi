@@ -27,6 +27,7 @@ import {
 
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
+import { useTranslation } from "react-i18next";
 
 // =============================================================================
 // Types
@@ -69,6 +70,7 @@ export function EmailPasswordForm({
   onClearError,
 }: EmailPasswordFormProps): React.JSX.Element {
   const { isDark } = useTheme();
+  const { t } = useTranslation("auth");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -88,24 +90,22 @@ export function EmailPasswordForm({
     const trimmedEmail = email.trim();
 
     if (!trimmedEmail) {
-      setLocalError("Please enter your email address.");
+      setLocalError(t("validation_email_required"));
       return;
     }
 
     if (!isValidEmail(trimmedEmail)) {
-      setLocalError("Please enter a valid email address.");
+      setLocalError(t("validation_email_invalid"));
       return;
     }
 
     if (!password) {
-      setLocalError("Please enter your password.");
+      setLocalError(t("validation_password_required"));
       return;
     }
 
     if (mode === "signUp" && password.length < MIN_PASSWORD_LENGTH) {
-      setLocalError(
-        `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`
-      );
+      setLocalError(t("validation_password_min", { min: MIN_PASSWORD_LENGTH }));
       return;
     }
 
@@ -130,7 +130,7 @@ export function EmailPasswordForm({
       <View className="flex-row items-center gap-3 my-2">
         <View className="flex-1 h-px bg-slate-300 dark:bg-slate-600" />
         <Text className="text-sm text-slate-400 dark:text-slate-500">
-          or continue with email
+          {t("or_continue_with_email")}
         </Text>
         <View className="flex-1 h-px bg-slate-300 dark:bg-slate-600" />
       </View>
@@ -139,7 +139,7 @@ export function EmailPasswordForm({
       <View>
         <TextInput
           className="py-4 px-4 rounded-2xl border text-base bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600"
-          placeholder="Email address"
+          placeholder={t("email_address_placeholder")}
           placeholderTextColor={placeholderColor}
           style={{ color: inputTextColor }}
           value={email}
@@ -161,7 +161,7 @@ export function EmailPasswordForm({
       <View className="relative">
         <TextInput
           className="py-4 px-4 pe-14 rounded-2xl border text-base bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600"
-          placeholder="Password"
+          placeholder={t("password_placeholder_label")}
           placeholderTextColor={placeholderColor}
           style={{ color: inputTextColor }}
           value={password}
@@ -180,7 +180,9 @@ export function EmailPasswordForm({
         <TouchableOpacity
           onPress={() => setShowPassword((prev) => !prev)}
           className="absolute end-4 top-4"
-          accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+          accessibilityLabel={
+            showPassword ? t("hide_password") : t("show_password")
+          }
           accessibilityRole="button"
         >
           <Ionicons
@@ -208,7 +210,7 @@ export function EmailPasswordForm({
           accessibilityRole="link"
         >
           <Text className="text-sm text-nileGreen-400 font-medium">
-            Forgot Password?
+            {t("forgot_password")}
           </Text>
         </TouchableOpacity>
       ) : null}
@@ -230,7 +232,7 @@ export function EmailPasswordForm({
           <ActivityIndicator size="small" color={palette.slate[25]} />
         ) : (
           <Text className="text-base font-semibold text-white">
-            {mode === "signIn" ? "Sign In" : "Create Account"}
+            {mode === "signIn" ? t("sign_in") : t("create_account")}
           </Text>
         )}
       </TouchableOpacity>
@@ -239,8 +241,8 @@ export function EmailPasswordForm({
       <View className="flex-row justify-center items-center gap-1 mt-2">
         <Text className="text-sm text-slate-400 dark:text-slate-500">
           {mode === "signIn"
-            ? "Don't have an account?"
-            : "Already have an account?"}
+            ? t("dont_have_account")
+            : t("already_have_account")}
         </Text>
         <TouchableOpacity
           onPress={toggleMode}
@@ -251,7 +253,7 @@ export function EmailPasswordForm({
           accessibilityRole="button"
         >
           <Text className="text-sm font-semibold text-nileGreen-400">
-            {mode === "signIn" ? "Sign Up" : "Sign In"}
+            {mode === "signIn" ? t("sign_up") : t("sign_in")}
           </Text>
         </TouchableOpacity>
       </View>

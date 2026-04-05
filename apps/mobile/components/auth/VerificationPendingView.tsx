@@ -16,6 +16,7 @@ import { palette } from "@/constants/colors";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 // =============================================================================
 // Types
@@ -38,6 +39,7 @@ export function VerificationPendingView({
   onResend,
   onBack,
 }: VerificationPendingViewProps): React.JSX.Element {
+  const { t } = useTranslation("auth");
   return (
     <>
       <View className="flex-1 items-center justify-center gap-6 px-4">
@@ -51,15 +53,11 @@ export function VerificationPendingView({
         </View>
 
         <Text className="text-2xl font-bold text-center text-text-primary dark:text-text-primary-dark">
-          Check Your Inbox
+          {t("check_your_inbox")}
         </Text>
 
         <Text className="text-base text-center text-text-secondary dark:text-text-secondary-dark max-w-[300px] leading-6">
-          We sent a verification email to{" "}
-          <Text className="font-semibold text-text-primary dark:text-text-primary-dark">
-            {email}
-          </Text>
-          . Tap the link to verify your account.
+          {t("verification_sent_message", { email })}
         </Text>
 
         {/* Resend Button */}
@@ -69,11 +67,11 @@ export function VerificationPendingView({
           }}
           className="py-3 px-6 rounded-2xl border border-nileGreen-500"
           activeOpacity={0.8}
-          accessibilityLabel="Resend verification email"
+          accessibilityLabel={t("resend_email")}
           accessibilityRole="button"
         >
           <Text className="text-sm font-semibold text-nileGreen-400">
-            Resend Email
+            {t("resend_email")}
           </Text>
         </TouchableOpacity>
       </View>
@@ -83,7 +81,7 @@ export function VerificationPendingView({
         onPress={onBack}
         className="py-3 items-center"
         activeOpacity={0.6}
-        accessibilityLabel="Back to sign in"
+        accessibilityLabel={t("back_to_sign_in")}
         accessibilityRole="button"
       >
         <View className="flex-row items-center gap-1">
@@ -93,7 +91,7 @@ export function VerificationPendingView({
             color={isDark ? palette.slate[400] : palette.slate[500]}
           />
           <Text className="text-sm text-text-secondary dark:text-text-secondary-dark">
-            Back to Sign In
+            {t("back_to_sign_in")}
           </Text>
         </View>
       </TouchableOpacity>

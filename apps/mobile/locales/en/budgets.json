@@ -31,5 +31,46 @@
   "budget_resumed": "Budget Resumed",
   "paused": "Paused",
   "resumed": "Resumed",
-  "load_budget_error": "Failed to load budget"
+  "load_budget_error": "Failed to load budget",
+
+  "resume_budget": "Resume Budget",
+  "continue_tracking_spending": "Continue tracking spending",
+  "pause_budget": "Pause Budget",
+  "temporarily_stop_tracking": "Temporarily stop tracking",
+  "delete_budget_title": "Delete Budget",
+  "delete_budget_message": "Are you sure you want to delete this budget? This action cannot be undone.",
+
+  "safe_to_spend": "Safe to Spend",
+  "daily_limit": "Daily Limit",
+
+  "of_budget": "of {{amount}} budget",
+  "daily_avg": "Daily Avg",
+  "days_left": "Days Left",
+
+  "budget_type": "Budget Type",
+  "category_type": "Category",
+  "global_type": "Global",
+  "budget_name_placeholder": "e.g., Monthly Food Budget",
+  "budget_limit": "Budget Limit",
+  "custom_period": "Custom",
+  "start_date": "Start Date",
+  "end_date": "End Date",
+  "alert_when_spending_reaches": "Alert When Spending Reaches",
+  "select_a_category": "Select a category",
+  "save_changes": "Save Changes",
+  "validation_name_required": "Budget name is required",
+  "validation_amount_invalid": "Enter a valid amount greater than 0",
+  "validation_category_required": "Select a category",
+  "validation_date_order": "End date must be after start date",
+  "budget_updated": "Updated",
+  "budget_updated_message": "Budget updated successfully",
+  "budget_created": "Created",
+  "budget_created_message": "Budget created successfully",
+
+  "limit_label": "limit",
+  "days_remaining": "{{count}} days remaining",
+  "accessibility_create_budget": "Create budget",
+  "accessibility_create_budget_hint": "Opens the form to create a new budget",
+  "accessibility_resume_budget": "Resume budget",
+  "accessibility_pause_budget": "Pause budget"
 }

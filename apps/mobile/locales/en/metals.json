@@ -18,5 +18,21 @@
   "add_gold": "Add Gold",
   "add_silver": "Add Silver",
   "no_gold_holdings": "No gold holdings yet",
-  "no_silver_holdings": "No silver holdings yet"
+  "no_silver_holdings": "No silver holdings yet",
+  "add_new_holding": "Add New Holding",
+  "name": "Name",
+  "name_placeholder": "e.g. \"Wedding Ring\"",
+  "weight_grams": "Weight (grams)",
+  "weight_placeholder": "0.0",
+  "purchase_price_currency": "Purchase Price ({{currency}})",
+  "purchase_price_placeholder": "0.00",
+  "purchase_date": "Purchase Date",
+  "form_optional": "Form (Optional)",
+  "form_coin": "Coin",
+  "form_bar": "Bar",
+  "form_jewelry": "Jewelry",
+  "error_save_failed": "Failed to save. Please try again.",
+  "add_to_savings": "Add to Savings",
+  "holding": "holding",
+  "holdings": "holdings"
 }

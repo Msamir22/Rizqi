@@ -12,6 +12,7 @@ import type { CurrencyType } from "@astik/db";
 import { type SpendingMetrics, formatCurrency } from "@astik/logic";
 import React from "react";
 import { Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { CircularProgress } from "./CircularProgress";
 
 // ---------------------------------------------------------------------------
@@ -33,6 +34,8 @@ export function BudgetDetailOverview({
   currency,
   daysLeft,
 }: BudgetDetailOverviewProps): React.JSX.Element {
+  const { t } = useTranslation("budgets");
+
   return (
     <View className="rounded-3xl border p-6 mb-4 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
       {/* Ring + Label */}
@@ -42,7 +45,7 @@ export function BudgetDetailOverview({
           status={metrics.status}
           size={140}
           strokeWidth={12}
-          label="spent"
+          label={t("spent")}
         />
 
         <View className="mt-3 items-center">
@@ -50,7 +53,9 @@ export function BudgetDetailOverview({
             {formatCurrency({ amount: metrics.spent, currency })}
           </Text>
           <Text className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            of {formatCurrency({ amount: metrics.limit, currency })} budget
+            {t("of_budget", {
+              amount: formatCurrency({ amount: metrics.limit, currency }),
+            })}
           </Text>
         </View>
       </View>
@@ -60,7 +65,7 @@ export function BudgetDetailOverview({
         {/* Remaining */}
         <View className="flex-1 items-center border-r border-slate-200 dark:border-slate-700">
           <Text className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-medium">
-            Remaining
+            {t("remaining")}
           </Text>
           <Text
             className="text-lg font-bold mt-1"
@@ -78,7 +83,7 @@ export function BudgetDetailOverview({
         {/* Daily Average */}
         <View className="flex-1 items-center border-r border-slate-200 dark:border-slate-700">
           <Text className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-medium">
-            Daily Avg
+            {t("daily_avg")}
           </Text>
           <Text className="text-lg font-bold mt-1 text-slate-800 dark:text-white">
             {formatCurrency({
@@ -92,7 +97,7 @@ export function BudgetDetailOverview({
         {/* Days Left */}
         <View className="flex-1 items-center">
           <Text className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-medium">
-            Days Left
+            {t("days_left")}
           </Text>
           <Text className="text-lg font-bold mt-1 text-slate-800 dark:text-white">
             {daysLeft}

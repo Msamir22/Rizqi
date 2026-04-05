@@ -25,6 +25,7 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { palette } from "@/constants/colors";
 
 // ---------------------------------------------------------------------------
@@ -88,6 +89,7 @@ export function BalanceChangedSheet({
 }: BalanceChangedSheetProps): React.JSX.Element {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const { t } = useTranslation("accounts");
   const [selectedOption, setSelectedOption] =
     useState<BalanceChangeOption>("silent");
 
@@ -102,10 +104,10 @@ export function BalanceChangedSheet({
   const isIncrease = difference > 0;
   const isDecrease = difference < 0;
   const changeLabel = isIncrease
-    ? "Increase"
+    ? t("increase")
     : isDecrease
-      ? "Decrease"
-      : "No Change";
+      ? t("decrease")
+      : t("no_change");
   const changeColor = isIncrease
     ? palette.nileGreen[500]
     : isDecrease

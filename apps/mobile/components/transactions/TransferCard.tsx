@@ -1,6 +1,7 @@
 import { CurrencyType } from "@astik/db";
 import { formatCurrency } from "@astik/logic";
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { palette } from "@/constants/colors";
 import { BaseCard } from "./BaseCard";
 
@@ -45,6 +46,7 @@ export const TransferCard = React.memo(function TransferCard({
   index?: number;
   onSwipeDelete?: (id: string) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation("common");
   const mainColor = palette.blue[500];
   const formattedAmount = formatCurrency({
     amount: Math.abs(amount),
@@ -62,7 +64,7 @@ export const TransferCard = React.memo(function TransferCard({
       mainColor={mainColor}
       iconName="swap-horizontal"
       iconLibrary="Ionicons"
-      title="Transfer"
+      title={t("transfer")}
       amount={formattedAmount}
       subtitle={subtitle}
       isExpense={false}

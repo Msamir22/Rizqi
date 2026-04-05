@@ -5,6 +5,7 @@ import { Switch, Text, TouchableOpacity, View } from "react-native";
 // Will use DatePicker modal later, simplified for now
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
+import { formatToLocalDateString } from "@/utils/dateHelpers";
 import type { RecurringFrequency } from "@astik/db";
 import { TextField } from "../ui/TextField";
 
@@ -134,12 +135,7 @@ export function OptionalSection({
               className="me-2"
             />
             <Text className="text-base font-medium text-slate-900 dark:text-white">
-              {fields.date.toLocaleDateString("en-US", {
-                weekday: "short",
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
+              {formatToLocalDateString(fields.date)}
             </Text>
           </TouchableOpacity>
 

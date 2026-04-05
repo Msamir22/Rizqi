@@ -21,5 +21,19 @@
   "delete_account": "Delete Account",
   "confirm_logout": "Are you sure you want to logout?",
   "logout_failed": "Logout Failed",
-  "logout_failed_message": "Could not complete logout. Your data may still be on this device."
+  "logout_failed_message": "Could not complete logout. Your data may still be on this device.",
+  "last_synced": "Last synced {{date}}",
+  "scan_inbox": "Scan inbox for financial SMS",
+  "grant_sms_permission": "Grant permission to read SMS",
+  "sms_android_only": "SMS transaction sync is only available on Android devices.",
+  "no_network_logout": "No internet connection. Please check your network and try again.",
+  "logout_error": "Something went wrong while logging out. Please try again.",
+  "auto_detect_description": "Automatically detect transactions from new SMS",
+  "auto_confirm_description": "Skip review and auto-add detected transactions",
+  "rescan_title": "Full Re-scan",
+  "rescan_message": "This will scan all SMS messages from scratch. Previously scanned messages will be automatically skipped.",
+  "rescan_confirm": "Re-scan",
+  "sync_failed_title": "Sync Failed",
+  "sync_failed_message": "Some data may not have been saved to the cloud. If you proceed, any unsynced data will be lost.",
+  "proceed_anyway": "Proceed Anyway"
 }

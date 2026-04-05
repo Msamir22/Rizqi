@@ -111,7 +111,7 @@ export default function SmsReviewScreen(): React.JSX.Element {
         setIsSaving(false);
       }
     },
-    [clearTransactions, router, markSyncComplete, showToast]
+    [clearTransactions, router, markSyncComplete, showToast, t]
   );
 
   // ── Discard ─────────────────────────────────────────────────────────
@@ -128,7 +128,7 @@ export default function SmsReviewScreen(): React.JSX.Element {
         },
       },
     ]);
-  }, [clearTransactions, router]);
+  }, [clearTransactions, router, t]);
 
   // ── No transactions guard ───────────────────────────────────────────
 

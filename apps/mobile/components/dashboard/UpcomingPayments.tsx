@@ -28,6 +28,7 @@ import {
 
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import type { RecurringPayment } from "@astik/db";
+import { useTranslation } from "react-i18next";
 import {
   FeaturedPaymentCard,
   MiniPaymentItem,
@@ -58,6 +59,7 @@ const PERIOD_OPTIONS: readonly BillsPeriodFilter[] = [
 export function UpcomingPayments(): React.JSX.Element {
   const { showToast } = useToast();
   const { preferredCurrency } = usePreferredCurrency();
+  const { t } = useTranslation("common");
 
   // Period filter state (FR-007: default is "This Month")
   const [selectedPeriod, setSelectedPeriod] =
@@ -90,7 +92,7 @@ export function UpcomingPayments(): React.JSX.Element {
   const handleSuccess = (amount: number): void => {
     showToast({
       type: "success",
-      title: "Payment Recorded",
+      title: t("payment_recorded"),
       message: `${selectedPayment?.name} - ${formatCurrency({
         amount,
         currency: selectedPayment?.currency ?? preferredCurrency,
@@ -121,7 +123,7 @@ export function UpcomingPayments(): React.JSX.Element {
       {/* Header */}
       <View className="flex-row items-center justify-between mb-3">
         <Text className="text-lg font-bold text-slate-800 dark:text-slate-25">
-          Upcoming Bills
+          {t("upcoming_bills")}
         </Text>
         <TouchableOpacity
           onPress={handleSeeAll}
@@ -129,7 +131,7 @@ export function UpcomingPayments(): React.JSX.Element {
           className="flex-row items-center"
         >
           <Text className="text-sm font-semibold text-nileGreen-500">
-            See All
+            {t("see_all")}
           </Text>
           <Ionicons
             name="arrow-forward"
@@ -183,7 +185,7 @@ export function UpcomingPayments(): React.JSX.Element {
             color={palette.slate[400]}
           />
           <Text className="text-sm text-slate-400 dark:text-slate-500 mt-2">
-            No bills due in this period
+            {t("no_bills_due")}
           </Text>
         </View>
       ) : (
@@ -211,7 +213,7 @@ export function UpcomingPayments(): React.JSX.Element {
           {/* Total Due — uses filtered total */}
           <View className="flex-row items-center justify-between mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
             <Text className="text-[13px] font-medium text-slate-500 dark:text-slate-400">
-              Total due:
+              {t("total_due")}
             </Text>
             <Text className="text-base font-bold text-nileGreen-500">
               {formatCurrency({

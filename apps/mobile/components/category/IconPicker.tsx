@@ -19,6 +19,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import {
   ALL_ICONS,
   ICON_GROUPS,
@@ -85,6 +86,7 @@ export function IconPicker({
   previewColor = palette.nileGreen[500],
 }: IconPickerProps): React.ReactElement {
   const [searchQuery, setSearchQuery] = useState("");
+  const { t } = useTranslation("common");
 
   // Filter icons based on search query
   const filteredIcons = useMemo(() => {
@@ -161,7 +163,7 @@ export function IconPicker({
             color={palette.slate[400]}
           />
           <Text className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-            No icons found for {searchQuery}
+            {t("no_icons_found", { query: searchQuery })}
           </Text>
         </View>
       }
@@ -179,7 +181,7 @@ export function IconPicker({
         {/* Header */}
         <View className="flex-row items-center justify-between border-b border-slate-200 px-4 pb-3 pt-4 dark:border-slate-700">
           <Text className="text-lg font-semibold text-slate-800 dark:text-white">
-            Select Icon
+            {t("select_icon")}
           </Text>
           <TouchableOpacity
             onPress={onClose}
@@ -200,7 +202,7 @@ export function IconPicker({
             />
             <TextInput
               className="ms-2 flex-1 text-base text-slate-800 dark:text-white"
-              placeholder="Search icons..."
+              placeholder={t("search_icons")}
               placeholderTextColor={palette.slate[400]}
               value={searchQuery}
               onChangeText={setSearchQuery}

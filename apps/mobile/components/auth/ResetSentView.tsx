@@ -16,6 +16,7 @@ import { palette } from "@/constants/colors";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 // =============================================================================
 // Types
@@ -36,6 +37,7 @@ export function ResetSentView({
   isDark,
   onBack,
 }: ResetSentViewProps): React.JSX.Element {
+  const { t } = useTranslation("auth");
   return (
     <>
       <View className="flex-1 items-center justify-center gap-6 px-4">
@@ -49,15 +51,11 @@ export function ResetSentView({
         </View>
 
         <Text className="text-2xl font-bold text-center text-text-primary dark:text-text-primary-dark">
-          Reset Link Sent
+          {t("reset_link_sent")}
         </Text>
 
         <Text className="text-base text-center text-text-secondary dark:text-text-secondary-dark max-w-[300px] leading-6">
-          We sent a password reset link to{" "}
-          <Text className="font-semibold text-text-primary dark:text-text-primary-dark">
-            {email}
-          </Text>
-          . Check your inbox and follow the link to reset your password.
+          {t("reset_link_message", { email })}
         </Text>
       </View>
 
@@ -66,7 +64,7 @@ export function ResetSentView({
         onPress={onBack}
         className="py-3 items-center"
         activeOpacity={0.6}
-        accessibilityLabel="Back to sign in"
+        accessibilityLabel={t("back_to_sign_in")}
         accessibilityRole="button"
       >
         <View className="flex-row items-center gap-1">
@@ -76,7 +74,7 @@ export function ResetSentView({
             color={isDark ? palette.slate[400] : palette.slate[500]}
           />
           <Text className="text-sm text-text-secondary dark:text-text-secondary-dark">
-            Back to Sign In
+            {t("back_to_sign_in")}
           </Text>
         </View>
       </TouchableOpacity>

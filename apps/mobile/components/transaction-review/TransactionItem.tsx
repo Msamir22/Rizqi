@@ -25,6 +25,7 @@
 
 import { palette } from "@/constants/colors";
 import type { MatchReason } from "@/services/sms-account-matcher";
+import { formatDate as formatDateHelper } from "@/utils/dateHelpers";
 import { formatCurrency, type ReviewableTransaction } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import React, { memo, useCallback, useState } from "react";
@@ -65,12 +66,9 @@ interface TransactionItemProps {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Format a Date as "dd MMM" */
+/** Format a Date as "dd MMM" using locale-aware helper */
 function formatDate(date: Date): string {
-  return date.toLocaleDateString("en-EG", {
-    day: "2-digit",
-    month: "short",
-  });
+  return formatDateHelper(date, "MMM d");
 }
 
 const BADGE_BG_COLORS: Record<BadgeColor, string> = {

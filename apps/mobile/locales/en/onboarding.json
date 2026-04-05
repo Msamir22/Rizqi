@@ -10,5 +10,9 @@
   "get_started": "Get Started",
   "select_currency": "Select Your Currency",
   "create_wallet": "Create Your Wallet",
-  "skip": "Skip"
+  "skip": "Skip",
+  "choose_your_currency": "Choose Your Currency",
+  "currency_description": "We'll create a wallet and show all amounts in this currency. You can change it later in settings.",
+  "search_currency": "Search currency",
+  "suggested": "Suggested"
 }

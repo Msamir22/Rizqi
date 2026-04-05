@@ -18,6 +18,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { TextField } from "@/components/ui/TextField";
 import { useToast } from "@/components/ui/Toast";
 import { palette } from "@/constants/colors";
@@ -52,6 +53,8 @@ export function PayNowModal({
 }: PayNowModalProps): React.JSX.Element | null {
   const { accounts } = useAccounts();
   const { showToast } = useToast();
+  const { t } = useTranslation("transactions");
+  const { t: tCommon } = useTranslation("common");
   const [amount, setAmount] = useState<string>("");
   const [amountError, setAmountError] = useState<string>("");
   const [selectedAccountId, setSelectedAccountId] = useState<string>("");
@@ -85,7 +88,7 @@ export function PayNowModal({
   const handleConfirm = async (): Promise<void> => {
     const numericAmount = parseFloat(amount);
     if (isNaN(numericAmount) || numericAmount <= 0) {
-      setAmountError("Please enter a valid amount.");
+      setAmountError(t("invalid_amount"));
       return;
     }
 
@@ -97,7 +100,7 @@ export function PayNowModal({
         currency: payment.currency,
         categoryId: payment.categoryId,
         accountId: selectedAccountId,
-        note: `Payment for ${payment.name}`,
+        note: t("payment_for_name", { name: payment.name }),
         type: payment.type,
         source: "MANUAL",
         date: new Date(),
@@ -118,8 +121,8 @@ export function PayNowModal({
       console.error("Error creating transaction:", error);
       showToast({
         type: "error",
-        title: "Payment Failed",
-        message: "Failed to create transaction. Please try again.",
+        title: t("payment_failed"),
+        message: t("payment_failed_message"),
       });
     }
   };
@@ -136,12 +139,12 @@ export function PayNowModal({
           <View className="w-full max-w-[340px] rounded-[20px] border p-6 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
             {/* Header */}
             <Text className="text-lg font-bold text-center mb-5 text-slate-800 dark:text-slate-25">
-              Pay {payment.name}
+              {t("pay_name", { name: payment.name })}
             </Text>
 
             {/* Amount Input — uses project TextField component */}
             <TextField
-              label={`Amount (${payment.currency})`}
+              label={t("amount_currency", { currency: payment.currency })}
               value={amount}
               onChangeText={handleAmountChange}
               keyboardType="decimal-pad"
@@ -152,7 +155,7 @@ export function PayNowModal({
             {/* Account Selector */}
             <View className="mb-4">
               <Text className="text-sm font-medium mb-2 text-slate-500 dark:text-slate-400">
-                Deduct from
+                {t("deduct_from")}
               </Text>
               <TouchableOpacity
                 onPress={() => setShowAccountPicker(!showAccountPicker)}
@@ -166,7 +169,7 @@ export function PayNowModal({
                     className="me-2"
                   />
                   <Text className="text-base font-medium text-slate-800 dark:text-white">
-                    {selectedAccount?.name || "Select account"}
+                    {selectedAccount?.name || t("select_account")}
                   </Text>
                 </View>
                 <Ionicons
@@ -219,7 +222,7 @@ export function PayNowModal({
             <View className="gap-2 mb-4">
               <View className="flex-row justify-between items-center">
                 <Text className="text-sm text-slate-500 dark:text-slate-400">
-                  Original amount:
+                  {t("original_amount")}
                 </Text>
                 <Text className="text-sm text-slate-600 dark:text-slate-300">
                   {formatCurrency({
@@ -230,7 +233,7 @@ export function PayNowModal({
               </View>
               <View className="flex-row justify-between items-center">
                 <Text className="text-sm text-slate-500 dark:text-slate-400">
-                  Due:
+                  {t("due_label")}
                 </Text>
                 <Text
                   className={`text-sm font-semibold ${
@@ -246,7 +249,7 @@ export function PayNowModal({
 
             {/* Info text */}
             <Text className="text-xs text-center mb-5 leading-[18px] text-slate-500 dark:text-slate-400">
-              This will create a transaction and update your account balance.
+              {t("payment_confirmation_text")}
             </Text>
 
             {/* Buttons */}
@@ -257,7 +260,7 @@ export function PayNowModal({
                 className="flex-1 py-3 rounded-xl border items-center border-slate-300 dark:border-slate-700"
               >
                 <Text className="text-sm font-semibold text-slate-600 dark:text-slate-300">
-                  Cancel
+                  {tCommon("cancel")}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -271,7 +274,7 @@ export function PayNowModal({
                   <ActivityIndicator size="small" color="white" />
                 ) : (
                   <Text className="text-sm font-semibold text-white">
-                    Confirm
+                    {tCommon("confirm")}
                   </Text>
                 )}
               </TouchableOpacity>

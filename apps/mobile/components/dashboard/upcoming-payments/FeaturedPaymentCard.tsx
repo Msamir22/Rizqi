@@ -11,6 +11,7 @@ import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import type { FeaturedPaymentCardProps } from "./types";
 
@@ -20,6 +21,7 @@ export function FeaturedPaymentCard({
   payment,
   onPayNow,
 }: FeaturedPaymentCardProps): React.JSX.Element {
+  const { t } = useTranslation("common");
   const iconName = getPaymentIcon(payment.name);
 
   const dueClass =
@@ -61,7 +63,9 @@ export function FeaturedPaymentCard({
         className="bg-nileGreen-400 w-full py-3 rounded-xl items-center"
         activeOpacity={0.8}
       >
-        <Text className="text-base font-bold text-slate-900">Pay Now</Text>
+        <Text className="text-base font-bold text-slate-900">
+          {t("pay_now")}
+        </Text>
       </TouchableOpacity>
     </View>
   );

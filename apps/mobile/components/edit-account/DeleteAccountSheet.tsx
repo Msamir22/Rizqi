@@ -26,6 +26,7 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { palette } from "@/constants/colors";
 
 // ---------------------------------------------------------------------------
@@ -56,14 +57,6 @@ interface DeleteAccountSheetProps {
   readonly linkedRecords: LinkedRecordsCounts;
   /** Whether a delete operation is in progress */
   readonly isDeleting?: boolean;
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function formatBalance(amount: number, currency: string): string {
-  return `${currency} ${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 /**
@@ -101,13 +94,13 @@ export function DeleteAccountSheet({
   onConfirm,
   onCancel,
   accountName,
-  accountBalance,
-  currencyCode,
   linkedRecords,
   isDeleting = false,
 }: DeleteAccountSheetProps): React.JSX.Element {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const { t } = useTranslation("accounts");
+  const { t: tCommon } = useTranslation("common");
 
   const totalLinked =
     linkedRecords.transactions +
@@ -147,10 +140,10 @@ export function DeleteAccountSheet({
                     />
                   </View>
                   <Text className="text-xl font-bold text-slate-800 dark:text-slate-100 text-center">
-                    Delete Account?
+                    {t("delete_account_title")}
                   </Text>
                   <Text className="text-sm text-slate-500 dark:text-slate-400 text-center mt-1">
-                    This action cannot be undone
+                    {t("action_cannot_be_undone")}
                   </Text>
                 </View>
 
@@ -160,7 +153,7 @@ export function DeleteAccountSheet({
                     {accountName}
                   </Text>
                   <Text className="text-sm text-slate-500 dark:text-slate-400">
-                    Balance: {formatBalance(accountBalance, currencyCode)}
+                    {t("balance_label")}
                   </Text>
                 </View>
 
@@ -199,7 +192,7 @@ export function DeleteAccountSheet({
                     disabled={isDeleting}
                   >
                     <Text className="text-base font-semibold text-slate-600 dark:text-slate-300">
-                      Cancel
+                      {tCommon("cancel")}{" "}
                     </Text>
                   </TouchableOpacity>
 

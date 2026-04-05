@@ -10,6 +10,8 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
+
 import { palette } from "@/constants/colors";
 import { TransactionTypeFilter } from "@/hooks/useTransactionsGrouping";
 
@@ -22,12 +24,12 @@ interface TypeFilterModalProps {
 
 const TYPE_OPTIONS: Array<{
   value: TransactionTypeFilter;
-  label: string;
+  labelKey: string;
   icon: keyof typeof Ionicons.glyphMap;
 }> = [
-  { value: "Income", label: "Income", icon: "trending-up" },
-  { value: "Expense", label: "Expense", icon: "trending-down" },
-  { value: "Transfer", label: "Transfer", icon: "swap-horizontal" },
+  { value: "Income", labelKey: "income", icon: "trending-up" },
+  { value: "Expense", labelKey: "expense", icon: "trending-down" },
+  { value: "Transfer", labelKey: "transfer", icon: "swap-horizontal" },
 ];
 
 export function TypeFilterModal({
@@ -38,6 +40,7 @@ export function TypeFilterModal({
 }: TypeFilterModalProps): React.JSX.Element {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const { t } = useTranslation("common");
 
   return (
     <Modal
@@ -60,7 +63,7 @@ export function TypeFilterModal({
               {/* Header */}
               <View className="flex-row justify-between items-center px-5 pt-5 pb-2">
                 <Text className="text-xl font-bold text-slate-800 dark:text-slate-100">
-                  Transaction Types
+                  {t("transaction_types")}
                 </Text>
                 <TouchableOpacity onPress={onClose} className="p-1">
                   <Ionicons
@@ -72,7 +75,7 @@ export function TypeFilterModal({
               </View>
 
               <Text className="text-sm text-slate-500 dark:text-slate-400 px-5 pb-3">
-                Select one or more types
+                {t("select_one_or_more_types")}
               </Text>
 
               {/* Options */}
@@ -110,7 +113,7 @@ export function TypeFilterModal({
                               : "text-slate-700 dark:text-slate-300"
                           }`}
                         >
-                          {option.label}
+                          {t(option.labelKey)}
                         </Text>
                       </View>
                       <View
@@ -134,7 +137,9 @@ export function TypeFilterModal({
                 className="bg-nileGreen-600 mx-5 my-5 py-4 rounded-xl items-center"
                 onPress={onClose}
               >
-                <Text className="text-base font-bold text-white">Done</Text>
+                <Text className="text-base font-bold text-white">
+                  {t("done")}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
