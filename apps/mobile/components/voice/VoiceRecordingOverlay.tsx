@@ -320,7 +320,7 @@ function VoiceRecordingOverlayComponent({
       <Animated.View
         entering={SlideInDown.springify().damping(18).stiffness(120)}
         exiting={SlideOutDown.duration(200)}
-        className="absolute start-0 right-0 z-[22] rounded-t-3xl bg-white dark:bg-slate-800"
+        className="absolute start-0 end-0 z-[22] rounded-t-3xl bg-white dark:bg-slate-800"
         style={panelStyle}
       >
         <View className="px-6 pb-4 pt-5">

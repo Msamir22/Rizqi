@@ -156,7 +156,7 @@ export function TopNav({
               style={{
                 borderColor: theme.surface,
               }}
-              className="absolute top-2 right-2 w-2 h-2 rounded-full border bg-red-500 dark:bg-red-600"
+              className="absolute top-2 end-2 w-2 h-2 rounded-full border bg-red-500 dark:bg-red-600"
             />
           </TouchableOpacity>
         </View>

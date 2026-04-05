@@ -67,7 +67,7 @@ function EmptyIllustration(): React.JSX.Element {
       </View>
 
       {/* Signal-off icon at top-right corner */}
-      <View className="absolute top-4 right-4 opacity-60">
+      <View className="absolute top-4 end-4 opacity-60">
         <Ionicons
           name="cellular-outline"
           size={24}

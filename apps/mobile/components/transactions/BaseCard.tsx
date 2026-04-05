@@ -143,7 +143,7 @@ export const BaseCard = React.memo(function BaseCard({
             color={mainColor}
           />
           {!isSelectionMode && onCategoryPress && (
-            <View className="absolute -bottom-1 -right-1 bg-white dark:bg-slate-800 rounded-full p-0.5 border border-slate-200 dark:border-slate-700">
+            <View className="absolute -bottom-1 -end-1 bg-white dark:bg-slate-800 rounded-full p-0.5 border border-slate-200 dark:border-slate-700">
               <Ionicons
                 name="pencil"
                 size={8}

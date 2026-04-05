@@ -71,7 +71,7 @@ export function LiveRatesStrip({
 
   return (
     <View
-      className="absolute start-4 right-4 flex-row items-center justify-center rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3"
+      className="absolute start-4 end-4 flex-row items-center justify-center rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3"
       style={[STRIP_SHADOW, { bottom: bottomInset + 10 }]}
       accessibilityRole="summary"
       accessibilityLabel={`Live rates: Gold $${goldPerOz.toFixed(0)} per ounce, ${goldChangePercent >= 0 ? "up" : "down"} ${Math.abs(goldChangePercent).toFixed(1)} percent. Silver $${silverPricePerGramUsd.toFixed(2)} per gram, ${silverChangePercent >= 0 ? "up" : "down"} ${Math.abs(silverChangePercent).toFixed(1)} percent.`}

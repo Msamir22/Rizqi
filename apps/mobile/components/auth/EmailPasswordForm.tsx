@@ -179,7 +179,7 @@ export function EmailPasswordForm({
         />
         <TouchableOpacity
           onPress={() => setShowPassword((prev) => !prev)}
-          className="absolute right-4 top-4"
+          className="absolute end-4 top-4"
           accessibilityLabel={showPassword ? "Hide password" : "Show password"}
           accessibilityRole="button"
         >

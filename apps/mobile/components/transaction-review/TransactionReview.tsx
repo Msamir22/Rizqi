@@ -183,7 +183,7 @@ export function TransactionReview({
               }
             />
             {hasActiveFilters && !isFiltersVisible && (
-              <View className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-nileGreen-400" />
+              <View className="absolute -top-1 -end-1 w-2.5 h-2.5 rounded-full bg-nileGreen-400" />
             )}
           </TouchableOpacity>
 

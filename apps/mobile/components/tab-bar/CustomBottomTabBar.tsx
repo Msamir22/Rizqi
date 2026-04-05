@@ -171,7 +171,7 @@ function CustomBottomTabBarComponent({
     <>
       {/* Main tab bar */}
       <View
-        className="absolute bottom-0 start-0 right-0 z-[25]"
+        className="absolute bottom-0 start-0 end-0 z-[25]"
         style={{ paddingBottom: bottomPadding, height: tabBarHeight }}
       >
         <BlurView

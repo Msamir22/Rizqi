@@ -194,7 +194,7 @@ export function BudgetDashboard(): React.JSX.Element {
       {budgets.length > 0 && (
         <TouchableOpacity
           onPress={handleCreateBudget}
-          className="absolute right-5 bg-nileGreen-500 w-14 h-14 rounded-full items-center justify-center"
+          className="absolute end-5 bg-nileGreen-500 w-14 h-14 rounded-full items-center justify-center"
           accessibilityRole="button"
           accessibilityLabel="Create budget"
           accessibilityHint="Opens the form to create a new budget"

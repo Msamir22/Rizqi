@@ -179,7 +179,7 @@ export function WalletCreationStep({
               </View>
               {/* Checkmark badge */}
               <View
-                className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full items-center justify-center"
+                className="absolute -bottom-2 -end-2 w-8 h-8 rounded-full items-center justify-center"
                 style={{ backgroundColor: palette.nileGreen[500] }}
               >
                 <Ionicons name="checkmark" size={20} color="white" />

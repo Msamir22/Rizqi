@@ -312,7 +312,7 @@ export default function RecurringPaymentsScreen(): React.JSX.Element {
         {/* FAB - Add New */}
         <TouchableOpacity
           onPress={() => router.push("/create-recurring-payment")}
-          className="absolute right-5 bg-nileGreen-500 w-14 h-14 rounded-full items-center justify-center"
+          className="absolute end-5 bg-nileGreen-500 w-14 h-14 rounded-full items-center justify-center"
           // eslint-disable-next-line react-native/no-inline-styles
           style={{
             bottom: insets.bottom + 20,
