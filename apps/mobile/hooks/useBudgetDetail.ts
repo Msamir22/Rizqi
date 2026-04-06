@@ -7,8 +7,7 @@
  * @module useBudgetDetail
  */
 
-import { useState, useEffect, useCallback } from "react";
-import { useFocusEffect } from "expo-router";
+import { useState, useEffect } from "react";
 import { Budget, database, Transaction, Category } from "@astik/db";
 import { Q } from "@nozbe/watermelondb";
 import {
@@ -84,20 +83,7 @@ export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
     isLoading: true,
   });
 
-  // ── Re-trigger spending computation on screen focus ──
-  const [refreshCounter, setRefreshCounter] = useState(0);
-  useFocusEffect(
-    useCallback(() => {
-      setRefreshCounter((c) => c + 1);
-    }, [])
-  );
-
   // ── Subscribe to budget changes ──
-  // WatermelonDB's findAndObserve emits the SAME model reference on update
-  // (models are cached by ID). React's useEffect compares deps by reference,
-  // so we use a version counter to detect each emission.
-  const [budgetVersion, setBudgetVersion] = useState(0);
-
   useEffect(() => {
     if (!budgetId) return;
 
@@ -105,10 +91,7 @@ export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
       .get<Budget>("budgets")
       .findAndObserve(budgetId)
       .subscribe(
-        (b) => {
-          setBudget(b);
-          setBudgetVersion((v) => v + 1);
-        },
+        (b) => setBudget(b),
         () => {
           // Budget not found or deleted
           setBudget(null);
@@ -295,9 +278,7 @@ export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
     return () => {
       cancelled = true;
     };
-    // budgetVersion increments on every WatermelonDB emission (same-reference workaround)
-    // refreshCounter increments on screen focus (useFocusEffect)
-  }, [budgetVersion, refreshCounter]);
+  }, [budget]);
 
   return {
     budget,

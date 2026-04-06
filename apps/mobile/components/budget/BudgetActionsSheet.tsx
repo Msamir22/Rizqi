@@ -10,6 +10,8 @@
  * - Uses absolute-positioned overlay instead of React Native Modal
  *   because Modal has a known layout collapse issue on Android
  *   with NativeWind v4 in this context.
+ * - Delete confirmation also uses absolute overlay (not ConfirmationModal)
+ *   for the same NativeWind v4 reason — Modal renders invisibly on this screen.
  * - Pattern: Overlay Component with action dispatch
  * - SOLID: SRP — only handles action selection, delegates execution to parent.
  *
@@ -18,7 +20,6 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  Alert,
   BackHandler,
   StyleSheet,
   Text,
@@ -120,6 +121,59 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: "#fff",
   },
+  // Delete confirmation overlay styles (absolute overlay, not Modal)
+  confirmOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1000,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  confirmBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+  },
+  confirmCardLight: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 24,
+    marginHorizontal: 32,
+    width: "85%" as unknown as number,
+    maxWidth: 340,
+  },
+  confirmCardDark: {
+    backgroundColor: palette.slate[800],
+    borderRadius: 20,
+    padding: 24,
+    marginHorizontal: 32,
+    width: "85%" as unknown as number,
+    maxWidth: 340,
+  },
+  confirmTitle: {
+    fontSize: 18,
+    fontWeight: "700" as const,
+    textAlign: "center" as const,
+    marginBottom: 8,
+  },
+  confirmMessage: {
+    fontSize: 14,
+    textAlign: "center" as const,
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  confirmButtons: {
+    flexDirection: "row" as const,
+    gap: 12,
+  },
+  confirmButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center" as const,
+  },
+  confirmButtonLabel: {
+    fontSize: 15,
+    fontWeight: "600" as const,
+  },
 });
 
 // ---------------------------------------------------------------------------
@@ -135,38 +189,33 @@ export function BudgetActionsSheet({
   const { isDark } = useTheme();
   const { t } = useTranslation("budgets");
   const { t: tCommon } = useTranslation("common");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
   const insets = useSafeAreaInsets();
 
   // Dismiss on Android Back button
   useEffect(() => {
-    if (!visible) return;
+    if (!visible && !showDeleteConfirm) return;
 
     const subscription = BackHandler.addEventListener(
       "hardwareBackPress",
       () => {
-        onClose();
+        if (showDeleteConfirm) {
+          setShowDeleteConfirm(false);
+        } else {
+          onClose();
+        }
         return true; // Consume the event
       }
     );
 
     return () => subscription.remove();
-  }, [visible, onClose]);
+  }, [visible, showDeleteConfirm, onClose]);
 
-  // Native Alert.alert for delete confirmation — ConfirmationModal (React Native
-  // Modal) hits the NativeWind v4 race condition on this screen, rendering
-  // invisibly while blocking all touches.
-  const showDeleteConfirmation = useCallback((): void => {
-    onClose();
-    Alert.alert(t("delete_budget_title"), t("delete_budget_message"), [
-      { text: tCommon("cancel"), style: "cancel" },
-      {
-        text: tCommon("delete"),
-        style: "destructive",
-        onPress: () => void onAction("delete"),
-      },
-    ]);
-  }, [onClose, onAction, t, tCommon]);
+  const handleDelete = useCallback((): void => {
+    setShowDeleteConfirm(false);
+    void onAction("delete");
+  }, [onAction]);
 
   const handlePauseToggle = useCallback(async (): Promise<void> => {
     if (isToggling) return;
@@ -188,7 +237,7 @@ export function BudgetActionsSheet({
   const closeIcon = isDark ? palette.slate[300] : palette.slate[600];
   const iconColor = isDark ? palette.slate[300] : palette.slate[600];
 
-  if (!visible) {
+  if (!visible && !showDeleteConfirm) {
     return <></>;
   }
 
@@ -302,7 +351,10 @@ export function BudgetActionsSheet({
 
             {/* Delete */}
             <TouchableOpacity
-              onPress={showDeleteConfirmation}
+              onPress={() => {
+                onClose();
+                setShowDeleteConfirm(true);
+              }}
               activeOpacity={0.7}
               style={styles.row}
             >
@@ -315,6 +367,77 @@ export function BudgetActionsSheet({
                 {t("delete_budget_title")}
               </Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Delete Confirmation — absolute overlay (not Modal) to avoid NativeWind v4
+          race condition that renders Modal content invisible on this screen */}
+      {showDeleteConfirm && (
+        <View style={styles.confirmOverlay}>
+          <TouchableWithoutFeedback
+            onPress={() => setShowDeleteConfirm(false)}
+          >
+            <View style={styles.confirmBackdrop} />
+          </TouchableWithoutFeedback>
+
+          <View
+            style={isDark ? styles.confirmCardDark : styles.confirmCardLight}
+          >
+            <Text style={[styles.confirmTitle, { color: textColor }]}>
+              {t("delete_budget_title")}
+            </Text>
+            <Text
+              style={[
+                styles.confirmMessage,
+                { color: isDark ? palette.slate[400] : palette.slate[500] },
+              ]}
+            >
+              {t("delete_budget_message")}
+            </Text>
+
+            <View style={styles.confirmButtons}>
+              <TouchableOpacity
+                onPress={() => setShowDeleteConfirm(false)}
+                activeOpacity={0.7}
+                style={[
+                  styles.confirmButton,
+                  {
+                    backgroundColor: isDark
+                      ? palette.slate[700]
+                      : palette.slate[100],
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.confirmButtonLabel,
+                    {
+                      color: isDark
+                        ? palette.slate[300]
+                        : palette.slate[600],
+                    },
+                  ]}
+                >
+                  {tCommon("cancel")}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleDelete}
+                activeOpacity={0.7}
+                style={[
+                  styles.confirmButton,
+                  { backgroundColor: palette.red[500] },
+                ]}
+              >
+                <Text
+                  style={[styles.confirmButtonLabel, { color: "#fff" }]}
+                >
+                  {tCommon("delete")}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       )}
