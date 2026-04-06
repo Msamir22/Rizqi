@@ -18,6 +18,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import {
+  Alert,
   BackHandler,
   StyleSheet,
   Text,
@@ -30,7 +31,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
-import { ConfirmationModal } from "@/components/modals/ConfirmationModal";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -135,7 +135,6 @@ export function BudgetActionsSheet({
   const { isDark } = useTheme();
   const { t } = useTranslation("budgets");
   const { t: tCommon } = useTranslation("common");
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
   const insets = useSafeAreaInsets();
 
@@ -154,11 +153,20 @@ export function BudgetActionsSheet({
     return () => subscription.remove();
   }, [visible, onClose]);
 
-  const handleDelete = useCallback((): void => {
-    setShowDeleteConfirm(false);
-    // Don't call onClose() — parent navigates away after successful delete
-    void onAction("delete");
-  }, [onAction]);
+  // Native Alert.alert for delete confirmation — ConfirmationModal (React Native
+  // Modal) hits the NativeWind v4 race condition on this screen, rendering
+  // invisibly while blocking all touches.
+  const showDeleteConfirmation = useCallback((): void => {
+    onClose();
+    Alert.alert(t("delete_budget_title"), t("delete_budget_message"), [
+      { text: tCommon("cancel"), style: "cancel" },
+      {
+        text: tCommon("delete"),
+        style: "destructive",
+        onPress: () => void onAction("delete"),
+      },
+    ]);
+  }, [onClose, onAction, t, tCommon]);
 
   const handlePauseToggle = useCallback(async (): Promise<void> => {
     if (isToggling) return;
@@ -180,7 +188,7 @@ export function BudgetActionsSheet({
   const closeIcon = isDark ? palette.slate[300] : palette.slate[600];
   const iconColor = isDark ? palette.slate[300] : palette.slate[600];
 
-  if (!visible && !showDeleteConfirm) {
+  if (!visible) {
     return <></>;
   }
 
@@ -294,10 +302,7 @@ export function BudgetActionsSheet({
 
             {/* Delete */}
             <TouchableOpacity
-              onPress={() => {
-                onClose();
-                setShowDeleteConfirm(true);
-              }}
+              onPress={showDeleteConfirmation}
               activeOpacity={0.7}
               style={styles.row}
             >
@@ -313,17 +318,6 @@ export function BudgetActionsSheet({
           </View>
         </View>
       )}
-
-      {/* Delete Confirmation — this one uses Modal (ConfirmationModal works fine) */}
-      <ConfirmationModal
-        visible={showDeleteConfirm}
-        title={t("delete_budget_title")}
-        message={t("delete_budget_message")}
-        confirmLabel={tCommon("delete")}
-        variant="danger"
-        onConfirm={handleDelete}
-        onCancel={() => setShowDeleteConfirm(false)}
-      />
     </>
   );
 }

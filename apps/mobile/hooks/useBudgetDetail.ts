@@ -93,6 +93,11 @@ export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
   );
 
   // ── Subscribe to budget changes ──
+  // WatermelonDB's findAndObserve emits the SAME model reference on update
+  // (models are cached by ID). React's useEffect compares deps by reference,
+  // so we use a version counter to detect each emission.
+  const [budgetVersion, setBudgetVersion] = useState(0);
+
   useEffect(() => {
     if (!budgetId) return;
 
@@ -100,7 +105,10 @@ export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
       .get<Budget>("budgets")
       .findAndObserve(budgetId)
       .subscribe(
-        (b) => setBudget(b),
+        (b) => {
+          setBudget(b);
+          setBudgetVersion((v) => v + 1);
+        },
         () => {
           // Budget not found or deleted
           setBudget(null);
@@ -287,7 +295,9 @@ export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
     return () => {
       cancelled = true;
     };
-  }, [budget, refreshCounter]);
+    // budgetVersion increments on every WatermelonDB emission (same-reference workaround)
+    // refreshCounter increments on screen focus (useFocusEffect)
+  }, [budgetVersion, refreshCounter]);
 
   return {
     budget,
