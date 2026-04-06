@@ -167,9 +167,9 @@ export function LanguagePickerStep({
           onPress={handleContinue}
           activeOpacity={0.8}
           disabled={isLoading}
-          className={`rounded-2xl py-[18px] bg-nileGreen-500 w-full flex-row items-center justify-center ${isLoading ? "opacity-60" : ""}`}
+          className="rounded-2xl py-[18px] bg-nileGreen-500 w-full flex-row items-center justify-center"
           // eslint-disable-next-line react-native/no-inline-styles
-          style={[styles.shadow, { elevation: 4 }]}
+          style={[styles.shadow, { elevation: 4, opacity: isLoading ? 0.6 : 1 }]}
         >
           {isLoading ? (
             <ActivityIndicator color="white" />

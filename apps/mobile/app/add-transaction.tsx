@@ -312,12 +312,13 @@ export default function AddTransaction(): React.ReactNode {
         title: t("transaction_created"),
         message: t("transaction_created_message"),
       });
-    } catch {
+    } catch (error: unknown) {
       showToast({
         type: "error",
         title: t("update_error"),
         message: t("transaction_creation_failed"),
       });
+      throw error;
     }
   };
 

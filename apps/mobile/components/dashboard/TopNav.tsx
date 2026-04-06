@@ -142,8 +142,8 @@ export function TopNav({
             accessibilityRole="button"
             accessibilityState={{ disabled: true }}
             disabled
-            style={{ backgroundColor: theme.surfaceHighlight }}
-            className="w-10 h-10 rounded-full items-center justify-center relative opacity-50"
+            style={{ backgroundColor: theme.surfaceHighlight, opacity: 0.5 }}
+            className="w-10 h-10 rounded-full items-center justify-center relative"
           >
             <Ionicons
               name="notifications-outline"
