@@ -133,11 +133,10 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.6)",
   },
   confirmCardLight: {
-    backgroundColor: "#fff",
+    backgroundColor: palette.slate[25],
     borderRadius: 20,
     padding: 24,
     marginHorizontal: 32,
-    width: "85%" as unknown as number,
     maxWidth: 340,
   },
   confirmCardDark: {
@@ -145,7 +144,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 24,
     marginHorizontal: 32,
-    width: "85%" as unknown as number,
     maxWidth: 340,
   },
   confirmTitle: {
@@ -382,7 +380,10 @@ export function BudgetActionsSheet({
           </TouchableWithoutFeedback>
 
           <View
-            style={isDark ? styles.confirmCardDark : styles.confirmCardLight}
+            style={[
+              isDark ? styles.confirmCardDark : styles.confirmCardLight,
+              { width: "85%" },
+            ]}
           >
             <Text style={[styles.confirmTitle, { color: textColor }]}>
               {t("delete_budget_title")}
@@ -432,7 +433,10 @@ export function BudgetActionsSheet({
                 ]}
               >
                 <Text
-                  style={[styles.confirmButtonLabel, { color: "#fff" }]}
+                  style={[
+                    styles.confirmButtonLabel,
+                    { color: palette.slate[25] },
+                  ]}
                 >
                   {tCommon("delete")}
                 </Text>
