@@ -403,7 +403,7 @@ export default function OnboardingScreen(): React.JSX.Element | null {
               name="arrow-forward"
               size={20}
               color="white"
-              style={{ marginLeft: 8 }}
+              style={{ marginStart: 8 }}
             />
           )}
         </TouchableOpacity>

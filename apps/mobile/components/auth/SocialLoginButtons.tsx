@@ -150,7 +150,7 @@ function SocialButton({
             name={config.iconName}
             size={22}
             color={config.iconColor}
-            style={{ marginRight: 12 }}
+            style={{ marginEnd: 12 }}
           />
           <Text className={`text-base font-semibold ${config.textClass}`}>
             {config.label}

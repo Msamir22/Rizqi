@@ -67,7 +67,7 @@ export function DrilldownCategoryItem({
           name="chevron-forward"
           size={16}
           color={isDark ? palette.slate[500] : palette.slate[400]}
-          style={{ marginLeft: 4 }}
+          style={{ marginStart: 4 }}
         />
       )}
     </TouchableOpacity>

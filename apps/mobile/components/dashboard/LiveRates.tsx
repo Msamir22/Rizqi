@@ -276,7 +276,7 @@ export function LiveRates({
                       ? palette.nileGreen[500]
                       : palette.red[500]
                   }
-                  style={{ marginLeft: 2, marginRight: -4 }}
+                  style={{ marginStart: 2, marginEnd: -4 }}
                 />
               )}
             </View>

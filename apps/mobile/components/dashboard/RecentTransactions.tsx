@@ -75,7 +75,7 @@ function TransactionItem({
 
       {/* Separator */}
       {!isLast && (
-        <View className="ml-[52px] h-[1px] bg-slate-200 dark:bg-white/10" />
+        <View className="ms-[52px] h-[1px] bg-slate-200 dark:bg-white/10" />
       )}
     </View>
   );

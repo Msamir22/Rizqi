@@ -112,7 +112,7 @@ export function BudgetSpendingTrendChart({
 
   return (
     <View className="mb-6">
-      <Text className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold mb-2 ml-[22px]">
+      <Text className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold mb-2 ms-[22px]">
         Spending Trend
       </Text>
       <View className="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-slate-200 dark:border-slate-700">

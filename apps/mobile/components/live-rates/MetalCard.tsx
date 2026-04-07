@@ -80,7 +80,7 @@ export function MetalCard({
             name={trendIcon}
             size={16}
             color={trendColor}
-            style={{ marginLeft: -3, marginRight: -2 }}
+            style={{ marginStart: -3, marginEnd: -2 }}
           />
         )}
         <Text style={{ color: trendColor, fontSize: 11, fontWeight: "500" }}>

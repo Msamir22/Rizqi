@@ -96,7 +96,7 @@ export function CurrencyRow({
               name={trendIcon}
               size={20}
               color={trendIconColor}
-              style={{ marginRight: -2, marginLeft: -3 }}
+              style={{ marginEnd: -2, marginStart: -3 }}
             />
           )}
           <Text className={`text-[11px] font-medium ${changeColor}`}>

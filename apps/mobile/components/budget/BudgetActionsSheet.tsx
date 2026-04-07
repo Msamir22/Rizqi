@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: "600" as const,
-    marginLeft: 16,
+    marginStart: 16,
   },
   sublabel: {
     fontSize: 12,
@@ -239,7 +239,7 @@ export function BudgetActionsSheet({
                 size={22}
                 color={palette.gold[500]}
               />
-              <View style={{ flex: 1, marginLeft: 16 }}>
+              <View style={{ flex: 1, marginStart: 16 }}>
                 <Text
                   style={[
                     { fontSize: 16, fontWeight: "600" },

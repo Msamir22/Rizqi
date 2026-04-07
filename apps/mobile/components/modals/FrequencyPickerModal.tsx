@@ -120,7 +120,7 @@ export function FrequencyPickerModal({
                                 ? palette.nileGreen[400]
                                 : palette.nileGreen[600]
                             }
-                            style={{ marginRight: 6 }}
+                            style={{ marginEnd: 6 }}
                           />
                         )}
                         <Text

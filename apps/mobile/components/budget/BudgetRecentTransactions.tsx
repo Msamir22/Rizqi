@@ -41,7 +41,7 @@ export function BudgetRecentTransactions({
 
   return (
     <View className="mb-6">
-      <Text className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold mb-2 ml-[22px]">
+      <Text className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold mb-2 ms-[22px]">
         Recent Transactions
       </Text>
       <View className="rounded-3xl border p-5 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">

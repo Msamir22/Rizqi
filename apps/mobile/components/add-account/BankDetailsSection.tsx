@@ -49,7 +49,7 @@ export function BankDetailsSection({
           name="chevron-down"
           size={16}
           color={palette.slate[400]}
-          style={{ marginLeft: 6 }}
+          style={{ marginStart: 6 }}
         />
       </TouchableOpacity>
     );
@@ -69,7 +69,7 @@ export function BankDetailsSection({
           name="chevron-up"
           size={14}
           color={palette.slate[400]}
-          style={{ marginLeft: 4 }}
+          style={{ marginStart: 4 }}
         />
       </TouchableOpacity>
 

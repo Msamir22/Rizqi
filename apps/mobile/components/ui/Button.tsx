@@ -116,7 +116,7 @@ export function Button({
                     ? palette.slate[300]
                     : palette.slate[700]
               }
-              style={{ marginRight: 8 }}
+              style={{ marginEnd: 8 }}
             />
           )}
 
@@ -141,7 +141,7 @@ export function Button({
                     ? palette.slate[300]
                     : palette.slate[700]
               }
-              style={{ marginLeft: 8 }}
+              style={{ marginStart: 8 }}
             />
           )}
         </>
