@@ -20,6 +20,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { getCurrentUserId } from "@/services/supabase";
 import { changeLanguage } from "@/i18n/changeLanguage";
+import i18n from "@/i18n";
 import { useTranslation } from "react-i18next";
 import type { CurrencyType } from "@astik/db";
 import {
@@ -38,6 +39,7 @@ import React, {
   useState,
 } from "react";
 import {
+  Alert,
   Dimensions,
   StyleSheet,
   Text,
@@ -230,14 +232,47 @@ export default function OnboardingScreen(): React.JSX.Element | null {
     checkLanguagePreference();
   }, []);
 
+  const [isChangingLanguage, setIsChangingLanguage] = useState(false);
+  const isChangingLanguageRef = useRef(false);
+
   /** Called when user selects a language in the language picker phase. */
-  const handleLanguageSelected = useCallback((language: "en" | "ar"): void => {
-    void changeLanguage(language).catch(() => {
-      // TODO: Replace with structured logging (e.g., Sentry)
-      // Continue even if language change fails — English fallback
-    });
-    setPhase("carousel");
-  }, []);
+  const handleLanguageSelected = useCallback(
+    (language: "en" | "ar"): void => {
+      if (isChangingLanguageRef.current) {
+        return;
+      }
+      const run = async (): Promise<void> => {
+        isChangingLanguageRef.current = true;
+        setIsChangingLanguage(true);
+        try {
+          await changeLanguage(language);
+          setPhase("carousel");
+        } catch (error) {
+          console.error("changeLanguage failed in onboarding", error);
+          Alert.alert(
+            tCommon("language_change_error_title"),
+            tCommon("language_change_failed"),
+            [
+              { text: tCommon("cancel"), style: "cancel" },
+              {
+                text: tCommon("retry"),
+                onPress: () => {
+                  isChangingLanguageRef.current = false;
+                  setIsChangingLanguage(false);
+                  void run();
+                },
+              },
+            ]
+          );
+        } finally {
+          isChangingLanguageRef.current = false;
+          setIsChangingLanguage(false);
+        }
+      };
+      void run();
+    },
+    [tCommon]
+  );
 
   const handleNext = useCallback((): void => {
     if (currentIndex === slides.length - 1) {
@@ -288,7 +323,14 @@ export default function OnboardingScreen(): React.JSX.Element | null {
   // Phase: Language Picker
   // -----------------------------------------------------------------------
   if (phase === "language-picker") {
-    return <LanguagePickerStep onLanguageSelected={handleLanguageSelected} />;
+    const detected = i18n.language?.startsWith("ar") ? "ar" : "en";
+    return (
+      <LanguagePickerStep
+        onLanguageSelected={handleLanguageSelected}
+        initialLanguage={detected}
+        isChanging={isChangingLanguage}
+      />
+    );
   }
 
   // -----------------------------------------------------------------------

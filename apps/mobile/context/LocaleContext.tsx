@@ -30,8 +30,10 @@ const LocaleContext = createContext<LocaleContextType | undefined>(undefined);
  * Helper to get current language from i18n instance
  */
 function getCurrentI18nLanguage(): SupportedLanguage {
-  const lang = i18n.language;
-  return lang === "ar" ? "ar" : "en";
+  // i18n.language can be undefined if initI18n() failed before changeLanguage
+  // ran. Default to "en" so RTL/font logic stays consistent.
+  const lang = i18n.language ?? "en";
+  return lang.startsWith("ar") ? "ar" : "en";
 }
 
 /**

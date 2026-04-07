@@ -72,9 +72,19 @@ export default function RootLayout(): React.ReactNode {
   useEffect(() => {
     initI18n()
       .then(() => setI18nInitialized(true))
-      .catch((error) => {
+      .catch(async (error) => {
         // TODO: Replace with structured logging (e.g., Sentry)
         console.error("Failed to initialize i18n:", error);
+        // Ensure i18next has a valid language even on init failure so that
+        // downstream consumers (LocaleContext, RTL, fonts) behave consistently.
+        try {
+          await i18n.changeLanguage("en");
+        } catch (fallbackError) {
+          console.error(
+            "Failed to set i18n fallback language to 'en':",
+            fallbackError
+          );
+        }
         setI18nInitialized(true); // Continue even if i18n fails
       });
   }, []);

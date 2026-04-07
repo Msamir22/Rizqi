@@ -207,11 +207,27 @@ export default function SettingsScreen(): React.JSX.Element {
     setShowForceLogoutError(true);
   }, [database]);
 
+  const [isChangingLanguage, setIsChangingLanguage] = useState(false);
   const handleLanguageChange = useCallback(
     async (lang: "en" | "ar"): Promise<void> => {
-      await changeLanguage(lang);
+      if (isChangingLanguage) {
+        return;
+      }
+      setIsChangingLanguage(true);
+      try {
+        await changeLanguage(lang);
+      } catch (error) {
+        console.error("changeLanguage failed", error);
+        showToast({
+          type: "error",
+          title: t("language_change_error_title"),
+          message: t("language_change_failed"),
+        });
+      } finally {
+        setIsChangingLanguage(false);
+      }
     },
-    []
+    [isChangingLanguage, showToast, t]
   );
 
   return (
@@ -249,7 +265,7 @@ export default function SettingsScreen(): React.JSX.Element {
                   }
                   value={language}
                   onChange={(val) => {
-                    handleLanguageChange(val as "en" | "ar").catch(() => {});
+                    void handleLanguageChange(val as "en" | "ar");
                   }}
                   isOpen={isLanguageDropdownOpen}
                   onToggle={() => setIsLanguageDropdownOpen((prev) => !prev)}

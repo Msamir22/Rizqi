@@ -18,7 +18,13 @@ import { LinearGradient } from "expo-linear-gradient";
 import { getLocales } from "expo-localization";
 import { useTranslation } from "react-i18next";
 import React, { useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/context/ThemeContext";
 
@@ -27,8 +33,16 @@ import { useTheme } from "@/context/ThemeContext";
 // ---------------------------------------------------------------------------
 
 interface LanguagePickerStepProps {
-  /** Called when the user selects a language. */
+  /** Called when the user confirms a language. May be async. */
   readonly onLanguageSelected: (language: SupportedLanguage) => void;
+  /**
+   * Initial selection — should be the already-detected language so the
+   * picker reflects the current UI on first render. Falls back to the
+   * device locale, then "en".
+   */
+  readonly initialLanguage?: SupportedLanguage;
+  /** Disables interaction and shows a spinner while a change is in flight. */
+  readonly isChanging?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -61,20 +75,28 @@ const LANGUAGE_OPTIONS: ReadonlyArray<{
 
 export function LanguagePickerStep({
   onLanguageSelected,
+  initialLanguage,
+  isChanging = false,
 }: LanguagePickerStepProps): React.JSX.Element {
   const insets = useSafeAreaInsets();
   const { theme, isDark } = useTheme();
   const { t } = useTranslation("common");
   const deviceLanguage = getLocales()[0]?.languageCode;
   const [selectedCode, setSelectedCode] = useState<SupportedLanguage>(
-    deviceLanguage === "ar" ? "ar" : "en"
+    initialLanguage ?? (deviceLanguage === "ar" ? "ar" : "en")
   );
 
   const handleSelect = (code: SupportedLanguage): void => {
+    if (isChanging) {
+      return;
+    }
     setSelectedCode(code);
   };
 
   const handleContinue = (): void => {
+    if (isChanging) {
+      return;
+    }
     onLanguageSelected(selectedCode);
   };
 
@@ -154,19 +176,30 @@ export function LanguagePickerStep({
         <TouchableOpacity
           onPress={handleContinue}
           activeOpacity={0.8}
+          disabled={isChanging}
+          accessibilityState={{ disabled: isChanging, busy: isChanging }}
           className="rounded-2xl py-[18px] bg-nileGreen-500 w-full flex-row items-center justify-center"
           // eslint-disable-next-line react-native/no-inline-styles
-          style={[styles.shadow, { elevation: 4 }]}
+          style={[
+            styles.shadow,
+            { elevation: 4, opacity: isChanging ? 0.6 : 1 },
+          ]}
         >
-          <Text className="text-white font-semibold text-lg">
-            {t("continue")}
-          </Text>
-          <Ionicons
-            name="arrow-forward"
-            size={20}
-            color="white"
-            className="ms-2"
-          />
+          {isChanging ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <>
+              <Text className="text-white font-semibold text-lg">
+                {t("continue")}
+              </Text>
+              <Ionicons
+                name="arrow-forward"
+                size={20}
+                color="white"
+                className="ms-2"
+              />
+            </>
+          )}
         </TouchableOpacity>
       </View>
     </View>
