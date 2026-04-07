@@ -279,44 +279,51 @@ export default function AddTransaction(): React.ReactNode {
     return recurring.id;
   };
 
-  const validateAndCreateTransfer = async (amount: number): Promise<void> => {
+  const validateAndCreateTransfer = async (
+    amount: number
+  ): Promise<boolean> => {
     if (!toAccountId) {
       setFormErrors({ toAccountId: t("please_select_destination_account") });
       setIsSubmitting(false);
-      return;
+      return false;
     }
 
     if (!selectedAccount) {
       setFormErrors({ fromAccountId: t("please_select_source_account") });
       setIsSubmitting(false);
-      return;
+      return false;
     }
 
     const exchangeRate =
       targetAmount && amount ? parseFloat(targetAmount) / amount : undefined;
 
-    await createTransfer({
-      amount,
-      currency: selectedAccount.currency,
-      fromAccountId: selectedAccountId,
-      toAccountId,
-      date,
-      notes: note,
-      convertedAmount: targetAmount ? parseFloat(targetAmount) : undefined,
-      exchangeRate,
-    }).catch(() => {
+    try {
+      await createTransfer({
+        amount,
+        currency: selectedAccount.currency,
+        fromAccountId: selectedAccountId,
+        toAccountId,
+        date,
+        notes: note,
+        convertedAmount: targetAmount ? parseFloat(targetAmount) : undefined,
+        exchangeRate,
+      });
+    } catch (error) {
+      console.error("createTransfer failed", error);
       showToast({
         type: "error",
         title: t("update_error"),
         message: t("transaction_creation_failed"),
       });
-    });
+      return false;
+    }
 
     showToast({
       type: "success",
       title: t("transaction_created"),
       message: t("transaction_created_message"),
     });
+    return true;
   };
 
   const validateAndCreateTransaction = async ({
@@ -378,7 +385,10 @@ export default function AddTransaction(): React.ReactNode {
       let alertTriggered = false;
 
       if (type === "TRANSFER") {
-        await validateAndCreateTransfer(finalAmount);
+        const ok = await validateAndCreateTransfer(finalAmount);
+        if (!ok) {
+          return;
+        }
       } else {
         let linkedRecurringId: string | undefined;
 

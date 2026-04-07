@@ -94,6 +94,9 @@ export default function SettingsScreen(): React.JSX.Element {
         startSmsListener();
       } else {
         stopSmsListener();
+        // Auto Confirm has no effect without Live Detection — turn it off too
+        setAutoConfirmSms(false);
+        await setAutoConfirm(false);
       }
     },
     []
@@ -425,8 +428,11 @@ export default function SettingsScreen(): React.JSX.Element {
               />
             </View>
 
-            {/* Auto Confirm Toggle */}
-            <View className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800 mt-0.5">
+            {/* Auto Confirm Toggle — only effective when Live Detection is on */}
+            <View
+              style={{ opacity: liveDetection ? 1 : 0.5 }}
+              className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800 mt-0.5"
+            >
               <View className="flex-row items-center gap-3 flex-1">
                 <View className="w-8 bg-indigo-600 dark:bg-indigo-500 h-8 rounded-lg justify-center items-center">
                   <Ionicons name="checkmark-circle" size={20} color="#FFF" />
@@ -443,6 +449,7 @@ export default function SettingsScreen(): React.JSX.Element {
               <Switch
                 value={autoConfirmSms}
                 onValueChange={handleToggleAutoConfirm}
+                disabled={!liveDetection}
                 trackColor={{ false: "#767577", true: palette.nileGreen[500] }}
                 thumbColor={autoConfirmSms ? "#FFF" : "#f4f3f4"}
               />
