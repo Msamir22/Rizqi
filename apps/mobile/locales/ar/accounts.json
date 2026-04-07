@@ -1,9 +1,12 @@
 {
   "add_account": "إضافة حساب",
   "edit_account": "تعديل الحساب",
+  "account_count_zero": "لا حسابات",
   "account_count_one": "{{count}} حساب",
   "account_count_two": "{{count}} حسابان",
-  "account_count_other": "{{count}} حسابات",
+  "account_count_few": "{{count}} حسابات",
+  "account_count_many": "{{count}} حساباً",
+  "account_count_other": "{{count}} حساب",
   "balance": "الرصيد",
   "account_name": "اسم الحساب",
   "account_name_placeholder_cash": "مثال: محفظتي",

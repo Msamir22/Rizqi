@@ -219,15 +219,19 @@ export function isDateInCurrentMonth(date: Date): boolean {
 }
 
 export function formatDate(date: Date, format: DateFormat): string {
+  const isArabic = getCurrentLanguage() === "ar";
   const shortMonths = getShortMonths();
   const fullMonths = getFullMonths();
   const days = getDays();
+  // FR-009: Arabic mode uses Arabic month/day names + Arabic comma "،",
+  // but keeps Western Arabic numerals for digits (handled by template strings).
+  const comma = isArabic ? "،" : ",";
 
   switch (format) {
     case "MMM d, yyyy":
-      return `${shortMonths[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+      return `${shortMonths[date.getMonth()]} ${date.getDate()}${comma} ${date.getFullYear()}`;
     case "EEEE, MMM d":
-      return `${days[date.getDay()]}, ${shortMonths[date.getMonth()]} ${date.getDate()}`;
+      return `${days[date.getDay()]}${comma} ${shortMonths[date.getMonth()]} ${date.getDate()}`;
     case "MMM d":
       return `${shortMonths[date.getMonth()]} ${date.getDate()}`;
     case "MMMM yyyy":

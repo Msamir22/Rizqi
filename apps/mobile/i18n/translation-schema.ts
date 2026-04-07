@@ -13,15 +13,23 @@
 type SupportedLanguage = "en" | "ar";
 
 /**
- * Plural key suffixes for Arabic (simplified: singular, dual, other).
+ * Plural key suffixes covering full CLDR / i18next v4 categories.
  *
- * NOTE: In the actual JSON files, these are flattened per i18next v4 convention:
- * `key_one`, `key_two`, `key_other` (NOT nested objects).
- * This interface documents the expected plural variants for each key.
+ * Arabic uses all six forms (zero/one/two/few/many/other), English uses only
+ * one/other. With `compatibilityJSON: "v4"` enabled, i18next consults
+ * `Intl.PluralRules` and looks for these suffixed keys at the JSON level
+ * (e.g. `transaction_count_few`). Optional fields here let English JSON files
+ * omit categories that don't apply to the language.
+ *
+ * In JSON, keys are flattened as `<base>_one`, `<base>_few`, etc. — never
+ * nested objects.
  */
 interface PluralKeys {
+  readonly _zero?: string;
   readonly _one: string;
-  readonly _two: string;
+  readonly _two?: string;
+  readonly _few?: string;
+  readonly _many?: string;
   readonly _other: string;
 }
 

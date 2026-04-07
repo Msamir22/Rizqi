@@ -64,8 +64,40 @@ export const fontWeightToFamily: Record<string, string> = {
 };
 
 /**
- * Predefined Text Styles
- * Use these for consistent typography across the app
+ * Build locale-aware text styles using the current font family.
+ *
+ * Prefer this over the static `textStyles` constant when consuming via inline
+ * `style` props, so that Arabic mode renders Noto Sans Arabic instead of Inter.
+ *
+ * @example
+ *   const styles = getLocaleTextStyles();
+ *   <Text style={styles.h1}>...</Text>
+ */
+export function getLocaleTextStyles(): Record<string, TextStyle> {
+  const f = getLocaleFontFamily();
+  return {
+    h1: { fontFamily: f.bold, fontSize: 28, lineHeight: 34 },
+    h2: { fontFamily: f.bold, fontSize: 24, lineHeight: 30 },
+    h3: { fontFamily: f.semiBold, fontSize: 20, lineHeight: 26 },
+    h4: { fontFamily: f.semiBold, fontSize: 18, lineHeight: 24 },
+    bodyLarge: { fontFamily: f.regular, fontSize: 16, lineHeight: 24 },
+    body: { fontFamily: f.regular, fontSize: 14, lineHeight: 20 },
+    bodySmall: { fontFamily: f.regular, fontSize: 12, lineHeight: 16 },
+    label: { fontFamily: f.medium, fontSize: 14, lineHeight: 20 },
+    labelSmall: { fontFamily: f.medium, fontSize: 12, lineHeight: 16 },
+    caption: { fontFamily: f.regular, fontSize: 12, lineHeight: 16 },
+    captionSmall: { fontFamily: f.regular, fontSize: 10, lineHeight: 14 },
+    amount: { fontFamily: f.medium, fontSize: 16, lineHeight: 22 },
+    amountLarge: { fontFamily: f.bold, fontSize: 32, lineHeight: 40 },
+    button: { fontFamily: f.semiBold, fontSize: 14, lineHeight: 20 },
+    logo: { fontFamily: f.bold, fontSize: 20, lineHeight: 24 },
+  };
+}
+
+/**
+ * Predefined Text Styles (Inter only — DEPRECATED for direct use).
+ * Prefer `getLocaleTextStyles()` so Arabic mode picks up Noto Sans Arabic.
+ * Kept for backward compatibility / non-locale-sensitive usage.
  */
 export const textStyles: Record<string, TextStyle> = {
   // Headings
