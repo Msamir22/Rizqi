@@ -64,134 +64,85 @@ export const fontWeightToFamily: Record<string, string> = {
 };
 
 /**
- * Build locale-aware text styles using the current font family.
- *
- * Prefer this over the static `textStyles` constant when consuming via inline
- * `style` props, so that Arabic mode renders Noto Sans Arabic instead of Inter.
- *
- * @example
- *   const styles = getLocaleTextStyles();
- *   <Text style={styles.h1}>...</Text>
+ * Text style keys for type-safe access.
  */
-export function getLocaleTextStyles(): Record<string, TextStyle> {
-  const f = getLocaleFontFamily();
+export interface TextStyles {
+  readonly h1: TextStyle;
+  readonly h2: TextStyle;
+  readonly h3: TextStyle;
+  readonly h4: TextStyle;
+  readonly bodyLarge: TextStyle;
+  readonly body: TextStyle;
+  readonly bodySmall: TextStyle;
+  readonly label: TextStyle;
+  readonly labelSmall: TextStyle;
+  readonly caption: TextStyle;
+  readonly captionSmall: TextStyle;
+  readonly amount: TextStyle;
+  readonly amountLarge: TextStyle;
+  readonly button: TextStyle;
+  readonly logo: TextStyle;
+}
+
+/**
+ * Get locale-aware predefined text styles.
+ * Uses `getLocaleFontFamily()` at call time so Arabic users get Noto Sans Arabic.
+ */
+export function getTextStyles(): TextStyles {
+  const font = getLocaleFontFamily();
+
   return {
-    h1: { fontFamily: f.bold, fontSize: 28, lineHeight: 34 },
-    h2: { fontFamily: f.bold, fontSize: 24, lineHeight: 30 },
-    h3: { fontFamily: f.semiBold, fontSize: 20, lineHeight: 26 },
-    h4: { fontFamily: f.semiBold, fontSize: 18, lineHeight: 24 },
-    bodyLarge: { fontFamily: f.regular, fontSize: 16, lineHeight: 24 },
-    body: { fontFamily: f.regular, fontSize: 14, lineHeight: 20 },
-    bodySmall: { fontFamily: f.regular, fontSize: 12, lineHeight: 16 },
-    label: { fontFamily: f.medium, fontSize: 14, lineHeight: 20 },
-    labelSmall: { fontFamily: f.medium, fontSize: 12, lineHeight: 16 },
-    caption: { fontFamily: f.regular, fontSize: 12, lineHeight: 16 },
-    captionSmall: { fontFamily: f.regular, fontSize: 10, lineHeight: 14 },
-    amount: { fontFamily: f.medium, fontSize: 16, lineHeight: 22 },
-    amountLarge: { fontFamily: f.bold, fontSize: 32, lineHeight: 40 },
-    button: { fontFamily: f.semiBold, fontSize: 14, lineHeight: 20 },
-    logo: { fontFamily: f.bold, fontSize: 20, lineHeight: 24 },
+    // Headings
+    h1: { fontFamily: font.bold, fontSize: 28, lineHeight: 34 },
+    h2: { fontFamily: font.bold, fontSize: 24, lineHeight: 30 },
+    h3: { fontFamily: font.semiBold, fontSize: 20, lineHeight: 26 },
+    h4: { fontFamily: font.semiBold, fontSize: 18, lineHeight: 24 },
+
+    // Body text
+    bodyLarge: { fontFamily: font.regular, fontSize: 16, lineHeight: 24 },
+    body: { fontFamily: font.regular, fontSize: 14, lineHeight: 20 },
+    bodySmall: { fontFamily: font.regular, fontSize: 12, lineHeight: 16 },
+
+    // Labels
+    label: { fontFamily: font.medium, fontSize: 14, lineHeight: 20 },
+    labelSmall: { fontFamily: font.medium, fontSize: 12, lineHeight: 16 },
+
+    // Captions
+    caption: { fontFamily: font.regular, fontSize: 12, lineHeight: 16 },
+    captionSmall: { fontFamily: font.regular, fontSize: 10, lineHeight: 14 },
+
+    // Special styles
+    amount: { fontFamily: font.medium, fontSize: 16, lineHeight: 22 },
+    amountLarge: { fontFamily: font.bold, fontSize: 32, lineHeight: 40 },
+    button: { fontFamily: font.semiBold, fontSize: 14, lineHeight: 20 },
+
+    // Brand
+    logo: { fontFamily: font.bold, fontSize: 20, lineHeight: 24 },
   };
 }
 
 /**
- * Predefined Text Styles (Inter only — DEPRECATED for direct use).
- * Prefer `getLocaleTextStyles()` so Arabic mode picks up Noto Sans Arabic.
- * Kept for backward compatibility / non-locale-sensitive usage.
+ * Static text styles using Inter font family.
+ * @deprecated Use `getTextStyles()` for locale-aware font selection.
  */
-export const textStyles: Record<string, TextStyle> = {
-  // Headings
-  h1: {
-    fontFamily: fontFamily.bold,
-    fontSize: 28,
-    lineHeight: 34,
-  },
-
-  h2: {
-    fontFamily: fontFamily.bold,
-    fontSize: 24,
-    lineHeight: 30,
-  },
-
-  h3: {
-    fontFamily: fontFamily.semiBold,
-    fontSize: 20,
-    lineHeight: 26,
-  },
-
-  h4: {
-    fontFamily: fontFamily.semiBold,
-    fontSize: 18,
-    lineHeight: 24,
-  },
-
-  // Body text
-  bodyLarge: {
-    fontFamily: fontFamily.regular,
-    fontSize: 16,
-    lineHeight: 24,
-  },
-
-  body: {
-    fontFamily: fontFamily.regular,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-
-  bodySmall: {
-    fontFamily: fontFamily.regular,
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  // Labels
-  label: {
-    fontFamily: fontFamily.medium,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-
-  labelSmall: {
-    fontFamily: fontFamily.medium,
-    fontSize: 12,
-    lineHeight: 16,
-  },
-
-  // Captions
-  caption: {
-    fontFamily: fontFamily.regular,
-    fontSize: 12,
-    lineHeight: 16,
-  },
-
+export const textStyles: TextStyles = {
+  h1: { fontFamily: fontFamily.bold, fontSize: 28, lineHeight: 34 },
+  h2: { fontFamily: fontFamily.bold, fontSize: 24, lineHeight: 30 },
+  h3: { fontFamily: fontFamily.semiBold, fontSize: 20, lineHeight: 26 },
+  h4: { fontFamily: fontFamily.semiBold, fontSize: 18, lineHeight: 24 },
+  bodyLarge: { fontFamily: fontFamily.regular, fontSize: 16, lineHeight: 24 },
+  body: { fontFamily: fontFamily.regular, fontSize: 14, lineHeight: 20 },
+  bodySmall: { fontFamily: fontFamily.regular, fontSize: 12, lineHeight: 16 },
+  label: { fontFamily: fontFamily.medium, fontSize: 14, lineHeight: 20 },
+  labelSmall: { fontFamily: fontFamily.medium, fontSize: 12, lineHeight: 16 },
+  caption: { fontFamily: fontFamily.regular, fontSize: 12, lineHeight: 16 },
   captionSmall: {
     fontFamily: fontFamily.regular,
     fontSize: 10,
     lineHeight: 14,
   },
-
-  // Special styles
-  amount: {
-    fontFamily: fontFamily.medium,
-    fontSize: 16,
-    lineHeight: 22,
-  },
-
-  amountLarge: {
-    fontFamily: fontFamily.bold,
-    fontSize: 32,
-    lineHeight: 40,
-  },
-
-  button: {
-    fontFamily: fontFamily.semiBold,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-
-  // Brand
-  logo: {
-    fontFamily: fontFamily.bold,
-    fontSize: 20,
-    lineHeight: 24,
-  },
-} as const;
+  amount: { fontFamily: fontFamily.medium, fontSize: 16, lineHeight: 22 },
+  amountLarge: { fontFamily: fontFamily.bold, fontSize: 32, lineHeight: 40 },
+  button: { fontFamily: fontFamily.semiBold, fontSize: 14, lineHeight: 20 },
+  logo: { fontFamily: fontFamily.bold, fontSize: 20, lineHeight: 24 },
+};

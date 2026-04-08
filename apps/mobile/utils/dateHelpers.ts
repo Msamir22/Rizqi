@@ -218,24 +218,39 @@ export function isDateInCurrentMonth(date: Date): boolean {
   );
 }
 
+/**
+ * Convert Western digits (0-9) to Arabic-Indic numerals and Latin comma to
+ * Arabic comma when the current language is Arabic.
+ */
+function localizeArabicOutput(str: string): string {
+  if (getCurrentLanguage() !== "ar") return str;
+  return str
+    .replace(/[0-9]/g, (d) => String.fromCharCode(0x0660 + Number(d)))
+    .replace(/,/g, "،");
+}
+
 export function formatDate(date: Date, format: DateFormat): string {
-  const isArabic = getCurrentLanguage() === "ar";
   const shortMonths = getShortMonths();
   const fullMonths = getFullMonths();
   const days = getDays();
-  // FR-009: Arabic mode uses Arabic month/day names + Arabic comma "،",
-  // but keeps Western Arabic numerals for digits (handled by template strings).
-  const comma = isArabic ? "،" : ",";
 
   switch (format) {
     case "MMM d, yyyy":
-      return `${shortMonths[date.getMonth()]} ${date.getDate()}${comma} ${date.getFullYear()}`;
+      return localizeArabicOutput(
+        `${shortMonths[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`
+      );
     case "EEEE, MMM d":
-      return `${days[date.getDay()]}${comma} ${shortMonths[date.getMonth()]} ${date.getDate()}`;
+      return localizeArabicOutput(
+        `${days[date.getDay()]}, ${shortMonths[date.getMonth()]} ${date.getDate()}`
+      );
     case "MMM d":
-      return `${shortMonths[date.getMonth()]} ${date.getDate()}`;
+      return localizeArabicOutput(
+        `${shortMonths[date.getMonth()]} ${date.getDate()}`
+      );
     case "MMMM yyyy":
-      return `${fullMonths[date.getMonth()]} ${date.getFullYear()}`;
+      return localizeArabicOutput(
+        `${fullMonths[date.getMonth()]} ${date.getFullYear()}`
+      );
     default:
       return date.toDateString();
   }
