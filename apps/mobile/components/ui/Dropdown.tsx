@@ -31,6 +31,7 @@ interface DropdownBaseProps<T> {
   onChange: (value: T) => void;
   className?: string;
   placeholder?: string;
+  disabled?: boolean;
 }
 
 interface DropdownInlineProps<T> extends DropdownBaseProps<T> {
@@ -226,18 +227,20 @@ export function Dropdown<T extends string | number>({
   className = "",
   placeholder = "Select...",
   useModal = false,
+  disabled = false,
 }: DropdownProps<T>): React.JSX.Element {
   const { isDark } = useTheme();
   const selectedItem = items.find((item) => item.value === value);
 
   return (
-    <View className={`mb-3 ${className}`}>
+    <View className={`mb-3 ${className} ${disabled ? "opacity-50" : ""}`}>
       <Text className="input-label mb-2">{label}</Text>
 
       <View className="rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800 overflow-hidden shadow-sm">
         <TouchableOpacity
           onPress={onToggle}
           activeOpacity={0.7}
+          disabled={disabled}
           className="p-4"
         >
           <View className="flex-row items-center justify-between">

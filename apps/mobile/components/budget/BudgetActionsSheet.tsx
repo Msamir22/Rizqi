@@ -10,6 +10,8 @@
  * - Uses absolute-positioned overlay instead of React Native Modal
  *   because Modal has a known layout collapse issue on Android
  *   with NativeWind v4 in this context.
+ * - Delete confirmation also uses absolute overlay (not ConfirmationModal)
+ *   for the same NativeWind v4 reason — Modal renders invisibly on this screen.
  * - Pattern: Overlay Component with action dispatch
  * - SOLID: SRP — only handles action selection, delegates execution to parent.
  *
@@ -30,7 +32,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
-import { ConfirmationModal } from "@/components/modals/ConfirmationModal";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -120,6 +121,57 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: "#fff",
   },
+  // Delete confirmation overlay styles (absolute overlay, not Modal)
+  confirmOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1000,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  confirmBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+  },
+  confirmCardLight: {
+    backgroundColor: palette.slate[25],
+    borderRadius: 20,
+    padding: 24,
+    marginHorizontal: 32,
+    maxWidth: 340,
+  },
+  confirmCardDark: {
+    backgroundColor: palette.slate[800],
+    borderRadius: 20,
+    padding: 24,
+    marginHorizontal: 32,
+    maxWidth: 340,
+  },
+  confirmTitle: {
+    fontSize: 18,
+    fontWeight: "700" as const,
+    textAlign: "center" as const,
+    marginBottom: 8,
+  },
+  confirmMessage: {
+    fontSize: 14,
+    textAlign: "center" as const,
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  confirmButtons: {
+    flexDirection: "row" as const,
+    gap: 12,
+  },
+  confirmButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center" as const,
+  },
+  confirmButtonLabel: {
+    fontSize: 15,
+    fontWeight: "600" as const,
+  },
 });
 
 // ---------------------------------------------------------------------------
@@ -141,24 +193,27 @@ export function BudgetActionsSheet({
 
   // Dismiss on Android Back button
   useEffect(() => {
-    if (!visible) return;
+    if (!visible && !showDeleteConfirm) return;
 
     const subscription = BackHandler.addEventListener(
       "hardwareBackPress",
       () => {
-        onClose();
+        if (showDeleteConfirm) {
+          setShowDeleteConfirm(false);
+        } else {
+          onClose();
+        }
         return true; // Consume the event
       }
     );
 
     return () => subscription.remove();
-  }, [visible, onClose]);
+  }, [visible, showDeleteConfirm, onClose]);
 
   const handleDelete = useCallback((): void => {
     setShowDeleteConfirm(false);
-    onClose();
     void onAction("delete");
-  }, [onClose, onAction]);
+  }, [onAction]);
 
   const handlePauseToggle = useCallback(async (): Promise<void> => {
     if (isToggling) return;
@@ -314,16 +369,82 @@ export function BudgetActionsSheet({
         </View>
       )}
 
-      {/* Delete Confirmation — this one uses Modal (ConfirmationModal works fine) */}
-      <ConfirmationModal
-        visible={showDeleteConfirm}
-        title={t("delete_budget_title")}
-        message={t("delete_budget_message")}
-        confirmLabel={tCommon("delete")}
-        variant="danger"
-        onConfirm={handleDelete}
-        onCancel={() => setShowDeleteConfirm(false)}
-      />
+      {/* Delete Confirmation — absolute overlay (not Modal) to avoid NativeWind v4
+          race condition that renders Modal content invisible on this screen */}
+      {showDeleteConfirm && (
+        <View style={styles.confirmOverlay}>
+          <TouchableWithoutFeedback
+            onPress={() => setShowDeleteConfirm(false)}
+          >
+            <View style={styles.confirmBackdrop} />
+          </TouchableWithoutFeedback>
+
+          <View
+            style={[
+              isDark ? styles.confirmCardDark : styles.confirmCardLight,
+              { width: "85%" },
+            ]}
+          >
+            <Text style={[styles.confirmTitle, { color: textColor }]}>
+              {t("delete_budget_title")}
+            </Text>
+            <Text
+              style={[
+                styles.confirmMessage,
+                { color: isDark ? palette.slate[400] : palette.slate[500] },
+              ]}
+            >
+              {t("delete_budget_message")}
+            </Text>
+
+            <View style={styles.confirmButtons}>
+              <TouchableOpacity
+                onPress={() => setShowDeleteConfirm(false)}
+                activeOpacity={0.7}
+                style={[
+                  styles.confirmButton,
+                  {
+                    backgroundColor: isDark
+                      ? palette.slate[700]
+                      : palette.slate[100],
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.confirmButtonLabel,
+                    {
+                      color: isDark
+                        ? palette.slate[300]
+                        : palette.slate[600],
+                    },
+                  ]}
+                >
+                  {tCommon("cancel")}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleDelete}
+                activeOpacity={0.7}
+                style={[
+                  styles.confirmButton,
+                  { backgroundColor: palette.red[500] },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.confirmButtonLabel,
+                    { color: palette.slate[25] },
+                  ]}
+                >
+                  {tCommon("delete")}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </>
   );
 }

@@ -38,6 +38,7 @@ import React, {
   useState,
 } from "react";
 import {
+  Alert,
   Dimensions,
   StyleSheet,
   Text,
@@ -125,7 +126,7 @@ export default function OnboardingScreen(): React.JSX.Element | null {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme, isDark } = useTheme();
-  const { t: tOnboarding } = useTranslation("onboarding");
+  const { t: tOnboarding, i18n } = useTranslation("onboarding");
   const { t: tCommon } = useTranslation("common");
   const carouselRef = useRef<ICarouselInstance>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -231,13 +232,29 @@ export default function OnboardingScreen(): React.JSX.Element | null {
   }, []);
 
   /** Called when user selects a language in the language picker phase. */
-  const handleLanguageSelected = useCallback((language: "en" | "ar"): void => {
-    void changeLanguage(language).catch(() => {
-      // TODO: Replace with structured logging (e.g., Sentry)
-      // Continue even if language change fails — English fallback
-    });
-    setPhase("carousel");
-  }, []);
+  const [isChangingLanguage, setIsChangingLanguage] = useState(false);
+
+  const handleLanguageSelected = useCallback(
+    async (language: "en" | "ar"): Promise<void> => {
+      if (isChangingLanguage) return;
+      setIsChangingLanguage(true);
+      try {
+        await changeLanguage(language);
+        setPhase("carousel");
+      } catch (error) {
+        // TODO: Replace with structured logging (e.g., Sentry)
+        console.error("Failed to change language:", error);
+        Alert.alert(
+          tCommon("error"),
+          tCommon("language_change_failed"),
+          [{ text: tCommon("ok") }]
+        );
+      } finally {
+        setIsChangingLanguage(false);
+      }
+    },
+    [isChangingLanguage, tCommon]
+  );
 
   const handleNext = useCallback((): void => {
     if (currentIndex === slides.length - 1) {
@@ -288,7 +305,13 @@ export default function OnboardingScreen(): React.JSX.Element | null {
   // Phase: Language Picker
   // -----------------------------------------------------------------------
   if (phase === "language-picker") {
-    return <LanguagePickerStep onLanguageSelected={handleLanguageSelected} />;
+    return (
+      <LanguagePickerStep
+        onLanguageSelected={handleLanguageSelected}
+        isLoading={isChangingLanguage}
+        initialLanguage={i18n.language === "ar" ? "ar" : "en"}
+      />
+    );
   }
 
   // -----------------------------------------------------------------------

@@ -18,7 +18,13 @@ import { LinearGradient } from "expo-linear-gradient";
 import { getLocales } from "expo-localization";
 import { useTranslation } from "react-i18next";
 import React, { useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/context/ThemeContext";
 
@@ -29,6 +35,10 @@ import { useTheme } from "@/context/ThemeContext";
 interface LanguagePickerStepProps {
   /** Called when the user selects a language. */
   readonly onLanguageSelected: (language: SupportedLanguage) => void;
+  /** Whether a language change is in progress. */
+  readonly isLoading?: boolean;
+  /** Pre-selected language from i18n context. Falls back to device locale. */
+  readonly initialLanguage?: SupportedLanguage;
 }
 
 // ---------------------------------------------------------------------------
@@ -61,13 +71,15 @@ const LANGUAGE_OPTIONS: ReadonlyArray<{
 
 export function LanguagePickerStep({
   onLanguageSelected,
+  isLoading = false,
+  initialLanguage,
 }: LanguagePickerStepProps): React.JSX.Element {
   const insets = useSafeAreaInsets();
   const { theme, isDark } = useTheme();
   const { t } = useTranslation("common");
   const deviceLanguage = getLocales()[0]?.languageCode;
   const [selectedCode, setSelectedCode] = useState<SupportedLanguage>(
-    deviceLanguage === "ar" ? "ar" : "en"
+    initialLanguage ?? (deviceLanguage === "ar" ? "ar" : "en")
   );
 
   const handleSelect = (code: SupportedLanguage): void => {
@@ -154,19 +166,26 @@ export function LanguagePickerStep({
         <TouchableOpacity
           onPress={handleContinue}
           activeOpacity={0.8}
+          disabled={isLoading}
           className="rounded-2xl py-[18px] bg-nileGreen-500 w-full flex-row items-center justify-center"
           // eslint-disable-next-line react-native/no-inline-styles
-          style={[styles.shadow, { elevation: 4 }]}
+          style={[styles.shadow, { elevation: 4, opacity: isLoading ? 0.6 : 1 }]}
         >
-          <Text className="text-white font-semibold text-lg">
-            {t("continue")}
-          </Text>
-          <Ionicons
-            name="arrow-forward"
-            size={20}
-            color="white"
-            className="ms-2"
-          />
+          {isLoading ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <>
+              <Text className="text-white font-semibold text-lg">
+                {t("continue")}
+              </Text>
+              <Ionicons
+                name="arrow-forward"
+                size={20}
+                color="white"
+                className="ms-2"
+              />
+            </>
+          )}
         </TouchableOpacity>
       </View>
     </View>

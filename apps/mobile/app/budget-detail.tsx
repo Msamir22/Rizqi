@@ -84,13 +84,25 @@ export default function BudgetDetailScreen(): React.JSX.Element {
             });
             break;
           case "delete":
-            await deleteBudget(budget.id);
-            showToast({
-              type: "success",
-              title: tCommon("delete"),
-              message: t("budget_deleted"),
-            });
-            router.back();
+            try {
+              await deleteBudget(budget.id);
+              showToast({
+                type: "success",
+                title: tCommon("delete"),
+                message: t("budget_deleted"),
+              });
+              router.back();
+            } catch (deleteErr) {
+              // Close the actions sheet so the error toast is clearly visible
+              setShowActions(false);
+              showToast({
+                type: "error",
+                title: tCommon("error"),
+                message: t("budget_delete_failed"),
+              });
+              // TODO: Replace with structured logging (e.g., Sentry)
+              console.error("Failed to delete budget:", deleteErr);
+            }
             break;
         }
       } catch (err) {
@@ -146,53 +158,57 @@ export default function BudgetDetailScreen(): React.JSX.Element {
 
   return (
     <View className="flex-1">
-      <PageHeader
-        title={budget.name}
-        centerTitle
-        showBackButton={true}
-        showDrawer={false}
-        rightAction={{
-          icon: "ellipsis-horizontal",
-          transparent: true,
-          onPress: () => setShowActions(true),
-        }}
-      />
-
-      <ScrollView
-        className="flex-1 px-5 pt-4"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
-      >
-        {/* Overview Card */}
-        <BudgetDetailOverview
-          metrics={metrics}
-          currency={effectiveCurrency}
-          daysLeft={daysLeft}
+      {/* Content layer — z-index 0 ensures actions overlay renders above */}
+      <View style={{ zIndex: 0, flex: 1 }}>
+        <PageHeader
+          title={budget.name}
+          centerTitle
+          showBackButton={true}
+          showDrawer={false}
+          rightAction={{
+            icon: "ellipsis-horizontal",
+            transparent: true,
+            onPress: () => setShowActions(true),
+          }}
         />
 
-        {/* Spending Trend Chart */}
-        {weeklySpending.length > 0 ? (
-          <BudgetSpendingTrendChart
-            data={weeklySpending.map((w) => ({
-              label: w.bucket.label,
-              amount: w.amount,
-            }))}
+        <ScrollView
+          className="flex-1 px-5 pt-4"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+        >
+          {/* Overview Card */}
+          <BudgetDetailOverview
+            metrics={metrics}
             currency={effectiveCurrency}
-            weeklyAverage={budget.amount / Math.max(weeklySpending.length, 1)}
+            daysLeft={daysLeft}
+            isPaused={budget.isPaused}
           />
-        ) : null}
 
-        {/* Subcategory Breakdown */}
-        {budget.isCategoryBudget && (
-          <SubcategoryBreakdown
-            data={subcategoryBreakdown}
-            currency={effectiveCurrency}
-          />
-        )}
+          {/* Spending Trend Chart */}
+          {weeklySpending.length > 0 ? (
+            <BudgetSpendingTrendChart
+              data={weeklySpending.map((w) => ({
+                label: w.bucket.label,
+                amount: w.amount,
+              }))}
+              currency={effectiveCurrency}
+              weeklyAverage={budget.amount / Math.max(weeklySpending.length, 1)}
+            />
+          ) : null}
 
-        {/* Recent Transactions */}
-        <BudgetRecentTransactions transactions={recentTransactions} />
-      </ScrollView>
+          {/* Subcategory Breakdown */}
+          {budget.isCategoryBudget && (
+            <SubcategoryBreakdown
+              data={subcategoryBreakdown}
+              currency={effectiveCurrency}
+            />
+          )}
+
+          {/* Recent Transactions */}
+          <BudgetRecentTransactions transactions={recentTransactions} />
+        </ScrollView>
+      </View>
 
       {/* Actions Sheet — uses absolute overlay, not Modal */}
       <BudgetActionsSheet

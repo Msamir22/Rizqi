@@ -295,28 +295,31 @@ export default function AddTransaction(): React.ReactNode {
     const exchangeRate =
       targetAmount && amount ? parseFloat(targetAmount) / amount : undefined;
 
-    await createTransfer({
-      amount,
-      currency: selectedAccount.currency,
-      fromAccountId: selectedAccountId,
-      toAccountId,
-      date,
-      notes: note,
-      convertedAmount: targetAmount ? parseFloat(targetAmount) : undefined,
-      exchangeRate,
-    }).catch(() => {
+    try {
+      await createTransfer({
+        amount,
+        currency: selectedAccount.currency,
+        fromAccountId: selectedAccountId,
+        toAccountId,
+        date,
+        notes: note,
+        convertedAmount: targetAmount ? parseFloat(targetAmount) : undefined,
+        exchangeRate,
+      });
+
+      showToast({
+        type: "success",
+        title: t("transaction_created"),
+        message: t("transaction_created_message"),
+      });
+    } catch (error: unknown) {
       showToast({
         type: "error",
         title: t("update_error"),
         message: t("transaction_creation_failed"),
       });
-    });
-
-    showToast({
-      type: "success",
-      title: t("transaction_created"),
-      message: t("transaction_created_message"),
-    });
+      throw error;
+    }
   };
 
   const validateAndCreateTransaction = async ({

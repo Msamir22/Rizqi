@@ -94,6 +94,8 @@ export default function SettingsScreen(): React.JSX.Element {
         startSmsListener();
       } else {
         stopSmsListener();
+        setAutoConfirmSms(false);
+        await setAutoConfirm(false);
       }
     },
     []
@@ -207,11 +209,27 @@ export default function SettingsScreen(): React.JSX.Element {
     setShowForceLogoutError(true);
   }, [database]);
 
+  const [isChangingLanguage, setIsChangingLanguage] = useState(false);
+
   const handleLanguageChange = useCallback(
     async (lang: "en" | "ar"): Promise<void> => {
-      await changeLanguage(lang);
+      if (isChangingLanguage) return;
+      setIsChangingLanguage(true);
+      try {
+        await changeLanguage(lang);
+      } catch (error) {
+        // TODO: Replace with structured logging (e.g., Sentry)
+        console.error("Failed to change language:", error);
+        showToast({
+          type: "error",
+          title: tCommon("error"),
+          message: t("language_change_failed"),
+        });
+      } finally {
+        setIsChangingLanguage(false);
+      }
     },
-    []
+    [isChangingLanguage, showToast, t, tCommon]
   );
 
   return (
@@ -249,8 +267,9 @@ export default function SettingsScreen(): React.JSX.Element {
                   }
                   value={language}
                   onChange={(val) => {
-                    handleLanguageChange(val as "en" | "ar").catch(() => {});
+                    void handleLanguageChange(val as "en" | "ar");
                   }}
+                  disabled={isChangingLanguage}
                   isOpen={isLanguageDropdownOpen}
                   onToggle={() => setIsLanguageDropdownOpen((prev) => !prev)}
                 />
@@ -426,7 +445,7 @@ export default function SettingsScreen(): React.JSX.Element {
             </View>
 
             {/* Auto Confirm Toggle */}
-            <View className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800 mt-0.5">
+            <View className={`flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800 mt-0.5 ${!liveDetection ? "opacity-50" : ""}`}>
               <View className="flex-row items-center gap-3 flex-1">
                 <View className="w-8 bg-indigo-600 dark:bg-indigo-500 h-8 rounded-lg justify-center items-center">
                   <Ionicons name="checkmark-circle" size={20} color="#FFF" />
@@ -443,6 +462,7 @@ export default function SettingsScreen(): React.JSX.Element {
               <Switch
                 value={autoConfirmSms}
                 onValueChange={handleToggleAutoConfirm}
+                disabled={!liveDetection}
                 trackColor={{ false: "#767577", true: palette.nileGreen[500] }}
                 thumbColor={autoConfirmSms ? "#FFF" : "#f4f3f4"}
               />

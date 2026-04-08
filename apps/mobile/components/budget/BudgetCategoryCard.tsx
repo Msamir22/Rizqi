@@ -20,6 +20,7 @@ import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Text, TouchableOpacity, View, type ViewStyle } from "react-native";
+import { useTranslation } from "react-i18next";
 import { CircularProgress } from "./CircularProgress";
 
 // ---------------------------------------------------------------------------
@@ -74,6 +75,7 @@ export function BudgetCategoryCard({
   currency,
   onPress,
 }: BudgetCategoryCardProps): React.JSX.Element {
+  const { t } = useTranslation("budgets");
   const { budget, metrics } = data;
   const effectiveCurrency = budget.currency ?? currency;
   const isPaused = budget.status === "PAUSED";
@@ -116,8 +118,14 @@ export function BudgetCategoryCard({
           showPercentage
         />
 
-        {/* S-06: Warning badge for budgets at or above threshold */}
-        {isWarning && !isPaused ? (
+        {/* Paused badge or warning icon */}
+        {isPaused ? (
+          <View className="bg-slate-500 rounded-full px-2 py-0.5">
+            <Text className="text-[10px] font-medium text-white">
+              {t("paused")}
+            </Text>
+          </View>
+        ) : isWarning ? (
           <Ionicons
             name="warning"
             size={18}

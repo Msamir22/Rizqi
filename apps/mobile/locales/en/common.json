@@ -87,5 +87,7 @@
   "vs_currency": "vs {{currency}}",
   "search_currencies": "Search currencies...",
   "see_all_currencies": "See all currencies →",
-  "show_less": "Show less ↑"
+  "show_less": "Show less ↑",
+  "ok": "OK",
+  "language_change_failed": "Failed to change language. Please try again."
 }

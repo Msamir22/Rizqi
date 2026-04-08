@@ -136,27 +136,19 @@ export function TopNav({
             />
           </TouchableOpacity>
 
-          {/* Notification Button */}
+          {/* Notification Button — disabled until feature is implemented */}
           <TouchableOpacity
             accessibilityLabel={t("notifications")}
             accessibilityRole="button"
-            style={{ backgroundColor: theme.surfaceHighlight }}
+            accessibilityState={{ disabled: true }}
+            disabled
+            style={{ backgroundColor: theme.surfaceHighlight, opacity: 0.5 }}
             className="w-10 h-10 rounded-full items-center justify-center relative"
-            onPress={() => {
-              // TODO: Implement notifications navigation
-            }}
           >
             <Ionicons
               name="notifications-outline"
               size={22}
               color={theme.text.secondary}
-            />
-            {/* Notification Badge */}
-            <View
-              style={{
-                borderColor: theme.surface,
-              }}
-              className="absolute top-2 end-2 w-2 h-2 rounded-full border bg-red-500 dark:bg-red-600"
             />
           </TouchableOpacity>
         </View>
