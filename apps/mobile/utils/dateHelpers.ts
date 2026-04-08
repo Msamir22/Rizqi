@@ -236,13 +236,21 @@ export function formatDate(date: Date, format: DateFormat): string {
 
   switch (format) {
     case "MMM d, yyyy":
-      return localizeArabicOutput(`${shortMonths[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`);
+      return localizeArabicOutput(
+        `${shortMonths[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`
+      );
     case "EEEE, MMM d":
-      return localizeArabicOutput(`${days[date.getDay()]}, ${shortMonths[date.getMonth()]} ${date.getDate()}`);
+      return localizeArabicOutput(
+        `${days[date.getDay()]}, ${shortMonths[date.getMonth()]} ${date.getDate()}`
+      );
     case "MMM d":
-      return localizeArabicOutput(`${shortMonths[date.getMonth()]} ${date.getDate()}`);
+      return localizeArabicOutput(
+        `${shortMonths[date.getMonth()]} ${date.getDate()}`
+      );
     case "MMMM yyyy":
-      return localizeArabicOutput(`${fullMonths[date.getMonth()]} ${date.getFullYear()}`);
+      return localizeArabicOutput(
+        `${fullMonths[date.getMonth()]} ${date.getFullYear()}`
+      );
     default:
       return date.toDateString();
   }

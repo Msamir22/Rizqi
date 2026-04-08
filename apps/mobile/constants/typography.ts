@@ -136,7 +136,11 @@ export const textStyles: TextStyles = {
   label: { fontFamily: fontFamily.medium, fontSize: 14, lineHeight: 20 },
   labelSmall: { fontFamily: fontFamily.medium, fontSize: 12, lineHeight: 16 },
   caption: { fontFamily: fontFamily.regular, fontSize: 12, lineHeight: 16 },
-  captionSmall: { fontFamily: fontFamily.regular, fontSize: 10, lineHeight: 14 },
+  captionSmall: {
+    fontFamily: fontFamily.regular,
+    fontSize: 10,
+    lineHeight: 14,
+  },
   amount: { fontFamily: fontFamily.medium, fontSize: 16, lineHeight: 22 },
   amountLarge: { fontFamily: fontFamily.bold, fontSize: 32, lineHeight: 40 },
   button: { fontFamily: fontFamily.semiBold, fontSize: 14, lineHeight: 20 },

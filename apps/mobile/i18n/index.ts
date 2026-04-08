@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Localization from "expo-localization";
 
 import { LANGUAGE_KEY } from "@/constants/storage-keys";
+import { validateTranslationResources } from "./translation-schemas";
 
 // Import translation files
 import enCommon from "../locales/en/common.json";
@@ -90,6 +91,12 @@ async function detectInitialLanguage(): Promise<"en" | "ar"> {
  * before the root component renders.
  */
 export async function initI18n(): Promise<void> {
+  // Runtime contract check — fail loud on translation drift before i18next
+  // silently falls back to English for missing keys.
+  validateTranslationResources(
+    resources as { en: Record<string, unknown>; ar: Record<string, unknown> }
+  );
+
   const language = await detectInitialLanguage();
 
   i18next.use(initReactI18next);

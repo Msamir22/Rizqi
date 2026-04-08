@@ -1,0 +1,145 @@
+/**
+ * Zod schemas for runtime validation of translation JSON resources.
+ *
+ * Mirrors the TypeScript interfaces in `translation-schema.ts`. Run at
+ * startup inside `initI18n()` so a missing/renamed key in either an EN or
+ * AR JSON file produces a descriptive error before the UI tries to read it.
+ *
+ * Why Zod (not just TS): JSON files are external assets — TypeScript only
+ * checks the import shape via `resolveJsonModule`, which uses inferred types
+ * from the JSON's literal structure, not our `TranslationResources` contract.
+ * A drift (e.g. removed key in AR) goes silently to fallbackLng at runtime
+ * with no error. Zod catches it loudly at startup.
+ */
+
+import { z } from "zod";
+
+const pluralKeysAllowAdditional = z
+  .object({
+    _zero: z.string().optional(),
+    _one: z.string(),
+    _two: z.string().optional(),
+    _few: z.string().optional(),
+    _many: z.string().optional(),
+    _other: z.string(),
+  })
+  .partial({ _one: true })
+  .passthrough();
+
+/**
+ * For plural-bearing keys we don't try to mirror the flattened
+ * `<base>_one` / `<base>_few` JSON convention with a Zod object — that would
+ * require knowing every base name. Instead the schemas below describe each
+ * namespace at the field level and use `pluralStringFields` to enumerate
+ * known plural bases. Validation walks the JSON dict and asserts that every
+ * declared base has at least `_one` (when language ≠ "en" the requirement
+ * widens — see `validateNamespacePlurals`).
+ */
+export const PluralKeysSchema = pluralKeysAllowAdditional;
+
+/**
+ * Generic JSON object schema — namespaces accept any string values.
+ * Validation focuses on (a) required scalar keys and (b) declared plural
+ * bases having the right CLDR forms for the locale.
+ */
+const StringDict = z.record(z.string(), z.string());
+
+export const NamespaceSchema = StringDict;
+
+/**
+ * Required scalar (non-plural) keys per namespace. Keep this in sync with
+ * `translation-schema.ts`. If any of these are missing in either locale,
+ * `validateTranslationResources()` throws.
+ */
+const REQUIRED_SCALAR_KEYS: Record<string, readonly string[]> = {
+  common: [
+    "save",
+    "cancel",
+    "retry",
+    "error",
+    "language_change_error_title",
+    "language_change_failed",
+  ],
+  settings: [
+    "title",
+    "language",
+    "language_change_error_title",
+    "language_change_failed",
+  ],
+};
+
+/**
+ * Plural base keys per namespace — every base must have `_one` and `_other`
+ * in EN, and the full CLDR set (one/two/few/many/other; zero is optional)
+ * in AR.
+ */
+const PLURAL_BASES: Record<string, readonly string[]> = {
+  common: [
+    "minutes_ago",
+    "hours_ago",
+    "days_ago",
+    "due_overdue",
+    "due_in_days",
+  ],
+  transactions: ["transaction_count", "delete_success_message"],
+  accounts: ["account_count"],
+  budgets: ["budget_count", "days_remaining"],
+  metals: ["holding"],
+};
+
+const REQUIRED_AR_PLURAL_FORMS = ["_one", "_two", "_few", "_many", "_other"];
+const REQUIRED_EN_PLURAL_FORMS = ["_one", "_other"];
+
+/**
+ * Validate a single namespace JSON for one language.
+ */
+function validateNamespace(
+  language: "en" | "ar",
+  namespace: string,
+  json: unknown
+): void {
+  const parsed = NamespaceSchema.safeParse(json);
+  if (!parsed.success) {
+    throw new Error(
+      `[i18n] ${language}/${namespace}: not a flat string dictionary — ${parsed.error.message}`
+    );
+  }
+  const dict = parsed.data;
+
+  for (const key of REQUIRED_SCALAR_KEYS[namespace] ?? []) {
+    if (typeof dict[key] !== "string" || dict[key].length === 0) {
+      throw new Error(
+        `[i18n] ${language}/${namespace}: missing required key "${key}"`
+      );
+    }
+  }
+
+  const requiredForms =
+    language === "ar" ? REQUIRED_AR_PLURAL_FORMS : REQUIRED_EN_PLURAL_FORMS;
+  for (const base of PLURAL_BASES[namespace] ?? []) {
+    for (const suffix of requiredForms) {
+      const k = `${base}${suffix}`;
+      if (typeof dict[k] !== "string") {
+        throw new Error(
+          `[i18n] ${language}/${namespace}: missing plural form "${k}" (required for ${language})`
+        );
+      }
+    }
+  }
+}
+
+/**
+ * Validate the full resources object passed to i18next.init.
+ * Throws on the first failure with a descriptive message.
+ */
+export function validateTranslationResources(resources: {
+  en: Record<string, unknown>;
+  ar: Record<string, unknown>;
+}): void {
+  for (const [ns, json] of Object.entries(resources.en)) {
+    validateNamespace("en", ns, json);
+  }
+  for (const [ns, json] of Object.entries(resources.ar)) {
+    validateNamespace("ar", ns, json);
+  }
+}
