@@ -8,6 +8,7 @@ import { type CategoryData } from "./types";
 import { palette } from "@/constants/colors";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import { useTheme } from "@/context/ThemeContext";
+import { useLocale } from "@/context/LocaleContext";
 import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
@@ -33,6 +34,7 @@ export function DrilldownCategoryItem({
   hasChildren,
 }: DrilldownCategoryItemProps): React.JSX.Element {
   const { isDark } = useTheme();
+  const { language } = useLocale();
   const { preferredCurrency } = usePreferredCurrency();
 
   return (
@@ -40,6 +42,12 @@ export function DrilldownCategoryItem({
       onPress={onPress}
       disabled={!hasChildren}
       className="flex-row items-center py-2"
+      accessible
+      accessibilityRole={hasChildren ? "button" : "text"}
+      accessibilityLanguage={language}
+      accessibilityLabel={`${category.displayName}, ${formatCurrency({ amount: category.amount, currency: preferredCurrency })}, ${category.percentage.toFixed(1)}%`}
+      accessibilityHint={hasChildren ? "Tap to drill down" : undefined}
+      accessibilityState={{ disabled: !hasChildren }}
     >
       <View
         className="w-3 h-3 rounded-full me-3"

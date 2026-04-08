@@ -26,6 +26,7 @@
 import { palette } from "@/constants/colors";
 import type { MatchReason } from "@/services/sms-account-matcher";
 import { formatDate as formatDateHelper } from "@/utils/dateHelpers";
+import { useLocale } from "@/context/LocaleContext";
 import { formatCurrency, type ReviewableTransaction } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import React, { memo, useCallback, useState } from "react";
@@ -118,6 +119,7 @@ function TransactionItemInner({
   hasMissingInfo = false,
 }: TransactionItemProps): React.JSX.Element {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { language } = useLocale();
   const isExpense = transaction.type === "EXPENSE";
   const isVoice = transaction.source === "VOICE";
   const hasExpandableContent = !isVoice && !!expandedContent;
@@ -146,6 +148,12 @@ function TransactionItemInner({
         onPress={handlePress}
         className="flex-row items-center p-4"
         activeOpacity={0.7}
+        accessible
+        accessibilityRole="button"
+        accessibilityLanguage={language}
+        accessibilityLabel={`${transaction.originLabel}, ${isExpense ? "expense" : "income"} ${formatCurrency({ amount: transaction.amount, currency: transaction.currency })}, ${counterpartyText ?? ""}, ${transaction.categoryDisplayName}${accountName ? `, ${accountName}` : ""}`}
+        accessibilityHint="Tap to edit this transaction"
+        accessibilityState={{ selected: isSelected }}
       >
         {/* Checkbox */}
         <TouchableOpacity
@@ -153,6 +161,8 @@ function TransactionItemInner({
           hitSlop={8}
           className="me-3"
           activeOpacity={0.7}
+          accessible={false}
+          importantForAccessibility="no"
         >
           <View
             className={`w-6 h-6 rounded-lg items-center justify-center border-2 ${

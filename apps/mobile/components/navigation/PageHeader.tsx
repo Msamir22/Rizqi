@@ -5,6 +5,7 @@ import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
+import { useLocale } from "@/context/LocaleContext";
 import { AppDrawer } from "./AppDrawer";
 
 interface PageHeaderProps {
@@ -179,6 +180,7 @@ export function PageHeader({
 }: PageHeaderProps): React.ReactElement {
   const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
+  const { language } = useLocale();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const shouldShowSelectionMode = selectionMode && selectionMode.count > 0;
@@ -205,6 +207,8 @@ export function PageHeader({
               <Text
                 className="text-2xl font-bold text-slate-800 dark:text-white px-12"
                 numberOfLines={1}
+                accessibilityRole="header"
+                accessibilityLanguage={language}
               >
                 {title}
               </Text>
@@ -229,6 +233,8 @@ export function PageHeader({
                   <Text
                     className="text-2xl font-bold text-slate-800 dark:text-white flex-1"
                     numberOfLines={1}
+                    accessibilityRole="header"
+                    accessibilityLanguage={language}
                   >
                     {title}
                   </Text>

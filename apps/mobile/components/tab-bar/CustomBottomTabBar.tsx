@@ -21,6 +21,7 @@ import Animated, {
   cancelAnimation,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useLocale } from "@/context/LocaleContext";
 import { IconConfig, TabIcon } from "./TabIcon";
 
 interface CustomBottomTabBarProps extends BottomTabBarProps {
@@ -70,6 +71,7 @@ function CustomBottomTabBarComponent({
   isRecording = false,
 }: CustomBottomTabBarProps): React.ReactElement {
   const insets = useSafeAreaInsets();
+  const { language } = useLocale();
 
   // Calculate safe bottom padding
   const bottomPadding = Math.max(insets.bottom);
@@ -152,6 +154,7 @@ function CustomBottomTabBarComponent({
         accessibilityRole="tab"
         accessibilityState={{ selected: isFocused }}
         accessibilityLabel={label}
+        accessibilityLanguage={language}
         onPress={onPress}
         onLongPress={onLongPress}
         activeOpacity={0.7}
@@ -234,9 +237,10 @@ function CustomBottomTabBarComponent({
             accessibilityLabel="Voice input - record a transaction"
             accessibilityRole="button"
             accessibilityHint="Tap to start voice recording for a transaction"
+            accessibilityLanguage={language}
+            accessibilityState={{ busy: isRecording }}
             accessible
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            className="shadow-lg"
             style={({ pressed }) => ({
               opacity: pressed ? 0.9 : 1,
               shadowColor: palette.nileGreen[500],
