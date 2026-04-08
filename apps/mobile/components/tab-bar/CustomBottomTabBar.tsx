@@ -241,7 +241,6 @@ function CustomBottomTabBarComponent({
             accessibilityState={{ busy: isRecording }}
             accessible
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            className="shadow-lg"
             style={({ pressed }) => ({
               opacity: pressed ? 0.9 : 1,
               shadowColor: palette.nileGreen[500],
