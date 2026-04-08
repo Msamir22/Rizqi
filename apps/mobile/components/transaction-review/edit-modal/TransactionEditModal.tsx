@@ -384,7 +384,7 @@ export function TransactionEditModal(
                     size={14}
                     color={palette.slate[400]}
                   />
-                  <Text className="text-xs text-slate-400 ml-auto">
+                  <Text className="text-xs text-slate-400 ms-auto">
                     Determined by account
                   </Text>
                 </View>

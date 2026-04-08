@@ -224,7 +224,7 @@ function CustomBottomTabBarComponent({
           className="absolute start-1/2 z-[30]"
           style={{
             top: -MIC_BUTTON_SIZE / 2 + 8,
-            marginLeft: -MIC_BUTTON_SIZE / 2,
+            marginStart: -MIC_BUTTON_SIZE / 2,
           }}
         >
           {/* T020: Pulse ring behind mic button */}

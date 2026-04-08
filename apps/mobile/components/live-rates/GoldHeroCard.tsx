@@ -54,7 +54,7 @@ function TrendBadge({
         name={icon}
         size={18}
         color={color}
-        style={{ marginLeft: -4 }}
+        style={{ marginStart: -4 }}
       />
       <Text style={{ color, fontSize: 12, fontWeight: "500" }}>{label}</Text>
     </View>

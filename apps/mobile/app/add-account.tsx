@@ -144,7 +144,7 @@ export default function AddAccount(): React.ReactNode {
                           ? palette.slate[400]
                           : palette.slate[600]
                     }
-                    style={{ marginRight: 8 }}
+                    style={{ marginEnd: 8 }}
                   />
                   <Text
                     className={`text-xs font-extrabold tracking-widest uppercase ${

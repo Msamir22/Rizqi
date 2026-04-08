@@ -236,7 +236,7 @@ function TransactionItemInner({
               <TouchableOpacity
                 onPress={handleToggleExpand}
                 hitSlop={14}
-                className="flex-row items-center ml-auto p-1"
+                className="flex-row items-center ms-auto p-1"
                 activeOpacity={0.7}
               >
                 <Ionicons
