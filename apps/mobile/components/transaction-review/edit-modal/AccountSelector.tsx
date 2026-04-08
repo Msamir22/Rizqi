@@ -114,7 +114,7 @@ export function AccountSelector({
       {/* Down arrow indicator for secondary field (ATM Cash) */}
       {isSecondary && (
         <View className="items-center -my-3 z-10 relative">
-          <View className="bg-slate-900 border border-slate-700/50 rounded-full w-8 h-8 items-center justify-center">
+          <View className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/50 rounded-full w-8 h-8 items-center justify-center">
             <Ionicons name="arrow-down" size={16} color={palette.slate[400]} />
           </View>
         </View>
@@ -148,10 +148,10 @@ export function AccountSelector({
       {allowCreateNew && (isCreatingNew || !hasOptions) ? (
         <View>
           <View
-            className={`bg-slate-800/60 rounded-xl px-4 py-3 flex-row items-center border ${
+            className={`bg-slate-100 dark:bg-slate-800/60 rounded-xl px-4 py-3 flex-row items-center border ${
               isCreatingNew
                 ? themeClasses.borderCreating
-                : "border-slate-700/50"
+                : "border-slate-200 dark:border-slate-700/50"
             }`}
           >
             {iconName && (
@@ -168,7 +168,7 @@ export function AccountSelector({
             <TextInput
               value={newAccountName}
               onChangeText={onNewAccountNameChange}
-              className="text-white text-base font-semibold flex-1"
+              className="text-slate-800 dark:text-white text-base font-semibold flex-1"
               placeholderTextColor={palette.slate[600]}
               placeholder={isSecondary ? "Cash account name" : "Account name"}
               autoFocus={isCreatingNew}
@@ -201,8 +201,10 @@ export function AccountSelector({
           <TouchableOpacity
             onPress={onTogglePicker}
             activeOpacity={0.7}
-            className={`bg-slate-800/60 rounded-xl px-4 py-3 flex-row items-center justify-between border ${
-              errorMsg ? "border-red-500/60" : "border-slate-700/50"
+            className={`bg-slate-100 dark:bg-slate-800/60 rounded-xl px-4 py-3 flex-row items-center justify-between border ${
+              errorMsg
+                ? "border-red-500/60"
+                : "border-slate-200 dark:border-slate-700/50"
             }`}
           >
             <View className="flex-row items-center flex-1">
@@ -218,7 +220,7 @@ export function AccountSelector({
                 </View>
               )}
               <Text
-                className="text-base text-white font-semibold flex-1"
+                className="text-base text-slate-800 dark:text-white font-semibold flex-1"
                 numberOfLines={1}
               >
                 {selectedName || placeholder}
@@ -235,7 +237,7 @@ export function AccountSelector({
           )}
 
           {isPickerOpen && (
-            <View className="mt-2 bg-slate-800/80 rounded-xl overflow-hidden border border-slate-700/40">
+            <View className="mt-2 bg-white dark:bg-slate-800/80 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700/40">
               {/* Section headers + grouped accounts (when available) */}
               {showSectionHeaders &&
                 matchingAccounts &&
@@ -254,7 +256,7 @@ export function AccountSelector({
                     key={opt.id}
                     onPress={() => onSelect(opt)}
                     activeOpacity={0.7}
-                    className={`px-4 py-3 flex-row items-center justify-between border-b border-slate-700/30 ${
+                    className={`px-4 py-3 flex-row items-center justify-between border-b border-slate-200 dark:border-slate-700/30 ${
                       isSelected ? themeClasses.selectedRowBg : ""
                     }`}
                   >
@@ -274,7 +276,7 @@ export function AccountSelector({
                         className={`text-sm font-medium flex-shrink ${
                           isSelected
                             ? themeClasses.selectedRowText
-                            : "text-white"
+                            : "text-slate-800 dark:text-white"
                         }`}
                         numberOfLines={1}
                       >
@@ -308,7 +310,7 @@ export function AccountSelector({
                 otherAccounts &&
                 otherAccounts.length > 0 && (
                   <>
-                    <Text className="px-4 pt-3 pb-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-t border-slate-700/40">
+                    <Text className="px-4 pt-3 pb-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-t border-slate-200 dark:border-slate-700/40">
                       Other accounts
                     </Text>
                     {otherAccounts.map((opt) => {
@@ -318,7 +320,7 @@ export function AccountSelector({
                           key={opt.id}
                           onPress={() => onSelect(opt)}
                           activeOpacity={0.7}
-                          className={`px-4 py-3 flex-row items-center justify-between border-b border-slate-700/30 ${
+                          className={`px-4 py-3 flex-row items-center justify-between border-b border-slate-200 dark:border-slate-700/30 ${
                             isSelected ? themeClasses.selectedRowBg : ""
                           }`}
                         >
@@ -338,7 +340,7 @@ export function AccountSelector({
                               className={`text-sm font-medium flex-shrink ${
                                 isSelected
                                   ? themeClasses.selectedRowText
-                                  : "text-white"
+                                  : "text-slate-800 dark:text-white"
                               }`}
                               numberOfLines={1}
                             >
@@ -375,7 +377,7 @@ export function AccountSelector({
                 <TouchableOpacity
                   onPress={onStartNew}
                   activeOpacity={0.7}
-                  className="px-4 py-3 flex-row items-center border-t border-slate-700/40"
+                  className="px-4 py-3 flex-row items-center border-t border-slate-200 dark:border-slate-700/40"
                 >
                   <View
                     className={`w-5 h-5 rounded-full items-center justify-center me-2 ${themeClasses.pillBg}`}

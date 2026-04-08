@@ -67,7 +67,9 @@ function FeatureBullet({
         <Ionicons name={icon} size={20} color={palette.nileGreen[500]} />
       </View>
       <View className="flex-1">
-        <Text className="text-white font-semibold text-base">{title}</Text>
+        <Text className="text-slate-800 dark:text-white font-semibold text-base">
+          {title}
+        </Text>
         <Text className="text-slate-400 text-sm mt-0.5">{description}</Text>
       </View>
     </Animated.View>
@@ -104,7 +106,7 @@ export function SmsPermissionPrompt({
       <TouchableWithoutFeedback onPress={onDismiss}>
         <View className="flex-1 bg-black/60 justify-end">
           <TouchableWithoutFeedback>
-            <View className="bg-slate-900 rounded-t-3xl px-6 pt-8 pb-10">
+            <View className="bg-white dark:bg-slate-900 rounded-t-3xl px-6 pt-8 pb-10">
               {/* Header Icon */}
               <Animated.View
                 entering={FadeInUp.delay(200).springify()}
@@ -117,7 +119,7 @@ export function SmsPermissionPrompt({
                     color={palette.nileGreen[500]}
                   />
                 </View>
-                <Text className="text-white text-2xl font-bold text-center">
+                <Text className="text-slate-800 dark:text-white text-2xl font-bold text-center">
                   Auto-Track Transactions
                 </Text>
                 <Text className="text-slate-400 text-base text-center mt-2 px-4">
