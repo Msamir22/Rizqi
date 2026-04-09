@@ -8,6 +8,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { formatToLocalDateString } from "@/utils/dateHelpers";
 import type { RecurringFrequency } from "@astik/db";
 import { TextField } from "../ui/TextField";
+import { useTranslation } from "react-i18next";
 
 const FREQUENCY_OPTIONS: ReadonlyArray<{
   readonly value: RecurringFrequency;
@@ -49,6 +50,7 @@ export function OptionalSection({
 }: OptionalSectionProps): React.JSX.Element {
   const { isDark } = useTheme();
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const { t } = useTranslation("transactions");
 
   const counterpartyLabel =
     transactionType === "INCOME" ? "PAYER" : "MERCHANT / PAYEE";
@@ -192,7 +194,7 @@ export function OptionalSection({
                 {/* Recurring logic will be implemented here later or simply show basic name/frequency for now as placeholders */}
                 <TextField
                   label="NAME"
-                  placeholder="Recurring Name"
+                  placeholder={t("recurring_name_placeholder")}
                   value={fields.recurringName}
                   onChangeText={(t) => onChange({ recurringName: t })}
                 />

@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback } from "react";
 import { Text, TouchableOpacity, View, type ViewStyle } from "react-native";
 import { palette } from "@/constants/colors";
+import { useTranslation } from "react-i18next";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -109,6 +110,7 @@ function EmptyIllustration(): React.JSX.Element {
 export function BudgetEmptyState({
   onCreateBudget,
 }: BudgetEmptyStateProps): React.JSX.Element {
+  const { t } = useTranslation("budgets");
   const handlePress = useCallback((): void => {
     onCreateBudget();
   }, [onCreateBudget]);
@@ -122,13 +124,12 @@ export function BudgetEmptyState({
 
       {/* Heading */}
       <Text className="text-xl font-bold text-slate-800 dark:text-white text-center">
-        Start Budgeting Smarter
+        {t("empty_budget_title")}
       </Text>
 
       {/* Description */}
       <Text className="mt-2 text-sm text-slate-500 dark:text-slate-400 text-center leading-5 px-4">
-        Create your first budget to track spending and stay in control of your
-        finances.
+        {t("empty_budget_description")}
       </Text>
 
       {/* CTA Button — pill shaped per mockup */}
@@ -136,8 +137,8 @@ export function BudgetEmptyState({
         onPress={handlePress}
         activeOpacity={0.85}
         accessibilityRole="button"
-        accessibilityLabel="Create First Budget"
-        accessibilityHint="Opens the budget creation form"
+        accessibilityLabel={t("accessibility_create_first_budget")}
+        accessibilityHint={t("accessibility_create_first_budget_hint")}
         className="mt-8 flex-row items-center rounded-full px-8 py-4"
         // NativeWind v4 shadow limitation — requires inline style on interactive components
         style={{
@@ -151,7 +152,7 @@ export function BudgetEmptyState({
           color={palette.slate[50]}
         />
         <Text className="ms-2 text-base font-bold text-white">
-          Create First Budget
+          {t("create_first_budget")}
         </Text>
       </TouchableOpacity>
     </View>

@@ -27,6 +27,7 @@ import {
   type ReviewableTransaction,
 } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import React from "react";
 import {
   KeyboardAvoidingView,
@@ -77,6 +78,7 @@ export function TransactionEditModal(
   props: TransactionEditModalProps
 ): React.JSX.Element {
   const { visible, onClose, latestRates, transaction } = props;
+  const { t } = useTranslation("transactions");
 
   const { state, setters, accountHandlers } = useTransactionEditState(props);
 
@@ -120,7 +122,9 @@ export function TransactionEditModal(
               activeOpacity={0.7}
               className="bg-nileGreen-500 px-5 py-1.5 rounded-full"
             >
-              <Text className="text-white text-sm font-semibold">Save</Text>
+              <Text className="text-white text-sm font-semibold">
+                {t("save")}
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -418,7 +422,7 @@ export function TransactionEditModal(
               <AccountSelector
                 label="To Account"
                 options={state.cashAccountOptions}
-                placeholder="Select cash account"
+                placeholder={t("select_cash_account")}
                 hintMessage={`A cash account named "${state.newToAccountName.trim() || "Cash"}" will be created in ${transaction.currency}.`}
                 themeColor="amber"
                 iconName="cash"

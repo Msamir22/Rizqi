@@ -34,5 +34,9 @@
   "error_save_failed": "Failed to save. Please try again.",
   "add_to_savings": "Add to Savings",
   "holding_one": "{{count}} holding",
-  "holding_other": "{{count}} holdings"
+  "holding_other": "{{count}} holdings",
+
+  "start_tracking_metals": "Start Tracking Your Metals",
+  "empty_metals_description": "Add your gold and silver holdings to track their value in real-time.",
+  "empty_illustration_label": "Empty metals illustration"
 }

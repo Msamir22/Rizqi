@@ -3,6 +3,7 @@ import { FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Dimensions,
@@ -145,6 +146,8 @@ export function AccountsSection({
   accounts,
   isLoading,
 }: AccountsSectionProps): React.JSX.Element {
+  const { t } = useTranslation("accounts");
+
   // Transform accounts to card data (top 3)
   const cardData: AccountCardData[] = useMemo(() => {
     return accounts.slice(0, 3).map((account) => {
@@ -195,7 +198,7 @@ export function AccountsSection({
         <EmptyStateCard
           onPress={() => router.push("/add-account")}
           icon="wallet-outline"
-          title="No accounts yet"
+          title={t("no_accounts_title")}
           description="Tap the + button to add one"
           height={CARD_HEIGHT}
           borderRadius={CARD_BORDER_RADIUS}

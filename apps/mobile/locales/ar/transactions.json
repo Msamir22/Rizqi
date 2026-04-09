@@ -223,5 +223,19 @@
   "feature_control_title": "أنت المتحكم",
   "feature_control_description": "راجع كل معاملة قبل حفظها. ارفض أي معاملة لا تريدها.",
   "allow_sms_access": "السماح بالوصول إلى الرسائل",
-  "not_now": "ليس الآن"
+  "not_now": "ليس الآن",
+
+  "edit_amount": "تعديل المبلغ",
+  "edit_category": "تعديل الفئة",
+
+  "select_frequency": "اختر التكرار",
+  "freq_daily": "يومي",
+  "freq_weekly": "أسبوعي",
+  "freq_monthly": "شهري",
+  "freq_quarterly": "ربع سنوي",
+  "freq_yearly": "سنوي",
+  "status_active": "نشط",
+  "status_paused": "متوقف",
+  "status_completed": "مكتمل",
+  "tap_to_edit_transaction": "اضغط لتعديل هذه المعاملة"
 }

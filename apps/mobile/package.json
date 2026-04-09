@@ -17,7 +17,8 @@
     "install-check": "npx expo install --check",
     "expo-install": "npx expo install",
     "test": "jest",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "i18n:check": "tsx scripts/check-i18n-coverage.ts"
   },
   "expo": {
     "doctor": {

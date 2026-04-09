@@ -17,6 +17,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -24,18 +25,22 @@ import {
 
 const FREQUENCY_OPTIONS: ReadonlyArray<{
   value: RecurringFrequency;
-  label: string;
+  labelKey: string;
 }> = [
-  { value: "DAILY", label: "Daily" },
-  { value: "WEEKLY", label: "Weekly" },
-  { value: "MONTHLY", label: "Monthly" },
-  { value: "QUARTERLY", label: "Quarterly" },
-  { value: "YEARLY", label: "Yearly" },
+  { value: "DAILY", labelKey: "freq_daily" },
+  { value: "WEEKLY", labelKey: "freq_weekly" },
+  { value: "MONTHLY", labelKey: "freq_monthly" },
+  { value: "QUARTERLY", labelKey: "freq_quarterly" },
+  { value: "YEARLY", labelKey: "freq_yearly" },
 ];
 
-/** Returns a human-readable label for a frequency value */
-export function getFrequencyLabel(freq: RecurringFrequency): string {
-  return FREQUENCY_OPTIONS.find((o) => o.value === freq)?.label ?? freq;
+/** Returns a human-readable label for a frequency value (requires t function) */
+export function getFrequencyLabel(
+  freq: RecurringFrequency,
+  t: (key: string) => string
+): string {
+  const option = FREQUENCY_OPTIONS.find((o) => o.value === freq);
+  return option ? t(option.labelKey) : freq;
 }
 
 // ---------------------------------------------------------------------------
@@ -60,6 +65,7 @@ export function FrequencyPickerModal({
   onClose,
 }: FrequencyPickerModalProps): React.JSX.Element {
   const { isDark } = useTheme();
+  const { t } = useTranslation("transactions");
 
   return (
     <Modal
@@ -82,7 +88,7 @@ export function FrequencyPickerModal({
               {/* Header */}
               <View className="flex-row justify-between items-center px-6 py-5 border-b border-slate-200 dark:border-slate-800">
                 <Text className="text-xl font-bold text-slate-800 dark:text-slate-100">
-                  Select Frequency
+                  {t("select_frequency")}
                 </Text>
                 <TouchableOpacity onPress={onClose} className="p-1">
                   <Ionicons
@@ -130,7 +136,7 @@ export function FrequencyPickerModal({
                               : "text-slate-700 dark:text-slate-300"
                           }`}
                         >
-                          {option.label}
+                          {t(option.labelKey)}
                         </Text>
                       </TouchableOpacity>
                     );

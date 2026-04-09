@@ -24,6 +24,7 @@ import {
 
 import { palette } from "@/constants/colors";
 import EMPTY_ILLUSTRATION from "@/assets/images/empty-metals.jpg";
+import { useTranslation } from "react-i18next";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -59,6 +60,7 @@ const ADD_BUTTON_SHADOW: ViewStyle = {
 export function EmptyMetalsState({
   onAddHolding,
 }: EmptyMetalsStateProps): React.JSX.Element {
+  const { t } = useTranslation("metals");
   const handlePress = useCallback((): void => {
     onAddHolding();
   }, [onAddHolding]);
@@ -70,17 +72,17 @@ export function EmptyMetalsState({
         source={EMPTY_ILLUSTRATION}
         style={ILLUSTRATION_SIZE}
         resizeMode="contain"
-        accessibilityLabel="Empty metals illustration"
+        accessibilityLabel={t("empty_illustration_label")}
       />
 
       {/* Heading */}
       <Text className="mt-6 text-xl font-bold text-slate-800 dark:text-white text-center">
-        Start Tracking Your Metals
+        {t("start_tracking_metals")}
       </Text>
 
       {/* Description */}
       <Text className="mt-2 text-sm text-slate-500 dark:text-slate-400 text-center leading-5">
-        Add your gold and silver holdings to track their value in real-time.
+        {t("empty_metals_description")}
       </Text>
 
       {/* CTA Button */}
@@ -99,7 +101,7 @@ export function EmptyMetalsState({
           color={palette.slate[50]}
         />
         <Text className="ms-2 text-base font-bold text-white">
-          Add to Savings
+          {t("add_to_savings")}
         </Text>
       </TouchableOpacity>
     </View>

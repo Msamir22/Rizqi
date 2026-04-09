@@ -33,6 +33,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { palette } from "@/constants/colors";
 import { MIC_BUTTON_SIZE, TAB_BAR_HEIGHT } from "@/constants/ui";
+import { useTranslation } from "react-i18next";
 import { WaveformVisualizer } from "./WaveformVisualizer";
 
 // ---------------------------------------------------------------------------
@@ -233,6 +234,7 @@ function VoiceRecordingOverlayComponent({
   onRetry,
 }: VoiceRecordingOverlayProps): React.ReactElement | null {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation("transactions");
   const bottomPadding = Math.max(insets.bottom, 0);
 
   const elapsedSeconds = Math.floor(durationMs / 1000);
@@ -312,7 +314,7 @@ function VoiceRecordingOverlayComponent({
         <Pressable
           className="flex-1"
           onPress={safeOnDiscard}
-          accessibilityLabel="Close recording overlay"
+          accessibilityLabel={t("close_recording_overlay")}
         />
       </Animated.View>
 

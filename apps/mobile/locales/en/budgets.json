@@ -73,5 +73,18 @@
   "accessibility_resume_budget": "Resume budget",
   "accessibility_pause_budget": "Pause budget",
   "no_budgets_for_filter": "No budgets match this filter",
-  "try_different_filter": "Try selecting a different period filter"
+  "try_different_filter": "Try selecting a different period filter",
+
+  "empty_budget_title": "Start Budgeting Smarter",
+  "empty_budget_description": "Create your first budget to track spending and stay in control of your finances.",
+  "create_first_budget": "Create First Budget",
+  "accessibility_create_first_budget": "Create First Budget",
+  "accessibility_create_first_budget_hint": "Opens the budget creation form",
+  "accessibility_category_budget_type": "Category budget type",
+  "accessibility_global_budget_type": "Global budget type",
+  "top_subcategories": "Top Subcategories",
+  "filter_all": "All",
+  "filter_weekly": "Weekly",
+  "filter_monthly": "Monthly",
+  "filter_custom": "Custom"
 }

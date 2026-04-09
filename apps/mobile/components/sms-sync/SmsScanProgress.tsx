@@ -22,6 +22,7 @@ import Animated, { FadeIn, FadeInDown, ZoomIn } from "react-native-reanimated";
 import Svg, { Circle } from "react-native-svg";
 import { useCategories } from "@/hooks/useCategories";
 import { useTheme } from "@/context/ThemeContext";
+import { useTranslation } from "react-i18next";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -75,6 +76,9 @@ export function SmsScanProgress({
   onBackPress,
   onRetryPress,
 }: SmsScanProgressProps): React.JSX.Element {
+  const { t } = useTranslation("transactions");
+  const tSms = t;
+
   return (
     <View className="flex-1 bg-slate-50 dark:bg-slate-900">
       {/* ── Header ───────────────────────────────────────────── */}
@@ -88,7 +92,7 @@ export function SmsScanProgress({
           <Ionicons name="chevron-back" size={24} color={palette.slate[400]} />
         </TouchableOpacity>
         <Text className="flex-1 text-center text-base font-bold text-slate-800 dark:text-white -ms-10">
-          SMS Scan
+          {tSms("sms_scan_header")}
         </Text>
       </View>
 
@@ -98,7 +102,7 @@ export function SmsScanProgress({
           className="flex-1 px-4"
           showsVerticalScrollIndicator={false}
         >
-          <ScanningState progress={progress} />
+          <ScanningState progress={progress} t={tSms} />
         </ScrollView>
       ) : (
         <View className="flex-1 px-4">
@@ -110,11 +114,16 @@ export function SmsScanProgress({
               topCategories={topCategories}
               onReviewPress={onReviewPress}
               onBackPress={onBackPress}
+              t={tSms}
             />
           )}
 
           {status === "complete" && transactionsFound === 0 && (
-            <EmptyState totalScanned={totalScanned} onBackPress={onBackPress} />
+            <EmptyState
+              totalScanned={totalScanned}
+              onBackPress={onBackPress}
+              t={tSms}
+            />
           )}
 
           {status === "error" && (
@@ -122,6 +131,7 @@ export function SmsScanProgress({
               error={error}
               onRetryPress={onRetryPress}
               onBackPress={onBackPress}
+              t={tSms}
             />
           )}
         </View>
@@ -130,14 +140,14 @@ export function SmsScanProgress({
       {/* ── Bottom action (scanning state only) ───────────────── */}
       {status === "scanning" && (
         <View className="px-4 pb-2">
-          <ScanHintText progress={progress} />
+          <ScanHintText progress={progress} t={tSms} />
           <TouchableOpacity
             onPress={onBackPress}
             activeOpacity={0.85}
             className="w-full py-4 rounded-2xl bg-slate-100 dark:bg-slate-800 items-center"
           >
             <Text className="text-slate-800 dark:text-white text-sm font-semibold">
-              Cancel Scan
+              {tSms("cancel_scan")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -205,8 +215,10 @@ function CircularProgressRing({
 
 function ScanningState({
   progress,
+  t,
 }: {
   readonly progress: SmsScanProgressData | null;
+  readonly t: (key: string, opts?: Record<string, unknown>) => string;
 }): React.JSX.Element {
   const scanned = progress?.messagesScanned ?? 0;
   const total = progress?.totalMessages ?? 0;
@@ -246,16 +258,18 @@ function ScanningState({
   }
 
   const statusText =
-    phase === "ai-parsing"
-      ? "Analyzing Transactions..."
-      : "Scanning Messages...";
+    phase === "ai-parsing" ? t("scanning_analyzing") : t("scanning_messages");
 
   const senderName = progress?.currentSender ?? "";
 
   // ── T009: Batch counter sub-text ──────────────────────────────────────
   const batchCounterText =
     phase === "ai-parsing" && aiChunksTotal !== undefined && aiChunksTotal > 0
-      ? `Analyzing batch ${aiChunksCompleted + (aiChunksCompleted < aiChunksTotal ? 1 : 0)} of ${aiChunksTotal}...`
+      ? t("analyzing_batch", {
+          current:
+            aiChunksCompleted + (aiChunksCompleted < aiChunksTotal ? 1 : 0),
+          total: aiChunksTotal,
+        })
       : undefined;
 
   return (
@@ -283,7 +297,7 @@ function ScanningState({
               color={palette.slate[400]}
             />
             <Text className="text-sm text-slate-400 ms-1">
-              Reading from {senderName}
+              {t("reading_from", { sender: senderName })}
             </Text>
           </View>
         )}
@@ -297,7 +311,7 @@ function ScanningState({
               color={palette.slate[500]}
             />
             <Text className="text-xs text-slate-500 ms-1">
-              {formatDuration(elapsedMs)} elapsed
+              {t("elapsed", { duration: formatDuration(elapsedMs) })}
             </Text>
           </View>
 
@@ -314,7 +328,9 @@ function ScanningState({
                 // eslint-disable-next-line react-native/no-inline-styles
                 style={{ color: palette.nileGreen[400] }}
               >
-                ~{formatDuration(estimatedRemainingMs)} remaining
+                {t("estimated_remaining", {
+                  duration: formatDuration(estimatedRemainingMs),
+                })}
               </Text>
             </View>
           )}
@@ -325,16 +341,16 @@ function ScanningState({
       <View className="flex-row gap-3 mt-3">
         <StatCard
           icon="mail-outline"
-          label="SCANNED"
+          label={t("scanned_label")}
           value={scanned}
           total={total}
-          sublabel="Messages"
+          sublabel={t("messages_label")}
         />
         <StatCard
           icon="receipt-outline"
-          label="FOUND"
+          label={t("found_label")}
           value={found}
-          sublabel="Transactions"
+          sublabel={t("transactions_label")}
           valueColor={palette.nileGreen[400]}
         />
       </View>
@@ -342,16 +358,17 @@ function ScanningState({
       {/* ── Pipeline Status ─────────────────────────────────── */}
       <View className="bg-white dark:bg-slate-800 rounded-3xl p-5 mt-3">
         <Text className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">
-          Pipeline Status
+          {t("pipeline_status")}
         </Text>
 
         <PipelineStep
-          label="Read SMS permissions"
+          label={t("pipeline_step_permissions")}
           status="completed"
+          statusLabel={t("pipeline_completed")}
           isLast={false}
         />
         <PipelineStep
-          label="Filtering financial messages"
+          label={t("pipeline_step_filtering")}
           status={
             phase === "filtering"
               ? "active"
@@ -359,16 +376,30 @@ function ScanningState({
                 ? "completed"
                 : "pending"
           }
+          statusLabel={
+            phase === "filtering"
+              ? t("pipeline_processing")
+              : phase === "ai-parsing" || phase === "complete"
+                ? t("pipeline_completed")
+                : t("pipeline_waiting")
+          }
           isLast={false}
         />
         <PipelineStep
-          label="AI transaction parsing"
+          label={t("pipeline_step_ai")}
           status={
             phase === "ai-parsing"
               ? "active"
               : phase === "complete"
                 ? "completed"
                 : "pending"
+          }
+          statusLabel={
+            phase === "ai-parsing"
+              ? t("pipeline_processing")
+              : phase === "complete"
+                ? t("pipeline_completed")
+                : t("pipeline_waiting")
           }
           isLast
         />
@@ -387,8 +418,10 @@ function ScanningState({
  */
 function ScanHintText({
   progress,
+  t,
 }: {
   readonly progress: SmsScanProgressData | null;
+  readonly t: (key: string, opts?: Record<string, unknown>) => string;
 }): React.JSX.Element {
   const phase = progress?.currentPhase ?? "filtering";
   const aiChunksCompleted = progress?.aiChunksCompleted ?? 0;
@@ -397,18 +430,18 @@ function ScanHintText({
   let hint: string;
 
   if (phase === "filtering") {
-    hint = "Scanning your messages...";
+    hint = t("scan_hint_filtering");
   } else if (phase === "ai-parsing") {
     if (aiChunksCompleted === 0) {
-      hint = "Processing may take a few minutes for large inboxes";
+      hint = t("scan_hint_ai_start");
     } else if (aiChunksTotal !== undefined && aiChunksTotal > 0) {
       const pctComplete = Math.round((aiChunksCompleted / aiChunksTotal) * 100);
-      hint = `${pctComplete}% of AI analysis complete`;
+      hint = t("scan_hint_ai_progress", { percent: pctComplete });
     } else {
-      hint = "Analyzing your transactions...";
+      hint = t("scan_hint_ai_analyzing");
     }
   } else {
-    hint = "Wrapping up...";
+    hint = t("scan_hint_wrapping");
   }
 
   return (
@@ -429,6 +462,7 @@ function SuccessState({
   topCategories,
   onReviewPress,
   onBackPress,
+  t,
 }: {
   readonly transactionsFound: number;
   readonly totalScanned: number;
@@ -436,6 +470,7 @@ function SuccessState({
   readonly topCategories: readonly string[];
   readonly onReviewPress: () => void;
   readonly onBackPress: () => void;
+  readonly t: (key: string, opts?: Record<string, unknown>) => string;
 }): React.JSX.Element {
   const durationLabel = formatDuration(durationMs);
 
@@ -474,32 +509,32 @@ function SuccessState({
         </View>
 
         <Text className="text-2xl font-bold text-slate-800 dark:text-white mt-5">
-          Scan Complete!
+          {t("scan_complete")}
         </Text>
         <Text className="text-sm text-slate-400 mt-1">
-          Your messages have been analyzed
+          {t("messages_analyzed")}
         </Text>
       </View>
 
       {/* ── Summary Card ────────────────────────────────────── */}
       <View className="bg-white dark:bg-slate-800 rounded-3xl mt-6">
         <SummaryRow
-          label="Messages Scanned"
+          label={t("messages_scanned")}
           value={totalScanned.toLocaleString()}
         />
         <SummaryRow
-          label="Transactions Found"
+          label={t("transactions_found")}
           value={transactionsFound.toString()}
           valueColor={palette.nileGreen[400]}
         />
-        <SummaryRow label="Time Taken" value={durationLabel} isLast />
+        <SummaryRow label={t("time_taken")} value={durationLabel} isLast />
       </View>
 
       {/* ── Category Chips ──────────────────────────────────── */}
       {topCategories.length > 0 && (
         <Animated.View entering={FadeInDown.delay(300)} className="mt-5 ms-2">
           <Text className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
-            Identified Categories
+            {t("identified_categories")}
           </Text>
           <View className="flex-row flex-wrap gap-2">
             {topCategories.map((cat) => (
@@ -530,8 +565,7 @@ function SuccessState({
           }}
         >
           <Text className="text-white text-base font-bold">
-            Review {transactionsFound} Transaction
-            {transactionsFound !== 1 ? "s" : ""}
+            {t("review_transactions", { count: transactionsFound })}
           </Text>
         </TouchableOpacity>
 
@@ -540,7 +574,9 @@ function SuccessState({
           activeOpacity={0.7}
           className="w-full py-3 items-center"
         >
-          <Text className="text-slate-400 text-sm">Back to Dashboard</Text>
+          <Text className="text-slate-400 text-sm">
+            {t("back_to_dashboard")}
+          </Text>
         </TouchableOpacity>
       </View>
     </Animated.View>
@@ -554,9 +590,11 @@ function SuccessState({
 function EmptyState({
   totalScanned,
   onBackPress,
+  t,
 }: {
   readonly totalScanned: number;
   readonly onBackPress: () => void;
+  readonly t: (key: string, opts?: Record<string, unknown>) => string;
 }): React.JSX.Element {
   return (
     <Animated.View
@@ -568,20 +606,20 @@ function EmptyState({
       </View>
 
       <Text className="text-xl font-bold text-slate-800 dark:text-white mb-2">
-        No Transactions Found
+        {t("no_transactions_found")}
       </Text>
       <Text className="text-sm text-slate-400 text-center mb-4">
-        Scanned {totalScanned.toLocaleString()} messages
+        {t("scanned_count", { count: totalScanned.toLocaleString() })}
       </Text>
 
       {/* ── Reasons Card ────────────────────────────────────── */}
       <View className="bg-white dark:bg-slate-800 rounded-2xl p-4 w-full mb-8">
         <Text className="text-sm font-semibold text-slate-300 mb-3">
-          Possible Reasons
+          {t("possible_reasons")}
         </Text>
-        <ReasonBullet text="No bank SMS found from supported senders" />
-        <ReasonBullet text="Messages may be too old or already synced" />
-        <ReasonBullet text="SMS format not recognized" />
+        <ReasonBullet text={t("reason_no_bank_sms")} />
+        <ReasonBullet text={t("reason_old_or_synced")} />
+        <ReasonBullet text={t("reason_unrecognized_format")} />
       </View>
 
       <View className="w-full">
@@ -591,7 +629,7 @@ function EmptyState({
           className="w-full py-4 rounded-2xl bg-slate-100 dark:bg-slate-800 items-center"
         >
           <Text className="text-slate-300 text-sm font-semibold">
-            Back to Dashboard
+            {t("back_to_dashboard")}
           </Text>
         </TouchableOpacity>
       </View>
@@ -607,10 +645,12 @@ function ErrorState({
   error,
   onRetryPress,
   onBackPress,
+  t,
 }: {
   readonly error: string | null;
   readonly onRetryPress: () => void;
   readonly onBackPress: () => void;
+  readonly t: (key: string, opts?: Record<string, unknown>) => string;
 }): React.JSX.Element {
   return (
     <Animated.View
@@ -627,7 +667,7 @@ function ErrorState({
       </View>
 
       <Text className="text-xl font-bold text-slate-800 dark:text-white mb-2">
-        Scan Failed
+        {t("scan_failed")}
       </Text>
 
       {/* Error detail card */}
@@ -639,14 +679,13 @@ function ErrorState({
             style={{ backgroundColor: palette.red[500] }}
           />
           <Text className="text-sm text-slate-300 flex-1 leading-5">
-            {error ??
-              "An unexpected error occurred while scanning SMS messages."}
+            {error ?? t("scan_error_default")}
           </Text>
         </View>
       </View>
 
       <Text className="text-sm text-slate-400 text-center mb-8 px-4">
-        Please check your SMS permissions in Settings and try again.
+        {t("check_permissions")}
       </Text>
 
       {/* Actions */}
@@ -658,7 +697,7 @@ function ErrorState({
           // eslint-disable-next-line react-native/no-inline-styles
           style={{ backgroundColor: palette.nileGreen[500] }}
         >
-          <Text className="text-white text-sm font-bold">Try Again</Text>
+          <Text className="text-white text-sm font-bold">{t("try_again")}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -667,7 +706,7 @@ function ErrorState({
           className="w-full py-4 rounded-2xl bg-slate-100 dark:bg-slate-800 items-center"
         >
           <Text className="text-slate-300 text-sm font-semibold">
-            Back to Dashboard
+            {t("back_to_dashboard")}
           </Text>
         </TouchableOpacity>
       </View>
@@ -731,19 +770,14 @@ function StatCard({
 function PipelineStep({
   label,
   status,
+  statusLabel,
   isLast,
 }: {
   readonly label: string;
   readonly status: "completed" | "active" | "pending";
+  readonly statusLabel: string;
   readonly isLast: boolean;
 }): React.JSX.Element {
-  const statusLabel =
-    status === "completed"
-      ? "Completed"
-      : status === "active"
-        ? "Processing..."
-        : "Waiting for filter";
-
   const statusColor =
     status === "completed" || status === "active"
       ? palette.nileGreen[400]

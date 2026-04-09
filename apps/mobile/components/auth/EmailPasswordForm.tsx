@@ -152,8 +152,8 @@ export function EmailPasswordForm({
           autoCorrect={false}
           textContentType="emailAddress"
           editable={!isLoading}
-          accessibilityLabel="Email address"
-          accessibilityHint="Enter your email address"
+          accessibilityLabel={t("email_address")}
+          accessibilityHint={t("email_placeholder")}
         />
       </View>
 
@@ -174,8 +174,8 @@ export function EmailPasswordForm({
           autoCorrect={false}
           textContentType={mode === "signUp" ? "newPassword" : "password"}
           editable={!isLoading}
-          accessibilityLabel="Password"
-          accessibilityHint="Enter your password"
+          accessibilityLabel={t("password")}
+          accessibilityHint={t("password_placeholder")}
         />
         <TouchableOpacity
           onPress={() => setShowPassword((prev) => !prev)}
@@ -206,7 +206,7 @@ export function EmailPasswordForm({
           onPress={handleForgotPassword}
           disabled={isLoading}
           className="self-end"
-          accessibilityLabel="Forgot password"
+          accessibilityLabel={t("forgot_password")}
           accessibilityRole="link"
         >
           <Text className="text-sm text-nileGreen-400 font-medium">

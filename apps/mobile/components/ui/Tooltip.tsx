@@ -145,7 +145,7 @@ function getArrowBaseStyle(
  * ```tsx
  * <View style={{ position: 'relative' }}>
  *   <Pressable onPress={() => setShowTooltip(true)}>
- *     <Text>Info Icon</Text>
+ *     <Text>Info Icon</Text> // i18n-ignore
  *   </Pressable>
  *   <Tooltip
  *     text="Your explanation here"

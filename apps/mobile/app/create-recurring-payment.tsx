@@ -342,7 +342,7 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
               className={`flex-row items-center justify-between px-4 py-3.5 rounded-xl border mb-4 ${inputBg} ${inputBorder}`}
             >
               <Text className={textColor}>
-                {getFrequencyLabel(formData.frequency)}
+                {getFrequencyLabel(formData.frequency, t)}
               </Text>
               <Ionicons
                 name="chevron-down"

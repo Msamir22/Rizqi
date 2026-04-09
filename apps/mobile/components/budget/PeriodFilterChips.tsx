@@ -17,6 +17,7 @@ import React, { useCallback } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import type { BudgetPeriod } from "@astik/db";
 import { palette } from "@/constants/colors";
+import { useTranslation } from "react-i18next";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -37,14 +38,14 @@ interface PeriodFilterChipsProps {
 
 interface ChipConfig {
   readonly key: PeriodFilter;
-  readonly label: string;
+  readonly labelKey: string;
 }
 
 const CHIPS: readonly ChipConfig[] = [
-  { key: "ALL", label: "All" },
-  { key: "WEEKLY", label: "Weekly" },
-  { key: "MONTHLY", label: "Monthly" },
-  { key: "CUSTOM", label: "Custom" },
+  { key: "ALL", labelKey: "filter_all" },
+  { key: "WEEKLY", labelKey: "filter_weekly" },
+  { key: "MONTHLY", labelKey: "filter_monthly" },
+  { key: "CUSTOM", labelKey: "filter_custom" },
 ] as const;
 
 const ACTIVE_BG_COLOR = palette.nileGreen[500];
@@ -57,6 +58,8 @@ export function PeriodFilterChips({
   selected,
   onSelect,
 }: PeriodFilterChipsProps): React.JSX.Element {
+  const { t } = useTranslation("budgets");
+
   return (
     <View className="flex-grow-0 py-2 pt-4">
       <ScrollView
@@ -67,7 +70,7 @@ export function PeriodFilterChips({
         {CHIPS.map((chip) => (
           <FilterChip
             key={chip.key}
-            label={chip.label}
+            label={t(chip.labelKey)}
             isActive={selected === chip.key}
             onPress={() => onSelect(chip.key)}
           />

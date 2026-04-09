@@ -38,5 +38,9 @@
   "holding_two": "مقتنيان",
   "holding_few": "{{count}} مقتنيات",
   "holding_many": "{{count}} مقتنى",
-  "holding_other": "{{count}} مقتنى"
+  "holding_other": "{{count}} مقتنى",
+
+  "start_tracking_metals": "ابدأ بتتبع معادني",
+  "empty_metals_description": "أضف مقتنياتك من الذهب والفضة لتتبع قيمتها لحظياً.",
+  "empty_illustration_label": "رسم توضيحي لغياب المعادن"
 }

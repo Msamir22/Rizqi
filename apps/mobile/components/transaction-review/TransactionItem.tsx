@@ -29,6 +29,7 @@ import { formatDate as formatDateHelper } from "@/utils/dateHelpers";
 import { useLocale } from "@/context/LocaleContext";
 import { formatCurrency, type ReviewableTransaction } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import React, { memo, useCallback, useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
@@ -120,6 +121,7 @@ function TransactionItemInner({
 }: TransactionItemProps): React.JSX.Element {
   const [isExpanded, setIsExpanded] = useState(false);
   const { language } = useLocale();
+  const { t } = useTranslation("transactions");
   const isExpense = transaction.type === "EXPENSE";
   const isVoice = transaction.source === "VOICE";
   const hasExpandableContent = !isVoice && !!expandedContent;
@@ -152,7 +154,7 @@ function TransactionItemInner({
         accessibilityRole="button"
         accessibilityLanguage={language}
         accessibilityLabel={`${transaction.originLabel}, ${isExpense ? "expense" : "income"} ${formatCurrency({ amount: transaction.amount, currency: transaction.currency })}, ${counterpartyText ?? ""}, ${transaction.categoryDisplayName}${accountName ? `, ${accountName}` : ""}`}
-        accessibilityHint="Tap to edit this transaction"
+        accessibilityHint={t("tap_to_edit_transaction")}
         accessibilityState={{ selected: isSelected }}
       >
         {/* Checkbox */}

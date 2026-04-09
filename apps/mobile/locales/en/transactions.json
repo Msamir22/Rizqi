@@ -215,5 +215,19 @@
   "feature_control_title": "You're in Control",
   "feature_control_description": "Review every transaction before it's saved. Decline any you don't want.",
   "allow_sms_access": "Allow SMS Access",
-  "not_now": "Not Now"
+  "not_now": "Not Now",
+
+  "edit_amount": "Edit Amount",
+  "edit_category": "Edit Category",
+
+  "select_frequency": "Select Frequency",
+  "freq_daily": "Daily",
+  "freq_weekly": "Weekly",
+  "freq_monthly": "Monthly",
+  "freq_quarterly": "Quarterly",
+  "freq_yearly": "Yearly",
+  "status_active": "Active",
+  "status_paused": "Paused",
+  "status_completed": "Completed",
+  "tap_to_edit_transaction": "Tap to edit this transaction"
 }

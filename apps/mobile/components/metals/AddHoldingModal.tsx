@@ -293,7 +293,7 @@ export function AddHoldingModal({
                               : "text-slate-500 dark:text-slate-400"
                           }`}
                         >
-                          {type.toLowerCase()}
+                          {t(type === "GOLD" ? "gold" : "silver")}
                         </Text>
                       </TouchableOpacity>
                     ))}

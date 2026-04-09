@@ -20,6 +20,7 @@ import { useRouter } from "expo-router";
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 // =============================================================================
 // Types
@@ -47,6 +48,7 @@ export function LiveRatesHeader({
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { isDark } = useTheme();
+  const { t } = useTranslation("common");
 
   const dotColor = isStale
     ? palette.gold[500]
@@ -85,7 +87,7 @@ export function LiveRatesHeader({
           testID="header-back"
           className="p-1"
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t("back")}
         >
           <Ionicons
             name="arrow-back-outline"

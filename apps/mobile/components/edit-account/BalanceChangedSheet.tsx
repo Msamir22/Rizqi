@@ -206,7 +206,7 @@ export function BalanceChangedSheet({
                     onPress={() => setSelectedOption("silent")}
                     activeOpacity={0.7}
                     accessibilityRole="radio"
-                    accessibilityLabel="Just update the balance silently"
+                    accessibilityLabel={t("just_update_balance")}
                     accessibilityState={{
                       checked: selectedOption === "silent",
                     }}
@@ -242,7 +242,7 @@ export function BalanceChangedSheet({
                     onPress={() => setSelectedOption("tracked")}
                     activeOpacity={0.7}
                     accessibilityRole="radio"
-                    accessibilityLabel="Track the balance change as a transaction"
+                    accessibilityLabel={t("track_as_transaction")}
                     accessibilityState={{
                       checked: selectedOption === "tracked",
                     }}
@@ -280,7 +280,7 @@ export function BalanceChangedSheet({
                   disabled={isSubmitting}
                   activeOpacity={0.8}
                   accessibilityRole="button"
-                  accessibilityLabel="Confirm balance change"
+                  accessibilityLabel={t("confirm_balance_change")}
                   className={`py-4 rounded-xl items-center ${
                     isSubmitting ? "bg-nileGreen-400" : "bg-nileGreen-500"
                   }`}

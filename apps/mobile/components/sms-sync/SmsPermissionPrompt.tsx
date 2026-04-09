@@ -23,6 +23,7 @@ import {
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { palette } from "@/constants/colors";
+import { useTranslation } from "react-i18next";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -86,6 +87,8 @@ export function SmsPermissionPrompt({
   onDismiss,
   requestPermission,
 }: SmsPermissionPromptProps): React.JSX.Element {
+  const { t } = useTranslation("transactions");
+
   const handleAllow = useCallback(async (): Promise<void> => {
     const result = await requestPermission();
     if (result === "granted") {
@@ -132,7 +135,7 @@ export function SmsPermissionPrompt({
               <View className="mb-8">
                 <FeatureBullet
                   icon="flash"
-                  title="Instant Tracking"
+                  title={t("feature_instant_title")}
                   description="Automatically detect transactions from your bank & wallet SMS"
                   delay={300}
                 />
@@ -144,7 +147,7 @@ export function SmsPermissionPrompt({
                 />
                 <FeatureBullet
                   icon="checkmark-circle"
-                  title="You're in Control"
+                  title={t("feature_control_title")}
                   description="Review every transaction before it's saved. Decline any you don't want."
                   delay={500}
                 />

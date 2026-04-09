@@ -24,6 +24,7 @@ import { palette } from "@/constants/colors";
 import { useLiveRatesScreen } from "@/hooks/useLiveRatesScreen";
 import React from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { CurrencySection } from "./CurrencySection";
 import { GoldHeroCard } from "./GoldHeroCard";
@@ -38,6 +39,7 @@ import { MetalCard } from "./MetalCard";
 // =============================================================================
 
 export function LiveRatesScreen(): React.JSX.Element {
+  const { t } = useTranslation("metals");
   const {
     isLoading,
     isConnected,
@@ -104,14 +106,14 @@ export function LiveRatesScreen(): React.JSX.Element {
             {/* Silver + Platinum side-by-side */}
             <View className="flex-row mt-3" style={{ gap: 12 }}>
               <MetalCard
-                metalName="Silver"
+                metalName={t("silver")}
                 price={metals.silverPrice}
                 trendPercent={metals.silverTrendPercent}
                 borderColor={palette.silver[500]}
                 currencySymbol={metals.currencySymbol}
               />
               <MetalCard
-                metalName="Platinum"
+                metalName={t("platinum")}
                 price={metals.platinumPrice}
                 trendPercent={metals.platinumTrendPercent}
                 borderColor={palette.slate[400]}

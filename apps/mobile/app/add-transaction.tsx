@@ -529,7 +529,9 @@ export default function AddTransaction(): React.ReactNode {
               <View className="flex-row gap-4 mb-4">
                 {/* Account Field */}
                 <View className="flex-1">
-                  <Text className="input-label">ACCOUNT</Text>
+                  <Text className="input-label">
+                    {t("account").toUpperCase()}
+                  </Text>
                   {hasAccounts ? (
                     <TouchableOpacity
                       onPress={() => {
@@ -592,7 +594,9 @@ export default function AddTransaction(): React.ReactNode {
 
                 {/* Category Field */}
                 <View className="flex-1">
-                  <Text className="input-label">CATEGORY</Text>
+                  <Text className="input-label">
+                    {t("category").toUpperCase()}
+                  </Text>
                   <TouchableOpacity
                     onPress={() => {
                       setFormErrors((prev) => ({
