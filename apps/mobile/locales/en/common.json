@@ -89,5 +89,6 @@
   "see_all_currencies": "See all currencies →",
   "show_less": "Show less ↑",
   "ok": "OK",
+  "language_change_error_title": "Language Change Failed",
   "language_change_failed": "Failed to change language. Please try again."
 }

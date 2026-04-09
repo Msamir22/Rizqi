@@ -36,5 +36,6 @@
   "sync_failed_title": "فشلت المزامنة",
   "sync_failed_message": "قد لا يتم حفظ بعض البيانات في السحابة. إذا تابعت، سيتم فقدان أي بيانات غير متزامنة.",
   "proceed_anyway": "المتابعة على أي حال",
+  "language_change_error_title": "فشل تغيير اللغة",
   "language_change_failed": "فشل تغيير اللغة. يرجى المحاولة مرة أخرى."
 }

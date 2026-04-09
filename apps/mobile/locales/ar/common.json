@@ -104,5 +104,6 @@
   "see_all_currencies": "عرض جميع العملات ←",
   "show_less": "عرض أقل ↑",
   "ok": "حسناً",
+  "language_change_error_title": "فشل تغيير اللغة",
   "language_change_failed": "فشل تغيير اللغة. يرجى المحاولة مرة أخرى."
 }

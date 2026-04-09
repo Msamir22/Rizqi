@@ -64,6 +64,19 @@ function generateUUID(): string {
 // Set the global ID generator BEFORE creating the database
 setGenerator(generateUUID);
 
+// TODO: WatermelonDB 0.28 does not support React Native Bridgeless Mode, which
+// is enabled via `newArchEnabled: true` in apps/mobile/app.json. At runtime the
+// JSI adapter cannot attach and WatermelonDB silently falls back to the slower
+// async bridge path — you'll see this warning in logcat:
+//   [🍉] JSI SQLiteAdapter not available… falling back to asynchronous operation
+// The `jsi: true` we pass below is therefore aspirational, not effective, and
+// the try/catch fallback below never runs (construction succeeds; the fallback
+// happens deeper inside WatermelonDB). Revisit when any of these land:
+//   1. WatermelonDB releases a version with bridgeless support
+//      (tracking: https://github.com/Nozbe/WatermelonDB/issues/1769)
+//   2. We decide to turn off the new architecture (newArchEnabled: false)
+// Impact: DB reads/writes go through the async bridge instead of synchronous
+// JSI — functionally correct, but noticeably slower on list-heavy screens.
 let adapter: SQLiteAdapter;
 try {
   adapter = new SQLiteAdapter({

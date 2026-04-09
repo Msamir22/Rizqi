@@ -14,6 +14,7 @@
     "mobile": "npm run start -w @astik/mobile",
     "mobile:ios": "npm run ios -w @astik/mobile",
     "mobile:android": "npm run android -w @astik/mobile",
+    "mobile:android:release": "npm run android:release -w @astik/mobile",
     "mobile:android-local-build": "npm run android-local-build -w @astik/mobile",
     "mobile-prebuild": "npm run prebuild -w @astik/mobile",
     "mobile:doctor": "npm run doctor -w @astik/mobile",
