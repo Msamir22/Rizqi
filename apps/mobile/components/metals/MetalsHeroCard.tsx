@@ -59,9 +59,6 @@ const LIGHT_GRADIENT_COLORS: readonly [string, string] = [
   "rgba(255, 255, 255, 0)",
 ];
 
-const TOOLTIP_TEXT =
-  "Based on current market rates vs. your purchase prices. Updates whenever rates change.";
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -146,7 +143,7 @@ export function MetalsHeroCard({
               onPress={handleInfoPress}
               hitSlop={8}
               accessibilityRole="button"
-              accessibilityLabel="Profit/loss calculation info"
+              accessibilityLabel={t("hero_accessibility")}
             >
               <Ionicons
                 name="information-circle-outline"
@@ -156,7 +153,7 @@ export function MetalsHeroCard({
             </Pressable>
 
             <Tooltip
-              text={TOOLTIP_TEXT}
+              text={t("metals_tooltip")}
               visible={showTooltip}
               onDismiss={handleTooltipDismiss}
               position="bottom"

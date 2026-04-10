@@ -116,5 +116,10 @@
   "select_category_modal": "Select Category",
   "select_period": "Select Period",
   "voice_listening": "Listening",
-  "no_matching_filters": "No transactions match your filters"
+  "no_matching_filters": "No transactions match your filters",
+  "search_categories": "Search categories...",
+  "search_category_level": "Search {{label}}...",
+  "no_categories_found": "No categories found",
+  "no_categories_match_search": "No categories match your search",
+  "vs_last_month": "vs Last Month"
 }

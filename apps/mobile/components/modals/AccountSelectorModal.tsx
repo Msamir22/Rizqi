@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import React from "react";
+import React, { useCallback } from "react";
 import {
   Modal,
   ScrollView,
@@ -31,6 +31,20 @@ export function AccountSelectorModal({
 }: AccountSelectorModalProps): React.JSX.Element {
   const { isDark } = useTheme();
   const { t } = useTranslation("common");
+  const { t: tAccounts } = useTranslation("accounts");
+
+  /** Map account type enum values to their translated display labels */
+  const accountTypeLabel = useCallback(
+    (type: string): string => {
+      const keyMap: Record<string, string> = {
+        CASH: "type_cash",
+        BANK: "type_bank",
+        DIGITAL_WALLET: "type_digital_wallet",
+      };
+      return tAccounts(keyMap[type] ?? type);
+    },
+    [tAccounts]
+  );
 
   return (
     <Modal
@@ -121,7 +135,7 @@ export function AccountSelectorModal({
                           </Text>
                           <Text className="text-xs text-slate-500 dark:text-slate-400">
                             {account.currency} •{" "}
-                            {account.type.replace("_", " ")} •{" "}
+                            {accountTypeLabel(account.type)} •{" "}
                             {account.formattedBalance}
                           </Text>
                         </View>

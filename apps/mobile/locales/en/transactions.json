@@ -257,5 +257,9 @@
   "add_bank_details_optional": "Add bank details (Optional)",
   "hide_bank_details": "Hide Bank Details",
   "bank_details_label": "BANK DETAILS",
-  "auto_detect_card_transactions": "We'll auto-detect transactions from this card"
+  "auto_detect_card_transactions": "We'll auto-detect transactions from this card",
+  "target_amount": "Target Amount ({{currency}})",
+  "confirm_amount_received": "Please confirm the amount received in {{currency}}.",
+  "save_button_count": "Save {{count}} Transaction(s)",
+  "save_error_title": "Save Error"
 }

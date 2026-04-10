@@ -190,7 +190,9 @@ export function CategorySelectorModal({
   }, [onClose, reset]);
 
   const searchPlaceholder =
-    depth === 0 ? "Search categories..." : `Search ${currentLevel.label}...`;
+    depth === 0
+      ? t("search_categories")
+      : t("search_category_level", { label: currentLevel.label });
 
   // ---[ FlatList helpers ]---
 
@@ -270,8 +272,8 @@ export function CategorySelectorModal({
                   <View className="items-center justify-center py-12">
                     <Text className="text-sm text-slate-400 dark:text-slate-500">
                       {searchQuery.trim()
-                        ? "No categories match your search"
-                        : "No categories found"}
+                        ? t("no_categories_match_search")
+                        : t("no_categories_found")}
                     </Text>
                   </View>
                 ) : (

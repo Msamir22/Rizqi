@@ -286,7 +286,7 @@ export function BalanceChangedSheet({
                   }`}
                 >
                   <Text className="text-base font-bold text-white">
-                    {isSubmitting ? "Saving..." : "Confirm"}
+                    {isSubmitting ? t("saving") : t("confirm_balance_change")}
                   </Text>
                 </TouchableOpacity>
               </View>

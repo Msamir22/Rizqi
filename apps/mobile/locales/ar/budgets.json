@@ -99,5 +99,7 @@
   "alert_threshold": "حد التنبيه",
   "view_budget": "عرض الميزانية",
   "recent_transactions": "أحدث المعاملات",
-  "spending_trend": "اتجاه الإنفاق"
+  "spending_trend": "اتجاه الإنفاق",
+  "alert_help_percentage": "سيتم تنبيهك عندما يصل الإنفاق إلى هذه النسبة",
+  "expense_fallback": "مصروف"
 }

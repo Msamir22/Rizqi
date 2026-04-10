@@ -91,5 +91,7 @@
   "alert_threshold": "Alert Threshold",
   "view_budget": "View Budget",
   "recent_transactions": "Recent Transactions",
-  "spending_trend": "Spending Trend"
+  "spending_trend": "Spending Trend",
+  "alert_help_percentage": "You'll be alerted when spending reaches this percentage",
+  "expense_fallback": "Expense"
 }

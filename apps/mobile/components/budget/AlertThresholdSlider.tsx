@@ -203,7 +203,7 @@ export function AlertThresholdSlider({
       </View>
 
       <Text className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-        {"You\u2019ll be alerted when spending reaches this percentage"}
+        {t("alert_help_percentage")}
       </Text>
     </View>
   );

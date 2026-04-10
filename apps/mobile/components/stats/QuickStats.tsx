@@ -72,7 +72,7 @@ export function QuickStats(): React.JSX.Element {
           {/* Month over Month */}
           <View className="flex-1 rounded-2xl p-4 bg-slate-100/50 dark:bg-slate-700/50">
             <Text className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-              vs Last Month
+              {t("vs_last_month")}
             </Text>
             <View className="flex-row items-center mt-1">
               <Ionicons

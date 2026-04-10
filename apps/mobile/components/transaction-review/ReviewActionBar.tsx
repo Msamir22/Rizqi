@@ -25,7 +25,7 @@ export function ReviewActionBar({
       const message = err instanceof Error ? err.message : String(err);
       showToast({
         type: "error",
-        title: "Save Error",
+        title: t("save_error_title"),
         message,
       });
     });
@@ -63,7 +63,7 @@ export function ReviewActionBar({
           <ActivityIndicator color="white" />
         ) : (
           <Text className="text-white text-base font-bold">
-            Save {selectedCount} Transaction{selectedCount !== 1 ? "s" : ""}
+            {t("save_button_count", { count: selectedCount })}
           </Text>
         )}
       </TouchableOpacity>

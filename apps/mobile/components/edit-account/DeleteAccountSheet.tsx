@@ -27,6 +27,7 @@ import {
   View,
 } from "react-native";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { palette } from "@/constants/colors";
 
 // ---------------------------------------------------------------------------
@@ -60,29 +61,29 @@ interface DeleteAccountSheetProps {
 }
 
 /**
- * Builds a summary string of linked records that will be deleted.
+ * Builds a localized summary string of linked records that will be deleted.
+ * Uses i18next pluralization with the accounts namespace.
  */
-function buildLinkedSummary(counts: LinkedRecordsCounts): string {
+function buildLinkedSummary(
+  counts: LinkedRecordsCounts,
+  t: TFunction<"accounts">
+): string {
   const parts: string[] = [];
   if (counts.transactions > 0) {
-    parts.push(
-      `${counts.transactions} transaction${counts.transactions !== 1 ? "s" : ""}`
-    );
+    parts.push(t("transaction_count", { count: counts.transactions }));
   }
   if (counts.transfers > 0) {
-    parts.push(
-      `${counts.transfers} transfer${counts.transfers !== 1 ? "s" : ""}`
-    );
+    parts.push(t("transfer_count", { count: counts.transfers }));
   }
   if (counts.debts > 0) {
-    parts.push(`${counts.debts} debt${counts.debts !== 1 ? "s" : ""}`);
+    parts.push(t("debt_count", { count: counts.debts }));
   }
   if (counts.recurringPayments > 0) {
     parts.push(
-      `${counts.recurringPayments} recurring payment${counts.recurringPayments !== 1 ? "s" : ""}`
+      t("recurring_payment_count", { count: counts.recurringPayments })
     );
   }
-  return parts.length > 0 ? parts.join(", ") : "No linked records";
+  return parts.length > 0 ? parts.join(", ") : t("no_linked_records");
 }
 
 // ---------------------------------------------------------------------------
@@ -171,7 +172,7 @@ export function DeleteAccountSheet({
                       </Text>
                     </View>
                     <Text className="text-sm text-amber-600 dark:text-amber-400 ms-6">
-                      {buildLinkedSummary(linkedRecords)}
+                      {buildLinkedSummary(linkedRecords, t)}
                     </Text>
                   </View>
                 )}

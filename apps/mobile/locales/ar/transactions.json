@@ -265,5 +265,9 @@
   "add_bank_details_optional": "إضافة بيانات بنكية (اختياري)",
   "hide_bank_details": "إخفاء البيانات البنكية",
   "bank_details_label": "البيانات البنكية",
-  "auto_detect_card_transactions": "سنكتشف المعاملات تلقائياً من هذه البطاقة"
+  "auto_detect_card_transactions": "سنكتشف المعاملات تلقائياً من هذه البطاقة",
+  "target_amount": "المبلغ المستهدف ({{currency}})",
+  "confirm_amount_received": "يرجى تأكيد المبلغ المستلم بـ {{currency}}.",
+  "save_button_count": "حفظ {{count}} معاملة",
+  "save_error_title": "خطأ في الحفظ"
 }

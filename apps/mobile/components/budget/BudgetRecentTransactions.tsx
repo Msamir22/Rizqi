@@ -82,7 +82,9 @@ export function BudgetRecentTransactions({
                   className="text-sm font-semibold text-slate-800 dark:text-white"
                   numberOfLines={1}
                 >
-                  {tx.counterparty ?? category?.displayName ?? "Expense"}
+                  {tx.counterparty ??
+                    category?.displayName ??
+                    t("expense_fallback")}
                 </Text>
                 <Text className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                   {new Date(tx.date).toLocaleDateString()}

@@ -131,5 +131,10 @@
   "select_category_modal": "اختر فئة",
   "select_period": "اختر فترة",
   "voice_listening": "جاري الاستماع",
-  "no_matching_filters": "لا توجد معاملات تطابق الفلاتر"
+  "no_matching_filters": "لا توجد معاملات تطابق الفلاتر",
+  "search_categories": "بحث عن فئات...",
+  "search_category_level": "بحث في {{label}}...",
+  "no_categories_found": "لا توجد فئات",
+  "no_categories_match_search": "لا توجد فئات تطابق بحثك",
+  "vs_last_month": "مقابل الشهر الماضي"
 }
