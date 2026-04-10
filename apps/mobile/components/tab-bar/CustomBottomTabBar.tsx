@@ -236,7 +236,7 @@ function CustomBottomTabBarComponent({
           <Animated.View style={[styles.pulseRing, pulseAnimatedStyle]} />
           <Pressable
             onPress={handleMicPress}
-            accessibilityLabel="Voice input - record a transaction"
+            accessibilityLabel={t("voice_recording_label")}
             accessibilityRole="button"
             accessibilityHint={t("voice_recording_hint")}
             accessibilityLanguage={language}

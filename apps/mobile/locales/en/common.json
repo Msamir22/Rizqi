@@ -91,5 +91,6 @@
   "ok": "OK",
   "language_change_error_title": "Language Change Failed",
   "language_change_failed": "Failed to change language. Please try again.",
-  "voice_recording_hint": "Tap to start voice recording for a transaction"
+  "voice_recording_hint": "Tap to start voice recording for a transaction",
+  "voice_recording_label": "Voice input - record a transaction"
 }

@@ -40,7 +40,7 @@ export function getFrequencyLabel(
   t: (key: string) => string
 ): string {
   const option = FREQUENCY_OPTIONS.find((o) => o.value === freq);
-  return option ? t(option.labelKey) : freq;
+  return option ? t(option.labelKey) : t("frequency");
 }
 
 // ---------------------------------------------------------------------------

@@ -77,7 +77,6 @@ export function SmsScanProgress({
   onRetryPress,
 }: SmsScanProgressProps): React.JSX.Element {
   const { t } = useTranslation("transactions");
-  const tSms = t;
 
   return (
     <View className="flex-1 bg-slate-50 dark:bg-slate-900">
@@ -92,7 +91,7 @@ export function SmsScanProgress({
           <Ionicons name="chevron-back" size={24} color={palette.slate[400]} />
         </TouchableOpacity>
         <Text className="flex-1 text-center text-base font-bold text-slate-800 dark:text-white -ms-10">
-          {tSms("sms_scan_header")}
+          {t("sms_scan_header")}
         </Text>
       </View>
 
@@ -102,7 +101,7 @@ export function SmsScanProgress({
           className="flex-1 px-4"
           showsVerticalScrollIndicator={false}
         >
-          <ScanningState progress={progress} t={tSms} />
+          <ScanningState progress={progress} t={t} />
         </ScrollView>
       ) : (
         <View className="flex-1 px-4">
@@ -114,7 +113,7 @@ export function SmsScanProgress({
               topCategories={topCategories}
               onReviewPress={onReviewPress}
               onBackPress={onBackPress}
-              t={tSms}
+              t={t}
             />
           )}
 
@@ -122,7 +121,7 @@ export function SmsScanProgress({
             <EmptyState
               totalScanned={totalScanned}
               onBackPress={onBackPress}
-              t={tSms}
+              t={t}
             />
           )}
 
@@ -131,7 +130,7 @@ export function SmsScanProgress({
               error={error}
               onRetryPress={onRetryPress}
               onBackPress={onBackPress}
-              t={tSms}
+              t={t}
             />
           )}
         </View>
@@ -140,14 +139,14 @@ export function SmsScanProgress({
       {/* ── Bottom action (scanning state only) ───────────────── */}
       {status === "scanning" && (
         <View className="px-4 pb-2">
-          <ScanHintText progress={progress} t={tSms} />
+          <ScanHintText progress={progress} t={t} />
           <TouchableOpacity
             onPress={onBackPress}
             activeOpacity={0.85}
             className="w-full py-4 rounded-2xl bg-slate-100 dark:bg-slate-800 items-center"
           >
             <Text className="text-slate-800 dark:text-white text-sm font-semibold">
-              {tSms("cancel_scan")}
+              {t("cancel_scan")}
             </Text>
           </TouchableOpacity>
         </View>

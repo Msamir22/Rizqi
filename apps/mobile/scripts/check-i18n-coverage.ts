@@ -79,7 +79,13 @@ function getJsonFiles(dir: string): string[] {
 }
 
 function readJson(filePath: string): Record<string, unknown> {
-  return JSON.parse(fs.readFileSync(filePath, "utf-8"));
+  try {
+    return JSON.parse(fs.readFileSync(filePath, "utf-8"));
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : "Unknown JSON parse error";
+    throw new Error(`Failed to parse ${filePath}: ${message}`);
+  }
 }
 
 function hasArabicScript(str: string): boolean {
@@ -232,8 +238,8 @@ function checkHardcodedStrings(): { passed: boolean; errors: string[] } {
       // Skip i18n-ignore lines
       if (line.includes("i18n-ignore")) continue;
 
-      // Skip lines that already use t() or useTranslation
-      if (line.includes("t(") || line.includes("useTranslation")) continue;
+      // Skip import-only lines
+      if (line.includes("useTranslation")) continue;
 
       const relativePath = path.relative(SRC_DIR, filePath);
 
@@ -290,6 +296,16 @@ function checkHardcodedStrings(): { passed: boolean; errors: string[] } {
       if (alertMatch) {
         errors.push(
           `${relativePath}:${lineNum} — Alert.alert("${alertMatch[1]}")`
+        );
+      }
+
+      // Pattern 7: throw new Error("English text"
+      const throwMatch = line.match(
+        /throw new Error\(["']([A-Z][A-Za-z ]{2,})/
+      );
+      if (throwMatch) {
+        errors.push(
+          `${relativePath}:${lineNum} — throw new Error("${throwMatch[1]}")`
         );
       }
     }

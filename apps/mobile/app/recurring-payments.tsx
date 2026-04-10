@@ -263,6 +263,12 @@ export default function RecurringPaymentsScreen(): React.JSX.Element {
 
   const { preferredCurrency } = usePreferredCurrency();
 
+  const statusLabelMap: Record<RecurringStatus, string> = {
+    ACTIVE: t("status_active"),
+    PAUSED: t("status_paused"),
+    COMPLETED: t("status_completed"),
+  };
+
   const handlePaymentPress = (_payment: RecurringPayment): void => {
     // TODO: Navigate to edit payment screen
   };
@@ -309,7 +315,7 @@ export default function RecurringPaymentsScreen(): React.JSX.Element {
             onPress={() => router.push("/create-recurring-payment")}
             icon="receipt-outline"
             title={t("no_status_payments", {
-              status: statusFilter.toLowerCase(),
+              status: statusLabelMap[statusFilter],
             })}
             description={t("tap_to_add_recurring")}
             height={120}
