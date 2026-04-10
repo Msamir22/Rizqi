@@ -24,10 +24,12 @@ const SRC_DIR = path.resolve(__dirname, "..");
 const EN_DIR = path.join(LOCALES_DIR, "en");
 const AR_DIR = path.join(LOCALES_DIR, "ar");
 
-const SRC_GLOB_DIRS = ["app", "components"].map((d) => path.join(SRC_DIR, d));
+const SRC_GLOB_DIRS = [SRC_DIR];
 
 /** Files/patterns to exclude from the hardcoded-string check */
 const EXCLUDE_PATTERNS = [
+  "node_modules/",
+  "locales/",
   "sms-simulator.tsx",
   "scripts/",
   ".test.",
@@ -53,6 +55,13 @@ const AR_LATIN_ALLOWLIST = new Set([
 /** Regex for purely numeric/placeholder values like "0.00", "0.0" */
 const NUMERIC_VALUE_RE = /^[0-9.,\s]+$/;
 
+/**
+ * Baseline count of known hardcoded strings that existed when the i18n gate
+ * was introduced. The gate blocks NEW regressions while allowing the team to
+ * chip away at existing debt. Update this ONLY when known issues are fixed.
+ */
+const KNOWN_ISSUES_BASELINE = 96;
+
 // ---------------------------------------------------------------------------
 // Utilities
 // ---------------------------------------------------------------------------
@@ -71,7 +80,9 @@ function flattenKeys(obj: Record<string, unknown>, prefix = ""): string[] {
 }
 
 function getJsonFiles(dir: string): string[] {
-  if (!fs.existsSync(dir)) return [];
+  if (!fs.existsSync(dir)) {
+    throw new Error(`Missing locale directory: ${dir}`);
+  }
   return fs
     .readdirSync(dir)
     .filter((f) => f.endsWith(".json"))
@@ -227,10 +238,8 @@ function flattenToEntries(
 function checkHardcodedStrings(): {
   passed: boolean;
   errors: string[];
-  warnings: string[];
 } {
   const errors: string[] = [];
-  const warnings: string[] = [];
   const files = collectSourceFiles();
 
   for (const filePath of files) {
@@ -238,10 +247,8 @@ function checkHardcodedStrings(): {
     const lines = content.split("\n");
     const relativePath = path.relative(SRC_DIR, filePath);
 
-    // ── Pass 1: Multiline <Text> detection (warnings) ──────────────────────
+    // ── Pass 1: Multiline <Text> detection ──────────────────────────────
     // Catches <Text ...>\n  English content\n</Text> that line-by-line misses.
-    // Reported as warnings since these are often pre-existing issues outside
-    // the current PR scope. Tracked so teams can chip away at them over time.
     const multilineTextRe =
       /<Text[^>]*>\s*([A-Z][A-Za-z ,.'!?&;:()\-]{2,}?)\s*<\/Text>/gs;
     for (const m of content.matchAll(multilineTextRe)) {
@@ -254,7 +261,7 @@ function checkHardcodedStrings(): {
       if (beforeText.includes("i18n-ignore")) continue;
 
       const lineNum = content.slice(0, m.index).split("\n").length;
-      warnings.push(`${relativePath}:${lineNum} — <Text>${captured}</Text>`);
+      errors.push(`${relativePath}:${lineNum} — <Text>${captured}</Text>`);
     }
 
     // ── Pass 2: Line-by-line attribute checks ─────────────────────────────
@@ -338,14 +345,16 @@ function checkHardcodedStrings(): {
     }
   }
 
-  return { passed: errors.length === 0, errors, warnings };
+  return { passed: errors.length <= KNOWN_ISSUES_BASELINE, errors };
 }
 
 function collectSourceFiles(): string[] {
   const files: string[] = [];
 
   function walk(dir: string): void {
-    if (!fs.existsSync(dir)) return;
+    if (!fs.existsSync(dir)) {
+      throw new Error(`Missing source directory: ${dir}`);
+    }
     const entries = fs.readdirSync(dir, { withFileTypes: true });
 
     for (const entry of entries) {
@@ -354,7 +363,7 @@ function collectSourceFiles(): string[] {
       if (entry.isDirectory()) {
         walk(fullPath);
       } else if (entry.isFile() && /\.(tsx|ts)$/.test(entry.name)) {
-        const relative = path.relative(SRC_DIR, fullPath);
+        const relative = path.relative(SRC_DIR, fullPath).replace(/\\/g, "/");
         if (EXCLUDE_PATTERNS.some((p) => relative.includes(p))) continue;
         files.push(fullPath);
       }
@@ -362,7 +371,14 @@ function collectSourceFiles(): string[] {
   }
 
   for (const dir of SRC_GLOB_DIRS) {
+    if (!fs.existsSync(dir)) {
+      throw new Error(`Missing source directory: ${dir}`);
+    }
     walk(dir);
+  }
+
+  if (files.length === 0) {
+    throw new Error("No TS/TSX files found for i18n coverage scan.");
   }
 
   return files.sort();
@@ -406,30 +422,31 @@ function main(): void {
   }
 
   // Check 3
-  console.log("Check 3: Hardcoded English Strings in JSX");
+  console.log("Check 3: Hardcoded English Strings in Source");
   const hardcoded = checkHardcodedStrings();
+  const baselineDiff = hardcoded.errors.length - KNOWN_ISSUES_BASELINE;
+
   if (hardcoded.passed) {
-    console.log("  PASSED\n");
+    if (hardcoded.errors.length === 0) {
+      console.log("  PASSED\n");
+    } else {
+      console.log(
+        `  PASSED with ${hardcoded.errors.length} known issues (baseline: ${KNOWN_ISSUES_BASELINE})\n`
+      );
+      for (const err of hardcoded.errors) {
+        console.log(`    - ${err}`);
+      }
+      console.log();
+    }
   } else {
     console.log(
-      `  FAILED (${hardcoded.errors.length} hardcoded strings found)`
+      `  FAILED — ${hardcoded.errors.length} hardcoded strings found (baseline: ${KNOWN_ISSUES_BASELINE}, +${baselineDiff} new regressions)`
     );
     for (const err of hardcoded.errors) {
       console.log(`    - ${err}`);
     }
     console.log();
-    totalErrors += hardcoded.errors.length;
-  }
-
-  // Warnings from multiline <Text> scan (informational, non-blocking)
-  if (hardcoded.warnings.length > 0) {
-    console.log(
-      `Warnings: ${hardcoded.warnings.length} multiline <Text> strings detected (non-blocking)`
-    );
-    for (const w of hardcoded.warnings) {
-      console.log(`    - ${w}`);
-    }
-    console.log();
+    totalErrors += baselineDiff;
   }
 
   // Summary

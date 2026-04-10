@@ -608,7 +608,7 @@ function EmptyState({
         {t("no_transactions_found")}
       </Text>
       <Text className="text-sm text-slate-400 text-center mb-4">
-        {t("scanned_count", { count: totalScanned.toLocaleString() })}
+        {t("scanned_count", { count: totalScanned })}
       </Text>
 
       {/* ── Reasons Card ────────────────────────────────────── */}
@@ -672,11 +672,7 @@ function ErrorState({
       {/* Error detail card */}
       <View className="bg-white dark:bg-slate-800 rounded-2xl p-4 w-full mb-4">
         <View className="flex-row items-start">
-          <View
-            className="w-2 h-2 rounded-full mt-1.5 me-2"
-            // eslint-disable-next-line react-native/no-inline-styles
-            style={{ backgroundColor: palette.red[500] }}
-          />
+          <View className="w-2 h-2 rounded-full mt-1.5 me-2 bg-red-500" />
           <Text className="text-sm text-slate-300 flex-1 leading-5">
             {error ?? t("scan_error_default")}
           </Text>
@@ -930,10 +926,10 @@ function formatDuration(
   ms: number,
   t: (key: string, opts?: Record<string, unknown>) => string
 ): string {
-  const seconds = Math.round(ms / 1000);
-  if (seconds < 60) return t("duration_seconds", { count: seconds });
-  const minutes = Math.floor(seconds / 60);
-  const remainderSec = seconds % 60;
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  if (totalSeconds < 60) return t("duration_seconds", { count: totalSeconds });
+  const minutes = Math.floor(totalSeconds / 60);
+  const remainderSec = totalSeconds % 60;
   return remainderSec > 0
     ? t("duration_minutes_seconds", { minutes, seconds: remainderSec })
     : t("duration_minutes", { count: minutes });
