@@ -2,6 +2,7 @@ import { palette } from "@/constants/colors";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import type { CurrencyType } from "@astik/db";
 
@@ -80,6 +81,7 @@ export function AccountSelector({
   matchingSectionLabel,
 }: AccountSelectorProps): React.JSX.Element {
   const hasOptions = options.length > 0;
+  const { t } = useTranslation("transactions");
 
   // Tailwind dynamic mappings
   const themeClasses = {
@@ -138,7 +140,7 @@ export function AccountSelector({
           >
             <Ionicons name="close" size={14} color={palette.red[400]} />
             <Text className="text-xs text-red-400 font-semibold ms-0.5">
-              Cancel
+              {t("cancel")}
             </Text>
           </TouchableOpacity>
         )}
@@ -243,7 +245,7 @@ export function AccountSelector({
                 matchingAccounts &&
                 matchingAccounts.length > 0 && (
                   <Text className="px-4 pt-2 pb-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    {matchingSectionLabel ?? "Matching currency"}
+                    {matchingSectionLabel ?? t("matching_currency")}
                   </Text>
                 )}
               {(showSectionHeaders && matchingAccounts
@@ -289,7 +291,7 @@ export function AccountSelector({
                       {opt.isPending && (
                         <View className="bg-amber-500/20 px-1.5 py-0.5 rounded ms-2">
                           <Text className="text-[10px] font-bold text-amber-400">
-                            NEW
+                            {t("new_badge")}
                           </Text>
                         </View>
                       )}
@@ -311,7 +313,7 @@ export function AccountSelector({
                 otherAccounts.length > 0 && (
                   <>
                     <Text className="px-4 pt-3 pb-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-t border-slate-200 dark:border-slate-700/40">
-                      Other accounts
+                      {t("other_accounts")}
                     </Text>
                     {otherAccounts.map((opt) => {
                       const isSelected = opt.id === selectedId;
@@ -352,7 +354,7 @@ export function AccountSelector({
                             {opt.isPending && (
                               <View className="bg-amber-500/20 px-1.5 py-0.5 rounded ms-2">
                                 <Text className="text-[10px] font-bold text-amber-400">
-                                  NEW
+                                  {t("new_badge")}
                                 </Text>
                               </View>
                             )}
@@ -391,7 +393,7 @@ export function AccountSelector({
                   <Text
                     className={`text-sm font-semibold ${themeClasses.pillText}`}
                   >
-                    Create a new account
+                    {t("create_new_account")}
                   </Text>
                 </TouchableOpacity>
               )}

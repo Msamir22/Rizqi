@@ -297,8 +297,9 @@ function checkHardcodedStrings(): {
       const line = lines[i];
       const lineNum = i + 1;
 
-      // Skip i18n-ignore lines
+      // Skip i18n-ignore lines (current or previous line)
       if (line.includes("i18n-ignore")) continue;
+      if (i > 0 && lines[i - 1].includes("i18n-ignore")) continue;
 
       // Skip import-only lines
       if (line.includes("useTranslation")) continue;

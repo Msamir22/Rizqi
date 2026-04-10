@@ -119,6 +119,7 @@ export async function createSmsAtmTransfer(
 export async function createTransfer(data: TransferData): Promise<void> {
   const userId = await getCurrentUserId();
   if (!userId) {
+    // i18n-ignore — developer-facing error
     throw new Error("User not authenticated");
   }
 
@@ -323,6 +324,7 @@ export async function convertTransferToTransaction(
 ): Promise<void> {
   const userId = await getCurrentUserId();
   if (!userId) {
+    // i18n-ignore — developer-facing error
     throw new Error("User not authenticated");
   }
 

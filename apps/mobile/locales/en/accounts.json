@@ -53,14 +53,14 @@
   "action_cannot_be_undone": "This action cannot be undone",
   "balance_label": "Balance:",
   "following_will_be_deleted": "The following will also be deleted:",
-  "transaction_count": "{{count}} transaction",
-  "transaction_count_plural": "{{count}} transactions",
-  "transfer_count": "{{count}} transfer",
-  "transfer_count_plural": "{{count}} transfers",
-  "debt_count": "{{count}} debt",
-  "debt_count_plural": "{{count}} debts",
-  "recurring_payment_count": "{{count}} recurring payment",
-  "recurring_payment_count_plural": "{{count}} recurring payments",
+  "transaction_count_one": "{{count}} transaction",
+  "transaction_count_other": "{{count}} transactions",
+  "transfer_count_one": "{{count}} transfer",
+  "transfer_count_other": "{{count}} transfers",
+  "debt_count_one": "{{count}} debt",
+  "debt_count_other": "{{count}} debts",
+  "recurring_payment_count_one": "{{count}} recurring payment",
+  "recurring_payment_count_other": "{{count}} recurring payments",
   "no_linked_records": "No linked records",
   "no_linked_records_message": "This account has no linked records.",
 
@@ -74,5 +74,13 @@
   "card_last_4_help": "Found on your card: ****1234",
   "sms_sender_name": "SMS Sender Name",
   "sms_sender_placeholder": "e.g., CIB, NBE, VFCash",
-  "sms_sender_help": "The name that appears as the SMS sender when your bank sends you transaction notifications. This helps us automatically match SMS transactions to this account."
+  "sms_sender_help": "The name that appears as the SMS sender when your bank sends you transaction notifications. This helps us automatically match SMS transactions to this account.",
+
+  "balance_change_question": "How would you like to track this change?",
+  "new_label": "New",
+  "silent_adjust_description": "Silently adjust without any record",
+  "track_as_transaction_description": "Create a Balance Adjustment record for your history",
+  "deletion_warning_linked_data": "The following will also be deleted:",
+  "no_linked_records_description": "This account has no linked records.",
+  "delete_account_action": "Delete"
 }

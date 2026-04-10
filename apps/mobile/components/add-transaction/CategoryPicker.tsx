@@ -5,6 +5,7 @@ import type { Category } from "@astik/db";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 interface CategoryPickerProps {
   selectedCategory: Category | null;
@@ -80,6 +81,7 @@ export function CategoryPicker({
   hideMainSelector = false,
 }: CategoryPickerProps): React.JSX.Element {
   const { isDark } = useTheme();
+  const { t } = useTranslation("transactions");
 
   const columns = useMemo(() => arrangeIntoColumns(categories), [categories]);
 
@@ -87,7 +89,7 @@ export function CategoryPicker({
     <View className={hideMainSelector ? "mb-3" : "mb-6"}>
       {!hideMainSelector && (
         <Text className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2 px-1">
-          Category
+          {t("category")}
         </Text>
       )}
 

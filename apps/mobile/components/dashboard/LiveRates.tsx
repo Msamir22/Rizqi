@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
+import { useTranslation } from "react-i18next";
 import { formatTimeAgo } from "@/utils/dateHelpers";
 
 interface Rate {
@@ -184,6 +185,7 @@ export function LiveRates({
   preferredCurrency,
 }: LiveRatesProps): React.ReactElement {
   const { isDark } = useTheme();
+  const { t } = useTranslation("common");
   const ratesDisplay = buildRatesDisplay(
     latestRates,
     previousDayRate,
@@ -199,7 +201,7 @@ export function LiveRates({
       <View className="mb-3 flex-row items-center justify-between">
         <View className="flex-row items-center">
           <Text className="header-text ms-1 text-slate-800 dark:text-slate-50">
-            Live Rates
+            {t("live_rates")}
           </Text>
           {isLoading && (
             <ActivityIndicator
@@ -224,7 +226,7 @@ export function LiveRates({
           className="flex-row items-center"
         >
           <Text className="text-sm font-medium text-nileGreen-600 dark:text-nileGreen-400">
-            View all
+            {t("view_all_rates")}
           </Text>
           <Ionicons
             name="chevron-forward"

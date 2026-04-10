@@ -49,6 +49,7 @@ export function LiveRatesHeader({
   const router = useRouter();
   const { isDark } = useTheme();
   const { t } = useTranslation("common");
+  const { t: tMetals } = useTranslation("metals");
 
   const dotColor = isStale
     ? palette.gold[500]
@@ -77,7 +78,7 @@ export function LiveRatesHeader({
             className="text-2xl font-bold text-slate-800 dark:text-white px-12"
             numberOfLines={1}
           >
-            Live Rates
+            {tMetals("live_rates")}
           </Text>
         </View>
 
@@ -103,7 +104,7 @@ export function LiveRatesHeader({
             style={{ backgroundColor: dotColor }}
           />
           <Text className="text-sm font-medium" style={{ color: labelColor }}>
-            Live
+            {tMetals("live_badge")}
           </Text>
         </View>
       </View>

@@ -30,6 +30,7 @@ export async function createRecurringPayment(
 ): Promise<RecurringPayment> {
   const userId = await getCurrentUserId();
   if (!userId) {
+    // i18n-ignore — developer-facing error
     throw new Error("User not authenticated");
   }
 

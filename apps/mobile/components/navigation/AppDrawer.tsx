@@ -346,7 +346,7 @@ export function AppDrawer({
                     color={isDark ? palette.slate[300] : palette.slate[600]}
                   />
                   <Text className="ms-4 text-base text-slate-800 dark:text-white">
-                    Dark Mode
+                    {t("dark_mode")}
                   </Text>
                 </View>
                 <Switch

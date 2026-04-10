@@ -15,6 +15,7 @@ import { palette } from "@/constants/colors";
 import type { BudgetAlert } from "@/services/budget-alert-service";
 import { formatCurrency } from "@astik/logic";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
+import { useTranslation } from "react-i18next";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -61,6 +62,7 @@ export function BudgetAlertModal({
   onViewBudget,
 }: BudgetAlertModalProps): React.JSX.Element {
   const { preferredCurrency } = usePreferredCurrency();
+  const { t } = useTranslation("budgets");
 
   if (!alert) return <></>;
 
@@ -149,7 +151,7 @@ export function BudgetAlertModal({
                 className="flex-1 py-3 rounded-xl items-center bg-slate-100 dark:bg-slate-700"
               >
                 <Text className="text-base font-semibold text-slate-600 dark:text-slate-300">
-                  View Budget
+                  {t("view_budget")}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity

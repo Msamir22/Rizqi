@@ -38,5 +38,19 @@
 
   "start_tracking_metals": "Start Tracking Your Metals",
   "empty_metals_description": "Add your gold and silver holdings to track their value in real-time.",
-  "empty_illustration_label": "Empty metals illustration"
+  "empty_illustration_label": "Empty metals illustration",
+
+  "gold_label": "Gold",
+  "rates_unavailable": "Rates unavailable",
+  "pull_to_refresh_offline": "Pull down to refresh when you're back online",
+  "offline_mode": "OFFLINE MODE",
+  "live_badge": "Live",
+  "silver_label": "Silver:",
+  "total_metals_value": "Total Metals Value",
+  "gold_24k_label": "Gold 24K:",
+  "live_rates_accessibility": "Live rates: Gold ${{goldPrice}} per ounce, {{goldDirection}} {{goldChange}} percent. Silver ${{silverPrice}} per gram, {{silverDirection}} {{silverChange}} percent.",
+  "direction_up": "up",
+  "direction_down": "down",
+  "metals_tooltip": "Based on current market rates vs. your purchase prices. Updates whenever rates change.",
+  "hero_accessibility": "Profit/loss calculation info"
 }

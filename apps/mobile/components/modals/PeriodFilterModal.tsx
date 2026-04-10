@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { palette } from "@/constants/colors";
 import { GroupingPeriod } from "@/hooks/useTransactionsGrouping";
+import { useTranslation } from "react-i18next";
 
 interface PeriodFilterModalProps {
   visible: boolean;
@@ -38,6 +39,7 @@ export function PeriodFilterModal({
 }: PeriodFilterModalProps): React.JSX.Element {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const { t } = useTranslation("common");
 
   return (
     <Modal
@@ -60,7 +62,7 @@ export function PeriodFilterModal({
               {/* Header */}
               <View className="flex-row justify-between items-center px-5 py-5 border-b border-slate-200 dark:border-slate-800">
                 <Text className="text-xl font-bold text-slate-800 dark:text-slate-100">
-                  Select Period
+                  {t("select_period")}
                 </Text>
                 <TouchableOpacity onPress={onClose} className="p-1">
                   <Ionicons

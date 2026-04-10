@@ -147,6 +147,7 @@ export function AccountsSection({
   isLoading,
 }: AccountsSectionProps): React.JSX.Element {
   const { t } = useTranslation("accounts");
+  const { t: tc } = useTranslation("common");
 
   // Transform accounts to card data (top 3)
   const cardData: AccountCardData[] = useMemo(() => {
@@ -172,7 +173,7 @@ export function AccountsSection({
       {/* Header Row */}
       <View className="flex-row items-center justify-between mb-3">
         <Text className="text-lg font-bold text-slate-800 dark:text-slate-50">
-          Accounts
+          {tc("accounts")}
         </Text>
         <TouchableOpacity
           onPress={handleSeeAll}
@@ -180,7 +181,7 @@ export function AccountsSection({
           className="flex-row items-center"
         >
           <Text className="text-sm font-semibold text-nileGreen-500">
-            See All
+            {tc("see_all")}
           </Text>
           <Ionicons
             name="arrow-forward"

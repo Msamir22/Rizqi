@@ -24,6 +24,7 @@ import {
   type LayoutChangeEvent,
   type PanResponderGestureState,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -54,6 +55,7 @@ export function AlertThresholdSlider({
   value,
   onValueChange,
 }: AlertThresholdSliderProps): React.JSX.Element {
+  const { t } = useTranslation("budgets");
   const [isMeasured, setIsMeasured] = useState(false);
   const [trackWidth, setTrackWidth] = useState(0);
   const trackWidthRef = useRef(0);
@@ -136,7 +138,7 @@ export function AlertThresholdSlider({
     <View>
       <View className="flex-row items-center justify-between mb-2">
         <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">
-          Alert Threshold
+          {t("alert_threshold")}
         </Text>
         <Text
           className="text-sm font-bold"
@@ -201,7 +203,7 @@ export function AlertThresholdSlider({
       </View>
 
       <Text className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-        {"You\u2019ll be alerted when spending reaches this percentage"}
+        {t("alert_help_percentage")}
       </Text>
     </View>
   );

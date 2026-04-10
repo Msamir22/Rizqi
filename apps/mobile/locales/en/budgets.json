@@ -86,5 +86,12 @@
   "filter_all": "All",
   "filter_weekly": "Weekly",
   "filter_monthly": "Monthly",
-  "filter_custom": "Custom"
+  "filter_custom": "Custom",
+
+  "alert_threshold": "Alert Threshold",
+  "view_budget": "View Budget",
+  "recent_transactions": "Recent Transactions",
+  "spending_trend": "Spending Trend",
+  "alert_help_percentage": "You'll be alerted when spending reaches this percentage",
+  "expense_fallback": "Expense"
 }

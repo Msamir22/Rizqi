@@ -18,6 +18,7 @@ import { palette } from "@/constants/colors";
 import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import React from "react";
 import { Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 // =============================================================================
 // Types
@@ -96,6 +97,7 @@ export function GoldHeroCard({
   trendPercent,
   currencySymbol,
 }: GoldHeroCardProps): React.JSX.Element {
+  const { t } = useTranslation("metals");
   return (
     <View className="bg-slate-800 rounded-2xl p-4 overflow-hidden border-l-[3px] border-l-gold-600">
       {/* Gold label */}
@@ -105,7 +107,7 @@ export function GoldHeroCard({
           className="ms-1.5 text-sm font-semibold"
           style={{ color: palette.gold[400] }}
         >
-          Gold
+          {t("gold_label")}
         </Text>
       </View>
 

@@ -269,7 +269,7 @@ function CustomBottomTabBarComponent({
               className="mt-1 text-center text-[10px] font-semibold"
               style={{ color: palette.nileGreen[500] }}
             >
-              Listening
+              {t("voice_listening")}
             </Text>
           )}
         </View>

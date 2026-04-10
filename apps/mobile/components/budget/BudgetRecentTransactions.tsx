@@ -18,6 +18,7 @@ import {
 } from "@/components/common/CategoryIcon";
 import { useTheme } from "@/context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -34,6 +35,7 @@ interface BudgetRecentTransactionsProps {
 export function BudgetRecentTransactions({
   transactions,
 }: BudgetRecentTransactionsProps): React.JSX.Element {
+  const { t } = useTranslation("budgets");
   const categoryMap = useCategoryLookup();
   const { isDark } = useTheme();
 
@@ -42,7 +44,7 @@ export function BudgetRecentTransactions({
   return (
     <View className="mb-6">
       <Text className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold mb-2 ms-[22px]">
-        Recent Transactions
+        {t("recent_transactions")}
       </Text>
       <View className="rounded-3xl border p-5 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
         {transactions.map((tx, index) => {
@@ -80,7 +82,9 @@ export function BudgetRecentTransactions({
                   className="text-sm font-semibold text-slate-800 dark:text-white"
                   numberOfLines={1}
                 >
-                  {tx.counterparty ?? category?.displayName ?? "Expense"}
+                  {tx.counterparty ??
+                    category?.displayName ??
+                    t("expense_fallback")}
                 </Text>
                 <Text className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                   {new Date(tx.date).toLocaleDateString()}

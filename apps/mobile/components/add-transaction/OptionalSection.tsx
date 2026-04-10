@@ -72,7 +72,7 @@ export function OptionalSection({
           color={isDark ? palette.nileGreen[400] : palette.nileGreen[600]}
         />
         <Text className="ms-2 text-sm font-bold text-nileGreen-600 dark:text-nileGreen-400">
-          Add more details
+          {t("add_more_details")}
         </Text>
         <Ionicons
           name="chevron-down"
@@ -91,7 +91,7 @@ export function OptionalSection({
         className="flex-row items-center justify-center mb-6"
       >
         <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-          Hide Details
+          {t("hide_details")}
         </Text>
         <Ionicons
           name="chevron-up"
@@ -124,7 +124,7 @@ export function OptionalSection({
         {/* Date */}
         <View>
           <Text className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 px-1 uppercase tracking-wider">
-            DATE
+            {t("date_label")}
           </Text>
           <TouchableOpacity
             onPress={() => setShowDatePicker(true)}
@@ -170,10 +170,10 @@ export function OptionalSection({
                 </View>
                 <View>
                   <Text className="text-base font-semibold text-slate-900 dark:text-white">
-                    Recurring Payment
+                    {t("recurring_payment")}
                   </Text>
                   <Text className="text-xs text-slate-500 dark:text-slate-400">
-                    {fields.isRecurring ? "Enabled" : "Disabled"}
+                    {fields.isRecurring ? t("enabled") : t("disabled")}
                   </Text>
                 </View>
               </View>
@@ -202,7 +202,7 @@ export function OptionalSection({
                 {/* Frequency Picker */}
                 <View>
                   <Text className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 px-1 uppercase tracking-wider">
-                    FREQUENCY
+                    {t("frequency_label")}
                   </Text>
                   <View className="flex-row flex-wrap gap-1">
                     {FREQUENCY_OPTIONS.map((option) => {
@@ -240,12 +240,12 @@ export function OptionalSection({
                   <View className="flex-row items-center ms-1 justify-between mt-2">
                     <View className="flex-1 me-4">
                       <Text className="text-sm font-semibold text-slate-900 dark:text-white">
-                        Auto-create transaction
+                        {t("auto_create_transaction")}
                       </Text>
                       <Text className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                         {fields.recurringAutoCreate
-                          ? "Transaction will be created automatically on due date"
-                          : "You will receive a reminder notification only"}
+                          ? t("auto_create_on_description")
+                          : t("auto_create_off_description")}
                       </Text>
                     </View>
                     <Switch

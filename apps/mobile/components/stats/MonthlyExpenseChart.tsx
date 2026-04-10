@@ -11,6 +11,7 @@ import { formatCurrency } from "@astik/logic";
 import React, { useState } from "react";
 import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 import { BarChart } from "react-native-gifted-charts";
+import { useTranslation } from "react-i18next";
 
 // =============================================================================
 // Types
@@ -27,6 +28,7 @@ const PERIOD_OPTIONS: readonly PeriodFilter[] = ["6m", "12m"];
 export function MonthlyExpenseChart(): React.JSX.Element {
   const { isDark } = useTheme();
   const { preferredCurrency } = usePreferredCurrency();
+  const { t } = useTranslation("common");
   const [period, setPeriod] = useState<PeriodFilter>("6m");
   const months = period === "6m" ? 6 : 12;
 
@@ -75,7 +77,7 @@ export function MonthlyExpenseChart(): React.JSX.Element {
       {/* Header */}
       <View className="flex-row items-center justify-between mb-4">
         <Text className="text-lg font-bold text-slate-800 dark:text-white">
-          Monthly Overview
+          {t("monthly_overview")}
         </Text>
         <View className="flex-row gap-1">
           {PERIOD_OPTIONS.map((p) => (
@@ -99,13 +101,13 @@ export function MonthlyExpenseChart(): React.JSX.Element {
         <View className="flex-row items-center">
           <View className="w-3 h-3 rounded-sm me-1 bg-nileGreen-500" />
           <Text className="text-xs text-slate-500 dark:text-slate-400">
-            Income
+            {t("income")}
           </Text>
         </View>
         <View className="flex-row items-center">
           <View className="w-3 h-3 rounded-sm me-1 bg-red-400" />
           <Text className="text-xs text-slate-500 dark:text-slate-400">
-            Expenses
+            {t("expense")}
           </Text>
         </View>
       </View>
@@ -148,7 +150,7 @@ export function MonthlyExpenseChart(): React.JSX.Element {
       <View className="flex-row justify-between mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
         <View className="items-center flex-1">
           <Text className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">
-            Total Income
+            {t("total_income")}
           </Text>
           <Text className="text-sm font-bold text-nileGreen-500 mt-0.5">
             {formatCurrency({
@@ -159,7 +161,7 @@ export function MonthlyExpenseChart(): React.JSX.Element {
         </View>
         <View className="items-center flex-1">
           <Text className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">
-            Total Expenses
+            {t("total_expenses")}
           </Text>
           <Text className="text-sm font-bold text-red-500 dark:text-red-400 mt-0.5">
             {formatCurrency({
@@ -170,7 +172,7 @@ export function MonthlyExpenseChart(): React.JSX.Element {
         </View>
         <View className="items-center flex-1">
           <Text className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">
-            Net Savings
+            {t("net_savings")}
           </Text>
           <Text
             className={`text-sm font-bold mt-0.5 ${netSavings >= 0 ? "text-nileGreen-500" : "text-red-400"}`}

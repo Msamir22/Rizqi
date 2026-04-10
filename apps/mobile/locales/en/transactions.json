@@ -241,5 +241,25 @@
   "duration_minutes_seconds": "{{minutes}}m {{seconds}}s",
   "currency": "Currency",
   "new_account_default": "New Account",
-  "cash_default": "Cash"
+  "cash_default": "Cash",
+
+  "date_label": "DATE",
+  "frequency_label": "FREQUENCY",
+  "to_label": "TO",
+  "new_badge": "NEW",
+  "other_accounts": "Other accounts",
+  "create_new_account": "Create a new account",
+  "matching_currency": "Matching currency",
+  "recurring_transaction_title": "Recurring Transaction",
+  "recurring_edit_subtitle": "This transaction is part of a recurring series. How would you like to apply changes?",
+  "edit_this_instance": "Edit Only This Instance",
+  "edit_all_future": "Edit All Future & Template",
+  "add_bank_details_optional": "Add bank details (Optional)",
+  "hide_bank_details": "Hide Bank Details",
+  "bank_details_label": "BANK DETAILS",
+  "auto_detect_card_transactions": "We'll auto-detect transactions from this card",
+  "target_amount": "Target Amount ({{currency}})",
+  "confirm_amount_received": "Please confirm the amount received in {{currency}}.",
+  "save_button_count": "Save {{count}} Transaction(s)",
+  "save_error_title": "Save Error"
 }

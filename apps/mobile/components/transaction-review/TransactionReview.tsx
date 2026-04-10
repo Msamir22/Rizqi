@@ -29,6 +29,7 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useState } from "react";
 import { FlatList, Text, TouchableOpacity, View } from "react-native";
 import Animated, { FadeIn, FadeInDown, FadeOut } from "react-native-reanimated";
+import { useTranslation } from "react-i18next";
 import { TransactionEditModal } from "./edit-modal/TransactionEditModal";
 import { TransactionItem } from "./TransactionItem";
 import { TransactionFiltersBar } from "@/components/transactions/TransactionFiltersBar";
@@ -72,6 +73,7 @@ export function TransactionReview({
   isSaving,
 }: TransactionReviewProps): React.JSX.Element {
   const { isDark } = useTheme();
+  const { t } = useTranslation("common");
 
   const state = useTransactionReviewState({ transactions, onSave });
   const [isFiltersVisible, setIsFiltersVisible] = useState(false);
@@ -216,7 +218,7 @@ export function TransactionReview({
             color={isDark ? palette.slate[600] : palette.slate[400]}
           />
           <Text className="text-slate-500 dark:text-slate-400 mt-3 text-center text-sm">
-            No transactions match your filters
+            {t("no_matching_filters")}
           </Text>
         </View>
       ) : (

@@ -94,5 +94,12 @@
   "filter_all": "الكل",
   "filter_weekly": "أسبوعي",
   "filter_monthly": "شهري",
-  "filter_custom": "مخصص"
+  "filter_custom": "مخصص",
+
+  "alert_threshold": "حد التنبيه",
+  "view_budget": "عرض الميزانية",
+  "recent_transactions": "أحدث المعاملات",
+  "spending_trend": "اتجاه الإنفاق",
+  "alert_help_percentage": "سيتم تنبيهك عندما يصل الإنفاق إلى هذه النسبة",
+  "expense_fallback": "مصروف"
 }

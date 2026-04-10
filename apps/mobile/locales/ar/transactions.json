@@ -249,5 +249,25 @@
   "duration_minutes_seconds": "{{minutes}}د {{seconds}}ث",
   "currency": "العملة",
   "new_account_default": "حساب جديد",
-  "cash_default": "نقدي"
+  "cash_default": "نقدي",
+
+  "date_label": "التاريخ",
+  "frequency_label": "التكرار",
+  "to_label": "إلى",
+  "new_badge": "جديد",
+  "other_accounts": "حسابات أخرى",
+  "create_new_account": "إنشاء حساب جديد",
+  "matching_currency": "عملة مطابقة",
+  "recurring_transaction_title": "معاملة متكررة",
+  "recurring_edit_subtitle": "هذه المعاملة جزء من سلسلة متكررة. كيف تريد تطبيق التغييرات؟",
+  "edit_this_instance": "تعديل هذه المرة فقط",
+  "edit_all_future": "تعديل جميع المستقبلية والقالب",
+  "add_bank_details_optional": "إضافة بيانات بنكية (اختياري)",
+  "hide_bank_details": "إخفاء البيانات البنكية",
+  "bank_details_label": "البيانات البنكية",
+  "auto_detect_card_transactions": "سنكتشف المعاملات تلقائياً من هذه البطاقة",
+  "target_amount": "المبلغ المستهدف ({{currency}})",
+  "confirm_amount_received": "يرجى تأكيد المبلغ المستلم بـ {{currency}}.",
+  "save_button_count": "حفظ {{count}} معاملة",
+  "save_error_title": "خطأ في الحفظ"
 }

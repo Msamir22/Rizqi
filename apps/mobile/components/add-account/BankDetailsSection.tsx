@@ -2,6 +2,7 @@ import { palette } from "@/constants/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Text, TouchableOpacity, View } from "react-native";
 import { TextField } from "../ui/TextField";
+import { useTranslation } from "react-i18next";
 
 interface BankDetailsSectionProps {
   expanded: boolean;
@@ -30,6 +31,7 @@ export function BankDetailsSection({
   onCardLast4Change,
   onSmsSenderNameChange,
 }: BankDetailsSectionProps): JSX.Element {
+  const { t } = useTranslation("transactions");
   if (!expanded) {
     return (
       <TouchableOpacity
@@ -43,7 +45,7 @@ export function BankDetailsSection({
           color={palette.nileGreen[500]}
         />
         <Text className="ms-2.5 text-sm font-bold text-slate-700 dark:text-slate-300">
-          Add bank details (Optional)
+          {t("add_bank_details_optional")}
         </Text>
         <Ionicons
           name="chevron-down"
@@ -63,7 +65,7 @@ export function BankDetailsSection({
         className="flex-row items-center justify-center mb-6"
       >
         <Text className="text-xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-          Hide Bank Details
+          {t("hide_bank_details")}
         </Text>
         <Ionicons
           name="chevron-up"
@@ -75,10 +77,10 @@ export function BankDetailsSection({
 
       <View className="mb-6 px-1">
         <Text className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest mb-1">
-          BANK DETAILS
+          {t("bank_details_label")}
         </Text>
         <Text className="text-xs font-bold text-slate-400 dark:text-slate-500">
-          We&apos;ll auto-detect transactions from this card
+          {t("auto_detect_card_transactions")}
         </Text>
       </View>
 
