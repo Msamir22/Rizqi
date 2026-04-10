@@ -40,9 +40,24 @@ const EXCLUDE_PATTERNS = [
 /** Arabic plural suffixes not present in EN (i18next v4 compat) */
 const AR_PLURAL_SUFFIXES = ["_zero", "_two", "_few", "_many"];
 
-/** Legitimate Latin values in AR files (allowlist) */
-const AR_LATIN_ALLOWLIST = new Set([
-  "English", // language name shown in language picker dropdown
+/**
+ * Translation keys whose AR values are legitimately Latin-only.
+ * Keyed by "namespace.flatKey" so the exception is tied to a specific
+ * translation slot, not a raw value that could mask a real miss.
+ *
+ * Add entries here when a specific key must keep a Latin value in Arabic
+ * (e.g. a language name displayed in its own script).
+ */
+const AR_LATIN_KEY_EXCEPTIONS = new Set<string>([
+  // Currently empty — "English" was removed because the AR value is "الإنجليزية".
+  // Add entries as: "namespace.flatKey"
+]);
+
+/**
+ * Short Latin values (currency codes, brand names) that are legitimate
+ * in AR files regardless of which key uses them.
+ */
+const AR_LATIN_SHORT_ALLOWLIST = new Set([
   "USD",
   "EGP",
   "EUR",
@@ -56,11 +71,13 @@ const AR_LATIN_ALLOWLIST = new Set([
 const NUMERIC_VALUE_RE = /^[0-9.,\s]+$/;
 
 /**
- * Baseline count of known hardcoded strings that existed when the i18n gate
- * was introduced. The gate blocks NEW regressions while allowing the team to
- * chip away at existing debt. Update this ONLY when known issues are fixed.
+ * Path to the baseline file that tracks known hardcoded-string findings
+ * by identity (file + description). This allows the gate to detect individual
+ * regressions and fixes, rather than masking one with the other via a raw count.
+ *
+ * Run with --update-baseline to regenerate after fixing known issues.
  */
-const KNOWN_ISSUES_BASELINE = 96;
+const BASELINE_PATH = path.resolve(__dirname, ".i18n-baseline.json");
 
 // ---------------------------------------------------------------------------
 // Utilities
@@ -83,10 +100,14 @@ function getJsonFiles(dir: string): string[] {
   if (!fs.existsSync(dir)) {
     throw new Error(`Missing locale directory: ${dir}`);
   }
-  return fs
+  const files = fs
     .readdirSync(dir)
     .filter((f) => f.endsWith(".json"))
     .sort();
+  if (files.length === 0) {
+    throw new Error(`Missing JSON locale files in: ${dir}`);
+  }
+  return files;
 }
 
 function readJson(filePath: string): Record<string, unknown> {
@@ -194,8 +215,12 @@ function checkArabicValues(): { passed: boolean; errors: string[] } {
         if (stripped.length === 0) continue;
       }
 
-      // Skip allowlisted values
-      if (AR_LATIN_ALLOWLIST.has(value)) continue;
+      // Skip key-scoped exceptions (tied to specific translation slots)
+      const fullScopedKey = `${ns}.${key}`;
+      if (AR_LATIN_KEY_EXCEPTIONS.has(fullScopedKey)) continue;
+
+      // Skip short allowlisted values (currency codes, brand names)
+      if (AR_LATIN_SHORT_ALLOWLIST.has(value)) continue;
 
       // Skip very short values (likely codes/labels)
       if (value.length <= 2) continue;
@@ -249,10 +274,13 @@ function checkHardcodedStrings(): {
 
     // ── Pass 1: Multiline <Text> detection ──────────────────────────────
     // Catches <Text ...>\n  English content\n</Text> that line-by-line misses.
+    // Only reports truly multiline matches — single-line is handled by Pass 2.
     const multilineTextRe =
       /<Text[^>]*>\s*([A-Z][A-Za-z ,.'!?&;:()\-]{2,}?)\s*<\/Text>/gs;
     for (const m of content.matchAll(multilineTextRe)) {
       if (m.index === undefined) continue;
+      // Skip single-line matches — Pass 2 handles those
+      if (!m[0].includes("\n")) continue;
       const captured = m[1].trim();
       // Skip if the content is already wrapped in t()
       if (/^\{?\s*t\s*\(/.test(captured)) continue;
@@ -345,7 +373,7 @@ function checkHardcodedStrings(): {
     }
   }
 
-  return { passed: errors.length <= KNOWN_ISSUES_BASELINE, errors };
+  return { passed: true, errors };
 }
 
 function collectSourceFiles(): string[] {
@@ -385,10 +413,49 @@ function collectSourceFiles(): string[] {
 }
 
 // ---------------------------------------------------------------------------
+// Baseline helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Strips line numbers from a finding to produce a stable fingerprint.
+ * "components/Foo.tsx:42 — <Text>Hello</Text>" → "components/Foo.tsx — <Text>Hello</Text>"
+ */
+function toFingerprint(finding: string): string {
+  return finding.replace(/:\d+ — /, " — ");
+}
+
+function loadBaseline(): Set<string> {
+  if (!fs.existsSync(BASELINE_PATH)) {
+    return new Set();
+  }
+  try {
+    const data = JSON.parse(fs.readFileSync(BASELINE_PATH, "utf-8"));
+    if (Array.isArray(data)) {
+      return new Set(data as string[]);
+    }
+    return new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function saveBaseline(findings: string[]): void {
+  const fingerprints = findings.map(toFingerprint).sort();
+  // Deduplicate (same file + same text can appear multiple times)
+  const unique = [...new Set(fingerprints)];
+  fs.writeFileSync(BASELINE_PATH, JSON.stringify(unique, null, 2) + "\n");
+  console.log(
+    `  Baseline updated: ${unique.length} findings written to ${path.basename(BASELINE_PATH)}\n`
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
 function main(): void {
+  const updateBaseline = process.argv.includes("--update-baseline");
+
   console.log("=== i18n Coverage Check ===\n");
 
   let totalErrors = 0;
@@ -421,32 +488,60 @@ function main(): void {
     totalErrors += arValues.errors.length;
   }
 
-  // Check 3
+  // Check 3: Identity-based baseline comparison
   console.log("Check 3: Hardcoded English Strings in Source");
   const hardcoded = checkHardcodedStrings();
-  const baselineDiff = hardcoded.errors.length - KNOWN_ISSUES_BASELINE;
 
-  if (hardcoded.passed) {
-    if (hardcoded.errors.length === 0) {
-      console.log("  PASSED\n");
+  if (updateBaseline) {
+    saveBaseline(hardcoded.errors);
+    // In update mode, don't fail on hardcoded strings
+  } else {
+    const baseline = loadBaseline();
+    const currentFingerprints = new Set(hardcoded.errors.map(toFingerprint));
+
+    // New findings = in current but NOT in baseline → regressions
+    const newFindings = [...currentFingerprints].filter(
+      (f) => !baseline.has(f)
+    );
+    // Fixed findings = in baseline but NOT in current → improvements
+    const fixedFindings = [...baseline].filter(
+      (f) => !currentFingerprints.has(f)
+    );
+
+    if (newFindings.length === 0) {
+      if (currentFingerprints.size === 0) {
+        console.log("  PASSED\n");
+      } else {
+        console.log(
+          `  PASSED with ${currentFingerprints.size} known issues (baseline: ${baseline.size})\n`
+        );
+        if (fixedFindings.length > 0) {
+          console.log(`  ${fixedFindings.length} issues fixed since baseline:`);
+          for (const f of fixedFindings) {
+            console.log(`    ✓ ${f}`);
+          }
+          console.log(
+            `\n  Run with --update-baseline to update the baseline file.\n`
+          );
+        }
+      }
     } else {
       console.log(
-        `  PASSED with ${hardcoded.errors.length} known issues (baseline: ${KNOWN_ISSUES_BASELINE})\n`
+        `  FAILED — ${newFindings.length} new regressions (${currentFingerprints.size} total, baseline: ${baseline.size})`
       );
-      for (const err of hardcoded.errors) {
-        console.log(`    - ${err}`);
+      console.log("\n  New regressions:");
+      for (const f of newFindings) {
+        console.log(`    ✗ ${f}`);
+      }
+      if (fixedFindings.length > 0) {
+        console.log(`\n  Fixed since baseline:`);
+        for (const f of fixedFindings) {
+          console.log(`    ✓ ${f}`);
+        }
       }
       console.log();
+      totalErrors += newFindings.length;
     }
-  } else {
-    console.log(
-      `  FAILED — ${hardcoded.errors.length} hardcoded strings found (baseline: ${KNOWN_ISSUES_BASELINE}, +${baselineDiff} new regressions)`
-    );
-    for (const err of hardcoded.errors) {
-      console.log(`    - ${err}`);
-    }
-    console.log();
-    totalErrors += baselineDiff;
   }
 
   // Summary
