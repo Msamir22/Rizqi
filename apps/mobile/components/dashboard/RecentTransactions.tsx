@@ -3,6 +3,7 @@ import { useCategoryLookup } from "@/context/CategoriesContext";
 import { formatTransactionDate } from "@/utils/transactions";
 import { Category, Transaction } from "@astik/db";
 import { router } from "expo-router";
+import React, { useCallback } from "react";
 import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { CategoryIcon } from "../common/CategoryIcon";
@@ -34,9 +35,16 @@ function TransactionItem({
     iconColor: isExpense ? palette.red[500] : palette.nileGreen[500],
   };
 
+  const handlePress = useCallback((): void => {
+    router.push(`/edit-transaction?id=${transaction.id}`);
+  }, [transaction.id]);
+
   return (
     <View>
-      <TouchableOpacity className="flex-row items-center py-3">
+      <TouchableOpacity
+        className="flex-row items-center py-3"
+        onPress={handlePress}
+      >
         {/* Icon Circle */}
         <View
           className={`me-3 h-10 w-10 items-center justify-center rounded-full ${
@@ -81,16 +89,20 @@ function TransactionItem({
   );
 }
 
-export function RecentTransactions({
+function RecentTransactionsComponent({
   transactions,
   isLoading = false,
 }: RecentTransactionsProps): React.JSX.Element {
   const categoryMap = useCategoryLookup();
   const { t } = useTranslation("common");
 
-  const handleSeeAll = (): void => {
+  const handleSeeAll = useCallback((): void => {
     router.push("/(tabs)/transactions");
-  };
+  }, []);
+
+  const handleAddTransaction = useCallback((): void => {
+    router.push("/add-transaction");
+  }, []);
 
   return (
     <>
@@ -111,7 +123,7 @@ export function RecentTransactions({
         </View>
       ) : transactions.length === 0 ? (
         <EmptyStateCard
-          onPress={() => router.push("/add-transaction")}
+          onPress={handleAddTransaction}
           icon="receipt-outline"
           title={t("no_transactions_yet")}
           description={t("tap_to_add")}
@@ -131,3 +143,5 @@ export function RecentTransactions({
     </>
   );
 }
+
+export const RecentTransactions = React.memo(RecentTransactionsComponent);

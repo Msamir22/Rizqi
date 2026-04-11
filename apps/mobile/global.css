@@ -21,3 +21,23 @@
 .input-error {
   @apply mt-1.5 px-2 text-xs font-bold text-red-500;
 }
+
+/* Subtitle — section headings, card titles */
+.subtitle-text {
+  @apply text-lg font-bold text-slate-800 dark:text-slate-50;
+}
+
+/* Body — standard paragraph text */
+.body-text {
+  @apply text-sm text-slate-700 dark:text-slate-200;
+}
+
+/* Body small — secondary info, descriptions */
+.body-small {
+  @apply text-xs text-slate-500 dark:text-slate-400;
+}
+
+/* Caption — labels, footnotes, timestamps */
+.caption-text {
+  @apply text-[11px] text-slate-400 dark:text-slate-500;
+}

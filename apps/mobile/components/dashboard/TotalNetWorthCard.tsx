@@ -4,6 +4,7 @@ import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTranslation } from "react-i18next";
+import React from "react";
 import { ActivityIndicator, Dimensions, Text, View } from "react-native";
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 
@@ -29,7 +30,7 @@ const { width } = Dimensions.get("window");
  * @param isLoading - When true, replaces the primary amount with a loading indicator.
  * @returns The JSX element for the Total Net Worth card.
  */
-export function TotalNetWorthCard({
+function TotalNetWorthCardComponent({
   totalNetWorth,
   totalNetWorthUsd,
   preferredCurrency,
@@ -154,3 +155,5 @@ export function TotalNetWorthCard({
     </View>
   );
 }
+
+export const TotalNetWorthCard = React.memo(TotalNetWorthCardComponent);

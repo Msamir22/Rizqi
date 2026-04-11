@@ -57,7 +57,8 @@
           "color": "#0F172A"
         }
       ],
-      "./plugins/withSmsBroadcastReceiver"
+      "./plugins/withSmsBroadcastReceiver",
+      "@sentry/react-native"
     ],
     "experiments": {
       "typedRoutes": true

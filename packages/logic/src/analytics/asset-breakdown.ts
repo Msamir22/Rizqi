@@ -88,8 +88,9 @@ export function calculateAssetBreakdown(
 }
 
 /**
- * Calculate asset breakdown as percentages for display
- * Returns Bank, Cash, Metals (wallet included in total but not displayed)
+ * Calculate asset breakdown as percentages for display.
+ * Uses the "largest remainder" method to ensure percentages always sum to 100%.
+ * Returns Bank, Cash, Metals (wallet included in total but not displayed).
  */
 export function calculateAssetBreakdownPercentages(
   breakdown: AssetBreakdown
@@ -104,21 +105,37 @@ export function calculateAssetBreakdownPercentages(
     ];
   }
 
-  return [
-    {
-      label: "Bank",
-      value: bank,
-      percentage: Math.round((bank / total) * 100),
-    },
-    {
-      label: "Cash",
-      value: cash,
-      percentage: Math.round((cash / total) * 100),
-    },
-    {
-      label: "Metals",
-      value: metals,
-      percentage: Math.round((metals / total) * 100),
-    },
+  // Largest remainder method: floor all percentages, then distribute remaining
+  // points to items with the largest fractional remainders
+  const items = [
+    { label: "Bank", value: bank, rawPct: (bank / total) * 100 },
+    { label: "Cash", value: cash, rawPct: (cash / total) * 100 },
+    { label: "Metals", value: metals, rawPct: (metals / total) * 100 },
   ];
+
+  const floored = items.map((item) => ({
+    ...item,
+    percentage: Math.floor(item.rawPct),
+    remainder: item.rawPct - Math.floor(item.rawPct),
+  }));
+
+  let remaining = 100 - floored.reduce((sum, item) => sum + item.percentage, 0);
+
+  // Sort by remainder descending, distribute 1% to each until remaining is 0
+  const sorted = [...floored].sort((a, b) => b.remainder - a.remainder);
+  for (const item of sorted) {
+    if (remaining <= 0) break;
+    item.percentage += 1;
+    remaining -= 1;
+  }
+
+  // Return in original order (Bank, Cash, Metals)
+  return items.map((original) => {
+    const matched = floored.find((f) => f.label === original.label)!;
+    return {
+      label: matched.label,
+      value: matched.value,
+      percentage: matched.percentage,
+    };
+  });
 }

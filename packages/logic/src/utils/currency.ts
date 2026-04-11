@@ -12,6 +12,11 @@ const SECONDARY_RATE_MAX_FRACTION_DIGITS = 4;
  * the original `amount` is returned unchanged. Otherwise the function uses `marketRates`
  * to compute the converted value.
  *
+ * **Offline-first behavior**: When a specific currency pair rate is unavailable,
+ * `MarketRate.getRate()` returns 1 (identity) so the unconverted amount is shown
+ * rather than crashing. The UI should display staleness warnings (via `isStale`)
+ * to alert the user that rates may be outdated.
+ *
  * @param amount - The amount in the source currency
  * @param fromCurrency - Source currency code
  * @param toCurrency - Target currency code
@@ -26,7 +31,9 @@ export function convertCurrency(
 ): number {
   if (!marketRates || amount === 0 || fromCurrency === toCurrency)
     return amount;
-  return amount * marketRates.getRate(fromCurrency, toCurrency);
+  const result = amount * marketRates.getRate(fromCurrency, toCurrency);
+  // Guard against NaN from unexpected rate values
+  return Number.isFinite(result) ? result : amount;
 }
 
 /**
@@ -152,12 +159,39 @@ const CURRENCY_SYMBOLS: Partial<Record<CurrencyType, string>> = {
   MYR: "MYR",
 };
 
+/**
+ * Default decimal precision per currency.
+ * EGP/SAR/AED = 0 (whole numbers typical for these markets).
+ * USD/EUR/GBP = 2 (standard decimal currencies).
+ * BTC = 8 (satoshi precision).
+ * Override per call via `minimumFractionDigits`/`maximumFractionDigits`.
+ */
+const CURRENCY_PRECISION: Partial<Record<CurrencyType, number>> = {
+  EGP: 0,
+  SAR: 0,
+  AED: 0,
+  KWD: 0,
+  USD: 2,
+  EUR: 2,
+  GBP: 2,
+  CAD: 2,
+  AUD: 2,
+  NZD: 2,
+  SGD: 2,
+  HKD: 2,
+  CHF: 2,
+  BTC: 8,
+};
+
+/** Default precision for currencies not listed in CURRENCY_PRECISION */
+const DEFAULT_PRECISION = 0;
+
 export const formatCurrency = ({
   amount,
   currency,
   signDisplay = "auto",
-  minimumFractionDigits = 0,
-  maximumFractionDigits = 0,
+  minimumFractionDigits,
+  maximumFractionDigits,
 }: {
   amount: number;
   currency: CurrencyType;
@@ -165,13 +199,17 @@ export const formatCurrency = ({
   minimumFractionDigits?: number;
   maximumFractionDigits?: number;
 }): string => {
+  // Use currency-specific precision when caller doesn't override
+  const precision = CURRENCY_PRECISION[currency] ?? DEFAULT_PRECISION;
+  const minDigits = minimumFractionDigits ?? precision;
+  const maxDigits = maximumFractionDigits ?? precision;
   // Normalize -0 to 0 (IEEE 754 artifact from floating-point arithmetic)
   const normalizedAmount = amount || 0;
 
   const formattedNumber = new Intl.NumberFormat("en-US", {
     style: "decimal",
-    minimumFractionDigits,
-    maximumFractionDigits,
+    minimumFractionDigits: minDigits,
+    maximumFractionDigits: maxDigits,
     signDisplay,
   }).format(normalizedAmount);
 

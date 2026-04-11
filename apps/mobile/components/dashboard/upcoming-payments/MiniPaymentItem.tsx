@@ -16,7 +16,7 @@ import type { MiniPaymentItemProps } from "./types";
 
 const URGENT_DAYS_THRESHOLD = 3;
 
-export function MiniPaymentItem({
+function MiniPaymentItemComponent({
   payment,
 }: MiniPaymentItemProps): React.JSX.Element {
   const dueText = getDueText(payment.nextDueDate);
@@ -56,3 +56,5 @@ export function MiniPaymentItem({
     </View>
   );
 }
+
+export const MiniPaymentItem = React.memo(MiniPaymentItemComponent);

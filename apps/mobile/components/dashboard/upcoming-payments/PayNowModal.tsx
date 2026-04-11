@@ -2,7 +2,8 @@
  * PayNowModal — Modal for confirming and executing a recurring payment.
  *
  * Allows the user to adjust the amount, select a deduction account,
- * and confirm. Creates a transaction and advances the next due date.
+ * and confirm. Business logic (validation, DB writes) is delegated to
+ * the `usePaymentSubmission` hook (SRP).
  */
 
 import { formatCurrency } from "@astik/logic";
@@ -20,12 +21,10 @@ import {
 } from "react-native";
 import { useTranslation } from "react-i18next";
 import { TextField } from "@/components/ui/TextField";
-import { useToast } from "@/components/ui/Toast";
 import { palette } from "@/constants/colors";
 import { useAccounts } from "@/hooks/useAccounts";
+import { usePaymentSubmission } from "@/hooks/usePaymentSubmission";
 import { getDueText } from "@/utils/dateHelpers";
-import { updateRecurringPaymentNextDueDate } from "@/services/recurring-payment-service";
-import { createTransaction } from "@/services/transaction-service";
 
 import type { PayNowModalProps } from "./types";
 
@@ -38,12 +37,6 @@ import type { PayNowModalProps } from "./types";
  * On confirmation, creates a transaction linked to the recurring payment, updates the
  * recurring payment's next due date, closes the modal, and calls `onSuccess` with the paid amount.
  * If transaction creation fails, displays an error toast and keeps the modal open.
- *
- * @param payment - The recurring payment details to be paid; when falsy the component renders `null`.
- * @param visible - Whether the modal is visible.
- * @param onClose - Callback invoked to close the modal.
- * @param onSuccess - Callback invoked after a successful payment with the numeric amount paid.
- * @returns A React element for the modal when `payment` is present, or `null` otherwise.
  */
 export function PayNowModal({
   payment,
@@ -52,24 +45,29 @@ export function PayNowModal({
   onSuccess,
 }: PayNowModalProps): React.JSX.Element | null {
   const { accounts } = useAccounts();
-  const { showToast } = useToast();
   const { t } = useTranslation("transactions");
   const { t: tCommon } = useTranslation("common");
   const [amount, setAmount] = useState<string>("");
-  const [amountError, setAmountError] = useState<string>("");
   const [selectedAccountId, setSelectedAccountId] = useState<string>("");
   const [showAccountPicker, setShowAccountPicker] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { isSubmitting, amountError, clearAmountError, submit } =
+    usePaymentSubmission({
+      payment,
+      accountId: selectedAccountId,
+      onSuccess,
+      onClose,
+    });
 
   // Reset amount, error, and account when payment changes
   useEffect(() => {
     if (payment) {
       setAmount(payment.amount.toString());
-      setAmountError("");
+      clearAmountError();
       setSelectedAccountId(payment.accountId);
       setShowAccountPicker(false);
     }
-  }, [payment]);
+  }, [payment, clearAmountError]);
 
   if (!payment) return null;
 
@@ -80,50 +78,8 @@ export function PayNowModal({
     if (amountError) {
       const num = parseFloat(text);
       if (!isNaN(num) && num > 0) {
-        setAmountError("");
+        clearAmountError();
       }
-    }
-  };
-
-  const handleConfirm = async (): Promise<void> => {
-    const numericAmount = parseFloat(amount);
-    if (isNaN(numericAmount) || numericAmount <= 0) {
-      setAmountError(t("invalid_amount"));
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      await createTransaction({
-        amount: numericAmount,
-        currency: payment.currency,
-        categoryId: payment.categoryId,
-        accountId: selectedAccountId,
-        note: t("payment_for_name", { name: payment.name }),
-        type: payment.type,
-        source: "MANUAL",
-        date: new Date(),
-        linkedRecurringId: payment.id,
-      });
-
-      await updateRecurringPaymentNextDueDate(
-        payment.id,
-        payment.nextDueDate,
-        payment.frequency
-      );
-
-      setIsSubmitting(false);
-      onClose();
-      onSuccess(numericAmount);
-    } catch (error) {
-      setIsSubmitting(false);
-      console.error("Error creating transaction:", error);
-      showToast({
-        type: "error",
-        title: t("payment_failed"),
-        message: t("payment_failed_message"),
-      });
     }
   };
 
@@ -218,6 +174,29 @@ export function PayNowModal({
               )}
             </View>
 
+            {/* Balance Warning */}
+            {selectedAccount &&
+              !isNaN(parseFloat(amount)) &&
+              parseFloat(amount) > 0 &&
+              selectedAccount.balance < parseFloat(amount) && (
+                <View className="mb-3 px-3 py-2.5 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/40 flex-row items-center">
+                  <Ionicons
+                    name="warning-outline"
+                    size={16}
+                    color={palette.orange[500]}
+                    style={{ marginEnd: 8 }}
+                  />
+                  <Text className="flex-1 text-xs text-orange-700 dark:text-orange-300">
+                    {t("balance_warning", {
+                      balance: formatCurrency({
+                        amount: selectedAccount.balance - parseFloat(amount),
+                        currency: selectedAccount.currency,
+                      }),
+                    })}
+                  </Text>
+                </View>
+              )}
+
             {/* Payment Info */}
             <View className="gap-2 mb-4">
               <View className="flex-row justify-between items-center">
@@ -264,9 +243,7 @@ export function PayNowModal({
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => {
-                  handleConfirm();
-                }}
+                onPress={() => submit(amount)}
                 disabled={isSubmitting}
                 className={`flex-1 py-3 rounded-xl items-center ${isSubmitting ? "bg-nileGreen-600" : "bg-nileGreen-500"}`}
               >

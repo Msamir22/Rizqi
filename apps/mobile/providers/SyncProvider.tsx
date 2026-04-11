@@ -10,6 +10,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -191,13 +192,16 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
-  const value: SyncContextValue = {
-    isSyncing,
-    isInitialSync,
-    lastSyncedAt,
-    syncError,
-    sync,
-  };
+  const value = useMemo<SyncContextValue>(
+    () => ({
+      isSyncing,
+      isInitialSync,
+      lastSyncedAt,
+      syncError,
+      sync,
+    }),
+    [isSyncing, isInitialSync, lastSyncedAt, syncError, sync]
+  );
 
   return <SyncContext.Provider value={value}>{children}</SyncContext.Provider>;
 }

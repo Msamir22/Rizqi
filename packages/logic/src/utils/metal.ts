@@ -11,18 +11,25 @@ export function getMetalPriceUsd(
   metalType: MetalType,
   marketRates: NonNullable<MarketRate>
 ): number {
+  let price: number;
   switch (metalType) {
     case "GOLD":
-      return marketRates.goldUsdPerGram;
+      price = marketRates.goldUsdPerGram;
+      break;
     case "SILVER":
-      return marketRates.silverUsdPerGram;
+      price = marketRates.silverUsdPerGram;
+      break;
     case "PLATINUM":
-      return marketRates.platinumUsdPerGram;
+      price = marketRates.platinumUsdPerGram;
+      break;
     case "PALLADIUM":
-      return marketRates.palladiumUsdPerGram;
+      price = marketRates.palladiumUsdPerGram;
+      break;
     default:
       return 0;
   }
+  // Guard against undefined/NaN fields to prevent NaN propagation through net worth
+  return Number.isFinite(price) ? price : 0;
 }
 
 /**

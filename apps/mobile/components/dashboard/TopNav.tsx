@@ -7,9 +7,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "@/context/ThemeContext";
 import { AstikLogo } from "../ui/AstikLogo";
 
-// TODO: Replace with user context when available
-const USER_NAME = "Mohamed";
-
 interface TopNavProps {
   onMenuPress?: () => void;
   /** Optional: shows a currency chip button when provided */
@@ -21,15 +18,14 @@ interface TopNavProps {
 }
 
 /**
- * Renders the top navigation bar with branding, a time-based greeting, and action controls.
+ * Renders the top navigation bar with branding and action controls.
  *
- * @param onMenuPress - Optional handler invoked when the hamburger menu is pressed.
- * @param currencyCode - Optional currency code shown in a currency chip (e.g., "USD"); the chip is rendered only when this and `onCurrencyPress` are provided.
- * @param currencyFlag - Optional emoji or short text shown before the currency code; defaults to "💱" when omitted.
- * @param onCurrencyPress - Optional handler invoked when the currency chip is pressed.
- * @returns The top navigation React element for use within a safe-area layout.
+ * The greeting has been moved to a separate row below TopNav in the dashboard
+ * to prevent crowding on narrow screens (<375px).
+ *
+ * Layout: [☰ Menu] [Astik Logo] ─── flex spacer ─── [🇪🇬 EGP ▾] [⚙] [🔔]
  */
-export function TopNav({
+function TopNavComponent({
   onMenuPress,
   currencyCode,
   currencyFlag,
@@ -39,16 +35,9 @@ export function TopNav({
   const { theme } = useTheme();
   const { t } = useTranslation("common");
 
-  const getGreeting = (): string => {
-    const hours = new Date().getHours();
-    if (hours < 12) return t("good_morning");
-    if (hours < 18) return t("good_afternoon");
-    return t("good_evening");
-  };
-
   return (
     <SafeAreaView edges={["top"]} className="pb-2">
-      <View className=" flex-row items-center mb-5 mt-2">
+      <View className="flex-row items-center mt-2">
         {/* Hamburger Menu */}
         {onMenuPress && (
           <TouchableOpacity
@@ -65,32 +54,11 @@ export function TopNav({
           </TouchableOpacity>
         )}
 
-        {/* Left Side: Logo & Greeting */}
-        <View className="flex-row items-center gap-3 flex-1">
-          <AstikLogo width={80} height={25} color={theme.text.primary} />
+        {/* Logo */}
+        <AstikLogo width={80} height={25} color={theme.text.primary} />
 
-          {/* Vertical Divider */}
-          <View className="h-8 w-[1px] opacity-30 bg-slate-400 dark:bg-slate-200" />
-
-          {/* Greeting Text */}
-          <View className="flex-1 justify-center">
-            <Text
-              numberOfLines={1}
-              style={{ color: theme.text.secondary }}
-              className="font-medium font-regular text-sm tracking-wider"
-            >
-              {getGreeting()}
-            </Text>
-
-            <Text
-              numberOfLines={1}
-              style={{ color: theme.text.primary }}
-              className="font-bold font-regular text-sm mt-0.5"
-            >
-              {USER_NAME}
-            </Text>
-          </View>
-        </View>
+        {/* Spacer */}
+        <View className="flex-1" />
 
         {/* Right Side: Actions */}
         <View className="flex-row items-center gap-2">
@@ -136,13 +104,13 @@ export function TopNav({
             />
           </TouchableOpacity>
 
-          {/* Notification Button — disabled until feature is implemented */}
+          {/* Notification Button — visually present, disabled until feature ships */}
           <TouchableOpacity
             accessibilityLabel={t("notifications")}
             accessibilityRole="button"
             accessibilityState={{ disabled: true }}
             disabled
-            style={{ backgroundColor: theme.surfaceHighlight, opacity: 0.5 }}
+            style={{ backgroundColor: theme.surfaceHighlight }}
             className="w-10 h-10 rounded-full items-center justify-center relative"
           >
             <Ionicons
@@ -156,3 +124,5 @@ export function TopNav({
     </SafeAreaView>
   );
 }
+
+export const TopNav = React.memo(TopNavComponent);

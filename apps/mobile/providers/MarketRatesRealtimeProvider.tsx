@@ -28,6 +28,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -114,7 +115,10 @@ export function MarketRatesRealtimeProvider({
     };
   }, [isAuthenticated, handleInsert]);
 
-  const value: MarketRatesRealtimeContextValue = { isConnected };
+  const value = useMemo<MarketRatesRealtimeContextValue>(
+    () => ({ isConnected }),
+    [isConnected]
+  );
 
   return (
     <MarketRatesRealtimeContext.Provider value={value}>

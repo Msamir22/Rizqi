@@ -10,6 +10,7 @@ import {
   ReactNode,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 
@@ -43,8 +44,13 @@ export function DatabaseProvider({
     initializeDatabase();
   }, []);
 
+  const value = useMemo<DatabaseContextValue>(
+    () => ({ database, isReady }),
+    [isReady]
+  );
+
   return (
-    <DatabaseContext.Provider value={{ database, isReady }}>
+    <DatabaseContext.Provider value={value}>
       {children}
     </DatabaseContext.Provider>
   );
