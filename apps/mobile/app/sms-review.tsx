@@ -17,6 +17,7 @@
  * @module sms-review
  */
 
+import { ConfirmationModal } from "@/components/modals/ConfirmationModal";
 import { TransactionReview } from "@/components/transaction-review/TransactionReview";
 import { useToast } from "@/components/ui/Toast";
 import { palette } from "@/constants/colors";
@@ -32,7 +33,7 @@ import type { ReviewableTransaction } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
-import { Alert, Text, TouchableOpacity } from "react-native";
+import { Text, TouchableOpacity } from "react-native";
 import { useTranslation } from "react-i18next";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -48,6 +49,7 @@ export default function SmsReviewScreen(): React.JSX.Element {
   const { showToast } = useToast();
 
   const [isSaving, setIsSaving] = useState(false);
+  const [discardConfirmVisible, setDiscardConfirmVisible] = useState(false);
 
   // Mark review as active to queue incoming live transactions
   useEffect(() => {
@@ -117,18 +119,13 @@ export default function SmsReviewScreen(): React.JSX.Element {
   // ── Discard ─────────────────────────────────────────────────────────
 
   const handleDiscard = useCallback(() => {
-    Alert.alert(t("discard_all"), t("discard_all_confirm"), [
-      { text: t("cancel"), style: "cancel" },
-      {
-        text: t("discard"),
-        style: "destructive",
-        onPress: () => {
-          clearTransactions();
-          router.replace("/(tabs)");
-        },
-      },
-    ]);
-  }, [clearTransactions, router, t]);
+    setDiscardConfirmVisible(true);
+  }, []);
+
+  const handleConfirmDiscard = useCallback(() => {
+    clearTransactions();
+    router.replace("/(tabs)");
+  }, [clearTransactions, router]);
 
   // ── No transactions guard ───────────────────────────────────────────
 
@@ -172,6 +169,18 @@ export default function SmsReviewScreen(): React.JSX.Element {
         onSave={handleSave}
         onDiscard={handleDiscard}
         isSaving={isSaving}
+      />
+
+      {/* Discard confirmation */}
+      <ConfirmationModal
+        visible={discardConfirmVisible}
+        variant="danger"
+        title={t("discard_all")}
+        message={t("discard_all_confirm")}
+        confirmLabel={t("discard")}
+        cancelLabel={t("cancel")}
+        onConfirm={handleConfirmDiscard}
+        onCancel={() => setDiscardConfirmVisible(false)}
       />
     </SafeAreaView>
   );

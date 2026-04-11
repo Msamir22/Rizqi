@@ -38,7 +38,6 @@ import React, {
   useState,
 } from "react";
 import {
-  Alert,
   Dimensions,
   StyleSheet,
   Text,
@@ -48,6 +47,7 @@ import {
 import Carousel, { ICarouselInstance } from "react-native-reanimated-carousel";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useToast } from "@/components/ui/Toast";
 import { CurrencyPickerStep } from "@/components/onboarding/CurrencyPickerStep";
 import { LanguagePickerStep } from "@/components/onboarding/LanguagePickerStep";
 import { WalletCreationStep } from "@/components/onboarding/WalletCreationStep";
@@ -139,6 +139,7 @@ export default function OnboardingScreen(): React.JSX.Element | null {
   );
   const [userId, setUserId] = useState<string | null>(null);
   const { isLoading: isAuthLoading } = useAuth();
+  const { showToast } = useToast();
 
   /**
    * Navigate to the main app after onboarding.
@@ -244,16 +245,16 @@ export default function OnboardingScreen(): React.JSX.Element | null {
       } catch (error) {
         // TODO: Replace with structured logging (e.g., Sentry)
         console.error("Failed to change language:", error);
-        Alert.alert(
-          tCommon("error"),
-          tCommon("language_change_failed"),
-          [{ text: tCommon("ok") }]
-        );
+        showToast({
+          type: "error",
+          title: tCommon("error"),
+          message: tCommon("language_change_failed"),
+        });
       } finally {
         setIsChangingLanguage(false);
       }
     },
-    [isChangingLanguage, tCommon]
+    [isChangingLanguage, tCommon, showToast]
   );
 
   const handleNext = useCallback((): void => {
