@@ -93,5 +93,11 @@
   "recent_transactions": "Recent Transactions",
   "spending_trend": "Spending Trend",
   "alert_help_percentage": "You'll be alerted when spending reaches this percentage",
-  "expense_fallback": "Expense"
+  "expense_fallback": "Expense",
+  "alert_warning_title": "Spending Alert",
+  "alert_warning_subtitle": "You've spent {{percentage}}% of your budget",
+  "alert_over_budget_title": "Over Budget!",
+  "alert_over_budget_subtitle": "You've exceeded your budget by {{overage}}",
+  "alert_got_it": "Got It",
+  "alert_dismiss": "Dismiss"
 }

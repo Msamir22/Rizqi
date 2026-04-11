@@ -101,5 +101,11 @@
   "recent_transactions": "أحدث المعاملات",
   "spending_trend": "اتجاه الإنفاق",
   "alert_help_percentage": "سيتم تنبيهك عندما يصل الإنفاق إلى هذه النسبة",
-  "expense_fallback": "مصروف"
+  "expense_fallback": "مصروف",
+  "alert_warning_title": "تنبيه الإنفاق",
+  "alert_warning_subtitle": "لقد أنفقت {{percentage}}% من ميزانيتك",
+  "alert_over_budget_title": "تجاوزت الميزانية!",
+  "alert_over_budget_subtitle": "لقد تجاوزت ميزانيتك بمبلغ {{overage}}",
+  "alert_got_it": "فهمت",
+  "alert_dismiss": "إغلاق"
 }

@@ -51,6 +51,11 @@
   "live_rates_accessibility": "Live rates: Gold ${{goldPrice}} per ounce, {{goldDirection}} {{goldChange}} percent. Silver ${{silverPrice}} per gram, {{silverDirection}} {{silverChange}} percent.",
   "direction_up": "up",
   "direction_down": "down",
+  "trend_direction_up": "Up",
+  "trend_direction_down": "Down",
   "metals_tooltip": "Based on current market rates vs. your purchase prices. Updates whenever rates change.",
-  "hero_accessibility": "Profit/loss calculation info"
+  "hero_accessibility": "Profit/loss calculation info",
+  "trend_label": "{{direction}} {{percent}}% today",
+  "gold_24k_subtitle": "24 Karat · Pure Gold",
+  "karat_label": "{{karat}} Karat"
 }

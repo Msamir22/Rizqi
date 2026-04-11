@@ -70,6 +70,12 @@ const AR_LATIN_SHORT_ALLOWLIST = new Set([
 /** Regex for purely numeric/placeholder values like "0.00", "0.0" */
 const NUMERIC_VALUE_RE = /^[0-9.,\s]+$/;
 
+/** Minimum length threshold for skipping short values (likely codes/labels) */
+const MIN_SKIP_LENGTH = 2;
+
+/** Minimum length for Arabic script detection in value checks */
+const MIN_ARABIC_DETECT_LENGTH = 3;
+
 /**
  * Path to the baseline file that tracks known hardcoded-string findings
  * by identity (file + description). This allows the gate to detect individual
@@ -223,13 +229,13 @@ function checkArabicValues(): { passed: boolean; errors: string[] } {
       if (AR_LATIN_SHORT_ALLOWLIST.has(value)) continue;
 
       // Skip very short values (likely codes/labels)
-      if (value.length <= 2) continue;
+      if (value.length <= MIN_SKIP_LENGTH) continue;
 
       // Skip purely numeric values like "0.00", "0.0"
       if (NUMERIC_VALUE_RE.test(value)) continue;
 
-      // If the value is purely Latin (no Arabic script) and > 3 chars, flag it
-      if (!hasArabicScript(value) && value.length > 3) {
+      // If the value is purely Latin (no Arabic script) and longer than threshold, flag it
+      if (!hasArabicScript(value) && value.length > MIN_ARABIC_DETECT_LENGTH) {
         errors.push(`ar/${ns}.json "${key}" = "${value}" (no Arabic script)`);
       }
     }
@@ -328,7 +334,7 @@ function checkHardcodedStrings(): {
 
       // Pattern 3: title="English text"
       const titleMatch = line.match(/title=["']([A-Z][A-Za-z ]{2,})["']/);
-      if (titleMatch && !line.includes("title={")) {
+      if (titleMatch) {
         errors.push(`${relativePath}:${lineNum} — title="${titleMatch[1]}"`);
       }
 

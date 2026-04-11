@@ -32,24 +32,7 @@ interface BudgetAlertModalProps {
 // Constants
 // ---------------------------------------------------------------------------
 
-const LEVEL_CONFIG = {
-  WARNING: {
-    icon: "warning-outline" as const,
-    headerBg: palette.gold[600],
-    iconBg: palette.gold[100],
-    iconColor: palette.gold[800],
-    title: "Spending Alert",
-    dismissLabel: "Got It",
-  },
-  DANGER: {
-    icon: "alert-circle-outline" as const,
-    headerBg: palette.red[500],
-    iconBg: palette.red[100],
-    iconColor: palette.red[600],
-    title: "Over Budget!",
-    dismissLabel: "Dismiss",
-  },
-};
+// Level configuration is now derived dynamically using translations
 
 // ---------------------------------------------------------------------------
 // Component
@@ -66,15 +49,42 @@ export function BudgetAlertModal({
 
   if (!alert) return <></>;
 
-  const config = LEVEL_CONFIG[alert.level];
   const percentage = Math.round(alert.percentage);
   const overage = alert.spent - alert.limit;
+
+  // Dynamic level config using translations
+  const levelConfig = {
+    WARNING: {
+      icon: "warning-outline" as const,
+      headerBg: palette.gold[600],
+      iconBg: palette.gold[100],
+      iconColor: palette.gold[800],
+      title: t("alert_warning_title"),
+      dismissLabel: t("alert_got_it"),
+    },
+    DANGER: {
+      icon: "alert-circle-outline" as const,
+      headerBg: palette.red[500],
+      iconBg: palette.red[100],
+      iconColor: palette.red[600],
+      title: t("alert_over_budget_title"),
+      dismissLabel: t("alert_dismiss"),
+    },
+  };
+
+  const config = levelConfig[alert.level];
 
   // Dynamic subtitle with specific numbers
   const subtitle =
     alert.level === "WARNING"
-      ? `You\u2019ve spent ${percentage}% of your budget`
-      : `You\u2019ve exceeded your budget by ${formatCurrency({ amount: overage, currency: preferredCurrency, maximumFractionDigits: 0 })}`;
+      ? t("alert_warning_subtitle", { percentage })
+      : t("alert_over_budget_subtitle", {
+          overage: formatCurrency({
+            amount: overage,
+            currency: preferredCurrency,
+            maximumFractionDigits: 0,
+          }),
+        });
 
   return (
     <Modal

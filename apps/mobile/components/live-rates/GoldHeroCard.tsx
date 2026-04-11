@@ -41,13 +41,17 @@ function TrendBadge({
 }: {
   readonly trendPercent: number;
 }): React.JSX.Element | null {
+  const { t } = useTranslation("metals");
   const roundedTrend = Number(trendPercent.toFixed(1));
   if (roundedTrend === 0) return null;
 
   const isUp = roundedTrend > 0;
   const color = isUp ? palette.nileGreen[400] : palette.red[400];
   const icon = isUp ? "arrow-drop-up" : "arrow-drop-down";
-  const label = `${isUp ? "▲" : "▼"} ${Math.abs(roundedTrend).toFixed(1)}% today`;
+  const label = t("trend_label", {
+    direction: isUp ? t("trend_direction_up") : t("trend_direction_down"),
+    percent: Math.abs(roundedTrend).toFixed(1),
+  });
 
   return (
     <View className="flex-row items-center mt-0.5">
@@ -62,22 +66,25 @@ function TrendBadge({
   );
 }
 
-function PurityChip({
-  label,
-  price,
-  currencySymbol,
-}: {
-  readonly label: string;
+interface PurityChipProps {
+  readonly karat: number;
   readonly price: string;
   readonly currencySymbol: string;
-}): React.JSX.Element {
+}
+
+function PurityChip({
+  karat,
+  price,
+  currencySymbol,
+}: PurityChipProps): React.JSX.Element {
+  const { t } = useTranslation("metals");
   return (
     <View
       className="rounded-lg px-3 py-2 me-2"
       style={{ backgroundColor: `${palette.gold[600]}20` }}
     >
       <Text className="text-[10px] font-medium text-slate-400 mb-0.5">
-        {label}
+        {t("karat_label", { karat })}
       </Text>
       <Text className="text-sm font-semibold text-white">
         {currencySymbol} {price}/g
@@ -118,19 +125,19 @@ export function GoldHeroCard({
 
       {/* Subtitle + trend */}
       <View className="flex-row items-center mt-0.5">
-        <Text className="text-xs text-slate-400">24 Karat · Pure Gold</Text>
+        <Text className="text-xs text-slate-400">{t("gold_24k_subtitle")}</Text>
         <TrendBadge trendPercent={trendPercent} />
       </View>
 
       {/* 21K and 18K chips */}
       <View className="flex-row mt-3">
         <PurityChip
-          label="21 Karat"
+          karat={21}
           price={price21k}
           currencySymbol={currencySymbol}
         />
         <PurityChip
-          label="18 Karat"
+          karat={18}
           price={price18k}
           currencySymbol={currencySymbol}
         />

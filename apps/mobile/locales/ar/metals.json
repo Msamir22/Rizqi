@@ -55,6 +55,11 @@
   "live_rates_accessibility": "الأسعار المباشرة: الذهب ${{goldPrice}} للأوقية، {{goldDirection}} {{goldChange}} بالمئة. الفضة ${{silverPrice}} للغرام، {{silverDirection}} {{silverChange}} بالمئة.",
   "direction_up": "أعلى",
   "direction_down": "أقل",
+  "trend_direction_up": "أعلى",
+  "trend_direction_down": "أقل",
   "metals_tooltip": "بناءً على أسعار السوق الحالية مقارنة بأسعار شرائك. يتم التحديث كلما تغيرت الأسعار.",
-  "hero_accessibility": "معلومات حساب الربح/الخسارة"
+  "hero_accessibility": "معلومات حساب الربح/الخسارة",
+  "trend_label": "{{direction}} {{percent}}% اليوم",
+  "gold_24k_subtitle": "عيار 24 · ذهب خالص",
+  "karat_label": "عيار {{karat}}"
 }

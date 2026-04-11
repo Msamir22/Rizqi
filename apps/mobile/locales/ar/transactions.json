@@ -129,6 +129,7 @@
   "payment_for_name": "دفعة مقابل {{name}}",
   "payment_failed": "فشلت الدفعة",
   "payment_failed_message": "فشل إنشاء المعاملة. يرجى المحاولة مرة أخرى.",
+  "balance_warning": "رصيد الحساب سيكون {{balance}} بعد هذه الدفعة.",
 
   "hide_details": "إخفاء التفاصيل",
   "note": "ملاحظة",
@@ -268,6 +269,11 @@
   "auto_detect_card_transactions": "سنكتشف المعاملات تلقائياً من هذه البطاقة",
   "target_amount": "المبلغ المستهدف ({{currency}})",
   "confirm_amount_received": "يرجى تأكيد المبلغ المستلم بـ {{currency}}.",
-  "save_button_count": "حفظ {{count}} معاملة",
+  "save_button_count_zero": "حفظ {{count}} معاملة",
+  "save_button_count_one": "حفظ معاملة",
+  "save_button_count_two": "حفظ معاملتين",
+  "save_button_count_few": "حفظ {{count}} معاملات",
+  "save_button_count_many": "حفظ {{count}} معاملة",
+  "save_button_count_other": "حفظ {{count}} معاملة",
   "save_error_title": "خطأ في الحفظ"
 }

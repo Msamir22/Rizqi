@@ -2,7 +2,7 @@ import type { CurrencyType, MarketRate } from "@astik/db";
 import { CURRENCY_INFO_MAP, getMetalPrice } from "@astik/logic";
 import { FontAwesome5, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -178,7 +178,7 @@ function getPillIcon(
  *
  * @returns The React element rendering the live rates pills, status indicators, and timestamp.
  */
-export function LiveRates({
+function LiveRatesComponent({
   latestRates,
   previousDayRate,
   isLoading = false,
@@ -189,11 +189,15 @@ export function LiveRates({
   const { isDark } = useTheme();
   const { t } = useTranslation("common");
   const { t: tMetals } = useTranslation("metals");
-  const ratesDisplay = buildRatesDisplay(
-    latestRates,
-    previousDayRate,
-    preferredCurrency,
-    tMetals
+  const ratesDisplay = useMemo(
+    () =>
+      buildRatesDisplay(
+        latestRates,
+        previousDayRate,
+        preferredCurrency,
+        tMetals
+      ),
+    [latestRates, previousDayRate, preferredCurrency, tMetals]
   );
 
   const handlePress = useCallback((): void => {
@@ -297,3 +301,5 @@ export function LiveRates({
     </View>
   );
 }
+
+export const LiveRates = React.memo(LiveRatesComponent);

@@ -121,6 +121,7 @@
   "payment_for_name": "Payment for {{name}}",
   "payment_failed": "Payment Failed",
   "payment_failed_message": "Failed to create transaction. Please try again.",
+  "balance_warning": "Account balance will be {{balance}} after this payment.",
 
   "hide_details": "Hide Details",
   "note": "NOTE",
@@ -260,6 +261,7 @@
   "auto_detect_card_transactions": "We'll auto-detect transactions from this card",
   "target_amount": "Target Amount ({{currency}})",
   "confirm_amount_received": "Please confirm the amount received in {{currency}}.",
-  "save_button_count": "Save {{count}} Transaction(s)",
+  "save_button_count_one": "Save {{count}} Transaction",
+  "save_button_count_other": "Save {{count}} Transactions",
   "save_error_title": "Save Error"
 }
