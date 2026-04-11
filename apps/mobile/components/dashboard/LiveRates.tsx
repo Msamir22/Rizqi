@@ -71,6 +71,7 @@ function calculateTrend(
  * @param latestRates - Most recent market rates used to compute current display values
  * @param previousDayRate - Prior-day market rates used to determine trends; may be null
  * @param preferredCurrency - User's preferred currency; when `"USD"` this function uses `"EUR"` as the displayed currency pair base
+ * @param t - Translation function from metals namespace
  * @returns An array of three Rate entries:
  *  - a currency pair entry labeled `<displayCurrency>/USD` with adaptive decimal precision,
  *  - a "Gold 24K" entry showing the preferred-currency price per gram rounded and localized,
@@ -79,7 +80,8 @@ function calculateTrend(
 function buildRatesDisplay(
   latestRates: MarketRate | null,
   previousDayRate: MarketRate | null,
-  preferredCurrency: CurrencyType
+  preferredCurrency: CurrencyType,
+  t: (key: string) => string
 ): Rate[] {
   if (!latestRates) {
     return [];
@@ -122,14 +124,14 @@ function buildRatesDisplay(
     },
     {
       id: "2",
-      label: "Gold 24K",
+      label: t("gold_24k_label").replace(":", ""),
       value: `${symbol} ${Math.round(goldInPreferred).toLocaleString()}/g`,
       trend: calculateTrend(goldInPreferred, prevGoldInPreferred),
       type: "gold",
     },
     {
       id: "3",
-      label: "Silver",
+      label: t("silver_label").replace(":", ""),
       value: `${symbol} ${silverInPreferred.toFixed(2)}/g`,
       trend: calculateTrend(silverInPreferred, prevSilverInPreferred),
       type: "silver",
@@ -186,10 +188,12 @@ export function LiveRates({
 }: LiveRatesProps): React.ReactElement {
   const { isDark } = useTheme();
   const { t } = useTranslation("common");
+  const { t: tMetals } = useTranslation("metals");
   const ratesDisplay = buildRatesDisplay(
     latestRates,
     previousDayRate,
-    preferredCurrency
+    preferredCurrency,
+    tMetals
   );
 
   const handlePress = useCallback((): void => {
@@ -287,7 +291,7 @@ export function LiveRates({
       </ScrollView>
       {lastUpdated && (
         <Text className="ms-1 mt-2 text-xs text-slate-500 dark:text-slate-400">
-          Last updated {formatTimeAgo(lastUpdated)}
+          {t("last_updated")} {formatTimeAgo(lastUpdated)}
         </Text>
       )}
     </View>

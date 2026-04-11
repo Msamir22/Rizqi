@@ -139,7 +139,7 @@ export function BudgetSpendingTrendChart({
                 className="text-slate-400 dark:text-slate-500 font-medium bg-white dark:bg-slate-800 px-1"
                 style={{ fontSize: 9 }}
               >
-                avg{" "}
+                {t("daily_avg")}{" "}
                 {formatCurrency({
                   amount: weeklyAverage,
                   currency,

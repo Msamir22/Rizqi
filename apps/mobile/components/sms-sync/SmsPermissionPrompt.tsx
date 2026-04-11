@@ -126,8 +126,7 @@ export function SmsPermissionPrompt({
                   {t("auto_track_title")}
                 </Text>
                 <Text className="text-slate-400 text-base text-center mt-2 px-4">
-                  Let Astik read your financial SMS to automatically track your
-                  spending
+                  {t("auto_track_description")}
                 </Text>
               </Animated.View>
 
@@ -148,7 +147,7 @@ export function SmsPermissionPrompt({
                 <FeatureBullet
                   icon="checkmark-circle"
                   title={t("feature_control_title")}
-                  description="Review every transaction before it's saved. Decline any you don't want."
+                  description={t("feature_control_description")}
                   delay={500}
                 />
               </View>

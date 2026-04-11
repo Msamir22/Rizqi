@@ -121,5 +121,19 @@
   "search_category_level": "Search {{label}}...",
   "no_categories_found": "No categories found",
   "no_categories_match_search": "No categories match your search",
-  "vs_last_month": "vs Last Month"
+  "vs_last_month": "vs Last Month",
+  "last_updated": "Last updated",
+  "period_today": "Today",
+  "period_this_week": "This Week",
+  "period_last_week": "Last Week",
+  "period_this_month": "This Month",
+  "period_last_month": "Last Month",
+  "period_six_months": "Last 6 Months",
+  "period_this_year": "This Year",
+  "period_all_time": "All Time",
+  "search_placeholder_counterparty": "Search counterparty, sender...",
+  "found": "found",
+  "selected": "selected",
+  "select_all": "Select All",
+  "deselect_all": "Deselect All"
 }

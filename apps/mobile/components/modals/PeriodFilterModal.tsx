@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Modal,
   Text,
@@ -20,15 +20,15 @@ interface PeriodFilterModalProps {
   onClose: () => void;
 }
 
-const PERIOD_OPTIONS: Array<{ value: GroupingPeriod; label: string }> = [
-  { value: "today", label: "Today" },
-  { value: "this_week", label: "This Week" },
-  { value: "last_week", label: "Last Week" },
-  { value: "this_month", label: "This Month" },
-  { value: "last_month", label: "Last Month" },
-  { value: "six_months", label: "Last 6 Months" },
-  { value: "this_year", label: "This Year" },
-  { value: "all_time", label: "All Time" },
+const PERIOD_VALUES: GroupingPeriod[] = [
+  "today",
+  "this_week",
+  "last_week",
+  "this_month",
+  "last_month",
+  "six_months",
+  "this_year",
+  "all_time",
 ];
 
 export function PeriodFilterModal({
@@ -40,6 +40,15 @@ export function PeriodFilterModal({
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const { t } = useTranslation("common");
+
+  const periodOptions = useMemo(
+    () =>
+      PERIOD_VALUES.map((value) => ({
+        value,
+        label: t(`period_${value}`),
+      })),
+    [t]
+  );
 
   return (
     <Modal
@@ -76,7 +85,7 @@ export function PeriodFilterModal({
               {/* Options - 2 columns grid */}
               <View className="p-4">
                 <View className="flex-row flex-wrap gap-3">
-                  {PERIOD_OPTIONS.map((option) => {
+                  {periodOptions.map((option) => {
                     const isSelected = selectedPeriod === option.value;
                     return (
                       <TouchableOpacity

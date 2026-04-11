@@ -172,7 +172,11 @@ export function AccountSelector({
               onChangeText={onNewAccountNameChange}
               className="text-slate-800 dark:text-white text-base font-semibold flex-1"
               placeholderTextColor={palette.slate[600]}
-              placeholder={isSecondary ? "Cash account name" : "Account name"}
+              placeholder={
+                isSecondary
+                  ? t("account_name_placeholder_cash")
+                  : t("account_name")
+              }
               autoFocus={isCreatingNew}
             />
           </View>

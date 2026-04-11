@@ -148,7 +148,7 @@ export function TransactionReview({
             onTypePress={() => state.setTypeModalVisible(true)}
             searchQuery={state.searchQuery}
             onSearchChange={state.setSearchQuery}
-            searchPlaceholder="Search counterparty, sender..."
+            searchPlaceholder={t("search_placeholder_counterparty")}
             containerClassName="px-5 pb-2"
           />
         </Animated.View>
@@ -163,11 +163,11 @@ export function TransactionReview({
           <Text className="font-bold text-slate-900 dark:text-white">
             {state.filteredTransactions.length}
           </Text>{" "}
-          found ·{" "}
+          {t("found")} ·{" "}
           <Text className="font-bold text-nileGreen-600 dark:text-nileGreen-400">
             {state.selectedCount}
           </Text>{" "}
-          selected
+          {t("selected")}
         </Text>
 
         <View className="flex-row items-center gap-3">
@@ -203,7 +203,7 @@ export function TransactionReview({
               }
             />
             <Text className="text-xs text-slate-400 ms-1.5">
-              {state.allSelected ? "Deselect All" : "Select All"}
+              {state.allSelected ? t("deselect_all") : t("select_all")}
             </Text>
           </TouchableOpacity>
         </View>

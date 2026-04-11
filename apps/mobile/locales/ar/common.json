@@ -136,5 +136,19 @@
   "search_category_level": "بحث في {{label}}...",
   "no_categories_found": "لا توجد فئات",
   "no_categories_match_search": "لا توجد فئات تطابق بحثك",
-  "vs_last_month": "مقابل الشهر الماضي"
+  "vs_last_month": "مقابل الشهر الماضي",
+  "last_updated": "آخر تحديث",
+  "period_today": "اليوم",
+  "period_this_week": "هذا الأسبوع",
+  "period_last_week": "الأسبوع الماضي",
+  "period_this_month": "هذا الشهر",
+  "period_last_month": "الشهر الماضي",
+  "period_six_months": "آخر 6 أشهر",
+  "period_this_year": "هذا العام",
+  "period_all_time": "كل الوقت",
+  "search_placeholder_counterparty": "البحث عن الطرف الآخر، المرسل...",
+  "found": "تم العثور",
+  "selected": "محدد",
+  "select_all": "تحديد الكل",
+  "deselect_all": "إلغاء تحديد الكل"
 }

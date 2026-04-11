@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Switch, Text, TouchableOpacity, View } from "react-native";
 // Will use DatePicker modal later, simplified for now
 import { palette } from "@/constants/colors";
@@ -10,15 +10,12 @@ import type { RecurringFrequency } from "@astik/db";
 import { TextField } from "../ui/TextField";
 import { useTranslation } from "react-i18next";
 
-const FREQUENCY_OPTIONS: ReadonlyArray<{
-  readonly value: RecurringFrequency;
-  readonly label: string;
-}> = [
-  { value: "DAILY", label: "Daily" },
-  { value: "WEEKLY", label: "Weekly" },
-  { value: "MONTHLY", label: "Monthly" },
-  { value: "QUARTERLY", label: "Quarterly" },
-  { value: "YEARLY", label: "Yearly" },
+const FREQUENCY_VALUES: readonly RecurringFrequency[] = [
+  "DAILY",
+  "WEEKLY",
+  "MONTHLY",
+  "QUARTERLY",
+  "YEARLY",
 ];
 
 export interface OptionalFields {
@@ -52,13 +49,22 @@ export function OptionalSection({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const { t } = useTranslation("transactions");
 
+  const frequencyOptions = useMemo(
+    () =>
+      FREQUENCY_VALUES.map((value) => ({
+        value,
+        label: t(`freq_${value.toLowerCase()}`),
+      })),
+    [t]
+  );
+
   const counterpartyLabel =
-    transactionType === "INCOME" ? "PAYER" : "MERCHANT / PAYEE";
+    transactionType === "INCOME" ? t("payer") : t("merchant_payee");
 
   const counterpartyPlaceholder =
     transactionType === "INCOME"
-      ? "e.g. Company name, Client"
-      : "e.g. Starbucks, Carrefour";
+      ? t("payer_placeholder")
+      : t("merchant_placeholder");
 
   if (!expanded) {
     return (
@@ -112,8 +118,8 @@ export function OptionalSection({
 
         {/* Note */}
         <TextField
-          label="NOTE"
-          placeholder="Add a note..."
+          label={t("note")}
+          placeholder={t("note_placeholder")}
           value={fields.note}
           onChangeText={(t) => onChange({ note: t })}
           multiline
@@ -193,7 +199,7 @@ export function OptionalSection({
               <View className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 gap-4">
                 {/* Recurring logic will be implemented here later or simply show basic name/frequency for now as placeholders */}
                 <TextField
-                  label="NAME"
+                  label={t("recurring_name_label")}
                   placeholder={t("recurring_name_placeholder")}
                   value={fields.recurringName}
                   onChangeText={(t) => onChange({ recurringName: t })}
@@ -205,7 +211,7 @@ export function OptionalSection({
                     {t("frequency_label")}
                   </Text>
                   <View className="flex-row flex-wrap gap-1">
-                    {FREQUENCY_OPTIONS.map((option) => {
+                    {frequencyOptions.map((option) => {
                       const isSelected =
                         fields.recurringFrequency === option.value;
                       return (
