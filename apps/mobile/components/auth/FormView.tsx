@@ -139,7 +139,7 @@ export function FormView({
             </View>
             <TouchableOpacity
               onPress={onRetry}
-              accessibilityLabel="Retry"
+              accessibilityLabel={t("retry")}
               accessibilityRole="button"
             >
               <Ionicons

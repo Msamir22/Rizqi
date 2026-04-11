@@ -46,6 +46,7 @@ export async function createTransactionFromVoice(
 ): Promise<Transaction> {
   const userId = await getCurrentUserId();
   if (!userId) {
+    // i18n-ignore — developer-facing error
     throw new Error("User not authenticated");
   }
 
@@ -109,6 +110,7 @@ async function updateAccountBalance(
 export async function getOrCreateDefaultAccount(): Promise<Account> {
   const userId = await getCurrentUserId();
   if (!userId) {
+    // i18n-ignore — developer-facing error
     throw new Error("User not authenticated");
   }
 

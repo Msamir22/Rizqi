@@ -2,6 +2,7 @@ import { palette } from "@/constants/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Text, TouchableOpacity, View } from "react-native";
 import { TextField } from "../ui/TextField";
+import { useTranslation } from "react-i18next";
 
 interface BankDetailsSectionProps {
   expanded: boolean;
@@ -30,6 +31,7 @@ export function BankDetailsSection({
   onCardLast4Change,
   onSmsSenderNameChange,
 }: BankDetailsSectionProps): JSX.Element {
+  const { t } = useTranslation("accounts");
   if (!expanded) {
     return (
       <TouchableOpacity
@@ -43,7 +45,7 @@ export function BankDetailsSection({
           color={palette.nileGreen[500]}
         />
         <Text className="ms-2.5 text-sm font-bold text-slate-700 dark:text-slate-300">
-          Add bank details (Optional)
+          {t("add_bank_details_optional")}
         </Text>
         <Ionicons
           name="chevron-down"
@@ -63,7 +65,7 @@ export function BankDetailsSection({
         className="flex-row items-center justify-center mb-6"
       >
         <Text className="text-xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-          Hide Bank Details
+          {t("hide_bank_details")}
         </Text>
         <Ionicons
           name="chevron-up"
@@ -75,16 +77,16 @@ export function BankDetailsSection({
 
       <View className="mb-6 px-1">
         <Text className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest mb-1">
-          BANK DETAILS
+          {t("bank_details_section")}
         </Text>
         <Text className="text-xs font-bold text-slate-400 dark:text-slate-500">
-          We&apos;ll auto-detect transactions from this card
+          {t("auto_detect_transactions")}
         </Text>
       </View>
 
       <TextField
-        label="Bank Name"
-        placeholder="e.g., CIB, NBE, HSBC"
+        label={t("bank_name_label")}
+        placeholder={t("bank_name_placeholder")}
         value={bankName}
         onChangeText={onBankNameChange}
         className="mb-4"
@@ -93,7 +95,7 @@ export function BankDetailsSection({
 
       <View className="mb-6">
         <TextField
-          label="Card Last 4 Digits"
+          label={t("card_last_4_digits")}
           placeholder="1234"
           value={cardLast4}
           onChangeText={onCardLast4Change}
@@ -102,22 +104,20 @@ export function BankDetailsSection({
           error={cardLast4Error}
         />
         <Text className="mt-2 ms-2 text-[11px] font-bold text-slate-500 dark:text-slate-600">
-          Found on your card: ****1234
+          {t("card_last_4_help")}
         </Text>
       </View>
 
       <View className="mb-6">
         <TextField
-          label="SMS Sender Name"
-          placeholder="e.g., CIB, NBE, VFCash"
+          label={t("sms_sender_name")}
+          placeholder={t("sms_sender_placeholder")}
           value={smsSenderName}
           onChangeText={onSmsSenderNameChange}
           maxLength={100}
         />
         <Text className="mt-2 ms-2 text-[11px] font-bold text-slate-500 dark:text-slate-600">
-          The name that appears as the SMS sender when your bank sends you
-          transaction notifications. This helps us automatically match SMS
-          transactions to this account.
+          {t("sms_sender_help")}
         </Text>
       </View>
     </View>

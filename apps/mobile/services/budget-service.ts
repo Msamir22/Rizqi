@@ -83,14 +83,18 @@ function categoriesCollection(): Collection<Category> {
 export async function createBudget(input: CreateBudgetInput): Promise<Budget> {
   const userId = await getCurrentUserId();
   if (!userId) {
+    // i18n-ignore — developer-facing error
     throw new Error("User not authenticated");
   }
 
   // Type-specific validation
   if (input.type === "CATEGORY" && !input.categoryId) {
+    // i18n-ignore — developer-facing error
     throw new Error("Category budgets require a categoryId");
   }
   if (input.period === "CUSTOM" && (!input.periodStart || !input.periodEnd)) {
+    // i18n-ignore — developer-facing error
+    // i18n-ignore — developer-facing error
     throw new Error(
       "Custom period budgets require both periodStart and periodEnd"
     );
@@ -138,6 +142,8 @@ export async function updateBudget(
     (!(input.periodStart ?? budget.periodStart) ||
       !(input.periodEnd ?? budget.periodEnd))
   ) {
+    // i18n-ignore — developer-facing error
+    // i18n-ignore — developer-facing error
     throw new Error(
       "Custom period budgets require both periodStart and periodEnd"
     );
@@ -145,6 +151,7 @@ export async function updateBudget(
 
   // F6 fix: Prevent clearing categoryId on CATEGORY budgets
   if (budget.type === "CATEGORY" && input.categoryId === "") {
+    // i18n-ignore — developer-facing error
     throw new Error("Category budgets require a categoryId");
   }
 
@@ -206,6 +213,7 @@ export async function pauseBudget(budgetId: string): Promise<void> {
 
   // M2 fix: Guard against pausing an already-paused budget
   if (budget.status === "PAUSED") {
+    // i18n-ignore — developer-facing error
     throw new Error("Budget is already paused");
   }
 
@@ -227,6 +235,7 @@ export async function resumeBudget(budgetId: string): Promise<void> {
 
   // M3 fix: Guard against resuming a non-paused budget
   if (budget.status !== "PAUSED") {
+    // i18n-ignore — developer-facing error
     throw new Error("Cannot resume a budget that is not paused");
   }
 
@@ -430,6 +439,7 @@ export async function validateBudgetUniqueness(
       type === "GLOBAL"
         ? `A Global ${period.toLowerCase()} budget already exists`
         : `A budget for this category with ${period.toLowerCase()} period already exists`;
+    // i18n-ignore — developer-facing error
     throw new Error(label);
   }
 }

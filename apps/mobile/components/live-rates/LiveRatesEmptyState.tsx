@@ -17,6 +17,7 @@ import { palette } from "@/constants/colors";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { View, Text } from "react-native";
+import { useTranslation } from "react-i18next";
 
 // =============================================================================
 // Sub-components
@@ -83,6 +84,7 @@ function EmptyIllustration(): React.JSX.Element {
 // =============================================================================
 
 export function LiveRatesEmptyState(): React.JSX.Element {
+  const { t } = useTranslation("metals");
   return (
     <View className="flex-1 items-center justify-center px-8 pb-20">
       {/* Composed illustration */}
@@ -92,12 +94,12 @@ export function LiveRatesEmptyState(): React.JSX.Element {
 
       {/* Heading */}
       <Text className="text-xl font-semibold text-slate-900 dark:text-white text-center">
-        Rates unavailable
+        {t("rates_unavailable")}
       </Text>
 
       {/* Description */}
       <Text className="mt-3 text-sm text-center leading-5 text-slate-600 dark:text-slate-400">
-        Pull down to refresh when you&apos;re back online
+        {t("pull_to_refresh_offline")}
       </Text>
 
       {/* Offline mode pill */}
@@ -108,7 +110,7 @@ export function LiveRatesEmptyState(): React.JSX.Element {
           color={palette.slate[500]}
         />
         <Text className="ms-2 text-slate-700 dark:text-slate-300 text-[11px] font-bold tracking-wider">
-          OFFLINE MODE
+          {t("offline_mode")}
         </Text>
       </View>
     </View>

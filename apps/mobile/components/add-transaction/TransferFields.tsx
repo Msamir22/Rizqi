@@ -5,6 +5,7 @@ import { Text, TouchableOpacity, View } from "react-native";
 import { useEffect, useMemo, useState } from "react";
 import { AccountSelectorModal } from "../modals/AccountSelectorModal";
 import { formatAmountInput } from "@astik/logic";
+import { useTranslation } from "react-i18next";
 
 interface TransferFieldsProps {
   accounts: Account[];
@@ -36,6 +37,7 @@ export function TransferFields({
 }: TransferFieldsProps): React.JSX.Element {
   const [isFromModalOpen, setIsFromModalOpen] = useState(false);
   const [isToModalOpen, setIsToModalOpen] = useState(false);
+  const { t } = useTranslation("transactions");
 
   const fromAccount = accounts.find((a) => a.id === fromAccountId);
   const toAccount = accounts.find((a) => a.id === toAccountId);
@@ -74,7 +76,7 @@ export function TransferFields({
         {/* From Account */}
         <View className="flex-1">
           <Text className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-2 px-1 uppercase tracking-wider">
-            FROM
+            {t("from_label").toUpperCase()}
           </Text>
           <TouchableOpacity
             onPress={() => setIsFromModalOpen(true)}
@@ -85,7 +87,7 @@ export function TransferFields({
               numberOfLines={1}
               className="flex-1 text-sm font-semibold text-slate-900 dark:text-white"
             >
-              {fromAccount?.name || "Select"}
+              {fromAccount?.name || t("select")}
             </Text>
             <Ionicons
               name="chevron-down"
@@ -113,7 +115,7 @@ export function TransferFields({
         {/* To Account */}
         <View className="flex-1">
           <Text className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-2 px-1 uppercase tracking-wider">
-            TO
+            {t("to_label")}
           </Text>
           <TouchableOpacity
             onPress={() => setIsToModalOpen(true)}
@@ -124,7 +126,7 @@ export function TransferFields({
               numberOfLines={1}
               className="flex-1 text-sm font-semibold text-slate-900 dark:text-white"
             >
-              {toAccount?.name || "Select"}
+              {toAccount?.name || t("select")}
             </Text>
             <Ionicons
               name="chevron-down"
@@ -157,7 +159,7 @@ export function TransferFields({
         <View className="mt-4 mx-2 bg-blue-50/50 dark:bg-blue-900/10 p-5 rounded-3xl border border-blue-100 dark:border-blue-900/30">
           <View className="flex-row items-center justify-between mb-3">
             <Text className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
-              Target Amount ({toAccount?.currency})
+              {t("target_amount", { currency: toAccount?.currency })}
             </Text>
             {exchangeRate && (
               <Text className="text-[10px] text-slate-400 font-bold dark:text-slate-500">
@@ -191,7 +193,7 @@ export function TransferFields({
           </TouchableOpacity>
 
           <Text className="text-xs text-slate-400 mt-2">
-            Please confirm the amount received in {toAccount?.currency}.
+            {t("confirm_amount_received", { currency: toAccount?.currency })}
           </Text>
         </View>
       )}

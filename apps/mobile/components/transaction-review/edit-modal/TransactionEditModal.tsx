@@ -27,6 +27,7 @@ import {
   type ReviewableTransaction,
 } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import React from "react";
 import {
   KeyboardAvoidingView,
@@ -77,6 +78,7 @@ export function TransactionEditModal(
   props: TransactionEditModalProps
 ): React.JSX.Element {
   const { visible, onClose, latestRates, transaction } = props;
+  const { t } = useTranslation("transactions");
 
   const { state, setters, accountHandlers } = useTransactionEditState(props);
 
@@ -109,18 +111,20 @@ export function TransactionEditModal(
           <View className="flex-row items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700/50 mb-6">
             <TouchableOpacity onPress={onClose} activeOpacity={0.7}>
               <Text className="text-slate-500 dark:text-slate-400 text-base font-bold">
-                Cancel
+                {t("cancel")}
               </Text>
             </TouchableOpacity>
             <Text className="text-slate-800 dark:text-white text-lg font-bold">
-              Edit Transaction
+              {t("edit_transaction")}
             </Text>
             <TouchableOpacity
               onPress={accountHandlers.handleSave}
               activeOpacity={0.7}
               className="bg-nileGreen-500 px-5 py-1.5 rounded-full"
             >
-              <Text className="text-white text-sm font-semibold">Save</Text>
+              <Text className="text-white text-sm font-semibold">
+                {t("save")}
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -140,7 +144,7 @@ export function TransactionEditModal(
               </View>
               <View className="flex-1">
                 <Text className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-0.5">
-                  From
+                  {t("from_label")}
                 </Text>
                 <Text
                   className="text-sm text-slate-800 dark:text-white font-semibold flex-shrink"
@@ -192,7 +196,7 @@ export function TransactionEditModal(
             {/* Amount */}
             <View className="mb-4">
               <Text className="text-xs text-slate-500 mb-2 font-bold uppercase tracking-wider">
-                Amount
+                {t("amount")}
               </Text>
               <View
                 className={`w-full bg-slate-100 dark:bg-slate-800/60 border rounded-xl py-4 px-4 flex-row items-center ${
@@ -255,14 +259,14 @@ export function TransactionEditModal(
             {state.formConfig.showCounterparty && (
               <View className="mb-4">
                 <Text className="text-xs text-slate-500 mb-2 font-medium uppercase tracking-wider">
-                  {state.txType === "EXPENSE" ? "Merchant" : "Payee"}
+                  {state.txType === "EXPENSE" ? t("merchant") : t("payee")}
                 </Text>
                 <TextInput
                   value={state.counterparty}
                   onChangeText={setters.setCounterparty}
                   className="bg-slate-100 dark:bg-slate-800/60 rounded-xl px-4 py-3 text-slate-800 dark:text-white text-base font-semibold border border-slate-200 dark:border-slate-700/50"
                   placeholderTextColor={palette.slate[600]}
-                  placeholder="e.g., Carrefour, Amazon"
+                  placeholder={t("counterparty_placeholder")}
                 />
               </View>
             )}
@@ -271,14 +275,14 @@ export function TransactionEditModal(
             {transaction.source === "VOICE" && (
               <View className="mb-4">
                 <Text className="text-xs text-slate-500 mb-2 font-medium uppercase tracking-wider">
-                  Note
+                  {t("note_label")}
                 </Text>
                 <TextInput
                   value={state.note}
                   onChangeText={setters.setNote}
                   className="bg-slate-100 dark:bg-slate-800/60 rounded-xl px-4 py-3 text-slate-800 dark:text-white text-base font-semibold border border-slate-200 dark:border-slate-700/50"
                   placeholderTextColor={palette.slate[600]}
-                  placeholder="e.g., groceries, lunch"
+                  placeholder={t("note_edit_placeholder")}
                   multiline
                 />
               </View>
@@ -288,7 +292,7 @@ export function TransactionEditModal(
             {state.formConfig.showCategory && (
               <View className="mb-4">
                 <Text className="text-xs text-slate-500 mb-2 font-medium uppercase tracking-wider">
-                  Category
+                  {t("category")}
                 </Text>
                 <TouchableOpacity
                   onPress={() => {
@@ -307,7 +311,8 @@ export function TransactionEditModal(
                     className={`text-base font-semibold ${!state.selectedCategoryId ? "text-slate-500" : "text-slate-800 dark:text-white"}`}
                     numberOfLines={1}
                   >
-                    {state.selectedCategoryDisplayName ?? "Select Category"}
+                    {state.selectedCategoryDisplayName ??
+                      t("select_category_label")}
                   </Text>
                   <Ionicons
                     name="chevron-down"
@@ -326,15 +331,20 @@ export function TransactionEditModal(
             {/* ── Main Account Selector ──────────────────────────────────── */}
             <AccountSelector
               label={
-                state.formConfig.showToAccount ? "From Account" : "Account"
+                state.formConfig.showToAccount
+                  ? t("from_account_label")
+                  : t("account_label")
               }
               options={state.accountOptions}
               placeholder={
                 state.formConfig.showToAccount
-                  ? "Select source bank account"
-                  : "Select an account"
+                  ? t("select_source_bank")
+                  : t("select_an_account")
               }
-              hintMessage={`We'll create an account named '${state.newAccountName.trim() || "New Account"}' in ${state.selectedAccountCurrency}.`}
+              hintMessage={t("create_account_hint", {
+                name: state.newAccountName.trim() || t("new_account_default"),
+                currency: state.selectedAccountCurrency,
+              })}
               themeColor="emerald"
               isSecondary={false}
               selectedId={state.selectedAccountId}
@@ -361,13 +371,15 @@ export function TransactionEditModal(
               matchingAccounts={state.matchingAccounts}
               otherAccounts={state.otherAccounts}
               showSectionHeaders={state.showSectionHeaders}
-              matchingSectionLabel={`${transaction.currency} accounts`}
+              matchingSectionLabel={t("matching_accounts_label", {
+                currency: transaction.currency,
+              })}
             />
 
             {/* ── Currency Field ──────────────────────────────────────── */}
             <View className="mb-4">
               <Text className="text-xs text-slate-500 mb-2 font-bold uppercase tracking-wider">
-                Currency
+                {t("currency")}
               </Text>
               {state.isCurrencyLocked ? (
                 /* Locked: show as a static read-only badge */
@@ -385,7 +397,7 @@ export function TransactionEditModal(
                     color={palette.slate[400]}
                   />
                   <Text className="text-xs text-slate-400 ms-auto">
-                    Determined by account
+                    {t("currency_locked_hint")}
                   </Text>
                 </View>
               ) : (
@@ -416,10 +428,13 @@ export function TransactionEditModal(
             {/* ── Cash Withdrawal TO account selector ──────────────────────────────────── */}
             {state.formConfig.showToAccount && (
               <AccountSelector
-                label="To Account"
+                label={t("to_account_label")}
                 options={state.cashAccountOptions}
-                placeholder="Select cash account"
-                hintMessage={`A cash account named "${state.newToAccountName.trim() || "Cash"}" will be created in ${transaction.currency}.`}
+                placeholder={t("select_cash_account")}
+                hintMessage={t("cash_account_hint", {
+                  name: state.newToAccountName.trim() || t("cash_default"),
+                  currency: transaction.currency,
+                })}
                 themeColor="amber"
                 iconName="cash"
                 isSecondary={true}

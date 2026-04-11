@@ -48,7 +48,14 @@ function StatusTabs({
   onTabChange,
   counts,
 }: StatusTabsProps): React.JSX.Element {
+  const { t } = useTranslation("transactions");
   const tabs: RecurringStatus[] = ["ACTIVE", "PAUSED", "COMPLETED"];
+
+  const statusLabels: Record<RecurringStatus, string> = {
+    ACTIVE: t("status_active"),
+    PAUSED: t("status_paused"),
+    COMPLETED: t("status_completed"),
+  };
 
   return (
     <View className="flex-row mb-5 gap-2">
@@ -69,7 +76,7 @@ function StatusTabs({
                 : "text-slate-600 dark:text-slate-400"
             }`}
           >
-            {tab.charAt(0) + tab.slice(1).toLowerCase()}
+            {statusLabels[tab]}
           </Text>
           <Text
             className={`text-center text-[10px] font-medium mt-0.5 ${
@@ -148,6 +155,7 @@ function PaymentCard({
   onPress,
 }: PaymentCardProps): React.JSX.Element {
   const { isDark } = useTheme();
+  const { t } = useTranslation("transactions");
   const categoryMap = useCategoryLookup();
   const category = categoryMap.get(payment.categoryId);
 
@@ -214,7 +222,7 @@ function PaymentCard({
           </Text>
           <View className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
           <Text className="text-xs text-slate-400 dark:text-slate-500">
-            {getFrequencyLabel(payment.frequency)}
+            {getFrequencyLabel(payment.frequency, t)}
           </Text>
         </View>
       </View>
@@ -254,6 +262,12 @@ export default function RecurringPaymentsScreen(): React.JSX.Element {
   } = useRecurringPayments();
 
   const { preferredCurrency } = usePreferredCurrency();
+
+  const statusLabelMap: Record<RecurringStatus, string> = {
+    ACTIVE: t("status_active"),
+    PAUSED: t("status_paused"),
+    COMPLETED: t("status_completed"),
+  };
 
   const handlePaymentPress = (_payment: RecurringPayment): void => {
     // TODO: Navigate to edit payment screen
@@ -301,7 +315,7 @@ export default function RecurringPaymentsScreen(): React.JSX.Element {
             onPress={() => router.push("/create-recurring-payment")}
             icon="receipt-outline"
             title={t("no_status_payments", {
-              status: statusFilter.toLowerCase(),
+              status: statusLabelMap[statusFilter],
             })}
             description={t("tap_to_add_recurring")}
             height={120}

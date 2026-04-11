@@ -34,6 +34,7 @@ import {
 } from "react-native";
 import Animated, { FadeIn, FadeOut, ZoomIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -53,17 +54,6 @@ interface WalletCreationStepProps {
 type WalletCreationPhase = "loading" | "success" | "error";
 
 // ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const LOADING_MESSAGE =
-  "Getting your wallet ready…\nEven pharaohs kept track of their gold!";
-const SUCCESS_TITLE = "✨ Wallet Created — You're All Set!";
-const ERROR_TITLE = "Couldn't create your wallet";
-const ERROR_SUBTITLE =
-  "Don't worry — we'll set it up automatically next time you open the app.";
-
-// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -75,6 +65,7 @@ export function WalletCreationStep({
 }: WalletCreationStepProps): React.JSX.Element {
   const insets = useSafeAreaInsets();
   const { theme, isDark } = useTheme();
+  const { t } = useTranslation("onboarding");
   const [phase, setPhase] = useState<WalletCreationPhase>("loading");
 
   const { setPreferredCurrency } = usePreferredCurrency();
@@ -158,7 +149,7 @@ export function WalletCreationStep({
             />
 
             <Text className="text-center text-base text-text-secondary dark:text-text-secondary-dark leading-6">
-              {LOADING_MESSAGE}
+              {t("wallet_loading_message")}
             </Text>
           </Animated.View>
         )}
@@ -187,18 +178,18 @@ export function WalletCreationStep({
             </View>
 
             <Text className="text-2xl font-bold text-center text-text-primary dark:text-text-primary-dark mb-3">
-              {SUCCESS_TITLE}
+              {t("wallet_success_title")}
             </Text>
 
             <Text className="text-base text-center text-text-secondary dark:text-text-secondary-dark">
-              Your Cash wallet has been created in {currency}.
+              {t("wallet_created_in_currency", { currency })}
             </Text>
 
             <Text
               className="text-sm text-center mt-2 italic"
               style={{ color: palette.nileGreen[400] }}
             >
-              You&apos;re ready to start tracking like royalty 👑
+              {t("wallet_ready_tracking")}
             </Text>
           </Animated.View>
         )}
@@ -219,11 +210,11 @@ export function WalletCreationStep({
             </View>
 
             <Text className="text-2xl font-bold text-center text-text-primary dark:text-text-primary-dark mb-3">
-              {ERROR_TITLE}
+              {t("wallet_error_title")}
             </Text>
 
             <Text className="text-base text-center text-text-secondary dark:text-text-secondary-dark">
-              {ERROR_SUBTITLE}
+              {t("wallet_error_subtitle")}
             </Text>
           </Animated.View>
         )}
@@ -250,7 +241,7 @@ export function WalletCreationStep({
             activeOpacity={0.8}
           >
             <Text className="text-white font-semibold text-lg">
-              Let&apos;s Go!
+              {t("wallet_cta")}
             </Text>
           </TouchableOpacity>
         </Animated.View>

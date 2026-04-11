@@ -38,5 +38,29 @@
   "holding_two": "مقتنيان",
   "holding_few": "{{count}} مقتنيات",
   "holding_many": "{{count}} مقتنى",
-  "holding_other": "{{count}} مقتنى"
+  "holding_other": "{{count}} مقتنى",
+
+  "start_tracking_metals": "ابدأ بتتبع معادني",
+  "empty_metals_description": "أضف مقتنياتك من الذهب والفضة لتتبع قيمتها لحظياً.",
+  "empty_illustration_label": "رسم توضيحي لغياب المعادن",
+
+  "gold_label": "الذهب",
+  "rates_unavailable": "الأسعار غير متوفرة",
+  "pull_to_refresh_offline": "اسحب للأسفل للتحديث عند عودة الاتصال",
+  "offline_mode": "وضع عدم الاتصال",
+  "live_badge": "مباشر",
+  "silver_label": "الفضة:",
+  "total_metals_value": "إجمالي قيمة المعادن",
+  "gold_24k_label": "ذهب عيار 24:",
+  "live_rates_accessibility": "الأسعار المباشرة: الذهب {{currencySymbol}}{{goldPrice}} للأوقية، {{goldDirection}} {{goldChange}} بالمئة. الفضة {{currencySymbol}}{{silverPrice}} للغرام، {{silverDirection}} {{silverChange}} بالمئة.",
+  "direction_up": "أعلى",
+  "direction_down": "أقل",
+  "trend_direction_up": "أعلى",
+  "trend_direction_down": "أقل",
+  "metals_tooltip": "بناءً على أسعار السوق الحالية مقارنة بأسعار شرائك. يتم التحديث كلما تغيرت الأسعار.",
+  "hero_accessibility": "معلومات حساب الربح/الخسارة",
+  "trend_label": "{{direction}} {{percent}}% اليوم",
+  "gold_24k_subtitle": "عيار 24 · ذهب خالص",
+  "karat_label": "عيار {{karat}}",
+  "price_gram_with_symbol": "{{currencySymbol}} {{price}}/غرام"
 }

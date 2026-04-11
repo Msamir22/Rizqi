@@ -22,6 +22,7 @@ import { Q } from "@nozbe/watermelondb";
 import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import { PieChart } from "react-native-gifted-charts";
+import { useTranslation } from "react-i18next";
 
 // =============================================================================
 // Main Component
@@ -30,6 +31,7 @@ import { PieChart } from "react-native-gifted-charts";
 export function CategoryDrilldownCard(): React.JSX.Element {
   const { isDark } = useTheme();
   const { preferredCurrency } = usePreferredCurrency();
+  const { t } = useTranslation("common");
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
 
@@ -206,10 +208,10 @@ export function CategoryDrilldownCard(): React.JSX.Element {
       {/* Header */}
       <View className="flex-row items-center justify-between mb-2">
         <Text className="text-lg font-bold text-slate-800 dark:text-white">
-          Category Breakdown
+          {t("category_breakdown")}
         </Text>
         <Text className="text-xs text-slate-500 dark:text-slate-400">
-          This Month
+          {t("this_month_stats")}
         </Text>
       </View>
 
@@ -234,7 +236,7 @@ export function CategoryDrilldownCard(): React.JSX.Element {
             color={isDark ? palette.slate[600] : palette.slate[300]}
           />
           <Text className="text-sm mt-3 text-slate-400 dark:text-slate-500">
-            No spending data
+            {t("no_spending_data")}
           </Text>
         </View>
       ) : (
@@ -252,7 +254,7 @@ export function CategoryDrilldownCard(): React.JSX.Element {
               centerLabelComponent={() => (
                 <View className="items-center">
                   <Text className="text-xs text-slate-500 dark:text-slate-400">
-                    Total
+                    {t("total")}
                   </Text>
                   <Text className="text-sm font-bold text-slate-800 dark:text-white">
                     {formatCurrency({

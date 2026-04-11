@@ -14,5 +14,13 @@
   "choose_your_currency": "Choose Your Currency",
   "currency_description": "We'll create a wallet and show all amounts in this currency. You can change it later in settings.",
   "search_currency": "Search currency",
-  "suggested": "Suggested"
+  "suggested": "Suggested",
+
+  "wallet_loading_message": "Getting your wallet ready…\nEven pharaohs kept track of their gold!",
+  "wallet_success_title": "Wallet Created — You're All Set!",
+  "wallet_error_title": "Couldn't create your wallet",
+  "wallet_error_subtitle": "Don't worry — we'll set it up automatically next time you open the app.",
+  "wallet_created_in_currency": "Your Cash wallet has been created in {{currency}}.",
+  "wallet_ready_tracking": "You're ready to start tracking like royalty",
+  "wallet_cta": "Let's Go!"
 }

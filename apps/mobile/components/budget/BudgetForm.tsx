@@ -266,7 +266,7 @@ export function BudgetForm({
             <TouchableOpacity
               onPress={() => updateField("type", "CATEGORY")}
               accessibilityRole="button"
-              accessibilityLabel="Category budget type"
+              accessibilityLabel={t("accessibility_category_budget_type")}
               accessibilityState={{ selected: form.type === "CATEGORY" }}
               className={`flex-1 rounded-2xl items-center justify-center border bg-white dark:bg-slate-800 ${
                 form.type === "CATEGORY"
@@ -309,7 +309,7 @@ export function BudgetForm({
             <TouchableOpacity
               onPress={() => updateField("type", "GLOBAL")}
               accessibilityRole="button"
-              accessibilityLabel="Global budget type"
+              accessibilityLabel={t("accessibility_global_budget_type")}
               accessibilityState={{ selected: form.type === "GLOBAL" }}
               className={`flex-1 rounded-2xl items-center justify-center border bg-white dark:bg-slate-800 ${
                 form.type === "GLOBAL"

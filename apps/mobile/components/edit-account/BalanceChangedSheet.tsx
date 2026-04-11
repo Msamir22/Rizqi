@@ -147,10 +147,10 @@ export function BalanceChangedSheet({
                     />
                   </View>
                   <Text className="text-xl font-bold text-slate-800 dark:text-slate-100 text-center">
-                    Balance Changed
+                    {t("balance_changed")}
                   </Text>
                   <Text className="text-sm text-slate-500 dark:text-slate-400 text-center mt-1">
-                    How would you like to track this change?
+                    {t("balance_change_question")}
                   </Text>
                 </View>
 
@@ -160,7 +160,7 @@ export function BalanceChangedSheet({
                   <View className="flex-row items-center justify-between mb-3">
                     <View className="flex-1">
                       <Text className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">
-                        Previous
+                        {t("previous")}
                       </Text>
                       <Text className="text-base font-bold text-slate-600 dark:text-slate-300">
                         {formatAmount(previousBalance, currencyCode)}
@@ -173,7 +173,7 @@ export function BalanceChangedSheet({
                     />
                     <View className="flex-1 items-end">
                       <Text className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">
-                        New
+                        {t("new_label")}
                       </Text>
                       <Text className="text-base font-bold text-slate-800 dark:text-white">
                         {formatAmount(newBalance, currencyCode)}
@@ -206,7 +206,7 @@ export function BalanceChangedSheet({
                     onPress={() => setSelectedOption("silent")}
                     activeOpacity={0.7}
                     accessibilityRole="radio"
-                    accessibilityLabel="Just update the balance silently"
+                    accessibilityLabel={t("just_update_balance")}
                     accessibilityState={{
                       checked: selectedOption === "silent",
                     }}
@@ -229,10 +229,10 @@ export function BalanceChangedSheet({
                     </View>
                     <View className="flex-1">
                       <Text className="text-base font-semibold text-slate-800 dark:text-white">
-                        Just update the balance
+                        {t("just_update_balance")}
                       </Text>
                       <Text className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                        Silently adjust without any record
+                        {t("silent_adjust_description")}
                       </Text>
                     </View>
                   </TouchableOpacity>
@@ -242,7 +242,7 @@ export function BalanceChangedSheet({
                     onPress={() => setSelectedOption("tracked")}
                     activeOpacity={0.7}
                     accessibilityRole="radio"
-                    accessibilityLabel="Track the balance change as a transaction"
+                    accessibilityLabel={t("track_as_transaction")}
                     accessibilityState={{
                       checked: selectedOption === "tracked",
                     }}
@@ -265,10 +265,10 @@ export function BalanceChangedSheet({
                     </View>
                     <View className="flex-1">
                       <Text className="text-base font-semibold text-slate-800 dark:text-white">
-                        Track as transaction
+                        {t("track_as_transaction")}
                       </Text>
                       <Text className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                        Create a Balance Adjustment record for your history
+                        {t("track_as_transaction_description")}
                       </Text>
                     </View>
                   </TouchableOpacity>
@@ -280,13 +280,13 @@ export function BalanceChangedSheet({
                   disabled={isSubmitting}
                   activeOpacity={0.8}
                   accessibilityRole="button"
-                  accessibilityLabel="Confirm balance change"
+                  accessibilityLabel={t("confirm_balance_change")}
                   className={`py-4 rounded-xl items-center ${
                     isSubmitting ? "bg-nileGreen-400" : "bg-nileGreen-500"
                   }`}
                 >
                   <Text className="text-base font-bold text-white">
-                    {isSubmitting ? "Saving..." : "Confirm"}
+                    {isSubmitting ? t("saving") : t("confirm_balance_change")}
                   </Text>
                 </TouchableOpacity>
               </View>

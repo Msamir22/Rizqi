@@ -1,2 +1,5 @@
 # Run lint-staged
 npx lint-staged
+
+# i18n coverage check — block commits with hardcoded English or missing translations
+npm run i18n:check -w @astik/mobile

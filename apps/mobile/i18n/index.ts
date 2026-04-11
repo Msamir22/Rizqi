@@ -16,6 +16,7 @@ import enOnboarding from "../locales/en/onboarding.json";
 import enAuth from "../locales/en/auth.json";
 import enMetals from "../locales/en/metals.json";
 import enCategories from "../locales/en/categories.json";
+import enDrawer from "../locales/en/drawer.json";
 
 import arCommon from "../locales/ar/common.json";
 import arTransactions from "../locales/ar/transactions.json";
@@ -26,6 +27,7 @@ import arOnboarding from "../locales/ar/onboarding.json";
 import arAuth from "../locales/ar/auth.json";
 import arMetals from "../locales/ar/metals.json";
 import arCategories from "../locales/ar/categories.json";
+import arDrawer from "../locales/ar/drawer.json";
 
 /**
  * Translation resources organized by language and namespace.
@@ -46,6 +48,7 @@ const resources: Resource = {
     auth: enAuth,
     metals: enMetals,
     categories: enCategories,
+    drawer: enDrawer,
   },
   ar: {
     common: arCommon,
@@ -57,6 +60,7 @@ const resources: Resource = {
     auth: arAuth,
     metals: arMetals,
     categories: arCategories,
+    drawer: arDrawer,
   },
 };
 

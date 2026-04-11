@@ -33,6 +33,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { palette } from "@/constants/colors";
 import { MIC_BUTTON_SIZE, TAB_BAR_HEIGHT } from "@/constants/ui";
+import { useTranslation } from "react-i18next";
 import { WaveformVisualizer } from "./WaveformVisualizer";
 
 // ---------------------------------------------------------------------------
@@ -233,6 +234,7 @@ function VoiceRecordingOverlayComponent({
   onRetry,
 }: VoiceRecordingOverlayProps): React.ReactElement | null {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation("transactions");
   const bottomPadding = Math.max(insets.bottom, 0);
 
   const elapsedSeconds = Math.floor(durationMs / 1000);
@@ -312,7 +314,7 @@ function VoiceRecordingOverlayComponent({
         <Pressable
           className="flex-1"
           onPress={safeOnDiscard}
-          accessibilityLabel="Close recording overlay"
+          accessibilityLabel={t("close_recording_overlay")}
         />
       </Animated.View>
 
@@ -329,10 +331,10 @@ function VoiceRecordingOverlayComponent({
             <View className="items-center py-8">
               <Ionicons name="pulse" size={32} color={palette.nileGreen[500]} />
               <Text className="mt-3 text-base font-medium text-slate-700 dark:text-slate-200">
-                Analyzing your voice...
+                {t("voice_analyzing")}
               </Text>
               <Text className="mt-1 text-sm text-slate-400">
-                This may take a few seconds
+                {t("voice_analyzing_hint")}
               </Text>
             </View>
           )}
@@ -346,7 +348,7 @@ function VoiceRecordingOverlayComponent({
                 color={palette.red[500]}
               />
               <Text className="mt-3 text-center text-sm text-slate-700 dark:text-slate-200">
-                {errorMessage ?? "Something went wrong. Please try again."}
+                {errorMessage ?? t("voice_error_default")}
               </Text>
               <View className="mt-4 flex-row gap-4">
                 <Pressable
@@ -354,7 +356,7 @@ function VoiceRecordingOverlayComponent({
                   className="rounded-full border border-slate-300 px-6 py-2.5 dark:border-slate-600"
                 >
                   <Text className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                    Cancel
+                    {t("cancel")}
                   </Text>
                 </Pressable>
                 {safeOnRetry && (
@@ -364,7 +366,7 @@ function VoiceRecordingOverlayComponent({
                     style={styles.retryBtn}
                   >
                     <Text className="text-sm font-semibold text-white">
-                      Retry
+                      {t("voice_retry")}
                     </Text>
                   </Pressable>
                 )}
@@ -384,10 +386,10 @@ function VoiceRecordingOverlayComponent({
                   />
                   <Text className="text-sm text-slate-500 dark:text-slate-400">
                     {isRecording
-                      ? "Recording..."
+                      ? t("recording")
                       : isPaused
-                        ? "Paused"
-                        : "Recording complete"}
+                        ? t("recording_paused")
+                        : t("recording_complete")}
                   </Text>
                 </View>
                 <Text className="text-xl font-semibold tabular-nums text-slate-800 dark:text-slate-100">
@@ -408,27 +410,30 @@ function VoiceRecordingOverlayComponent({
                 <View className="h-full rounded-full" style={progressStyle} />
               </View>
               <Text className="mb-5 text-end text-xs text-slate-400 dark:text-slate-500">
-                {elapsedSeconds}s / {MAX_DURATION_S}s
+                {t("voice_timer_progress", {
+                  elapsed: elapsedSeconds,
+                  max: MAX_DURATION_S,
+                })}
               </Text>
 
               {/* Control buttons */}
               <View className="flex-row items-center justify-evenly">
                 <ControlButton
                   icon="close"
-                  label="Discard"
+                  label={t("discard")}
                   onPress={safeOnDiscard}
                   variant="destructive"
                 />
                 {!isCompleted && (
                   <ControlButton
                     icon={isPaused ? "play" : "pause"}
-                    label={isPaused ? "Resume" : "Pause"}
+                    label={isPaused ? t("voice_resume") : t("voice_pause")}
                     onPress={handlePauseResume}
                   />
                 )}
                 <ControlButton
                   icon="stop"
-                  label="Done"
+                  label={t("voice_done")}
                   onPress={safeOnSubmit}
                   variant="primary"
                   size={56}

@@ -13,6 +13,7 @@ import { palette } from "@/constants/colors";
 import { useCategoryLookup } from "@/context/CategoriesContext";
 import { useCategories } from "@/hooks/useCategories";
 import type { TransactionType } from "@astik/db";
+import { useTranslation } from "react-i18next";
 
 interface QuickEditModalProps {
   readonly visible: boolean;
@@ -39,6 +40,7 @@ export function QuickEditModal({
   onSave,
 }: QuickEditModalProps): React.JSX.Element | null {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation("transactions");
 
   // State
   const [amount, setAmount] = useState(initialAmount?.toString() || "");
@@ -123,7 +125,7 @@ export function QuickEditModal({
             {/* Header */}
             <View className="flex-row items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
               <Text className="text-lg font-bold text-slate-900 dark:text-white">
-                {type === "AMOUNT" ? "Edit Amount" : "Edit Category"}
+                {type === "AMOUNT" ? t("edit_amount") : t("edit_category")}
               </Text>
               <TouchableOpacity onPress={onClose}>
                 <Ionicons
@@ -147,7 +149,7 @@ export function QuickEditModal({
                 </View>
                 <CalculatorKeypad
                   onKeyPress={handleKeyPress}
-                  actionLabel="Save"
+                  actionLabel={t("save")}
                 />
               </View>
             ) : (

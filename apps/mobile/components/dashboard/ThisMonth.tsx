@@ -26,6 +26,7 @@ import {
   usePeriodSummary,
 } from "@/hooks/usePeriodSummary";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
+import { useTranslation } from "react-i18next";
 
 // =============================================================================
 // Constants
@@ -55,6 +56,7 @@ interface RingGaugeProps {
 
 function RingGauge({ percentage }: RingGaugeProps): React.JSX.Element {
   const { isDark } = useTheme();
+  const { t } = useTranslation("common");
   // Clamp percentage between 0 and 100
   const clampedPercentage = Math.min(100, Math.max(0, percentage));
   const strokeDashoffset =
@@ -96,7 +98,7 @@ function RingGauge({ percentage }: RingGaugeProps): React.JSX.Element {
           {clampedPercentage}%
         </Text>
         <Text className="text-[10px] font-medium mt-0.5 text-slate-500 dark:text-slate-400">
-          Spent
+          {t("spent")}
         </Text>
       </View>
     </View>
@@ -149,6 +151,7 @@ export function ThisMonth(): React.JSX.Element {
     useState<PeriodFilter>("this_month");
   const { data, isLoading } = usePeriodSummary(selectedPeriod);
   const { preferredCurrency } = usePreferredCurrency();
+  const { t } = useTranslation("common");
 
   const handleDetails = (): void => {
     router.push("/transactions");
@@ -169,7 +172,7 @@ export function ThisMonth(): React.JSX.Element {
           className="flex-row items-center"
         >
           <Text className="text-sm font-semibold text-nileGreen-500">
-            Details
+            {t("details")}
           </Text>
           <Ionicons
             name="arrow-forward"
@@ -195,7 +198,7 @@ export function ThisMonth(): React.JSX.Element {
             {/* Income */}
             <View className="flex-row items-center">
               <Text className="text-[13px] font-medium me-1.5 text-slate-500 dark:text-slate-400">
-                Income:
+                {t("income_label")}
               </Text>
               <Text className="text-sm font-semibold text-nileGreen-500">
                 {formatCurrency({
@@ -209,7 +212,7 @@ export function ThisMonth(): React.JSX.Element {
             {/* Expenses */}
             <View className="flex-row items-center">
               <Text className="text-[13px] font-medium me-1.5 text-slate-500 dark:text-slate-400">
-                Expenses:
+                {t("expenses_label")}
               </Text>
               <Text className="text-sm font-semibold text-red-500">
                 {formatCurrency({
@@ -223,7 +226,7 @@ export function ThisMonth(): React.JSX.Element {
             {/* Saved */}
             <View className="flex-row items-center">
               <Text className="text-[13px] font-medium me-1.5 text-slate-500 dark:text-slate-400">
-                Saved:
+                {t("saved_label")}
               </Text>
               <Text className="text-sm font-semibold text-gold-600">
                 {formatCurrency({

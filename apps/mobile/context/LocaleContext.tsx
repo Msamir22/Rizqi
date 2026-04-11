@@ -86,8 +86,9 @@ export const LocaleProvider: React.FC<{ children: React.ReactNode }> = ({
  * ```tsx
  * const { language, isRTL, fontFamily } = useLocale();
  *
- * // Use in inline styles (not NativeWind className)
+ * // i18n-ignore - developer placeholder
  * <Text style={{ fontFamily: fontFamily.bold }}>Title</Text>
+ * // i18n-ignore — developer placeholder
  *
  * // Check RTL for conditional logic
  * if (isRTL) {

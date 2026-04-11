@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useCallback, useState } from "react";
 import { Pressable, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import type { CurrencyType } from "@astik/db";
 import { formatCurrency } from "@astik/logic";
@@ -58,9 +59,6 @@ const LIGHT_GRADIENT_COLORS: readonly [string, string] = [
   "rgba(255, 255, 255, 0)",
 ];
 
-const TOOLTIP_TEXT =
-  "Based on current market rates vs. your purchase prices. Updates whenever rates change.";
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -74,6 +72,7 @@ export function MetalsHeroCard({
   profitLossPercent,
   currency,
 }: MetalsHeroCardProps): React.JSX.Element {
+  const { t } = useTranslation("metals");
   const { isDark } = useTheme();
   const [showTooltip, setShowTooltip] = useState(false);
 
@@ -119,7 +118,7 @@ export function MetalsHeroCard({
       <View className="items-center py-8 px-6">
         {/* Label */}
         <Text className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">
-          Total Metals Value
+          {t("total_metals_value")}
         </Text>
 
         {/* Total Value */}
@@ -144,7 +143,7 @@ export function MetalsHeroCard({
               onPress={handleInfoPress}
               hitSlop={8}
               accessibilityRole="button"
-              accessibilityLabel="Profit/loss calculation info"
+              accessibilityLabel={t("hero_accessibility")}
             >
               <Ionicons
                 name="information-circle-outline"
@@ -154,7 +153,7 @@ export function MetalsHeroCard({
             </Pressable>
 
             <Tooltip
-              text={TOOLTIP_TEXT}
+              text={t("metals_tooltip")}
               visible={showTooltip}
               onDismiss={handleTooltipDismiss}
               position="bottom"

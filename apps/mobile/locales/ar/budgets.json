@@ -81,5 +81,31 @@
   "accessibility_resume_budget": "استئناف الميزانية",
   "accessibility_pause_budget": "إيقاف الميزانية",
   "no_budgets_for_filter": "لا توجد ميزانيات تطابق هذا الفلتر",
-  "try_different_filter": "جرب اختيار فلتر فترة مختلف"
+  "try_different_filter": "جرب اختيار فلتر فترة مختلف",
+
+  "empty_budget_title": "ابدأ الميزانية بذكاء",
+  "empty_budget_description": "أنشئ ميزانيتك الأولى لتتبع الإنفاق والتحكم في أموالك.",
+  "create_first_budget": "إنشاء أول ميزانية",
+  "accessibility_create_first_budget": "إنشاء أول ميزانية",
+  "accessibility_create_first_budget_hint": "يفتح نموذج إنشاء الميزانية",
+  "accessibility_category_budget_type": "نوع ميزانية الفئة",
+  "accessibility_global_budget_type": "نوع ميزانية عامة",
+  "top_subcategories": "أبرز الفئات الفرعية",
+  "filter_all": "الكل",
+  "filter_weekly": "أسبوعي",
+  "filter_monthly": "شهري",
+  "filter_custom": "مخصص",
+
+  "alert_threshold": "حد التنبيه",
+  "view_budget": "عرض الميزانية",
+  "recent_transactions": "أحدث المعاملات",
+  "spending_trend": "اتجاه الإنفاق",
+  "alert_help_percentage": "سيتم تنبيهك عندما يصل الإنفاق إلى هذه النسبة",
+  "expense_fallback": "مصروف",
+  "alert_warning_title": "تنبيه الإنفاق",
+  "alert_warning_subtitle": "لقد أنفقت {{percentage}}% من ميزانيتك",
+  "alert_over_budget_title": "تجاوزت الميزانية!",
+  "alert_over_budget_subtitle": "لقد تجاوزت ميزانيتك بمبلغ {{overage}}",
+  "alert_got_it": "فهمت",
+  "alert_dismiss": "إغلاق"
 }

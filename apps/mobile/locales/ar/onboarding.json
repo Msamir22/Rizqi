@@ -14,5 +14,13 @@
   "choose_your_currency": "اختر عملتك",
   "currency_description": "سننشئ لك محفظة ونعرض جميع المبالغ بهذه العملة. يمكنك تغييرها لاحقاً من الإعدادات.",
   "search_currency": "بحث عن عملة",
-  "suggested": "مقترحة"
+  "suggested": "مقترحة",
+
+  "wallet_loading_message": "جاري تجهيز محفظتك…\nحتى الفراعنة كانوا يتتبعون ذهبهم!",
+  "wallet_success_title": "تم إنشاء المحفظة — كل شيء جاهز!",
+  "wallet_error_title": "تعذر إنشاء محفظتك",
+  "wallet_error_subtitle": "لا تقلق — سيتم إعدادها تلقائياً في المرة القادمة التي تفتح فيها التطبيق.",
+  "wallet_created_in_currency": "تم إنشاء محفظتك النقدية بالعملة {{currency}}.",
+  "wallet_ready_tracking": "أنت جاهز لبدء التتبع كالملوك",
+  "wallet_cta": "هيا بنا!"
 }

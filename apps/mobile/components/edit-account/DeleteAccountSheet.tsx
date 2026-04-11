@@ -27,6 +27,7 @@ import {
   View,
 } from "react-native";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { palette } from "@/constants/colors";
 
 // ---------------------------------------------------------------------------
@@ -60,29 +61,29 @@ interface DeleteAccountSheetProps {
 }
 
 /**
- * Builds a summary string of linked records that will be deleted.
+ * Builds a localized summary string of linked records that will be deleted.
+ * Uses i18next pluralization with the accounts namespace.
  */
-function buildLinkedSummary(counts: LinkedRecordsCounts): string {
+function buildLinkedSummary(
+  counts: LinkedRecordsCounts,
+  t: TFunction<"accounts">
+): string {
   const parts: string[] = [];
   if (counts.transactions > 0) {
-    parts.push(
-      `${counts.transactions} transaction${counts.transactions !== 1 ? "s" : ""}`
-    );
+    parts.push(t("transaction_count", { count: counts.transactions }));
   }
   if (counts.transfers > 0) {
-    parts.push(
-      `${counts.transfers} transfer${counts.transfers !== 1 ? "s" : ""}`
-    );
+    parts.push(t("transfer_count", { count: counts.transfers }));
   }
   if (counts.debts > 0) {
-    parts.push(`${counts.debts} debt${counts.debts !== 1 ? "s" : ""}`);
+    parts.push(t("debt_count", { count: counts.debts }));
   }
   if (counts.recurringPayments > 0) {
     parts.push(
-      `${counts.recurringPayments} recurring payment${counts.recurringPayments !== 1 ? "s" : ""}`
+      t("recurring_payment_count", { count: counts.recurringPayments })
     );
   }
-  return parts.length > 0 ? parts.join(", ") : "No linked records";
+  return parts.length > 0 ? parts.join(", ") : t("no_linked_records");
 }
 
 // ---------------------------------------------------------------------------
@@ -167,11 +168,11 @@ export function DeleteAccountSheet({
                         color={palette.gold[500]}
                       />
                       <Text className="ms-2 text-sm font-bold text-amber-700 dark:text-amber-300">
-                        The following will also be deleted:
+                        {t("deletion_warning_linked_data")}
                       </Text>
                     </View>
                     <Text className="text-sm text-amber-600 dark:text-amber-400 ms-6">
-                      {buildLinkedSummary(linkedRecords)}
+                      {buildLinkedSummary(linkedRecords, t)}
                     </Text>
                   </View>
                 )}
@@ -179,7 +180,7 @@ export function DeleteAccountSheet({
                 {totalLinked === 0 && (
                   <View className="mb-6">
                     <Text className="text-sm text-slate-400 dark:text-slate-500 text-center">
-                      This account has no linked records.
+                      {t("no_linked_records")}
                     </Text>
                   </View>
                 )}
@@ -205,7 +206,7 @@ export function DeleteAccountSheet({
                       <ActivityIndicator size="small" color="white" />
                     ) : (
                       <Text className="text-base font-semibold text-white">
-                        Delete
+                        {t("delete_account")}
                       </Text>
                     )}
                   </TouchableOpacity>

@@ -3,6 +3,7 @@ import { FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Dimensions,
@@ -145,6 +146,9 @@ export function AccountsSection({
   accounts,
   isLoading,
 }: AccountsSectionProps): React.JSX.Element {
+  const { t } = useTranslation("accounts");
+  const { t: tc } = useTranslation("common");
+
   // Transform accounts to card data (top 3)
   const cardData: AccountCardData[] = useMemo(() => {
     return accounts.slice(0, 3).map((account) => {
@@ -169,7 +173,7 @@ export function AccountsSection({
       {/* Header Row */}
       <View className="flex-row items-center justify-between mb-3">
         <Text className="text-lg font-bold text-slate-800 dark:text-slate-50">
-          Accounts
+          {tc("accounts")}
         </Text>
         <TouchableOpacity
           onPress={handleSeeAll}
@@ -177,7 +181,7 @@ export function AccountsSection({
           className="flex-row items-center"
         >
           <Text className="text-sm font-semibold text-nileGreen-500">
-            See All
+            {tc("see_all")}
           </Text>
           <Ionicons
             name="arrow-forward"
@@ -195,8 +199,8 @@ export function AccountsSection({
         <EmptyStateCard
           onPress={() => router.push("/add-account")}
           icon="wallet-outline"
-          title="No accounts yet"
-          description="Tap the + button to add one"
+          title={t("no_accounts_title")}
+          description={tc("tap_to_add")}
           height={CARD_HEIGHT}
           borderRadius={CARD_BORDER_RADIUS}
         />

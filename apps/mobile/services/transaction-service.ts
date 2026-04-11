@@ -29,6 +29,7 @@ export async function createTransaction(data: {
 }): Promise<Transaction> {
   const userId = await getCurrentUserId();
   if (!userId) {
+    // i18n-ignore — developer-facing error
     throw new Error("User not authenticated");
   }
 
@@ -221,6 +222,7 @@ export async function convertTransactionToTransfer(
 ): Promise<void> {
   const userId = await getCurrentUserId();
   if (!userId) {
+    // i18n-ignore — developer-facing error
     throw new Error("User not authenticated");
   }
 

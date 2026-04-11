@@ -23,6 +23,7 @@ import {
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { palette } from "@/constants/colors";
+import { useTranslation } from "react-i18next";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -86,6 +87,8 @@ export function SmsPermissionPrompt({
   onDismiss,
   requestPermission,
 }: SmsPermissionPromptProps): React.JSX.Element {
+  const { t } = useTranslation("transactions");
+
   const handleAllow = useCallback(async (): Promise<void> => {
     const result = await requestPermission();
     if (result === "granted") {
@@ -120,11 +123,10 @@ export function SmsPermissionPrompt({
                   />
                 </View>
                 <Text className="text-slate-800 dark:text-white text-2xl font-bold text-center">
-                  Auto-Track Transactions
+                  {t("auto_track_title")}
                 </Text>
                 <Text className="text-slate-400 text-base text-center mt-2 px-4">
-                  Let Astik read your financial SMS to automatically track your
-                  spending
+                  {t("auto_track_description")}
                 </Text>
               </Animated.View>
 
@@ -132,20 +134,20 @@ export function SmsPermissionPrompt({
               <View className="mb-8">
                 <FeatureBullet
                   icon="flash"
-                  title="Instant Tracking"
-                  description="Automatically detect transactions from your bank & wallet SMS"
+                  title={t("feature_instant_title")}
+                  description={t("feature_instant_description")}
                   delay={300}
                 />
                 <FeatureBullet
                   icon="shield-checkmark"
-                  title="Private & Secure"
-                  description="Your SMS messages are processed securely via encrypted connection. Your data is never stored or used for training."
+                  title={t("feature_secure_title")}
+                  description={t("feature_secure_description")}
                   delay={400}
                 />
                 <FeatureBullet
                   icon="checkmark-circle"
-                  title="You're in Control"
-                  description="Review every transaction before it's saved. Decline any you don't want."
+                  title={t("feature_control_title")}
+                  description={t("feature_control_description")}
                   delay={500}
                 />
               </View>
@@ -168,7 +170,7 @@ export function SmsPermissionPrompt({
                   className="bg-nileGreen-500 rounded-2xl py-4 items-center mb-3"
                 >
                   <Text className="text-white font-bold text-lg">
-                    Allow SMS Access
+                    {t("allow_sms_access")}
                   </Text>
                 </TouchableOpacity>
 
@@ -178,7 +180,7 @@ export function SmsPermissionPrompt({
                   className="rounded-2xl py-3.5 items-center"
                 >
                   <Text className="text-slate-500 font-medium text-base">
-                    Not Now
+                    {t("not_now")}
                   </Text>
                 </TouchableOpacity>
               </Animated.View>

@@ -2,7 +2,7 @@ import type { CurrencyType, MarketRate } from "@astik/db";
 import { CURRENCY_INFO_MAP, getMetalPrice } from "@astik/logic";
 import { FontAwesome5, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
+import { useTranslation } from "react-i18next";
 import { formatTimeAgo } from "@/utils/dateHelpers";
 
 interface Rate {
@@ -70,6 +71,7 @@ function calculateTrend(
  * @param latestRates - Most recent market rates used to compute current display values
  * @param previousDayRate - Prior-day market rates used to determine trends; may be null
  * @param preferredCurrency - User's preferred currency; when `"USD"` this function uses `"EUR"` as the displayed currency pair base
+ * @param t - Translation function from metals namespace
  * @returns An array of three Rate entries:
  *  - a currency pair entry labeled `<displayCurrency>/USD` with adaptive decimal precision,
  *  - a "Gold 24K" entry showing the preferred-currency price per gram rounded and localized,
@@ -78,7 +80,8 @@ function calculateTrend(
 function buildRatesDisplay(
   latestRates: MarketRate | null,
   previousDayRate: MarketRate | null,
-  preferredCurrency: CurrencyType
+  preferredCurrency: CurrencyType,
+  t: (key: string) => string
 ): Rate[] {
   if (!latestRates) {
     return [];
@@ -121,14 +124,14 @@ function buildRatesDisplay(
     },
     {
       id: "2",
-      label: "Gold 24K",
+      label: t("gold_24k_label").replace(":", ""),
       value: `${symbol} ${Math.round(goldInPreferred).toLocaleString()}/g`,
       trend: calculateTrend(goldInPreferred, prevGoldInPreferred),
       type: "gold",
     },
     {
       id: "3",
-      label: "Silver",
+      label: t("silver_label").replace(":", ""),
       value: `${symbol} ${silverInPreferred.toFixed(2)}/g`,
       trend: calculateTrend(silverInPreferred, prevSilverInPreferred),
       type: "silver",
@@ -175,7 +178,7 @@ function getPillIcon(
  *
  * @returns The React element rendering the live rates pills, status indicators, and timestamp.
  */
-export function LiveRates({
+function LiveRatesComponent({
   latestRates,
   previousDayRate,
   isLoading = false,
@@ -184,10 +187,17 @@ export function LiveRates({
   preferredCurrency,
 }: LiveRatesProps): React.ReactElement {
   const { isDark } = useTheme();
-  const ratesDisplay = buildRatesDisplay(
-    latestRates,
-    previousDayRate,
-    preferredCurrency
+  const { t } = useTranslation("common");
+  const { t: tMetals } = useTranslation("metals");
+  const ratesDisplay = useMemo(
+    () =>
+      buildRatesDisplay(
+        latestRates,
+        previousDayRate,
+        preferredCurrency,
+        tMetals
+      ),
+    [latestRates, previousDayRate, preferredCurrency, tMetals]
   );
 
   const handlePress = useCallback((): void => {
@@ -199,7 +209,7 @@ export function LiveRates({
       <View className="mb-3 flex-row items-center justify-between">
         <View className="flex-row items-center">
           <Text className="header-text ms-1 text-slate-800 dark:text-slate-50">
-            Live Rates
+            {t("live_rates")}
           </Text>
           {isLoading && (
             <ActivityIndicator
@@ -224,7 +234,7 @@ export function LiveRates({
           className="flex-row items-center"
         >
           <Text className="text-sm font-medium text-nileGreen-600 dark:text-nileGreen-400">
-            View all
+            {t("view_all_rates")}
           </Text>
           <Ionicons
             name="chevron-forward"
@@ -285,9 +295,11 @@ export function LiveRates({
       </ScrollView>
       {lastUpdated && (
         <Text className="ms-1 mt-2 text-xs text-slate-500 dark:text-slate-400">
-          Last updated {formatTimeAgo(lastUpdated)}
+          {t("last_updated")} {formatTimeAgo(lastUpdated)}
         </Text>
       )}
     </View>
   );
 }
+
+export const LiveRates = React.memo(LiveRatesComponent);

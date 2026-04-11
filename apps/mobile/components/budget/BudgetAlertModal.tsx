@@ -15,6 +15,7 @@ import { palette } from "@/constants/colors";
 import type { BudgetAlert } from "@/services/budget-alert-service";
 import { formatCurrency } from "@astik/logic";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
+import { useTranslation } from "react-i18next";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -31,24 +32,7 @@ interface BudgetAlertModalProps {
 // Constants
 // ---------------------------------------------------------------------------
 
-const LEVEL_CONFIG = {
-  WARNING: {
-    icon: "warning-outline" as const,
-    headerBg: palette.gold[600],
-    iconBg: palette.gold[100],
-    iconColor: palette.gold[800],
-    title: "Spending Alert",
-    dismissLabel: "Got It",
-  },
-  DANGER: {
-    icon: "alert-circle-outline" as const,
-    headerBg: palette.red[500],
-    iconBg: palette.red[100],
-    iconColor: palette.red[600],
-    title: "Over Budget!",
-    dismissLabel: "Dismiss",
-  },
-};
+// Level configuration is now derived dynamically using translations
 
 // ---------------------------------------------------------------------------
 // Component
@@ -61,18 +45,46 @@ export function BudgetAlertModal({
   onViewBudget,
 }: BudgetAlertModalProps): React.JSX.Element {
   const { preferredCurrency } = usePreferredCurrency();
+  const { t } = useTranslation("budgets");
 
   if (!alert) return <></>;
 
-  const config = LEVEL_CONFIG[alert.level];
   const percentage = Math.round(alert.percentage);
   const overage = alert.spent - alert.limit;
+
+  // Dynamic level config using translations
+  const levelConfig = {
+    WARNING: {
+      icon: "warning-outline" as const,
+      headerBg: palette.gold[600],
+      iconBg: palette.gold[100],
+      iconColor: palette.gold[800],
+      title: t("alert_warning_title"),
+      dismissLabel: t("alert_got_it"),
+    },
+    DANGER: {
+      icon: "alert-circle-outline" as const,
+      headerBg: palette.red[500],
+      iconBg: palette.red[100],
+      iconColor: palette.red[600],
+      title: t("alert_over_budget_title"),
+      dismissLabel: t("alert_dismiss"),
+    },
+  };
+
+  const config = levelConfig[alert.level];
 
   // Dynamic subtitle with specific numbers
   const subtitle =
     alert.level === "WARNING"
-      ? `You\u2019ve spent ${percentage}% of your budget`
-      : `You\u2019ve exceeded your budget by ${formatCurrency({ amount: overage, currency: preferredCurrency, maximumFractionDigits: 0 })}`;
+      ? t("alert_warning_subtitle", { percentage })
+      : t("alert_over_budget_subtitle", {
+          overage: formatCurrency({
+            amount: overage,
+            currency: preferredCurrency,
+            maximumFractionDigits: 0,
+          }),
+        });
 
   return (
     <Modal
@@ -149,7 +161,7 @@ export function BudgetAlertModal({
                 className="flex-1 py-3 rounded-xl items-center bg-slate-100 dark:bg-slate-700"
               >
                 <Text className="text-base font-semibold text-slate-600 dark:text-slate-300">
-                  View Budget
+                  {t("view_budget")}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity

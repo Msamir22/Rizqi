@@ -97,8 +97,12 @@ export function useSmsScan(): UseSmsScanResult {
         setTransactions(scanResult.transactions);
         setStatus("complete");
       } catch (err) {
-        const message = err instanceof Error ? err.message : "SMS scan failed";
-        setError(message);
+        // Log raw error for debugging but don't expose English service
+        // messages to the UI — the component falls back to t("scan_error_default")
+        if (err instanceof Error) {
+          console.error("[useSmsScan] Scan failed:", err.message);
+        }
+        setError(null);
         setStatus("error");
       } finally {
         isScanningRef.current = false;

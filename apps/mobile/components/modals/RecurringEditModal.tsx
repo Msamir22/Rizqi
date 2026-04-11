@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { palette } from "@/constants/colors";
+import { useTranslation } from "react-i18next";
 
 interface RecurringEditModalProps {
   visible: boolean;
@@ -26,6 +27,7 @@ export function RecurringEditModal({
 }: RecurringEditModalProps): React.JSX.Element {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const { t } = useTranslation("transactions");
 
   return (
     <Modal
@@ -56,12 +58,11 @@ export function RecurringEditModal({
                 </View>
 
                 <Text className="text-xl font-bold text-slate-800 dark:text-slate-100 text-center mb-2">
-                  Recurring Transaction
+                  {t("recurring_transaction_title")}
                 </Text>
 
                 <Text className="text-base text-slate-600 dark:text-slate-400 text-center mb-6">
-                  This transaction is part of a recurring series. How would you
-                  like to apply changes?
+                  {t("recurring_edit_subtitle")}
                 </Text>
 
                 <TouchableOpacity
@@ -69,7 +70,7 @@ export function RecurringEditModal({
                   onPress={onEditThis}
                 >
                   <Text className="text-white font-bold text-base">
-                    Edit Only This Instance
+                    {t("edit_this_instance")}
                   </Text>
                 </TouchableOpacity>
 
@@ -78,7 +79,7 @@ export function RecurringEditModal({
                   onPress={onEditTemplate}
                 >
                   <Text className="text-slate-800 dark:text-slate-200 font-bold text-base">
-                    Edit All Future & Template
+                    {t("edit_all_future")}
                   </Text>
                 </TouchableOpacity>
 
@@ -87,7 +88,7 @@ export function RecurringEditModal({
                   onPress={onCancel}
                 >
                   <Text className="text-slate-500 dark:text-slate-400 font-medium text-base">
-                    Cancel
+                    {t("cancel")}
                   </Text>
                 </TouchableOpacity>
               </View>

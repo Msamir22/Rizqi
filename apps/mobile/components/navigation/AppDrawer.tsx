@@ -50,14 +50,14 @@ import { useTranslation } from "react-i18next";
 
 interface MenuItem {
   id: string;
-  label: string;
+  labelKey: string;
   icon: keyof typeof Ionicons.glyphMap;
   route?: string;
   onPress?: () => void;
 }
 
 interface MenuSection {
-  title: string;
+  titleKey: string;
   items: MenuItem[];
 }
 
@@ -74,58 +74,58 @@ const DRAWER_WIDTH = Dimensions.get("window").width * 0.8;
 
 const MENU_SECTIONS: MenuSection[] = [
   {
-    title: "MAIN",
+    titleKey: "menu_section_main",
     items: [
-      { id: "home", label: "Home", icon: "home-outline", route: "/" },
+      { id: "home", labelKey: "home", icon: "home-outline", route: "/" },
       {
         id: "accounts",
-        label: "Accounts",
+        labelKey: "accounts",
         icon: "wallet-outline",
         route: "/accounts",
       },
       {
         id: "transactions",
-        label: "Transactions",
+        labelKey: "transactions",
         icon: "swap-horizontal-outline",
         route: "/transactions",
       },
     ],
   },
   {
-    title: "ASSETS",
+    titleKey: "menu_section_assets",
     items: [
       {
         id: "metals",
-        label: "Metals",
+        labelKey: "metals",
         icon: "diamond-outline",
         route: "/metals",
       },
       {
         id: "live-rates",
-        label: "Live Rates",
+        labelKey: "live_rates",
         icon: "trending-up-outline",
         route: "/live-rates",
       },
       {
         id: "stats",
-        label: "Stats",
+        labelKey: "stats",
         icon: "stats-chart-outline",
         route: "/stats",
       },
     ],
   },
   {
-    title: "MANAGEMENT",
+    titleKey: "menu_section_management",
     items: [
       {
         id: "bills",
-        label: "Bills",
+        labelKey: "bills",
         icon: "receipt-outline",
         route: "/recurring-payments",
       },
       {
         id: "budgets",
-        label: "Budgets",
+        labelKey: "budgets",
         icon: "pie-chart-outline",
         route: "/budgets",
       },
@@ -146,6 +146,7 @@ export function AppDrawer({
   const { profile, isLoading: isProfileLoading } = useProfile();
   const { t } = useTranslation("settings");
   const { t: tCommon } = useTranslation("common");
+  const { t: tDrawer } = useTranslation("drawer");
 
   // Derive display properties from raw profile using pure helpers
   const displayName = useMemo(
@@ -272,6 +273,7 @@ export function AppDrawer({
               ) : avatarUrl && !avatarError ? (
                 <Image
                   source={{ uri: avatarUrl }}
+                  resizeMode="cover"
                   className="w-16 h-16 rounded-full mb-3 border-2 border-nileGreen-500/30"
                   onError={() => setAvatarError(true)}
                 />
@@ -308,9 +310,9 @@ export function AppDrawer({
             {/* Menu sections */}
             <View className="flex-1 p-4">
               {MENU_SECTIONS.map((section) => (
-                <View key={section.title} className="mb-4">
+                <View key={section.titleKey} className="mb-4">
                   <Text className="text-xs font-semibold mb-2 text-slate-400 dark:text-slate-500">
-                    {section.title}
+                    {tDrawer(section.titleKey)}
                   </Text>
                   {section.items.map((item) => (
                     <TouchableOpacity
@@ -324,7 +326,7 @@ export function AppDrawer({
                         color={isDark ? palette.slate[300] : palette.slate[600]}
                       />
                       <Text className="ms-4 text-base text-slate-800 dark:text-white">
-                        {item.label}
+                        {tCommon(item.labelKey)}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -346,7 +348,7 @@ export function AppDrawer({
                     color={isDark ? palette.slate[300] : palette.slate[600]}
                   />
                   <Text className="ms-4 text-base text-slate-800 dark:text-white">
-                    Dark Mode
+                    {t("dark_mode")}
                   </Text>
                 </View>
                 <Switch
@@ -376,7 +378,7 @@ export function AppDrawer({
                   />
                 )}
                 <Text className="ms-4 text-base text-red-400">
-                  {isLoggingOut ? "Logging out..." : "Logout"}
+                  {isLoggingOut ? tDrawer("logging_out") : t("logout")}
                 </Text>
               </TouchableOpacity>
             </View>

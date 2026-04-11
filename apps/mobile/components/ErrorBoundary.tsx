@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from "react";
 import { ScrollView, Text, View } from "react-native";
+import i18next from "i18next";
 
 interface Props {
   children: ReactNode;
@@ -35,7 +36,7 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <View className="flex-1 bg-red-100 p-5 justify-center items-center">
           <Text className="text-2xl font-bold text-red-600 mb-5 mt-[50px]">
-            Something went wrong
+            {i18next.t("common:error_boundary_message")}
           </Text>
           <ScrollView className="w-full max-h-[500px]">
             <Text

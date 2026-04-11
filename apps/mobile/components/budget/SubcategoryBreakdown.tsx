@@ -13,6 +13,7 @@ import type { SubcategorySpending } from "@/hooks/useBudgetDetail";
 import type { CurrencyType } from "@astik/db";
 import { formatCurrency } from "@astik/logic";
 import { palette } from "@/constants/colors";
+import { useTranslation } from "react-i18next";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -44,12 +45,14 @@ export function SubcategoryBreakdown({
   data,
   currency,
 }: SubcategoryBreakdownProps): React.JSX.Element {
+  const { t } = useTranslation("budgets");
+
   if (data.length === 0) return <></>;
 
   return (
     <View className="mb-6">
       <Text className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold mb-2 ms-[22px]">
-        Top Subcategories
+        {t("top_subcategories")}
       </Text>
       <View className="rounded-3xl border p-5 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
         {data.map((item, index) => (

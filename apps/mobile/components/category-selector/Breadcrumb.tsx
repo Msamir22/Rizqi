@@ -4,6 +4,7 @@ import type { NavigationLevel } from "@/hooks/useCategoryNavigation";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 interface BreadcrumbProps {
   /** Full navigation stack from useCategoryNavigation */
@@ -28,6 +29,7 @@ export function Breadcrumb({
   onGoBack,
 }: BreadcrumbProps): React.JSX.Element {
   const { isDark } = useTheme();
+  const { t } = useTranslation("common");
   const handleSegmentPress = useCallback(
     (index: number) => {
       onJumpToLevel(index);
@@ -44,7 +46,7 @@ export function Breadcrumb({
         onPress={onGoBack}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         className="me-1 p-1"
-        accessibilityLabel="Go back"
+        accessibilityLabel={t("back")}
         accessibilityRole="button"
       >
         <Ionicons

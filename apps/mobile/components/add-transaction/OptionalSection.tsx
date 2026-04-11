@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Switch, Text, TouchableOpacity, View } from "react-native";
 // Will use DatePicker modal later, simplified for now
 import { palette } from "@/constants/colors";
@@ -8,16 +8,14 @@ import { useTheme } from "@/context/ThemeContext";
 import { formatToLocalDateString } from "@/utils/dateHelpers";
 import type { RecurringFrequency } from "@astik/db";
 import { TextField } from "../ui/TextField";
+import { useTranslation } from "react-i18next";
 
-const FREQUENCY_OPTIONS: ReadonlyArray<{
-  readonly value: RecurringFrequency;
-  readonly label: string;
-}> = [
-  { value: "DAILY", label: "Daily" },
-  { value: "WEEKLY", label: "Weekly" },
-  { value: "MONTHLY", label: "Monthly" },
-  { value: "QUARTERLY", label: "Quarterly" },
-  { value: "YEARLY", label: "Yearly" },
+const FREQUENCY_VALUES: readonly RecurringFrequency[] = [
+  "DAILY",
+  "WEEKLY",
+  "MONTHLY",
+  "QUARTERLY",
+  "YEARLY",
 ];
 
 export interface OptionalFields {
@@ -49,14 +47,24 @@ export function OptionalSection({
 }: OptionalSectionProps): React.JSX.Element {
   const { isDark } = useTheme();
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const { t } = useTranslation("transactions");
+
+  const frequencyOptions = useMemo(
+    () =>
+      FREQUENCY_VALUES.map((value) => ({
+        value,
+        label: t(`freq_${value.toLowerCase()}`),
+      })),
+    [t]
+  );
 
   const counterpartyLabel =
-    transactionType === "INCOME" ? "PAYER" : "MERCHANT / PAYEE";
+    transactionType === "INCOME" ? t("payer") : t("merchant_payee");
 
   const counterpartyPlaceholder =
     transactionType === "INCOME"
-      ? "e.g. Company name, Client"
-      : "e.g. Starbucks, Carrefour";
+      ? t("payer_placeholder")
+      : t("merchant_placeholder");
 
   if (!expanded) {
     return (
@@ -70,7 +78,7 @@ export function OptionalSection({
           color={isDark ? palette.nileGreen[400] : palette.nileGreen[600]}
         />
         <Text className="ms-2 text-sm font-bold text-nileGreen-600 dark:text-nileGreen-400">
-          Add more details
+          {t("add_more_details")}
         </Text>
         <Ionicons
           name="chevron-down"
@@ -89,7 +97,7 @@ export function OptionalSection({
         className="flex-row items-center justify-center mb-6"
       >
         <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-          Hide Details
+          {t("hide_details")}
         </Text>
         <Ionicons
           name="chevron-up"
@@ -110,8 +118,8 @@ export function OptionalSection({
 
         {/* Note */}
         <TextField
-          label="NOTE"
-          placeholder="Add a note..."
+          label={t("note")}
+          placeholder={t("note_placeholder")}
           value={fields.note}
           onChangeText={(t) => onChange({ note: t })}
           multiline
@@ -122,7 +130,7 @@ export function OptionalSection({
         {/* Date */}
         <View>
           <Text className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 px-1 uppercase tracking-wider">
-            DATE
+            {t("date_label")}
           </Text>
           <TouchableOpacity
             onPress={() => setShowDatePicker(true)}
@@ -168,10 +176,10 @@ export function OptionalSection({
                 </View>
                 <View>
                   <Text className="text-base font-semibold text-slate-900 dark:text-white">
-                    Recurring Payment
+                    {t("recurring_payment")}
                   </Text>
                   <Text className="text-xs text-slate-500 dark:text-slate-400">
-                    {fields.isRecurring ? "Enabled" : "Disabled"}
+                    {fields.isRecurring ? t("enabled") : t("disabled")}
                   </Text>
                 </View>
               </View>
@@ -191,8 +199,8 @@ export function OptionalSection({
               <View className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 gap-4">
                 {/* Recurring logic will be implemented here later or simply show basic name/frequency for now as placeholders */}
                 <TextField
-                  label="NAME"
-                  placeholder="Recurring Name"
+                  label={t("recurring_name_label")}
+                  placeholder={t("recurring_name_placeholder")}
                   value={fields.recurringName}
                   onChangeText={(t) => onChange({ recurringName: t })}
                 />
@@ -200,10 +208,10 @@ export function OptionalSection({
                 {/* Frequency Picker */}
                 <View>
                   <Text className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 px-1 uppercase tracking-wider">
-                    FREQUENCY
+                    {t("frequency_label")}
                   </Text>
                   <View className="flex-row flex-wrap gap-1">
-                    {FREQUENCY_OPTIONS.map((option) => {
+                    {frequencyOptions.map((option) => {
                       const isSelected =
                         fields.recurringFrequency === option.value;
                       return (
@@ -238,12 +246,12 @@ export function OptionalSection({
                   <View className="flex-row items-center ms-1 justify-between mt-2">
                     <View className="flex-1 me-4">
                       <Text className="text-sm font-semibold text-slate-900 dark:text-white">
-                        Auto-create transaction
+                        {t("auto_create_transaction")}
                       </Text>
                       <Text className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                         {fields.recurringAutoCreate
-                          ? "Transaction will be created automatically on due date"
-                          : "You will receive a reminder notification only"}
+                          ? t("auto_create_on_description")
+                          : t("auto_create_off_description")}
                       </Text>
                     </View>
                     <Switch

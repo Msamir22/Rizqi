@@ -34,5 +34,29 @@
   "error_save_failed": "Failed to save. Please try again.",
   "add_to_savings": "Add to Savings",
   "holding_one": "{{count}} holding",
-  "holding_other": "{{count}} holdings"
+  "holding_other": "{{count}} holdings",
+
+  "start_tracking_metals": "Start Tracking Your Metals",
+  "empty_metals_description": "Add your gold and silver holdings to track their value in real-time.",
+  "empty_illustration_label": "Empty metals illustration",
+
+  "gold_label": "Gold",
+  "rates_unavailable": "Rates unavailable",
+  "pull_to_refresh_offline": "Pull down to refresh when you're back online",
+  "offline_mode": "OFFLINE MODE",
+  "live_badge": "Live",
+  "silver_label": "Silver:",
+  "total_metals_value": "Total Metals Value",
+  "gold_24k_label": "Gold 24K:",
+  "live_rates_accessibility": "Live rates: Gold {{currencySymbol}}{{goldPrice}} per ounce, {{goldDirection}} {{goldChange}} percent. Silver {{currencySymbol}}{{silverPrice}} per gram, {{silverDirection}} {{silverChange}} percent.",
+  "direction_up": "up",
+  "direction_down": "down",
+  "trend_direction_up": "Up",
+  "trend_direction_down": "Down",
+  "metals_tooltip": "Based on current market rates vs. your purchase prices. Updates whenever rates change.",
+  "hero_accessibility": "Profit/loss calculation info",
+  "trend_label": "{{direction}} {{percent}}% today",
+  "gold_24k_subtitle": "24 Karat · Pure Gold",
+  "karat_label": "{{karat}} Karat",
+  "price_gram_with_symbol": "{{currencySymbol}} {{price}}/g"
 }

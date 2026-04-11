@@ -30,6 +30,10 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: i18n Coverage Check
+        working-directory: apps/mobile
+        run: npm run i18n:check
+
       - name: Test Logic Package
         run: npm test -w @astik/logic
 

@@ -25,6 +25,7 @@ import { formatCurrency } from "@astik/logic";
 import type { CurrencyType } from "@astik/db";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
+import { useTranslation } from "react-i18next";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -98,6 +99,7 @@ export function BudgetSpendingTrendChart({
   currency,
   weeklyAverage,
 }: BudgetSpendingTrendChartProps): React.JSX.Element {
+  const { t } = useTranslation("budgets");
   const { isDark } = useTheme();
   const amounts = data.map((d) => d.amount);
   const maxAmount = Math.max(...amounts, weeklyAverage, 1);
@@ -113,7 +115,7 @@ export function BudgetSpendingTrendChart({
   return (
     <View className="mb-6">
       <Text className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold mb-2 ms-[22px]">
-        Spending Trend
+        {t("spending_trend")}
       </Text>
       <View className="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-slate-200 dark:border-slate-700">
         {/* Chart area */}
@@ -137,7 +139,7 @@ export function BudgetSpendingTrendChart({
                 className="text-slate-400 dark:text-slate-500 font-medium bg-white dark:bg-slate-800 px-1"
                 style={{ fontSize: 9 }}
               >
-                avg{" "}
+                {t("daily_avg")}{" "}
                 {formatCurrency({
                   amount: weeklyAverage,
                   currency,
