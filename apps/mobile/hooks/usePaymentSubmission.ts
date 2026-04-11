@@ -13,8 +13,8 @@ import { useCallback, useState } from "react";
 import { InteractionManager } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/components/ui/Toast";
-import { createTransaction } from "@/services/transaction-service";
-import { updateRecurringPaymentNextDueDate } from "@/services/recurring-payment-service";
+import { logger } from "@/utils/logger";
+import { submitRecurringPayment } from "@/services/recurring-payment-service";
 
 // =============================================================================
 // Types
@@ -74,8 +74,8 @@ export function usePaymentSubmission({
     (amountStr: string): void => {
       if (!payment) return;
 
-      const numericAmount = parseFloat(amountStr);
-      if (isNaN(numericAmount) || numericAmount <= 0) {
+      const numericAmount = Number(amountStr.trim());
+      if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
         setAmountError(t("invalid_amount"));
         return;
       }
@@ -85,31 +85,22 @@ export function usePaymentSubmission({
       // Defer DB writes until animations complete to avoid jank
       InteractionManager.runAfterInteractions(async () => {
         try {
-          await createTransaction({
-            amount: numericAmount,
-            currency: payment.currency,
-            categoryId: payment.categoryId,
+          await submitRecurringPayment({
+            payment,
             accountId,
+            amount: numericAmount,
             note: t("payment_for_name", { name: payment.name }),
-            type: payment.type,
-            source: "MANUAL",
-            date: new Date(),
-            linkedRecurringId: payment.id,
           });
-
-          await updateRecurringPaymentNextDueDate(
-            payment.id,
-            payment.nextDueDate,
-            payment.frequency
-          );
 
           setIsSubmitting(false);
           onClose();
           onSuccess(numericAmount);
         } catch (error) {
           setIsSubmitting(false);
-          // TODO: Replace with structured logging (e.g., Sentry)
-          console.error("Error creating transaction:", error);
+          logger.error("Error creating transaction", error, {
+            paymentId: payment.id,
+            accountId,
+          });
           showToast({
             type: "error",
             title: t("payment_failed"),

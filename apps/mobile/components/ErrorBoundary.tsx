@@ -1,7 +1,8 @@
 import React from "react";
-import { ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { ErrorBoundary as REB } from "react-error-boundary";
 import i18next from "i18next";
+import { logger } from "@/utils/logger";
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -13,7 +14,7 @@ interface ErrorBoundaryProps {
  */
 function ErrorFallback({
   error,
-  resetErrorBoundary: _resetErrorBoundary,
+  resetErrorBoundary,
 }: {
   error: unknown;
   resetErrorBoundary: () => void;
@@ -31,6 +32,14 @@ function ErrorFallback({
           {error instanceof Error ? error.toString() : String(error)}
         </Text>
       </ScrollView>
+      <TouchableOpacity
+        onPress={resetErrorBoundary}
+        className="mt-4 px-6 py-3 rounded-xl bg-red-600"
+      >
+        <Text className="text-base font-semibold text-white">
+          {i18next.t("common:retry")}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -47,7 +56,9 @@ export function ErrorBoundary({
   children,
 }: ErrorBoundaryProps): React.JSX.Element {
   const handleError = (error: unknown, errorInfo: React.ErrorInfo): void => {
-    console.error("Uncaught error:", error, errorInfo);
+    logger.error("Uncaught error", error, {
+      componentStack: errorInfo.componentStack,
+    });
   };
 
   return (

@@ -59,15 +59,15 @@ export function PayNowModal({
       onClose,
     });
 
-  // Reset amount, error, and account when payment changes
+  // Reset amount, error, and account when modal opens or payment changes
   useEffect(() => {
-    if (payment) {
+    if (visible && payment) {
       setAmount(payment.amount.toString());
       clearAmountError();
       setSelectedAccountId(payment.accountId);
       setShowAccountPicker(false);
     }
-  }, [payment, clearAmountError]);
+  }, [visible, payment, clearAmountError]);
 
   if (!payment) return null;
 

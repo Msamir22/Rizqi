@@ -6,7 +6,7 @@ quality before release.
 
 ## Usage
 
-```
+```bash
 /module-audit <module-name>
 ```
 

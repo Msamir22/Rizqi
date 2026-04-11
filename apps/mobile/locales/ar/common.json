@@ -166,5 +166,7 @@
   "sms_imported_count_other": "{{count}} معاملات مستوردة هذا الشهر",
   "sms_last_scan": "آخر فحص: {{time}}",
   "sms_never_scanned": "لم يتم الفحص بعد",
-  "new_badge": "جديد"
+  "new_badge": "جديد",
+  "section_failed_to_load": "فشل تحميل {{name}}",
+  "retry": "إعادة المحاولة"
 }

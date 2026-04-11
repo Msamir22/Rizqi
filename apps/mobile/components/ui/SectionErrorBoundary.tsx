@@ -13,9 +13,11 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import i18next from "i18next";
 import React, { Component, type ErrorInfo, type ReactNode } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { palette } from "@/constants/colors";
+import { logger } from "@/utils/logger";
 
 // =============================================================================
 // Types
@@ -53,12 +55,9 @@ export class SectionErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    // TODO: Replace with structured logging (e.g., Sentry)
-    console.error(
-      `[SectionErrorBoundary] Error in "${this.props.name}":`,
-      error,
-      errorInfo
-    );
+    logger.error(`SectionErrorBoundary: "${this.props.name}" crashed`, error, {
+      componentStack: errorInfo.componentStack,
+    });
   }
 
   handleRetry = (): void => {
@@ -75,13 +74,17 @@ export class SectionErrorBoundary extends Component<
             color={palette.slate[400]}
           />
           <Text className="text-sm font-medium mt-2 text-slate-500 dark:text-slate-400">
-            {this.props.name} failed to load
+            {i18next.t("common:section_failed_to_load", {
+              name: this.props.name,
+            })}
           </Text>
           <TouchableOpacity
             onPress={this.handleRetry}
             className="mt-3 px-4 py-2 rounded-lg bg-nileGreen-500"
           >
-            <Text className="text-xs font-semibold text-white">Retry</Text>
+            <Text className="text-xs font-semibold text-white">
+              {i18next.t("common:retry")}
+            </Text>
           </TouchableOpacity>
         </View>
       );

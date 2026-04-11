@@ -17,6 +17,7 @@ import {
   useOnboardingGuide,
   type OnboardingStep,
 } from "@/hooks/useOnboardingGuide";
+import { logger } from "@/utils/logger";
 
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -194,7 +195,11 @@ function OnboardingGuideCardComponent(): React.ReactElement | null {
   );
 
   const handleDismiss = useCallback((): void => {
-    dismiss().catch(() => {});
+    dismiss().catch((error: unknown) => {
+      logger.warn("Failed to persist onboarding guide dismissal", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
   }, [dismiss]);
 
   // Don't render if dismissed, all complete, or still loading
@@ -202,7 +207,8 @@ function OnboardingGuideCardComponent(): React.ReactElement | null {
     return null;
   }
 
-  const progressPercentage = (completedCount / totalSteps) * 100;
+  const progressPercentage =
+    totalSteps > 0 ? (completedCount / totalSteps) * 100 : 0;
 
   return (
     <View

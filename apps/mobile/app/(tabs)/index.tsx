@@ -12,6 +12,7 @@ import { AppDrawer } from "@/components/navigation/AppDrawer";
 import { SmsPermissionPrompt } from "@/components/sms-sync/SmsPermissionPrompt";
 import { SectionErrorBoundary } from "@/components/ui/SectionErrorBoundary";
 import { StarryBackground } from "@/components/ui/StarryBackground";
+import { useToast } from "@/components/ui/Toast";
 import { palette } from "@/constants/colors";
 import { TAB_BAR_HEIGHT } from "@/constants/ui";
 import { useTheme } from "@/context/ThemeContext";
@@ -25,6 +26,7 @@ import { useSmsSync } from "@/hooks/useSmsSync";
 import { useRecentTransactions } from "@/hooks/useTransactions";
 import { useDatabaseReady } from "@/providers/DatabaseProvider";
 import { useSync } from "@/providers/SyncProvider";
+import { logger } from "@/utils/logger";
 import type { CurrencyType } from "@astik/db";
 import { CURRENCY_INFO_MAP } from "@astik/logic";
 import { useRouter } from "expo-router";
@@ -118,19 +120,29 @@ export default function DashboardScreen(): React.JSX.Element {
   const handleCurrencySelect = useCallback(
     (currency: CurrencyType) => {
       if (isCurrencyLoading) return;
-      setPreferredCurrency(currency).catch(console.error);
+      setPreferredCurrency(currency).catch((error: unknown) => {
+        logger.error("Failed to set preferred currency", error, { currency });
+      });
     },
     [setPreferredCurrency, isCurrencyLoading]
   );
+
+  const { showToast } = useToast();
 
   const handleRefresh = useCallback(async (): Promise<void> => {
     setIsRefreshing(true);
     try {
       await sync();
+    } catch (error: unknown) {
+      logger.error("Pull-to-refresh sync failed", error);
+      showToast({
+        type: "error",
+        title: t("error_generic"),
+      });
     } finally {
       setIsRefreshing(false);
     }
-  }, [sync]);
+  }, [sync, showToast, t]);
 
   // Overall loading state
   const isLoading = accountsLoading || ratesLoading || netWorthLoading;
@@ -154,7 +166,9 @@ export default function DashboardScreen(): React.JSX.Element {
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
-            onRefresh={handleRefresh}
+            onRefresh={() => {
+              void handleRefresh();
+            }}
             tintColor={palette.nileGreen[500]}
             colors={[palette.nileGreen[500]]}
           />

@@ -51,20 +51,19 @@ export const logger: Logger = {
       return;
     }
 
-    if (context) {
-      Sentry.setContext("errorContext", context);
-    }
+    Sentry.withScope((scope) => {
+      if (context) {
+        scope.setContext("errorContext", context);
+      }
 
-    if (error instanceof Error) {
-      Sentry.captureException(error, {
-        extra: { message, ...context },
-      });
-    } else {
-      Sentry.captureMessage(message, {
-        level: "error",
-        extra: { originalError: error, ...context },
-      });
-    }
+      if (error instanceof Error) {
+        scope.setExtras({ message, ...(context ?? {}) });
+        Sentry.captureException(error);
+      } else {
+        scope.setExtras({ originalError: error, ...(context ?? {}) });
+        Sentry.captureMessage(message, "error");
+      }
+    });
   },
 
   warn(message: string, context?: LogContext): void {

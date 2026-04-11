@@ -151,5 +151,7 @@
   "sms_imported_count_other": "{{count}} transactions imported this month",
   "sms_last_scan": "Last scan: {{time}}",
   "sms_never_scanned": "Not yet scanned",
-  "new_badge": "NEW"
+  "new_badge": "NEW",
+  "section_failed_to_load": "{{name}} failed to load",
+  "retry": "Retry"
 }

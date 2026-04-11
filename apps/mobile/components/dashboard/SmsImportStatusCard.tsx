@@ -39,6 +39,9 @@ function formatLastScan(
   }
 
   const diffMs = Date.now() - timestamp;
+  if (diffMs < 0) {
+    return t("just_now");
+  }
   const diffMinutes = Math.floor(diffMs / 60_000);
   const diffHours = Math.floor(diffMs / 3_600_000);
   const diffDays = Math.floor(diffMs / 86_400_000);

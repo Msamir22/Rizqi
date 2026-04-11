@@ -20,6 +20,7 @@ import { Q } from "@nozbe/watermelondb";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Platform } from "react-native";
+import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -79,8 +80,10 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       try {
         const dismissed = await AsyncStorage.getItem(GUIDE_DISMISSED_KEY);
         setIsDismissed(dismissed === "true");
-      } catch {
-        // Fail silently — show guide by default
+      } catch (error: unknown) {
+        logger.warn("Failed to read onboarding dismissed state", {
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     }
 
@@ -138,7 +141,10 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       try {
         const hasSynced = await AsyncStorage.getItem("@astik/sms-has-synced");
         setHasSmsEnabled(hasSynced === "true");
-      } catch {
+      } catch (error: unknown) {
+        logger.warn("Failed to read SMS sync state", {
+          error: error instanceof Error ? error.message : String(error),
+        });
         setHasSmsEnabled(false);
       } finally {
         setIsLoading(false);
@@ -174,7 +180,7 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
         key: "spending_budget",
         labelKey: "onboarding_step_spending_budget",
         isComplete: hasBudget,
-        route: "/(tabs)/budgets",
+        route: "/create-budget",
       },
       {
         key: "sms_import",
@@ -198,8 +204,10 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
     setIsDismissed(true);
     try {
       await AsyncStorage.setItem(GUIDE_DISMISSED_KEY, "true");
-    } catch {
-      // Silently fail — guide will re-appear next time
+    } catch (error: unknown) {
+      logger.warn("Failed to persist onboarding guide dismissal", {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }, []);
 
