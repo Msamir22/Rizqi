@@ -81,7 +81,7 @@ function sqlTypeToWatermelon(sqlType, columnName) {
   }
 
   // Boolean types
-  if (/^bool(ean)?$/.test(normalized)) {
+  if (/^bool(ean)?(?:\s|$)/.test(normalized)) {
     return "boolean";
   }
 

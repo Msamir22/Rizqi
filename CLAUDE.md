@@ -138,8 +138,8 @@ Dependency direction: `apps/ → packages/logic → packages/db`. **Never revers
 All schema changes MUST go through local SQL migration files in
 `supabase/migrations/`, never through Supabase MCP or dashboard directly.
 
-- Workflow: Write SQL migration → `npm run db:push` → `npm run db:migrate` →
-  commit both migration and generated schema.
+- Workflow: Write SQL migration → `npm run db:migrate` → commit both migration
+  and generated schema.
 - Naming: `supabase/migrations/023_descriptive_name.sql`
 - When bringing existing Supabase tables into WatermelonDB: manually add
   `createTable` to `packages/db/src/migrations.ts` and bump schema version

@@ -2,8 +2,12 @@
  * useOnboardingGuide Hook
  *
  * Tracks granular onboarding progress for the dashboard setup guide card.
- * Reactively observes WatermelonDB + AsyncStorage to determine which
- * onboarding steps the user has completed.
+ * Reactively observes WatermelonDB to determine which onboarding steps
+ * the user has completed, and whether the guide has been dismissed.
+ *
+ * The guide is only shown when `profile.setupGuideCompleted` is `false`.
+ * When the user dismisses the card or all steps are complete, the field
+ * is set to `true` in WatermelonDB (syncs to Supabase).
  *
  * Steps:
  * 1. Cash account created (always true — auto-created during onboarding)
@@ -16,17 +20,11 @@
  */
 
 import { logger } from "@/utils/logger";
-import { Account, Budget, Transaction, database } from "@astik/db";
+import { Account, Budget, Profile, Transaction, database } from "@astik/db";
 import { Q } from "@nozbe/watermelondb";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Platform } from "react-native";
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const GUIDE_DISMISSED_KEY = "@astik/onboarding-guide-dismissed";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -52,13 +50,13 @@ interface UseOnboardingGuideResult {
   readonly completedCount: number;
   /** Total number of steps */
   readonly totalSteps: number;
-  /** Whether the guide has been dismissed by the user */
+  /** Whether the guide has been completed/dismissed by the user */
   readonly isDismissed: boolean;
   /** Whether state is still loading */
   readonly isLoading: boolean;
   /** Whether all steps are complete */
   readonly isAllComplete: boolean;
-  /** Dismiss the guide card */
+  /** Dismiss the guide card (sets setupGuideCompleted = true in DB) */
   readonly dismiss: () => Promise<void>;
 }
 
@@ -67,31 +65,48 @@ interface UseOnboardingGuideResult {
 // ---------------------------------------------------------------------------
 
 export function useOnboardingGuide(): UseOnboardingGuideResult {
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [hasBankAccount, setHasBankAccount] = useState(false);
   const [hasTransaction, setHasTransaction] = useState(false);
   const [hasBudget, setHasBudget] = useState(false);
   const [hasSmsEnabled, setHasSmsEnabled] = useState(false);
-  const [isDismissed, setIsDismissed] = useState(false);
-  // NOTE: isLoading tracks only the async SMS check. WatermelonDB observers
-  // emit synchronously on subscribe, so bank/transaction/budget states are
-  // immediately available. On iOS, isLoading is set false synchronously.
+  // NOTE: isLoading tracks the async SMS check + profile observation.
+  // WatermelonDB observers for bank/transaction/budget emit synchronously
+  // on subscribe, so those states are immediately available.
   const [isLoading, setIsLoading] = useState(true);
 
-  // ── Check dismissed state from AsyncStorage ──
-  useEffect(() => {
-    async function checkDismissed(): Promise<void> {
-      try {
-        const dismissed = await AsyncStorage.getItem(GUIDE_DISMISSED_KEY);
-        setIsDismissed(dismissed === "true");
-      } catch (error: unknown) {
-        logger.warn("Failed to read onboarding dismissed state", {
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
+  // Track loading for profile and SMS separately, mark done when both complete
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  const [smsLoaded, setSmsLoaded] = useState(false);
 
-    void checkDismissed();
+  useEffect(() => {
+    if (profileLoaded && smsLoaded) {
+      setIsLoading(false);
+    }
+  }, [profileLoaded, smsLoaded]);
+
+  // ── Observe profile for setupGuideCompleted ──
+  useEffect(() => {
+    const subscription = database
+      .get<Profile>("profiles")
+      .query(Q.where("deleted", false), Q.take(1))
+      .observe()
+      .subscribe({
+        next: (profiles) => {
+          setProfile(profiles[0] ?? null);
+          setProfileLoaded(true);
+        },
+        error: (error: unknown) => {
+          logger.error("Failed to observe profile for setup guide", error);
+          setProfileLoaded(true);
+        },
+      });
+
+    return () => subscription.unsubscribe();
   }, []);
+
+  // Derive dismissed state from profile DB field
+  const isDismissed = profile?.setupGuideCompleted ?? true;
 
   // ── Observe bank accounts (type = "BANK") ──
   useEffect(() => {
@@ -151,7 +166,7 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
   useEffect(() => {
     if (Platform.OS !== "android") {
       setHasSmsEnabled(false);
-      setIsLoading(false);
+      setSmsLoaded(true);
       return;
     }
 
@@ -165,7 +180,7 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
         });
         setHasSmsEnabled(false);
       } finally {
-        setIsLoading(false);
+        setSmsLoaded(true);
       }
     }
 
@@ -216,16 +231,29 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
 
   const isAllComplete = completedCount === steps.length;
 
-  const dismiss = useCallback(async (): Promise<void> => {
-    setIsDismissed(true);
-    try {
-      await AsyncStorage.setItem(GUIDE_DISMISSED_KEY, "true");
-    } catch (error: unknown) {
-      logger.warn("Failed to persist onboarding guide dismissal", {
-        error: error instanceof Error ? error.message : String(error),
+  // Auto-dismiss when all steps complete
+  useEffect(() => {
+    if (isAllComplete && profile && !profile.setupGuideCompleted) {
+      void database.write(async () => {
+        await profile.update((record) => {
+          record.setupGuideCompleted = true;
+        });
       });
     }
-  }, []);
+  }, [isAllComplete, profile]);
+
+  const dismiss = useCallback(async (): Promise<void> => {
+    if (!profile) {
+      logger.warn("Cannot dismiss setup guide: profile not loaded");
+      return;
+    }
+
+    await database.write(async () => {
+      await profile.update((record) => {
+        record.setupGuideCompleted = true;
+      });
+    });
+  }, [profile]);
 
   return {
     steps,
