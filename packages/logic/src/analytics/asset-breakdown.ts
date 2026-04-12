@@ -76,8 +76,13 @@ export function calculateAssetBreakdown(
 
   // Calculate metals value (already in USD per gram)
   assetMetals.forEach((metal) => {
-    const pricePerGram = getMetalPriceUsd(metal.metalType, marketRates);
-    breakdown.metals += metal.calculateValue(pricePerGram);
+    try {
+      const pricePerGram = getMetalPriceUsd(metal.metalType, marketRates);
+      breakdown.metals += metal.calculateValue(pricePerGram);
+    } catch {
+      // Metal price unavailable — skip this holding rather than crashing
+      // the entire breakdown. The holding value defaults to 0.
+    }
   });
 
   // Total = bank + cash + wallet + metals

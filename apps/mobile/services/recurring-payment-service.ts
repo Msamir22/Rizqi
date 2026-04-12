@@ -91,7 +91,7 @@ export async function submitRecurringPayment(params: {
   payment: RecurringPayment;
   accountId: string;
   amount: number;
-  note: string;
+  note?: string;
 }): Promise<void> {
   const { payment, accountId, amount, note } = params;
 

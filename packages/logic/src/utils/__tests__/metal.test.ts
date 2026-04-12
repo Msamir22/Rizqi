@@ -81,50 +81,64 @@ describe("getMetalPriceUsd", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Number.isFinite guard — undefined/NaN fields
+  // Throws on invalid price data — callers must handle the error
   // -------------------------------------------------------------------------
 
-  it("returns 0 when goldUsdPerGram is undefined", () => {
+  it("throws when goldUsdPerGram is undefined", () => {
     const rates = createMockRates({
       goldUsdPerGram: undefined as unknown as number,
     });
-    expect(getMetalPriceUsd("GOLD", rates)).toBe(0);
+    expect(() => getMetalPriceUsd("GOLD", rates)).toThrow(
+      "Metal price unavailable for GOLD"
+    );
   });
 
-  it("returns 0 when silverUsdPerGram is undefined", () => {
+  it("throws when silverUsdPerGram is undefined", () => {
     const rates = createMockRates({
       silverUsdPerGram: undefined as unknown as number,
     });
-    expect(getMetalPriceUsd("SILVER", rates)).toBe(0);
+    expect(() => getMetalPriceUsd("SILVER", rates)).toThrow(
+      "Metal price unavailable for SILVER"
+    );
   });
 
-  it("returns 0 when platinumUsdPerGram is undefined", () => {
+  it("throws when platinumUsdPerGram is undefined", () => {
     const rates = createMockRates({
       platinumUsdPerGram: undefined as unknown as number,
     });
-    expect(getMetalPriceUsd("PLATINUM", rates)).toBe(0);
+    expect(() => getMetalPriceUsd("PLATINUM", rates)).toThrow(
+      "Metal price unavailable for PLATINUM"
+    );
   });
 
-  it("returns 0 when palladiumUsdPerGram is undefined", () => {
+  it("throws when palladiumUsdPerGram is undefined", () => {
     const rates = createMockRates({
       palladiumUsdPerGram: undefined as unknown as number,
     });
-    expect(getMetalPriceUsd("PALLADIUM", rates)).toBe(0);
+    expect(() => getMetalPriceUsd("PALLADIUM", rates)).toThrow(
+      "Metal price unavailable for PALLADIUM"
+    );
   });
 
-  it("returns 0 when the price field is NaN", () => {
+  it("throws when the price field is NaN", () => {
     const rates = createMockRates({ goldUsdPerGram: NaN });
-    expect(getMetalPriceUsd("GOLD", rates)).toBe(0);
+    expect(() => getMetalPriceUsd("GOLD", rates)).toThrow(
+      "Metal price unavailable for GOLD"
+    );
   });
 
-  it("returns 0 when the price field is Infinity", () => {
+  it("throws when the price field is Infinity", () => {
     const rates = createMockRates({ silverUsdPerGram: Infinity });
-    expect(getMetalPriceUsd("SILVER", rates)).toBe(0);
+    expect(() => getMetalPriceUsd("SILVER", rates)).toThrow(
+      "Metal price unavailable for SILVER"
+    );
   });
 
-  it("returns 0 when the price field is -Infinity", () => {
+  it("throws when the price field is -Infinity", () => {
     const rates = createMockRates({ platinumUsdPerGram: -Infinity });
-    expect(getMetalPriceUsd("PLATINUM", rates)).toBe(0);
+    expect(() => getMetalPriceUsd("PLATINUM", rates)).toThrow(
+      "Metal price unavailable for PLATINUM"
+    );
   });
 
   // -------------------------------------------------------------------------
@@ -184,16 +198,15 @@ describe("getMetalPrice", () => {
     );
   });
 
-  it("passes 0 to convertCurrency when the USD price is 0", () => {
+  it("throws when the USD price is unavailable (undefined)", () => {
     const rates = createMockRates({
       goldUsdPerGram: undefined as unknown as number,
     });
-    mockedConvertCurrency.mockReturnValue(0);
 
-    const result = getMetalPrice("GOLD", rates, "EGP");
-
-    expect(result).toBe(0);
-    expect(mockedConvertCurrency).toHaveBeenCalledWith(0, "USD", "EGP", rates);
+    expect(() => getMetalPrice("GOLD", rates, "EGP")).toThrow(
+      "Metal price unavailable for GOLD"
+    );
+    expect(mockedConvertCurrency).not.toHaveBeenCalled();
   });
 
   it("converts all metal types to a non-USD currency", () => {

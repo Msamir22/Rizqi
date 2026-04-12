@@ -15,12 +15,12 @@
  * @module useOnboardingGuide
  */
 
+import { logger } from "@/utils/logger";
 import { Account, Budget, Transaction, database } from "@astik/db";
 import { Q } from "@nozbe/watermelondb";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Platform } from "react-native";
-import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -99,8 +99,13 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       .get<Account>("accounts")
       .query(Q.where("deleted", false), Q.where("type", "BANK"))
       .observeCount()
-      .subscribe((count) => {
-        setHasBankAccount(count > 0);
+      .subscribe({
+        next: (count) => {
+          setHasBankAccount(count > 0);
+        },
+        error: (error: unknown) => {
+          logger.error("Failed to observe bank accounts", error);
+        },
       });
 
     return () => subscription.unsubscribe();
@@ -112,8 +117,13 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       .get<Transaction>("transactions")
       .query(Q.where("deleted", false))
       .observeCount()
-      .subscribe((count) => {
-        setHasTransaction(count > 0);
+      .subscribe({
+        next: (count) => {
+          setHasTransaction(count > 0);
+        },
+        error: (error: unknown) => {
+          logger.error("Failed to observe transactions", error);
+        },
       });
 
     return () => subscription.unsubscribe();
@@ -125,8 +135,13 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       .get<Budget>("budgets")
       .query(Q.where("deleted", false), Q.where("status", "ACTIVE"))
       .observeCount()
-      .subscribe((count) => {
-        setHasBudget(count > 0);
+      .subscribe({
+        next: (count) => {
+          setHasBudget(count > 0);
+        },
+        error: (error: unknown) => {
+          logger.error("Failed to observe budgets", error);
+        },
       });
 
     return () => subscription.unsubscribe();

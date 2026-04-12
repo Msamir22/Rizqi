@@ -12,12 +12,12 @@
  * ```
  */
 
-import { Ionicons } from "@expo/vector-icons";
-import i18next from "i18next";
-import React, { Component, type ErrorInfo, type ReactNode } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
 import { palette } from "@/constants/colors";
 import { logger } from "@/utils/logger";
+import { Ionicons } from "@expo/vector-icons";
+import { t } from "i18next";
+import { Component, type ErrorInfo, type ReactNode } from "react";
+import { Text, TouchableOpacity, View } from "react-native";
 
 // =============================================================================
 // Types
@@ -31,7 +31,11 @@ interface SectionErrorBoundaryProps {
 
 interface SectionErrorBoundaryState {
   hasError: boolean;
+  retryCount: number;
 }
+
+/** Maximum retry attempts before disabling the retry button */
+const MAX_RETRIES = 3;
 
 // =============================================================================
 // Component (Class-based — required for error boundaries)
@@ -47,10 +51,10 @@ export class SectionErrorBoundary extends Component<
 > {
   constructor(props: SectionErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, retryCount: 0 };
   }
 
-  static getDerivedStateFromError(): SectionErrorBoundaryState {
+  static getDerivedStateFromError(): Partial<SectionErrorBoundaryState> {
     return { hasError: true };
   }
 
@@ -61,11 +65,16 @@ export class SectionErrorBoundary extends Component<
   }
 
   handleRetry = (): void => {
-    this.setState({ hasError: false });
+    this.setState((prev) => ({
+      hasError: false,
+      retryCount: prev.retryCount + 1,
+    }));
   };
 
   render(): ReactNode {
     if (this.state.hasError) {
+      const canRetry = this.state.retryCount < MAX_RETRIES;
+
       return (
         <View className="my-3 px-4 py-5 rounded-2xl border items-center bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700">
           <Ionicons
@@ -74,18 +83,20 @@ export class SectionErrorBoundary extends Component<
             color={palette.slate[400]}
           />
           <Text className="text-sm font-medium mt-2 text-slate-500 dark:text-slate-400">
-            {i18next.t("common:section_failed_to_load", {
+            {t("common:section_failed_to_load", {
               name: this.props.name,
             })}
           </Text>
-          <TouchableOpacity
-            onPress={this.handleRetry}
-            className="mt-3 px-4 py-2 rounded-lg bg-nileGreen-500"
-          >
-            <Text className="text-xs font-semibold text-white">
-              {i18next.t("common:retry")}
-            </Text>
-          </TouchableOpacity>
+          {canRetry ? (
+            <TouchableOpacity
+              onPress={this.handleRetry}
+              className="mt-3 px-4 py-2 rounded-lg bg-nileGreen-500"
+            >
+              <Text className="text-xs font-semibold text-white">
+                {t("common:retry")}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
       );
     }

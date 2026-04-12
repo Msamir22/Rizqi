@@ -139,36 +139,38 @@ export function PayNowModal({
               {showAccountPicker && (
                 <View className="mt-2 rounded-xl border overflow-hidden bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600">
                   <ScrollView style={{ maxHeight: 150 }}>
-                    {accounts.map((account) => (
-                      <TouchableOpacity
-                        key={account.id}
-                        onPress={() => {
-                          setSelectedAccountId(account.id);
-                          setShowAccountPicker(false);
-                        }}
-                        className={`px-4 py-3 flex-row items-center justify-between border-b border-slate-200 dark:border-slate-600 ${
-                          account.id === selectedAccountId
-                            ? "bg-nileGreen-50 dark:bg-nileGreen-800/30"
-                            : ""
-                        }`}
-                      >
-                        <View className="flex-1">
-                          <Text className="text-sm font-medium text-slate-800 dark:text-white">
-                            {account.name}
-                          </Text>
-                          <Text className="text-xs text-slate-500 dark:text-slate-400">
-                            {account.formattedBalance}
-                          </Text>
-                        </View>
-                        {account.id === selectedAccountId && (
-                          <Ionicons
-                            name="checkmark-circle"
-                            size={20}
-                            color={palette.nileGreen[500]}
-                          />
-                        )}
-                      </TouchableOpacity>
-                    ))}
+                    {accounts
+                      .filter((a) => a.currency === payment.currency)
+                      .map((account) => (
+                        <TouchableOpacity
+                          key={account.id}
+                          onPress={() => {
+                            setSelectedAccountId(account.id);
+                            setShowAccountPicker(false);
+                          }}
+                          className={`px-4 py-3 flex-row items-center justify-between border-b border-slate-200 dark:border-slate-600 ${
+                            account.id === selectedAccountId
+                              ? "bg-nileGreen-50 dark:bg-nileGreen-800/30"
+                              : ""
+                          }`}
+                        >
+                          <View className="flex-1">
+                            <Text className="text-sm font-medium text-slate-800 dark:text-white">
+                              {account.name}
+                            </Text>
+                            <Text className="text-xs text-slate-500 dark:text-slate-400">
+                              {account.formattedBalance}
+                            </Text>
+                          </View>
+                          {account.id === selectedAccountId && (
+                            <Ionicons
+                              name="checkmark-circle"
+                              size={20}
+                              color={palette.nileGreen[500]}
+                            />
+                          )}
+                        </TouchableOpacity>
+                      ))}
                   </ScrollView>
                 </View>
               )}

@@ -19,8 +19,8 @@ import { useSmsPermission } from "@/hooks/useSmsPermission";
 import { useSmsSync } from "@/hooks/useSmsSync";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useCallback, useMemo } from "react";
-import { StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
+import React, { memo, useCallback, useMemo } from "react";
+import { Switch, Text, TouchableOpacity, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
 // =============================================================================
@@ -39,6 +39,7 @@ function formatLastScan(
   }
 
   const diffMs = Date.now() - timestamp;
+  // Guard against future timestamps (e.g., clock skew)
   if (diffMs < 0) {
     return t("just_now");
   }
@@ -99,40 +100,26 @@ function SmsImportStatusCardComponent(): React.ReactElement | null {
     <TouchableOpacity
       onPress={handleCardPress}
       activeOpacity={0.7}
-      style={[
-        styles.card,
-        {
-          backgroundColor: isDark ? palette.slate[800] : palette.slate[100],
-          borderLeftColor: palette.nileGreen[500],
-        },
-      ]}
+      className="flex-row items-center rounded-xl p-3.5 mt-4 overflow-hidden bg-slate-100 dark:bg-slate-800 border-l-2 border-l-nileGreen-500"
     >
       {/* SMS Icon */}
-      <View
-        style={[
-          styles.iconContainer,
-          { backgroundColor: `${palette.nileGreen[500]}1A` },
-        ]}
-      >
+      <View className="w-10 h-10 rounded-[10px] items-center justify-center bg-nileGreen-500/10">
         <Ionicons name="chatbubble" size={20} color={palette.nileGreen[500]} />
       </View>
 
       {/* Text Content */}
       <View className="flex-1 ml-3">
         <Text
-          className="text-sm font-bold"
-          style={{
-            color: isDark ? palette.slate[50] : palette.slate[800],
-          }}
+          className="text-sm font-bold text-slate-800 dark:text-slate-50"
           numberOfLines={1}
         >
           {t("sms_imported_count", { count: importedThisMonth })}
         </Text>
         <Text
-          className="mt-0.5"
+          className="mt-0.5 text-[11px] uppercase tracking-wider"
           style={[
-            styles.subtitle,
             {
+              // eslint-disable-next-line no-restricted-syntax
               color: isDark ? `${palette.slate[400]}B3` : palette.slate[500],
             },
           ]}
@@ -141,7 +128,7 @@ function SmsImportStatusCardComponent(): React.ReactElement | null {
         </Text>
       </View>
 
-      {/* Toggle Switch */}
+      {/* Toggle Switch — isDark used for component color props (allowed exception) */}
       <Switch
         value={isEnabled}
         onValueChange={handleToggle}
@@ -149,42 +136,11 @@ function SmsImportStatusCardComponent(): React.ReactElement | null {
           false: isDark ? palette.slate[600] : palette.slate[300],
           true: palette.nileGreen[500],
         }}
-        thumbColor={isDark ? palette.slate[25] : palette.slate[25]}
-        style={styles.toggle}
+        thumbColor={palette.slate[25]}
+        className="ms-2"
       />
     </TouchableOpacity>
   );
 }
 
-export const SmsImportStatusCard = React.memo(SmsImportStatusCardComponent);
-
-// =============================================================================
-// STYLES
-// =============================================================================
-
-const styles = StyleSheet.create({
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 12,
-    padding: 14,
-    marginTop: 16,
-    borderLeftWidth: 2,
-    overflow: "hidden",
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  subtitle: {
-    fontSize: 11,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  toggle: {
-    marginLeft: 8,
-  },
-});
+export const SmsImportStatusCard = memo(SmsImportStatusCardComponent);

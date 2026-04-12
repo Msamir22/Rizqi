@@ -31,9 +31,11 @@ export function convertCurrency(
 ): number {
   if (!marketRates || amount === 0 || fromCurrency === toCurrency)
     return amount;
-  const result = amount * marketRates.getRate(fromCurrency, toCurrency);
-  // Guard against NaN from unexpected rate values
-  return Number.isFinite(result) ? result : amount;
+  const rate = marketRates.getRate(fromCurrency, toCurrency);
+  const result = amount * rate;
+  // Guard against NaN / missing rates — return 0 to signal conversion failure
+  // rather than silently returning the unconverted source amount.
+  return Number.isFinite(result) ? result : 0;
 }
 
 /**
@@ -161,30 +163,23 @@ const CURRENCY_SYMBOLS: Partial<Record<CurrencyType, string>> = {
 
 /**
  * Default decimal precision per currency.
- * EGP/SAR/AED = 0 (whole numbers typical for these markets).
- * USD/EUR/GBP = 2 (standard decimal currencies).
+ * Most currencies use 2 decimal places (ISO 4217 standard).
+ * BHD/KWD/OMR = 3 (ISO 4217 three-decimal currencies).
  * BTC = 8 (satoshi precision).
  * Override per call via `minimumFractionDigits`/`maximumFractionDigits`.
  */
 const CURRENCY_PRECISION: Partial<Record<CurrencyType, number>> = {
-  EGP: 0,
-  SAR: 0,
-  AED: 0,
-  KWD: 0,
-  USD: 2,
-  EUR: 2,
-  GBP: 2,
-  CAD: 2,
-  AUD: 2,
-  NZD: 2,
-  SGD: 2,
-  HKD: 2,
-  CHF: 2,
+  // Three-decimal currencies (ISO 4217)
+  BHD: 3,
+  KWD: 3,
+  OMR: 3,
+  // Crypto
   BTC: 8,
+  // All other currencies default to 2 via DEFAULT_PRECISION
 };
 
-/** Default precision for currencies not listed in CURRENCY_PRECISION */
-const DEFAULT_PRECISION = 0;
+/** Default precision for currencies not listed in CURRENCY_PRECISION (ISO 4217 standard) */
+const DEFAULT_PRECISION = 2;
 
 export const formatCurrency = ({
   amount,
@@ -236,7 +231,8 @@ export const formatCurrency = ({
 
   if (prefixCurrencies.includes(currency)) {
     if (amount < 0) {
-      return `-${symbol}${Math.abs(Number(formattedNumber))}`;
+      // Strip the leading minus sign from the formatted number and prepend -symbol
+      return `-${symbol}${formattedNumber.replace(/^-/, "")}`;
     }
     return `${symbol}${formattedNumber}`;
   }

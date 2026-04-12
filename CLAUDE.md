@@ -93,22 +93,41 @@ Dependency direction: `apps/ → packages/logic → packages/db`. **Never revers
 - Use Zod for runtime validation. Derive types with `z.infer<typeof schema>` —
   don't duplicate type definitions.
 - Use Expo managed workflow, EAS Build, and `expo-updates` for OTA updates.
+- **i18n**: In functional components, use the `useTranslation` hook
+  (`const { t } = useTranslation("namespace")`). In class components or
+  non-component files, use the named import `import { t } from "i18next"` —
+  never `i18next.t()`.
 
 ## Styling Rules
 
-- **Tailwind CSS first**: Always prefer NativeWind classes over
-  `StyleSheet.create()` unless absolutely necessary for dynamic values.
+- **NativeWind classes only**: Use `className` for ALL styling. Do NOT use
+  `StyleSheet.create()` or inline `style` unless there is no NativeWind
+  equivalent (e.g., dynamic computed values like `width: \`${percent}%\``).
+- **Colors via Tailwind config**: All palette colors are registered in
+  `tailwind.config.js`. Use NativeWind classes (`bg-slate-800`,
+  `text-nileGreen-500`, `border-slate-300`) — never use inline
+  `style={{ color: palette.xxx }}` when a class exists. Use `palette` imports
+  only for component props that don't accept `className` (e.g.,
+  `<Icon color={palette.nileGreen[500]} />`).
+- **Opacity modifier**: Use the `/opacity` syntax for semi-transparent colors
+  (e.g., `bg-nileGreen-500/20`, `border-slate-300/25`). This works on `View` and
+  `Text`. See the NativeWind v4 crash exception below for
+  `TouchableOpacity`/`Pressable`.
 - **Dark mode**: Use `dark:` variant. NEVER use `isDark` ternary conditionals if
   a Tailwind class works. **Exception**: `isDark` MAY be used for component
   props that accept color values (e.g.,
-  `<Icon color={isDark ? '#fff' : '#000'} />`) since `className` doesn't work on
-  those props.
-- **Colors**: Always use `palette` from `@/constants/colors`. No static hex
-  codes or `rgba` values.
+  `<Switch trackColor={{ false: isDark ? ... : ... }} />`) since `className`
+  doesn't work on those props.
+- **Theme text colors**: Use `text-text-primary`, `text-text-secondary`,
+  `text-text-muted` classes (defined in `tailwind.config.js`) instead of
+  `style={{ color: theme.text.primary }}`.
 - `palette.slate[25]` is the standard light-mode white for backgrounds/text.
-- **Shadow bug**: `shadow-*`, `opacity-*`, and `bg-color/opacity` classes on
-  `TouchableOpacity`/`Pressable` cause NativeWind v4 crash. Use inline `style`
-  for shadows on these components.
+- **NativeWind v4 crash**: `shadow-*`, `opacity-*`, and `bg-color/opacity`
+  classes on `TouchableOpacity`/`Pressable` cause a crash. Use inline `style`
+  for these specific cases on these specific components only.
+- **Reusable class compounds**: When the same combination of classes repeats
+  across multiple components, extract it to `global.css` using `@apply` (e.g.,
+  `.subtitle-text`, `.body-small`, `.caption-text`).
 - Use unified `PageHeader` component for all screen headers (manages drawer
   state internally).
 - Use `TextField` for text inputs, `Dropdown` for selections, `OptionalSection`
@@ -168,6 +187,12 @@ mapping logic from component to model, suggest a rule update with location.
 
 - Static colors (`#FFFFFF`, `rgb(0,0,0)`)
 - `isDark` ternary logic for background/text colors
+- `StyleSheet.create()` or inline `style` when a NativeWind class exists
+- `style={{ color: palette.xxx }}` on `Text`/`View` when a Tailwind class exists
+  (e.g., use `text-nileGreen-500` not
+  `style={{ color: palette.nileGreen[500] }}`)
 - Custom header implementations (use `PageHeader`)
 - `withObservables` HOC for simple data fetching (use hooks like `useAccounts`)
-- NativeWind shadow classes on `TouchableOpacity`/`Pressable`
+- NativeWind `shadow-*`, `opacity-*`, `bg-color/opacity` on
+  `TouchableOpacity`/`Pressable`
+- `i18next.t()` — use `{ t } from "i18next"` or `useTranslation` hook instead

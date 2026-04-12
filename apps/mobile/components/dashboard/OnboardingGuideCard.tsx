@@ -12,7 +12,6 @@
  */
 
 import { palette } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
 import {
   useOnboardingGuide,
   type OnboardingStep,
@@ -21,9 +20,9 @@ import { logger } from "@/utils/logger";
 
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useCallback, useMemo } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { memo, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { Text, TouchableOpacity, View } from "react-native";
 
 // =============================================================================
 // STEP ITEM SUB-COMPONENTS
@@ -33,7 +32,6 @@ interface StepItemProps {
   readonly step: OnboardingStep;
   readonly index: number;
   readonly isActive: boolean;
-  readonly isDark: boolean;
   readonly onPress?: () => void;
 }
 
@@ -45,7 +43,6 @@ function StepItemComponent({
   step,
   index,
   isActive,
-  isDark,
   onPress,
 }: StepItemProps): React.ReactElement {
   const { t } = useTranslation("common");
@@ -53,22 +50,11 @@ function StepItemComponent({
   // ── Completed step ──
   if (step.isComplete) {
     return (
-      <View className="flex-row items-center gap-x-3" style={styles.stepRow}>
-        <View
-          style={[
-            styles.stepCircle,
-            { backgroundColor: `${palette.nileGreen[500]}33` },
-          ]}
-        >
+      <View className="flex-row items-center gap-x-3 opacity-85">
+        <View className="w-6 h-6 rounded-full items-center justify-center bg-nileGreen-500/20">
           <Ionicons name="checkmark" size={14} color={palette.nileGreen[500]} />
         </View>
-        <Text
-          className="text-sm"
-          style={{
-            color: palette.slate[400],
-            textDecorationLine: "line-through",
-          }}
-        >
+        <Text className="text-sm text-slate-400 line-through">
           {t(step.labelKey)}
         </Text>
       </View>
@@ -81,40 +67,26 @@ function StepItemComponent({
       <TouchableOpacity
         onPress={onPress}
         activeOpacity={0.7}
-        style={[
-          styles.activeStepContainer,
-          {
-            backgroundColor: `${palette.nileGreen[500]}1A`,
-            borderColor: `${palette.nileGreen[500]}33`,
-          },
-        ]}
+        className="flex-row items-center justify-between p-3 -mx-1 rounded-lg border"
+        style={{
+          backgroundColor: `${palette.nileGreen[500]}1A`,
+          borderColor: `${palette.nileGreen[500]}33`,
+        }}
       >
         <View className="flex-row items-center gap-x-3 flex-1">
-          <View
-            style={[
-              styles.stepCircle,
-              { borderWidth: 2, borderColor: palette.nileGreen[500] },
-            ]}
-          >
-            <Text
-              style={{
-                color: palette.nileGreen[500],
-                fontSize: 11,
-                fontWeight: "700",
-              }}
-            >
+          <View className="w-6 h-6 rounded-full items-center justify-center border-2 border-nileGreen-500">
+            <Text className="text-[11px] font-bold text-nileGreen-500">
               {index + 1}
             </Text>
           </View>
-          <Text
-            className="text-sm font-semibold"
-            style={{ color: palette.nileGreen[500] }}
-          >
+          <Text className="text-sm font-semibold text-nileGreen-500">
             {t(step.labelKey)}
           </Text>
         </View>
-        <View style={styles.addButton}>
-          <Text style={styles.addButtonText}>{t("add")}</Text>
+        <View className="px-3.5 py-1.5 rounded-full bg-nileGreen-500">
+          <Text className="text-xs font-bold text-nileGreen-900">
+            {t("add")}
+          </Text>
         </View>
       </TouchableOpacity>
     );
@@ -122,36 +94,21 @@ function StepItemComponent({
 
   // ── Upcoming step ──
   return (
-    <View className="flex-row items-center gap-x-3" style={styles.stepRow}>
-      <View
-        style={[
-          styles.stepCircle,
-          {
-            borderWidth: 1,
-            borderColor: isDark ? palette.slate[600] : palette.slate[300],
-          },
-        ]}
-      >
-        <Text
-          style={{
-            color: isDark ? palette.slate[400] : palette.slate[500],
-            fontSize: 11,
-            fontWeight: "500",
-          }}
-        >
+    <View className="flex-row items-center gap-x-3 opacity-85">
+      <View className="w-6 h-6 rounded-full items-center justify-center border border-slate-300 dark:border-slate-600">
+        <Text className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
           {index + 1}
         </Text>
       </View>
       <View className="flex-row items-center gap-x-2">
-        <Text
-          className="text-sm"
-          style={{ color: isDark ? palette.slate[400] : palette.slate[500] }}
-        >
+        <Text className="text-sm text-slate-500 dark:text-slate-400">
           {t(step.labelKey)}
         </Text>
         {step.isNew ? (
-          <View style={styles.newBadge}>
-            <Text style={styles.newBadgeText}>{t("new_badge")}</Text>
+          <View className="px-2 py-0.5 rounded-[10px] bg-nileGreen-500/20">
+            <Text className="text-[10px] font-bold tracking-wider text-nileGreen-500">
+              {t("new_badge")}
+            </Text>
           </View>
         ) : null}
       </View>
@@ -159,7 +116,7 @@ function StepItemComponent({
   );
 }
 
-const StepItem = React.memo(StepItemComponent);
+const StepItem = memo(StepItemComponent);
 
 // =============================================================================
 // MAIN COMPONENT
@@ -167,7 +124,6 @@ const StepItem = React.memo(StepItemComponent);
 
 function OnboardingGuideCardComponent(): React.ReactElement | null {
   const { t } = useTranslation("common");
-  const { theme, isDark } = useTheme();
   const router = useRouter();
   const {
     steps,
@@ -211,33 +167,17 @@ function OnboardingGuideCardComponent(): React.ReactElement | null {
     totalSteps > 0 ? (completedCount / totalSteps) * 100 : 0;
 
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: isDark ? palette.slate[800] : palette.slate[100],
-          borderColor: isDark
-            ? `${palette.slate[600]}1A`
-            : `${palette.slate[300]}40`,
-        },
-      ]}
-    >
+    <View className="rounded-xl p-5 mt-4 border border-slate-300/25 overflow-hidden bg-slate-100 dark:bg-slate-800">
       {/* Header */}
       <View className="flex-row justify-between items-start mb-4">
         <View>
           <View className="flex-row items-center gap-x-2 mb-1">
             <Ionicons name="rocket" size={20} color={palette.nileGreen[500]} />
-            <Text
-              className="text-lg font-semibold"
-              style={{ color: theme.text.primary }}
-            >
+            <Text className="text-lg font-semibold text-text-primary">
               {t("setup_guide")}
             </Text>
           </View>
-          <Text
-            className="text-sm font-medium"
-            style={{ color: theme.text.secondary }}
-          >
+          <Text className="text-sm font-medium text-text-secondary">
             {t("setup_guide_progress", {
               completed: completedCount,
               total: totalSteps,
@@ -247,34 +187,21 @@ function OnboardingGuideCardComponent(): React.ReactElement | null {
       </View>
 
       {/* Progress Bar */}
-      <View
-        style={[
-          styles.progressTrack,
-          {
-            backgroundColor: isDark ? palette.slate[900] : palette.slate[200],
-          },
-        ]}
-      >
+      <View className="h-1.5 rounded-full w-full mb-6 bg-slate-200 dark:bg-slate-900">
         <View
-          style={[
-            styles.progressFill,
-            {
-              width: `${progressPercentage}%`,
-              backgroundColor: palette.nileGreen[500],
-            },
-          ]}
+          className="h-full rounded-full bg-nileGreen-500"
+          style={{ width: `${progressPercentage}%` }}
         />
       </View>
 
       {/* Steps Checklist */}
-      <View style={styles.stepsList}>
+      <View className="gap-4">
         {steps.map((step, index) => (
           <StepItem
             key={step.key}
             step={step}
             index={index}
             isActive={index === activeStepIndex}
-            isDark={isDark}
             onPress={
               index === activeStepIndex
                 ? () => handleStepPress(step.route)
@@ -287,10 +214,7 @@ function OnboardingGuideCardComponent(): React.ReactElement | null {
       {/* Dismiss */}
       <View className="mt-6 flex-row justify-end">
         <TouchableOpacity onPress={handleDismiss} hitSlop={8}>
-          <Text
-            className="text-sm font-medium py-2 px-3"
-            style={{ color: theme.text.secondary }}
-          >
+          <Text className="text-sm font-medium py-2 px-3 text-text-secondary">
             {t("dismiss")}
           </Text>
         </TouchableOpacity>
@@ -299,73 +223,4 @@ function OnboardingGuideCardComponent(): React.ReactElement | null {
   );
 }
 
-export const OnboardingGuideCard = React.memo(OnboardingGuideCardComponent);
-
-// =============================================================================
-// STYLES
-// =============================================================================
-
-const styles = StyleSheet.create({
-  card: {
-    borderRadius: 12,
-    padding: 20,
-    marginTop: 16,
-    borderWidth: 1,
-    overflow: "hidden",
-  },
-  progressTrack: {
-    height: 6,
-    borderRadius: 3,
-    width: "100%",
-    marginBottom: 24,
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 3,
-  },
-  stepsList: {
-    gap: 16,
-  },
-  stepRow: {
-    opacity: 0.85,
-  },
-  stepCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  activeStepContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 12,
-    marginHorizontal: -4,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  addButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: palette.nileGreen[500],
-  },
-  addButtonText: {
-    color: palette.nileGreen[900],
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  newBadge: {
-    backgroundColor: `${palette.nileGreen[500]}33`,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  newBadgeText: {
-    color: palette.nileGreen[500],
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-});
+export const OnboardingGuideCard = memo(OnboardingGuideCardComponent);

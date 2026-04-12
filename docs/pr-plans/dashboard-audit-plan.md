@@ -11,7 +11,7 @@ performance, code quality, styling, UX polish, and new features.
 
 - [x] **TopNav crowding on narrow screens** — Moved greeting below TopNav to its
       own row, removed inline greeting + vertical divider
-- [x] **Hardcoded user name** — Replaced with `useProfile()` reading
+- [x] **Hardcoded username** — Replaced with `useProfile()` reading
       `firstName`/`displayName` from WatermelonDB
 - [x] **Currency chip crash** — Re-added `<Text>` wrappers around raw strings in
       JSX

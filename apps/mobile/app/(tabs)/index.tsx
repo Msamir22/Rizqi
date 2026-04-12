@@ -109,12 +109,20 @@ export default function DashboardScreen(): React.JSX.Element {
   );
 
   const handleSmsPermissionGranted = useCallback(() => {
-    dismissPrompt().catch(() => {});
+    dismissPrompt().catch((error: unknown) => {
+      logger.warn("dismissPrompt failed in handleSmsPermissionGranted", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
     router.push("/sms-scan");
   }, [dismissPrompt, router]);
 
   const handleSmsDismiss = useCallback(() => {
-    dismissPrompt().catch(() => {});
+    dismissPrompt().catch((error: unknown) => {
+      logger.warn("dismissPrompt failed in handleSmsDismiss", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
   }, [dismissPrompt]);
 
   const handleCurrencySelect = useCallback(

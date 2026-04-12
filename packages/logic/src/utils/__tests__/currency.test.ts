@@ -98,14 +98,14 @@ describe("convertCurrency", () => {
     expect(result).toBeCloseTo(0.497, 3);
   });
 
-  it("returns the original amount when rate produces NaN", () => {
+  it("returns 0 when rate produces NaN", () => {
     const result = convertCurrency(100, "USD", "EGP", nanRates);
-    expect(result).toBe(100);
+    expect(result).toBe(0);
   });
 
-  it("returns the original amount when rate produces Infinity", () => {
+  it("returns 0 when rate produces Infinity", () => {
     const result = convertCurrency(100, "USD", "EGP", infinityRates);
-    expect(result).toBe(100);
+    expect(result).toBe(0);
   });
 
   it("returns -0 as 0 when amount is -0 (short-circuits on amount === 0)", () => {
@@ -121,9 +121,9 @@ describe("convertCurrency", () => {
 
 describe("formatCurrency", () => {
   describe("currency-specific precision (CURRENCY_PRECISION)", () => {
-    it("formats EGP with 0 decimal places by default", () => {
+    it("formats EGP with 2 decimal places by default", () => {
       expect(formatCurrency({ amount: 1234.56, currency: "EGP" })).toBe(
-        "1,235 EGP"
+        "1,234.56 EGP"
       );
     });
 
@@ -145,9 +145,9 @@ describe("formatCurrency", () => {
       );
     });
 
-    it("formats SAR with 0 decimal places by default", () => {
+    it("formats SAR with 2 decimal places by default", () => {
       expect(formatCurrency({ amount: 100.99, currency: "SAR" })).toBe(
-        "101 SAR"
+        "100.99 SAR"
       );
     });
 
@@ -157,10 +157,10 @@ describe("formatCurrency", () => {
       );
     });
 
-    it("uses DEFAULT_PRECISION (0) for unlisted currencies", () => {
+    it("uses DEFAULT_PRECISION (2) for unlisted currencies", () => {
       // MAD is in CURRENCY_SYMBOLS but not in CURRENCY_PRECISION
       expect(formatCurrency({ amount: 100.75, currency: "MAD" })).toBe(
-        "101 MAD"
+        "100.75 MAD"
       );
     });
   });
@@ -192,7 +192,7 @@ describe("formatCurrency", () => {
   describe("negative zero normalization", () => {
     it("normalizes -0 to 0 for EGP", () => {
       const result = formatCurrency({ amount: -0, currency: "EGP" });
-      expect(result).toBe("0 EGP");
+      expect(result).toBe("0.00 EGP");
     });
 
     it("normalizes -0 to 0 for USD", () => {
@@ -203,7 +203,7 @@ describe("formatCurrency", () => {
 
   describe("zero values", () => {
     it("formats zero EGP correctly", () => {
-      expect(formatCurrency({ amount: 0, currency: "EGP" })).toBe("0 EGP");
+      expect(formatCurrency({ amount: 0, currency: "EGP" })).toBe("0.00 EGP");
     });
 
     it("formats zero USD correctly", () => {
@@ -214,13 +214,14 @@ describe("formatCurrency", () => {
   describe("negative values", () => {
     it("formats negative EGP as suffix currency", () => {
       expect(formatCurrency({ amount: -500, currency: "EGP" })).toBe(
-        "-500 EGP"
+        "-500.00 EGP"
       );
     });
 
     it("formats negative USD with minus before symbol", () => {
-      // Math.abs(Number(formattedNumber)) strips trailing zeros from the numeric conversion
-      expect(formatCurrency({ amount: -25.5, currency: "USD" })).toBe("-$25.5");
+      expect(formatCurrency({ amount: -25.5, currency: "USD" })).toBe(
+        "-$25.50"
+      );
     });
 
     it("formats negative EUR with minus before symbol", () => {
@@ -276,14 +277,14 @@ describe("formatCurrency", () => {
         signDisplay: "never",
       });
       expect(result).not.toContain("-");
-      expect(result).toBe("50 EGP");
+      expect(result).toBe("50.00 EGP");
     });
   });
 
   describe("large numbers", () => {
     it("adds thousands separators", () => {
       expect(formatCurrency({ amount: 1234567, currency: "EGP" })).toBe(
-        "1,234,567 EGP"
+        "1,234,567.00 EGP"
       );
     });
 
@@ -410,8 +411,9 @@ describe("formatConversionPreview", () => {
     expect(result).toContain("EGP");
   });
 
-  it("handles zero amount for same currency", () => {
+  it("handles zero amount for same currency (EGP)", () => {
     const result = formatConversionPreview(0, "EGP", "EGP", standardRates);
+    // formatConversionPreview uses PRIMARY_RATE_FRACTION_DIGITS (2) for same-currency
     expect(result).toBe("0.00 EGP");
   });
 

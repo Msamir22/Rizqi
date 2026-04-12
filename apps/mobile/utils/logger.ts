@@ -19,7 +19,9 @@ import * as Sentry from "@sentry/react-native";
 // Types
 // =============================================================================
 
-type LogContext = Record<string, unknown>;
+interface LogContext {
+  [key: string]: unknown;
+}
 
 interface Logger {
   /** Log an error with optional context. Captured by Sentry as an exception. */

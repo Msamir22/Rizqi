@@ -23,8 +23,13 @@ export function calculateTotalAssets(
   }
 
   return assetMetals.reduce((total, metal) => {
-    const pricePerGram = getMetalPriceUsd(metal.metalType, marketRates);
-    const value = metal.calculateValue(pricePerGram);
-    return total + value;
+    try {
+      const pricePerGram = getMetalPriceUsd(metal.metalType, marketRates);
+      const value = metal.calculateValue(pricePerGram);
+      return total + value;
+    } catch {
+      // Metal price unavailable — skip this holding rather than crashing.
+      return total;
+    }
   }, 0);
 }

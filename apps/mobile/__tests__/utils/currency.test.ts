@@ -153,8 +153,10 @@ describe("formatCurrency", () => {
     expect(formatCurrency({ amount: 1234, currency: "USD" })).toBe("$1,234.00");
   });
 
-  it("formats EGP with suffix code and 0 decimal places", () => {
-    expect(formatCurrency({ amount: 1234, currency: "EGP" })).toBe("1,234 EGP");
+  it("formats EGP with suffix code and 2 decimal places", () => {
+    expect(formatCurrency({ amount: 1234, currency: "EGP" })).toBe(
+      "1,234.00 EGP"
+    );
   });
 
   it("formats negative amounts correctly", () => {
