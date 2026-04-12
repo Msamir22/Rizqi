@@ -15,7 +15,7 @@ import { StarryBackground } from "@/components/ui/StarryBackground";
 import { useToast } from "@/components/ui/Toast";
 import { palette } from "@/constants/colors";
 import { TAB_BAR_HEIGHT } from "@/constants/ui";
-import { useTheme } from "@/context/ThemeContext";
+
 import { useTopAccounts } from "@/hooks/useAccounts";
 import { useMarketRates } from "@/hooks/useMarketRates";
 import { useMonthlyPercentageChange, useNetWorth } from "@/hooks/useNetWorth";
@@ -60,7 +60,6 @@ export default function DashboardScreen(): React.JSX.Element {
   const [isCurrencyPickerOpen, setIsCurrencyPickerOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const isDbReady = useDatabaseReady();
-  const { theme } = useTheme();
   const { t } = useTranslation("common");
   const { profile } = useProfile();
   const { sync } = useSync();
@@ -194,14 +193,13 @@ export default function DashboardScreen(): React.JSX.Element {
           {/* Greeting Row — below TopNav, same horizontal padding */}
           <Text
             numberOfLines={1}
-            style={{ color: theme.text.primary }}
-            className="text-base font-semibold mb-4"
+            className="text-base font-semibold mb-4 text-text-primary"
           >
             {greetingText}
             {greetingName ? `, ${greetingName}` : ""} 👋
           </Text>
 
-          <SectionErrorBoundary name="Net Worth">
+          <SectionErrorBoundary name={t("section_net_worth")}>
             <TotalNetWorthCard
               totalNetWorth={totalNetWorth}
               totalNetWorthUsd={totalNetWorthUsd}
@@ -210,13 +208,13 @@ export default function DashboardScreen(): React.JSX.Element {
               isLoading={isLoading}
             />
           </SectionErrorBoundary>
-          <SectionErrorBoundary name="SMS Import Status">
+          <SectionErrorBoundary name={t("section_sms_import")}>
             <SmsImportStatusCard />
           </SectionErrorBoundary>
-          <SectionErrorBoundary name="Onboarding Guide">
+          <SectionErrorBoundary name={t("section_onboarding_guide")}>
             <OnboardingGuideCard />
           </SectionErrorBoundary>
-          <SectionErrorBoundary name="Live Rates">
+          <SectionErrorBoundary name={t("section_live_rates")}>
             <LiveRates
               latestRates={latestRates}
               previousDayRate={previousDayRate}
@@ -226,16 +224,16 @@ export default function DashboardScreen(): React.JSX.Element {
               preferredCurrency={preferredCurrency}
             />
           </SectionErrorBoundary>
-          <SectionErrorBoundary name="Accounts">
+          <SectionErrorBoundary name={t("section_accounts")}>
             <AccountsSection accounts={accounts} isLoading={accountsLoading} />
           </SectionErrorBoundary>
-          <SectionErrorBoundary name="This Month">
+          <SectionErrorBoundary name={t("section_this_month")}>
             <ThisMonth />
           </SectionErrorBoundary>
-          <SectionErrorBoundary name="Upcoming Payments">
+          <SectionErrorBoundary name={t("section_upcoming_payments")}>
             <UpcomingPayments />
           </SectionErrorBoundary>
-          <SectionErrorBoundary name="Recent Transactions">
+          <SectionErrorBoundary name={t("section_recent_transactions")}>
             <RecentTransactions
               transactions={transactions}
               isLoading={transactionsLoading}

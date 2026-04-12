@@ -102,7 +102,7 @@ Dependency direction: `apps/ → packages/logic → packages/db`. **Never revers
 
 - **NativeWind classes only**: Use `className` for ALL styling. Do NOT use
   `StyleSheet.create()` or inline `style` unless there is no NativeWind
-  equivalent (e.g., dynamic computed values like `width: \`${percent}%\``).
+  equivalent (e.g., dynamic computed values like `` width: `${percent}%` ``).
 - **Colors via Tailwind config**: All palette colors are registered in
   `tailwind.config.js`. Use NativeWind classes (`bg-slate-800`,
   `text-nileGreen-500`, `border-slate-300`) — never use inline

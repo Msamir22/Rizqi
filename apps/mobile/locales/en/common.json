@@ -152,5 +152,13 @@
   "sms_last_scan": "Last scan: {{time}}",
   "sms_never_scanned": "Not yet scanned",
   "new_badge": "NEW",
-  "section_failed_to_load": "{{name}} failed to load"
+  "section_failed_to_load": "{{name}} failed to load",
+  "section_net_worth": "Net Worth",
+  "section_sms_import": "SMS Import",
+  "section_onboarding_guide": "Setup Guide",
+  "section_live_rates": "Live Rates",
+  "section_accounts": "Accounts",
+  "section_this_month": "This Month",
+  "section_upcoming_payments": "Upcoming Payments",
+  "section_recent_transactions": "Recent Transactions"
 }

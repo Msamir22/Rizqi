@@ -115,15 +115,7 @@ function SmsImportStatusCardComponent(): React.ReactElement | null {
         >
           {t("sms_imported_count", { count: importedThisMonth })}
         </Text>
-        <Text
-          className="mt-0.5 text-[11px] uppercase tracking-wider"
-          style={[
-            {
-              // eslint-disable-next-line no-restricted-syntax
-              color: isDark ? `${palette.slate[400]}B3` : palette.slate[500],
-            },
-          ]}
-        >
+        <Text className="mt-0.5 text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400/70">
           {lastScanText}
         </Text>
       </View>

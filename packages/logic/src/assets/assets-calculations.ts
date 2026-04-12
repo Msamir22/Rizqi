@@ -27,9 +27,15 @@ export function calculateTotalAssets(
       const pricePerGram = getMetalPriceUsd(metal.metalType, marketRates);
       const value = metal.calculateValue(pricePerGram);
       return total + value;
-    } catch {
-      // Metal price unavailable — skip this holding rather than crashing.
-      return total;
+    } catch (error: unknown) {
+      // Only swallow "Metal price unavailable" errors — rethrow anything unexpected.
+      if (
+        error instanceof Error &&
+        error.message.startsWith("Metal price unavailable")
+      ) {
+        return total;
+      }
+      throw error;
     }
   }, 0);
 }

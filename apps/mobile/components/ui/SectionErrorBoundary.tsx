@@ -16,11 +16,66 @@ import { palette } from "@/constants/colors";
 import { logger } from "@/utils/logger";
 import { Ionicons } from "@expo/vector-icons";
 import { t } from "i18next";
-import { Component, type ErrorInfo, type ReactNode } from "react";
+import { useCallback, useState, type ErrorInfo, type ReactNode } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
+import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
 
 // =============================================================================
-// Types
+// Constants
+// =============================================================================
+
+/** Maximum retry attempts before disabling the retry button */
+const MAX_RETRIES = 3;
+
+// =============================================================================
+// Fallback Component
+// =============================================================================
+
+interface SectionFallbackProps extends FallbackProps {
+  name: string;
+  retryCount: number;
+  onRetryCountIncrement: () => void;
+}
+
+function SectionFallback({
+  resetErrorBoundary,
+  name,
+  retryCount,
+  onRetryCountIncrement,
+}: SectionFallbackProps): React.JSX.Element {
+  const canRetry = retryCount < MAX_RETRIES;
+
+  const handleRetry = useCallback((): void => {
+    onRetryCountIncrement();
+    resetErrorBoundary();
+  }, [resetErrorBoundary, onRetryCountIncrement]);
+
+  return (
+    <View className="my-3 px-4 py-5 rounded-2xl border items-center bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700">
+      <Ionicons
+        name="alert-circle-outline"
+        size={28}
+        color={palette.slate[400]}
+      />
+      <Text className="text-sm font-medium mt-2 text-slate-500 dark:text-slate-400">
+        {t("common:section_failed_to_load", { name })}
+      </Text>
+      {canRetry ? (
+        <TouchableOpacity
+          onPress={handleRetry}
+          className="mt-3 px-4 py-2 rounded-lg bg-nileGreen-500"
+        >
+          <Text className="text-xs font-semibold text-white">
+            {t("common:retry")}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
+}
+
+// =============================================================================
+// Main Component
 // =============================================================================
 
 interface SectionErrorBoundaryProps {
@@ -29,78 +84,42 @@ interface SectionErrorBoundaryProps {
   children: ReactNode;
 }
 
-interface SectionErrorBoundaryState {
-  hasError: boolean;
-  retryCount: number;
-}
-
-/** Maximum retry attempts before disabling the retry button */
-const MAX_RETRIES = 3;
-
-// =============================================================================
-// Component (Class-based — required for error boundaries)
-// =============================================================================
-
 /**
  * Catches rendering errors in a dashboard section and displays a compact
  * fallback with a retry button. Logs the error for debugging.
  */
-export class SectionErrorBoundary extends Component<
-  SectionErrorBoundaryProps,
-  SectionErrorBoundaryState
-> {
-  constructor(props: SectionErrorBoundaryProps) {
-    super(props);
-    this.state = { hasError: false, retryCount: 0 };
-  }
+export function SectionErrorBoundary({
+  name,
+  children,
+}: SectionErrorBoundaryProps): React.JSX.Element {
+  const [retryCount, setRetryCount] = useState(0);
 
-  static getDerivedStateFromError(): Partial<SectionErrorBoundaryState> {
-    return { hasError: true };
-  }
+  const handleError = useCallback(
+    (error: unknown, info: ErrorInfo): void => {
+      logger.error(`SectionErrorBoundary: "${name}" crashed`, error, {
+        componentStack: info.componentStack,
+      });
+    },
+    [name]
+  );
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    logger.error(`SectionErrorBoundary: "${this.props.name}" crashed`, error, {
-      componentStack: errorInfo.componentStack,
-    });
-  }
+  const incrementRetryCount = useCallback((): void => {
+    setRetryCount((prev) => prev + 1);
+  }, []);
 
-  handleRetry = (): void => {
-    this.setState((prev) => ({
-      hasError: false,
-      retryCount: prev.retryCount + 1,
-    }));
-  };
-
-  render(): ReactNode {
-    if (this.state.hasError) {
-      const canRetry = this.state.retryCount < MAX_RETRIES;
-
-      return (
-        <View className="my-3 px-4 py-5 rounded-2xl border items-center bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700">
-          <Ionicons
-            name="alert-circle-outline"
-            size={28}
-            color={palette.slate[400]}
-          />
-          <Text className="text-sm font-medium mt-2 text-slate-500 dark:text-slate-400">
-            {t("common:section_failed_to_load", {
-              name: this.props.name,
-            })}
-          </Text>
-          {canRetry ? (
-            <TouchableOpacity
-              onPress={this.handleRetry}
-              className="mt-3 px-4 py-2 rounded-lg bg-nileGreen-500"
-            >
-              <Text className="text-xs font-semibold text-white">
-                {t("common:retry")}
-              </Text>
-            </TouchableOpacity>
-          ) : null}
-        </View>
-      );
-    }
-
-    return this.props.children;
-  }
+  return (
+    <ErrorBoundary
+      onError={handleError}
+      fallbackRender={(props) => (
+        <SectionFallback
+          {...props}
+          name={name}
+          retryCount={retryCount}
+          onRetryCountIncrement={incrementRetryCount}
+        />
+      )}
+    >
+      {children}
+    </ErrorBoundary>
+  );
 }

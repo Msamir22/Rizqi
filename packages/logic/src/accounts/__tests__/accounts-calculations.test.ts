@@ -227,20 +227,20 @@ describe("calculateAccountsTotalBalance", () => {
         createMockAccount(500, "EUR"),
       ];
 
-      // convertCurrency returns the original amount when result is NaN
+      // convertCurrency returns 0 when result is NaN
       const result = calculateAccountsTotalBalance(accounts, nanRates);
 
-      // When NaN, convertCurrency falls back to original amounts
-      expect(result).toBe(1500);
+      // When NaN, convertCurrency returns 0 for both accounts
+      expect(result).toBe(0);
     });
 
-    it("should return original amounts when rates return Infinity (convertCurrency guards against Infinity)", () => {
+    it("should return 0 when rates return Infinity (convertCurrency guards against Infinity)", () => {
       const accounts = [createMockAccount(1000, "EGP")];
 
-      // convertCurrency returns original amount when result is Infinity
+      // convertCurrency returns 0 when result is Infinity
       const result = calculateAccountsTotalBalance(accounts, infinityRates);
 
-      expect(result).toBe(1000);
+      expect(result).toBe(0);
     });
 
     it("should handle mixed known and unknown currencies gracefully", () => {

@@ -167,5 +167,13 @@
   "sms_last_scan": "آخر فحص: {{time}}",
   "sms_never_scanned": "لم يتم الفحص بعد",
   "new_badge": "جديد",
-  "section_failed_to_load": "فشل تحميل {{name}}"
+  "section_failed_to_load": "فشل تحميل {{name}}",
+  "section_net_worth": "صافي الثروة",
+  "section_sms_import": "استيراد الرسائل",
+  "section_onboarding_guide": "دليل الإعداد",
+  "section_live_rates": "الأسعار الحية",
+  "section_accounts": "الحسابات",
+  "section_this_month": "هذا الشهر",
+  "section_upcoming_payments": "المدفوعات القادمة",
+  "section_recent_transactions": "المعاملات الأخيرة"
 }

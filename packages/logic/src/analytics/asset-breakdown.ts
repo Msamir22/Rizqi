@@ -79,9 +79,15 @@ export function calculateAssetBreakdown(
     try {
       const pricePerGram = getMetalPriceUsd(metal.metalType, marketRates);
       breakdown.metals += metal.calculateValue(pricePerGram);
-    } catch {
-      // Metal price unavailable — skip this holding rather than crashing
-      // the entire breakdown. The holding value defaults to 0.
+    } catch (error: unknown) {
+      // Only swallow "Metal price unavailable" errors — rethrow anything unexpected.
+      if (
+        error instanceof Error &&
+        error.message.startsWith("Metal price unavailable")
+      ) {
+        return;
+      }
+      throw error;
     }
   });
 
