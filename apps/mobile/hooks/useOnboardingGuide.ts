@@ -117,7 +117,7 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
   useEffect(() => {
     const subscription = database
       .get<Budget>("budgets")
-      .query(Q.where("deleted", false), Q.where("status", "ACTIVE"), Q.take(1))
+      .query(Q.where("deleted", false), Q.where("status", "ACTIVE"))
       .observeCount()
       .subscribe((count) => {
         setHasBudget(count > 0);
