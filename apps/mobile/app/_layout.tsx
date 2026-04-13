@@ -52,15 +52,17 @@ import {
   stopSmsListener,
 } from "../services/sms-live-listener-service";
 
+const SENTRY_DSN = String(process.env.EXPO_PUBLIC_SENTRY_DSN ?? "");
+
 Sentry.init({
-  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+  dsn: SENTRY_DSN || undefined,
   sendDefaultPii: true,
   tracesSampleRate: 1.0,
   profilesSampleRate: 1.0,
   replaysOnErrorSampleRate: 1.0,
   replaysSessionSampleRate: 0.1,
   integrations: [Sentry.mobileReplayIntegration()],
-  enabled: Boolean(process.env.EXPO_PUBLIC_SENTRY_DSN) && !__DEV__,
+  enabled: SENTRY_DSN.length > 0 && !__DEV__,
 });
 
 // Prevent splash screen from auto-hiding until fonts are loaded
