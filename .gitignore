@@ -1,3 +1,7 @@
+# MCP config (contains API tokens)
+.mcp.json
+.mcp.local.json
+
 # Dependencies
 node_modules/
 npm-debug.log*

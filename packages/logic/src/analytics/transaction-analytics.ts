@@ -198,14 +198,16 @@ export function calculateComparison(
 ): ComparisonResult {
   const absoluteChange = currentTotal - previousTotal;
 
-  let percentageChange = 0;
+  let percentageChange: number | null = null;
   if (previousTotal > 0) {
     percentageChange = Math.round(
       ((currentTotal - previousTotal) / previousTotal) * 100
     );
-  } else if (currentTotal > 0) {
-    percentageChange = 100; // Infinite increase, cap at 100%
+  } else if (previousTotal === 0 && currentTotal === 0) {
+    percentageChange = 0;
   }
+  // When previousTotal is 0 but currentTotal > 0, percentageChange stays null
+  // (growth rate from zero is undefined — UI should show "N/A" or just the absolute change)
 
   let trend: "up" | "down" | "stable" = "stable";
   if (absoluteChange > 0) {

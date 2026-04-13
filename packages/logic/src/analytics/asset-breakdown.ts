@@ -6,7 +6,7 @@
 
 import type { Account, AssetMetal, MarketRate } from "@astik/db";
 import { convertCurrency } from "../utils/currency";
-import { getMetalPriceUsd } from "../utils/metal";
+import { MetalPriceUnavailableError, getMetalPriceUsd } from "../utils/metal";
 
 export interface AssetBreakdown {
   bank: number;
@@ -76,8 +76,15 @@ export function calculateAssetBreakdown(
 
   // Calculate metals value (already in USD per gram)
   assetMetals.forEach((metal) => {
-    const pricePerGram = getMetalPriceUsd(metal.metalType, marketRates);
-    breakdown.metals += metal.calculateValue(pricePerGram);
+    try {
+      const pricePerGram = getMetalPriceUsd(metal.metalType, marketRates);
+      breakdown.metals += metal.calculateValue(pricePerGram);
+    } catch (error: unknown) {
+      if (error instanceof MetalPriceUnavailableError) {
+        return;
+      }
+      throw error;
+    }
   });
 
   // Total = bank + cash + wallet + metals
@@ -88,15 +95,19 @@ export function calculateAssetBreakdown(
 }
 
 /**
- * Calculate asset breakdown as percentages for display
- * Returns Bank, Cash, Metals (wallet included in total but not displayed)
+ * Calculate asset breakdown as percentages for display.
+ * Uses the "largest remainder" method to ensure percentages always sum to 100%.
+ * Returns Bank, Cash, Metals (wallet included in total but not displayed).
  */
 export function calculateAssetBreakdownPercentages(
   breakdown: AssetBreakdown
 ): AssetBreakdownPercentage[] {
-  const { bank, cash, metals, total } = breakdown;
+  const { bank, cash, metals } = breakdown;
 
-  if (total === 0) {
+  // Use the sum of displayed categories (excludes wallet) so percentages sum to 100%
+  const displayedTotal = bank + cash + metals;
+
+  if (displayedTotal === 0) {
     return [
       { label: "Bank", value: 0, percentage: 0 },
       { label: "Cash", value: 0, percentage: 0 },
@@ -104,21 +115,43 @@ export function calculateAssetBreakdownPercentages(
     ];
   }
 
-  return [
-    {
-      label: "Bank",
-      value: bank,
-      percentage: Math.round((bank / total) * 100),
-    },
-    {
-      label: "Cash",
-      value: cash,
-      percentage: Math.round((cash / total) * 100),
-    },
-    {
-      label: "Metals",
-      value: metals,
-      percentage: Math.round((metals / total) * 100),
-    },
+  // Largest remainder method: floor all percentages, then distribute remaining
+  // points to items with the largest fractional remainders
+  const items = [
+    { label: "Bank", value: bank, rawPct: (bank / displayedTotal) * 100 },
+    { label: "Cash", value: cash, rawPct: (cash / displayedTotal) * 100 },
+    { label: "Metals", value: metals, rawPct: (metals / displayedTotal) * 100 },
   ];
+
+  const floored = items.map((item) => ({
+    ...item,
+    percentage: Math.floor(item.rawPct),
+    remainder: item.rawPct - Math.floor(item.rawPct),
+  }));
+
+  let remaining = 100 - floored.reduce((sum, item) => sum + item.percentage, 0);
+
+  // Sort by remainder descending, distribute 1% to each until remaining is 0
+  // Uses immutable map to avoid mutating floored items
+  const sorted = [...floored].sort((a, b) => b.remainder - a.remainder);
+  const adjusted = sorted.map((item) => {
+    if (remaining <= 0) return item;
+    remaining -= 1;
+    return { ...item, percentage: item.percentage + 1 };
+  });
+
+  // Return in original order (Bank, Cash, Metals)
+  return items.map((original) => {
+    const matched = adjusted.find((f) => f.label === original.label);
+    if (!matched) {
+      throw new Error(
+        `Invariant violation: missing floored percentage for label "${original.label}"`
+      );
+    }
+    return {
+      label: matched.label,
+      value: matched.value,
+      percentage: matched.percentage,
+    };
+  });
 }

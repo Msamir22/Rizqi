@@ -2,7 +2,7 @@ import { Account, AccountType } from "@astik/db";
 import { FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
@@ -81,10 +81,14 @@ function getAccountTypeConfig(type: AccountType): {
 // =============================================================================
 
 function AccountCard({ data, width }: AccountCardProps): React.JSX.Element {
+  const handlePress = useCallback((): void => {
+    router.push(`/edit-account?id=${data.id}`);
+  }, [data.id]);
+
   return (
     <TouchableOpacity
       activeOpacity={0.85}
-      onPress={() => router.push(`/edit-account?id=${data.id}`)}
+      onPress={handlePress}
       style={{ width }}
     >
       <LinearGradient
@@ -142,7 +146,7 @@ function LoadingState(): React.JSX.Element {
 // Main Component
 // =============================================================================
 
-export function AccountsSection({
+function AccountsSectionComponent({
   accounts,
   isLoading,
 }: AccountsSectionProps): React.JSX.Element {
@@ -164,9 +168,13 @@ export function AccountsSection({
     });
   }, [accounts]);
 
-  const handleSeeAll = (): void => {
+  const handleSeeAll = useCallback((): void => {
     router.push("/accounts");
-  };
+  }, []);
+
+  const handleAddAccount = useCallback((): void => {
+    router.push("/add-account");
+  }, []);
 
   return (
     <View className="my-3">
@@ -197,7 +205,7 @@ export function AccountsSection({
         <LoadingState />
       ) : cardData.length === 0 ? (
         <EmptyStateCard
-          onPress={() => router.push("/add-account")}
+          onPress={handleAddAccount}
           icon="wallet-outline"
           title={t("no_accounts_title")}
           description={tc("tap_to_add")}
@@ -217,3 +225,5 @@ export function AccountsSection({
     </View>
   );
 }
+
+export const AccountsSection = React.memo(AccountsSectionComponent);

@@ -7,7 +7,13 @@
 
 import { palette } from "@/constants/colors";
 import { Ionicons } from "@expo/vector-icons";
-import React, { createContext, useCallback, useContext, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from "react";
 import { Text, View } from "react-native";
 import Animated, { SlideInUp, SlideOutUp } from "react-native-reanimated";
 
@@ -157,8 +163,10 @@ export function ToastProvider({
     setToastConfig(null);
   }, []);
 
+  const value = useMemo<ToastContextValue>(() => ({ showToast }), [showToast]);
+
   return (
-    <ToastContext.Provider value={{ showToast }}>
+    <ToastContext.Provider value={value}>
       {children}
       {toastConfig && <Toast config={toastConfig} onHide={hideToast} />}
     </ToastContext.Provider>

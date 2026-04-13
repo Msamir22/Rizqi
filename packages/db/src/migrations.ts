@@ -183,5 +183,14 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 15,
+      steps: [
+        addColumns({
+          table: "profiles",
+          columns: [{ name: "setup_guide_completed", type: "boolean" }],
+        }),
+      ],
+    },
   ],
 });

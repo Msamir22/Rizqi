@@ -9,7 +9,7 @@
 import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -54,6 +54,16 @@ interface RingGaugeProps {
   percentage: number;
 }
 
+/**
+ * Returns a contextual color based on spending percentage.
+ * Green (<60%) = on track, Yellow (60-80%) = watch spending, Red (>80%) = over budget.
+ */
+function getGaugeColor(percentage: number): string {
+  if (percentage < 60) return palette.nileGreen[500];
+  if (percentage < 80) return palette.orange[500];
+  return palette.red[500];
+}
+
 function RingGauge({ percentage }: RingGaugeProps): React.JSX.Element {
   const { isDark } = useTheme();
   const { t } = useTranslation("common");
@@ -61,6 +71,7 @@ function RingGauge({ percentage }: RingGaugeProps): React.JSX.Element {
   const clampedPercentage = Math.min(100, Math.max(0, percentage));
   const strokeDashoffset =
     RING_CIRCUMFERENCE - (clampedPercentage / 100) * RING_CIRCUMFERENCE;
+  const gaugeColor = getGaugeColor(clampedPercentage);
 
   return (
     <View
@@ -82,7 +93,7 @@ function RingGauge({ percentage }: RingGaugeProps): React.JSX.Element {
           cx={RING_SIZE / 2}
           cy={RING_SIZE / 2}
           r={RING_RADIUS}
-          stroke={palette.nileGreen[500]}
+          stroke={gaugeColor}
           strokeWidth={RING_STROKE_WIDTH}
           fill="transparent"
           strokeDasharray={RING_CIRCUMFERENCE}
@@ -146,16 +157,20 @@ function FilterChip({
  * @returns A React element containing the period summary card with ring gauge, stats, divider, and horizontal filter chips.
  */
 
-export function ThisMonth(): React.JSX.Element {
+function ThisMonthComponent(): React.JSX.Element {
   const [selectedPeriod, setSelectedPeriod] =
     useState<PeriodFilter>("this_month");
   const { data, isLoading } = usePeriodSummary(selectedPeriod);
   const { preferredCurrency } = usePreferredCurrency();
   const { t } = useTranslation("common");
 
-  const handleDetails = (): void => {
+  const handleDetails = useCallback((): void => {
     router.push("/transactions");
-  };
+  }, []);
+
+  const handlePeriodSelect = useCallback((filter: PeriodFilter): void => {
+    setSelectedPeriod(filter);
+  }, []);
 
   const title = PERIOD_LABELS[selectedPeriod];
 
@@ -223,17 +238,20 @@ export function ThisMonth(): React.JSX.Element {
               </Text>
             </View>
 
-            {/* Saved */}
+            {/* Saved / Deficit */}
             <View className="flex-row items-center">
               <Text className="text-[13px] font-medium me-1.5 text-slate-500 dark:text-slate-400">
-                {t("saved_label")}
+                {data.savings >= 0 ? t("saved_label") : t("deficit_label")}
               </Text>
-              <Text className="text-sm font-semibold text-gold-600">
+              <Text
+                className={`text-sm font-semibold ${data.savings >= 0 ? "text-gold-600" : "text-red-500"}`}
+              >
                 {formatCurrency({
-                  amount: data.savings,
+                  amount: Math.abs(data.savings),
                   currency: preferredCurrency,
                 })}{" "}
-                ({data.savingsPercentage}%) ✓
+                ({Math.abs(data.savingsPercentage)}%){" "}
+                {data.savings >= 0 ? "✓" : "⚠"}
               </Text>
             </View>
           </View>
@@ -255,10 +273,12 @@ export function ThisMonth(): React.JSX.Element {
             key={filter}
             label={PERIOD_LABELS[filter]}
             isSelected={selectedPeriod === filter}
-            onPress={() => setSelectedPeriod(filter)}
+            onPress={() => handlePeriodSelect(filter)}
           />
         ))}
       </ScrollView>
     </View>
   );
 }
+
+export const ThisMonth = React.memo(ThisMonthComponent);

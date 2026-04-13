@@ -1,5 +1,5 @@
 import type { AssetMetal, MarketRate } from "@astik/db";
-import { getMetalPriceUsd } from "../utils/metal";
+import { MetalPriceUnavailableError, getMetalPriceUsd } from "../utils/metal";
 
 /**
  * Calculates the total USD value of the provided metal assets.
@@ -23,8 +23,15 @@ export function calculateTotalAssets(
   }
 
   return assetMetals.reduce((total, metal) => {
-    const pricePerGram = getMetalPriceUsd(metal.metalType, marketRates);
-    const value = metal.calculateValue(pricePerGram);
-    return total + value;
+    try {
+      const pricePerGram = getMetalPriceUsd(metal.metalType, marketRates);
+      const value = metal.calculateValue(pricePerGram);
+      return total + value;
+    } catch (error: unknown) {
+      if (error instanceof MetalPriceUnavailableError) {
+        return total;
+      }
+      throw error;
+    }
   }, 0);
 }

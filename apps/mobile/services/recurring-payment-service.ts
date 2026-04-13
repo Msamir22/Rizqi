@@ -8,6 +8,7 @@ import {
   TransactionType,
 } from "@astik/db";
 import { getCurrentUserId } from "./supabase";
+import { createTransaction } from "./transaction-service";
 
 export interface RecurringPaymentData {
   name: string;
@@ -75,4 +76,40 @@ export async function updateRecurringPaymentNextDueDate(
       record.nextDueDate = calculateNextDueDate(currentDueDate, frequency);
     });
   });
+}
+
+/**
+ * Submit a recurring payment: create a linked transaction and advance the due date.
+ * Orchestrates the two DB writes (transaction creation + due date update).
+ *
+ * TODO: Wrap both operations in a single database.write() for atomicity.
+ * Currently, if updateRecurringPaymentNextDueDate fails after createTransaction
+ * succeeds, the payment is recorded but the schedule is not advanced.
+ * See: https://github.com/Msamir22/Astik/issues/217
+ */
+export async function submitRecurringPayment(params: {
+  payment: RecurringPayment;
+  accountId: string;
+  amount: number;
+  note?: string;
+}): Promise<void> {
+  const { payment, accountId, amount, note } = params;
+
+  await createTransaction({
+    amount,
+    currency: payment.currency,
+    categoryId: payment.categoryId,
+    accountId,
+    note,
+    type: payment.type,
+    source: "MANUAL",
+    date: new Date(),
+    linkedRecurringId: payment.id,
+  });
+
+  await updateRecurringPaymentNextDueDate(
+    payment.id,
+    payment.nextDueDate,
+    payment.frequency
+  );
 }

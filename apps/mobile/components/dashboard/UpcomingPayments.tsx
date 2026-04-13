@@ -14,10 +14,11 @@ import {
   BILLS_PERIOD_LABELS,
   type BillsPeriodFilter,
 } from "@/hooks/useRecurringPayments";
+import type { CurrencyType, RecurringPayment } from "@astik/db";
 import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -27,7 +28,6 @@ import {
 } from "react-native";
 
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
-import type { RecurringPayment } from "@astik/db";
 import { useTranslation } from "react-i18next";
 import {
   FeaturedPaymentCard,
@@ -56,7 +56,7 @@ const PERIOD_OPTIONS: readonly BillsPeriodFilter[] = [
  * @returns The JSX element for the Upcoming Bills UI, or an empty fragment when there are no upcoming payments.
  */
 
-export function UpcomingPayments(): React.JSX.Element {
+function UpcomingPaymentsComponent(): React.JSX.Element {
   const { showToast } = useToast();
   const { preferredCurrency } = usePreferredCurrency();
   const { t } = useTranslation("common");
@@ -84,26 +84,41 @@ export function UpcomingPayments(): React.JSX.Element {
     useState<RecurringPayment | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
-  const handlePayNow = (payment: RecurringPayment): void => {
+  const handlePayNow = useCallback((payment: RecurringPayment): void => {
     setSelectedPayment(payment);
     setModalVisible(true);
-  };
+  }, []);
 
-  const handleSuccess = (amount: number): void => {
-    showToast({
-      type: "success",
-      title: t("payment_recorded"),
-      message: `${selectedPayment?.name} - ${formatCurrency({
-        amount,
-        currency: selectedPayment?.currency ?? preferredCurrency,
-      })}`,
-      duration: TOAST_DURATION_MS,
-    });
-  };
+  const handleSuccess = useCallback(
+    (
+      amount: number,
+      paymentName: string,
+      paymentCurrency: CurrencyType
+    ): void => {
+      showToast({
+        type: "success",
+        title: t("payment_recorded"),
+        message: `${paymentName} - ${formatCurrency({
+          amount,
+          currency: paymentCurrency,
+        })}`,
+        duration: TOAST_DURATION_MS,
+      });
+    },
+    [showToast, t]
+  );
 
-  const handleSeeAll = (): void => {
+  const handleSeeAll = useCallback((): void => {
     router.push("/recurring-payments");
-  };
+  }, []);
+
+  const handleModalClose = useCallback((): void => {
+    setModalVisible(false);
+  }, []);
+
+  const handlePeriodSelect = useCallback((period: BillsPeriodFilter): void => {
+    setSelectedPeriod(period);
+  }, []);
 
   // Split payments for display
   const featuredPayment = payments[0];
@@ -152,7 +167,7 @@ export function UpcomingPayments(): React.JSX.Element {
         {PERIOD_OPTIONS.map((period) => (
           <TouchableOpacity
             key={period}
-            onPress={() => setSelectedPeriod(period)}
+            onPress={() => handlePeriodSelect(period)}
             className={`px-3 py-1.5 rounded-full ${
               selectedPeriod === period
                 ? "bg-nileGreen-500"
@@ -229,9 +244,11 @@ export function UpcomingPayments(): React.JSX.Element {
       <PayNowModal
         payment={selectedPayment}
         visible={modalVisible}
-        onClose={() => setModalVisible(false)}
+        onClose={handleModalClose}
         onSuccess={handleSuccess}
       />
     </View>
   );
 }
+
+export const UpcomingPayments = React.memo(UpcomingPaymentsComponent);

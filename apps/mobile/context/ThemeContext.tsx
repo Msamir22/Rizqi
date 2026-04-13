@@ -5,6 +5,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 import { Appearance, ColorSchemeName, View } from "react-native";
@@ -164,10 +165,13 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
       ? darkTheme
       : lightTheme;
 
+  const value = useMemo<ThemeContextType>(
+    () => ({ mode, theme, isDark, colorScheme, toggleTheme, setTheme }),
+    [mode, theme, isDark, colorScheme, toggleTheme, setTheme]
+  );
+
   return (
-    <ThemeContext.Provider
-      value={{ mode, theme, isDark, colorScheme, toggleTheme, setTheme }}
-    >
+    <ThemeContext.Provider value={value}>
       <View className="flex-1">{children}</View>
     </ThemeContext.Provider>
   );

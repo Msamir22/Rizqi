@@ -40,7 +40,8 @@ export interface ComparisonResult {
   currentTotal: number;
   previousTotal: number;
   absoluteChange: number;
-  percentageChange: number;
+  /** Percentage change from previous period. `null` when previous is 0 (undefined growth rate). */
+  percentageChange: number | null;
   trend: "up" | "down" | "stable";
 }
 

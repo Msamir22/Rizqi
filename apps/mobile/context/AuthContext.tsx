@@ -19,6 +19,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -127,13 +128,18 @@ export function AuthProvider({
     await supabase.auth.signOut();
   }, []);
 
-  const value: AuthContextValue = {
-    user,
-    session,
-    isLoading,
-    isAuthenticated: user !== null,
-    signOut,
-  };
+  const isAuthenticated = user !== null;
+
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      user,
+      session,
+      isLoading,
+      isAuthenticated,
+      signOut,
+    }),
+    [user, session, isLoading, isAuthenticated, signOut]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -10,6 +10,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -64,10 +65,10 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
       // Concurrency guard is handled inside syncDatabase (module-level lock in sync.ts)
       await syncDatabase(database, forceFullSync);
       setLastSyncedAt(new Date());
-      // TODO: Replace with structured logging (e.g., Sentry)
     } catch (error) {
-      // TODO: Replace with structured logging (e.g., Sentry)
-      setSyncError(error instanceof Error ? error : new Error("Sync failed"));
+      const syncErr = error instanceof Error ? error : new Error("Sync failed");
+      setSyncError(syncErr);
+      throw syncErr;
     } finally {
       setIsSyncing(false);
     }
@@ -191,13 +192,16 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
-  const value: SyncContextValue = {
-    isSyncing,
-    isInitialSync,
-    lastSyncedAt,
-    syncError,
-    sync,
-  };
+  const value = useMemo<SyncContextValue>(
+    () => ({
+      isSyncing,
+      isInitialSync,
+      lastSyncedAt,
+      syncError,
+      sync,
+    }),
+    [isSyncing, isInitialSync, lastSyncedAt, syncError, sync]
+  );
 
   return <SyncContext.Provider value={value}>{children}</SyncContext.Provider>;
 }

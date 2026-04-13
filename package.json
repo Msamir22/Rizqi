@@ -29,7 +29,7 @@
     "db:transform": "node scripts/transform-schema.js",
     "db:sync": "npm run db:types && npm run db:format-types && npm run db:transform",
     "db:watermelon-migrate": "node scripts/sql-to-watermelon-migration.js",
-    "db:migrate": "npm run db:push -- --include-all && npm run db:watermelon-migrate -- --latest && npm run db:sync",
+    "db:migrate": "npm run db:push -- --include-all && npm run db:sync-local",
     "db:sync-local": "npm run db:watermelon-migrate -- --latest && npm run db:sync",
     "db:pull": "npx supabase db pull",
     "db:push": "npx supabase db push",

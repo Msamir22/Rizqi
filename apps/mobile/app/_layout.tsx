@@ -11,6 +11,7 @@ import {
   NotoSansArabic_600SemiBold,
   NotoSansArabic_700Bold,
 } from "@expo-google-fonts/noto-sans-arabic";
+import * as Sentry from "@sentry/react-native";
 import { useFonts } from "expo-font";
 import { I18nextProvider } from "react-i18next";
 import { router, Stack, useRootNavigation, useSegments } from "expo-router";
@@ -39,6 +40,7 @@ import { QueryProvider } from "../providers/QueryProvider";
 import { MarketRatesRealtimeProvider } from "../providers/MarketRatesRealtimeProvider";
 import { SyncProvider } from "../providers/SyncProvider";
 import { initializeNotifications } from "../services/notification-service";
+import { logger } from "../utils/logger";
 import {
   handleDetectedSms,
   initializeDetectionActionHandler,
@@ -50,11 +52,25 @@ import {
   stopSmsListener,
 } from "../services/sms-live-listener-service";
 
-// Prevent splash screen from auto-hiding until fonts are loaded
-// TODO: Replace with structured logging (e.g., Sentry)
-SplashScreen.preventAutoHideAsync().catch(console.error);
+const SENTRY_DSN = String(process.env.EXPO_PUBLIC_SENTRY_DSN ?? "");
 
-export default function RootLayout(): React.ReactNode {
+Sentry.init({
+  dsn: SENTRY_DSN || undefined,
+  sendDefaultPii: true,
+  tracesSampleRate: 1.0,
+  profilesSampleRate: 1.0,
+  replaysOnErrorSampleRate: 1.0,
+  replaysSessionSampleRate: 0.1,
+  integrations: [Sentry.mobileReplayIntegration()],
+  enabled: SENTRY_DSN.length > 0 && !__DEV__,
+});
+
+// Prevent splash screen from auto-hiding until fonts are loaded
+SplashScreen.preventAutoHideAsync().catch((error: unknown) => {
+  logger.warn("Failed to prevent splash screen auto-hide", { error });
+});
+
+function RootLayout(): React.ReactNode {
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -72,13 +88,12 @@ export default function RootLayout(): React.ReactNode {
   useEffect(() => {
     initI18n()
       .then(() => setI18nInitialized(true))
-      .catch(async (error) => {
-        // TODO: Replace with structured logging (e.g., Sentry)
-        console.error("Failed to initialize i18n:", error);
+      .catch(async (error: unknown) => {
+        logger.error("Failed to initialize i18n", error);
         try {
           await i18n.changeLanguage("en");
-        } catch {
-          // Last resort — i18n stays in whatever state it's in
+        } catch (fallbackError: unknown) {
+          logger.error("Failed to set i18n fallback to en", fallbackError);
         }
         setI18nInitialized(true);
       });
@@ -87,8 +102,9 @@ export default function RootLayout(): React.ReactNode {
   // Hide splash screen once fonts and i18n are loaded
   useEffect(() => {
     if ((fontsLoaded || fontError) && i18nInitialized) {
-      // TODO: Replace with structured logging (e.g., Sentry)
-      SplashScreen.hideAsync().catch(console.error);
+      SplashScreen.hideAsync().catch((error: unknown) => {
+        logger.warn("Failed to hide splash screen", { error });
+      });
     }
   }, [fontsLoaded, fontError, i18nInitialized]);
 
@@ -107,27 +123,34 @@ export default function RootLayout(): React.ReactNode {
 
   useEffect(() => {
     // Initialize notifications channel and action handler
-    // TODO: Replace with structured logging (e.g., Sentry)
-    initializeNotifications().catch(console.error);
+    initializeNotifications().catch((error: unknown) => {
+      logger.error("Failed to initialize notifications", error);
+    });
     const cleanupActions = initializeDetectionActionHandler();
 
     // Subscribe to detected transactions from Tier 1 listener
     const cleanupDetection = onTransactionDetected((parsed) => {
-      // TODO: Replace with structured logging (e.g., Sentry)
-      handleDetectedSms(parsed).catch(console.error);
+      handleDetectedSms(parsed).catch((error: unknown) => {
+        logger.error("Failed to handle detected SMS", error);
+      });
     });
 
     // Start listener if preference enabled
-    // TODO: Replace with structured logging (e.g., Sentry)
-    startDetectionIfEnabled().catch(console.error);
+    startDetectionIfEnabled().catch((error: unknown) => {
+      logger.error("Failed to start SMS detection", error);
+    });
 
     // Listen for app state changes to restart listener
     const appStateSubscription = AppState.addEventListener(
       "change",
       (nextState: AppStateStatus) => {
         if (nextState === "active") {
-          // TODO: Replace with structured logging (e.g., Sentry)
-          startDetectionIfEnabled().catch(console.error);
+          startDetectionIfEnabled().catch((error: unknown) => {
+            logger.error(
+              "Failed to restart SMS detection on app resume",
+              error
+            );
+          });
         }
       }
     );
@@ -187,6 +210,8 @@ export default function RootLayout(): React.ReactNode {
     </ErrorBoundary>
   );
 }
+
+export default Sentry.wrap(RootLayout);
 
 /**
  * Auth Guard — blocks access to all app routes when not authenticated.

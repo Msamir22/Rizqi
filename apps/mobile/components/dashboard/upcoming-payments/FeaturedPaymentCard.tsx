@@ -17,7 +17,7 @@ import type { FeaturedPaymentCardProps } from "./types";
 
 const URGENT_DAYS_THRESHOLD = 3;
 
-export function FeaturedPaymentCard({
+function FeaturedPaymentCardComponent({
   payment,
   onPayNow,
 }: FeaturedPaymentCardProps): React.JSX.Element {
@@ -70,3 +70,5 @@ export function FeaturedPaymentCard({
     </View>
   );
 }
+
+export const FeaturedPaymentCard = React.memo(FeaturedPaymentCardComponent);

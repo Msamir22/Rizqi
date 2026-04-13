@@ -149,16 +149,18 @@ describe("convertCurrency", () => {
 // ---------------------------------------------------------------------------
 
 describe("formatCurrency", () => {
-  it("formats USD with prefix symbol", () => {
-    expect(formatCurrency({ amount: 1234, currency: "USD" })).toBe("$1,234");
+  it("formats USD with prefix symbol and 2 decimal places", () => {
+    expect(formatCurrency({ amount: 1234, currency: "USD" })).toBe("$1,234.00");
   });
 
-  it("formats EGP with suffix code", () => {
-    expect(formatCurrency({ amount: 1234, currency: "EGP" })).toBe("1,234 EGP");
+  it("formats EGP with suffix code and 2 decimal places", () => {
+    expect(formatCurrency({ amount: 1234, currency: "EGP" })).toBe(
+      "1,234.00 EGP"
+    );
   });
 
   it("formats negative amounts correctly", () => {
-    expect(formatCurrency({ amount: -500, currency: "USD" })).toBe("-$500");
+    expect(formatCurrency({ amount: -500, currency: "USD" })).toBe("-$500.00");
   });
 
   it("respects fraction digit options", () => {

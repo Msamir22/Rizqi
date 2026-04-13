@@ -172,8 +172,8 @@ export function useBankAccounts(): UseBankAccountsResult {
 }
 
 /**
- * Hook to get top N accounts ordered by balance (highest first)
- * Used for dashboard display
+ * Hook to get top N accounts ordered by creation date (newest first).
+ * Used for dashboard display.
  */
 export function useTopAccounts(limit: number = 3): UseTopAccountsResult {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -184,7 +184,7 @@ export function useTopAccounts(limit: number = 3): UseTopAccountsResult {
 
     const accountsCollection = database.get<Account>("accounts");
 
-    // Query non-deleted accounts, ordered by balance descending, limited
+    // Query non-deleted accounts, ordered by creation date (newest first), limited
     const query = accountsCollection.query(
       Q.where("deleted", false),
       Q.sortBy("created_at", Q.desc),

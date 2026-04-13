@@ -2,6 +2,19 @@ import type { CurrencyType, MarketRate, MetalType } from "@astik/db";
 import { convertCurrency } from "./currency";
 
 /**
+ * Error thrown when a metal's market price is unavailable (null, NaN, Infinity).
+ * Callers can use `instanceof` to selectively catch this vs unexpected errors.
+ */
+export class MetalPriceUnavailableError extends Error {
+  constructor(metalType: MetalType, rawValue: unknown) {
+    super(
+      `Metal price unavailable for ${metalType}: expected a finite number, got ${String(rawValue)}`
+    );
+    this.name = "MetalPriceUnavailableError";
+  }
+}
+
+/**
  * Retrieve the current price per gram for a specified metal in USD.
  *
  * @param marketRates - Market rates object containing USD-per-gram prices for supported metals
@@ -11,18 +24,29 @@ export function getMetalPriceUsd(
   metalType: MetalType,
   marketRates: NonNullable<MarketRate>
 ): number {
+  let price: number;
   switch (metalType) {
     case "GOLD":
-      return marketRates.goldUsdPerGram;
+      price = marketRates.goldUsdPerGram;
+      break;
     case "SILVER":
-      return marketRates.silverUsdPerGram;
+      price = marketRates.silverUsdPerGram;
+      break;
     case "PLATINUM":
-      return marketRates.platinumUsdPerGram;
+      price = marketRates.platinumUsdPerGram;
+      break;
     case "PALLADIUM":
-      return marketRates.palladiumUsdPerGram;
+      price = marketRates.palladiumUsdPerGram;
+      break;
     default:
       return 0;
   }
+  // Fail explicitly when rate data is missing — callers should handle the error
+  // rather than silently propagating a zero price through net worth calculations.
+  if (!Number.isFinite(price)) {
+    throw new MetalPriceUnavailableError(metalType, price);
+  }
+  return price;
 }
 
 /**
