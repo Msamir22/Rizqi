@@ -230,6 +230,19 @@ export default function SmsScanScreen(): React.JSX.Element {
   // Track whether scan has been initiated to prevent double-start
   const scanInitiated = useRef(false);
 
+  // Auto-request permission on first mount when status is "undetermined".
+  // This preserves the pre-gate UX where tapping "Enable SMS auto-import"
+  // surfaced the native permission dialog directly, with no extra screen.
+  // The visible gate UI only appears if the user has already denied/blocked.
+  const autoRequestedRef = useRef(false);
+  useEffect(() => {
+    if (isPermissionLoading) return;
+    if (permissionStatus !== "undetermined") return;
+    if (autoRequestedRef.current) return;
+    autoRequestedRef.current = true;
+    requestPermission().catch(() => {});
+  }, [permissionStatus, isPermissionLoading, requestPermission]);
+
   // Auto-start scan on mount — waits until permission is granted and categories loaded
   useEffect(() => {
     if (permissionStatus !== "granted") return;
@@ -262,13 +275,32 @@ export default function SmsScanScreen(): React.JSX.Element {
   );
 
   // ── Permission gate ──
-  // Show permission request UI if READ_SMS is not granted.
+  // While the initial permission check (or auto-request for first-time users)
+  // is in flight, show a skeleton loading state instead of the gate UI.
+  // Only render the visible gate when the user has explicitly denied or
+  // blocked the permission — first-time users see the native dialog directly.
   // All hooks are called above (unconditionally) to satisfy Rules of Hooks.
-  if (permissionStatus !== "granted") {
+  if (isPermissionLoading || permissionStatus === "undetermined") {
+    return (
+      <SmsPermissionGate
+        status="undetermined"
+        isLoading
+        onRequest={() => {
+          requestPermission().catch(() => {});
+        }}
+        onOpenSettings={() => {
+          openSettings().catch(() => {});
+        }}
+        onBack={handleBackPress}
+      />
+    );
+  }
+
+  if (permissionStatus === "denied" || permissionStatus === "blocked") {
     return (
       <SmsPermissionGate
         status={permissionStatus}
-        isLoading={isPermissionLoading}
+        isLoading={false}
         onRequest={() => {
           requestPermission().catch(() => {});
         }}
