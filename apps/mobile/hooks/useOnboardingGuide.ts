@@ -65,7 +65,15 @@ interface UseOnboardingGuideResult {
 // ---------------------------------------------------------------------------
 
 export function useOnboardingGuide(): UseOnboardingGuideResult {
+  // NOTE: Store the profile record and the setup_guide_completed value
+  // SEPARATELY. WatermelonDB mutates records in place, so reusing the same
+  // object reference on each observer emission causes React's setState to
+  // bail out (reference equality). Storing the primitive value ensures
+  // re-renders fire whenever the field changes.
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [setupGuideCompleted, setSetupGuideCompleted] = useState<
+    boolean | null
+  >(null);
   const [hasBankAccount, setHasBankAccount] = useState(false);
   const [hasTransaction, setHasTransaction] = useState(false);
   const [hasBudget, setHasBudget] = useState(false);
@@ -94,7 +102,11 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       .observeWithColumns(["setup_guide_completed"])
       .subscribe({
         next: (profiles) => {
-          setProfile(profiles[0] ?? null);
+          const nextProfile = profiles[0] ?? null;
+          setProfile(nextProfile);
+          // Store the primitive field value explicitly — see NOTE above on
+          // why we can't rely on profile object reference changes.
+          setSetupGuideCompleted(nextProfile?.setupGuideCompleted ?? null);
           setProfileLoaded(true);
         },
         error: (error: unknown) => {
@@ -106,8 +118,10 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Derive dismissed state from profile DB field
-  const isDismissed = profile?.setupGuideCompleted ?? true;
+  // Derive dismissed state from the tracked primitive value.
+  // Defaults to `true` (hidden) when the profile hasn't loaded yet to avoid
+  // a flash of the card before we know the real state.
+  const isDismissed = setupGuideCompleted ?? true;
 
   // ── Observe bank accounts (type = "BANK") ──
   useEffect(() => {

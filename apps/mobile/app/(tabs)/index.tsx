@@ -193,12 +193,15 @@ export default function DashboardScreen(): React.JSX.Element {
           {/* Greeting Row — below TopNav, same horizontal padding */}
           <Text
             numberOfLines={1}
-            className="text-base font-semibold mb-4 text-text-primary"
+            className="text-base font-semibold mb-4 text-slate-800 dark:text-slate-25"
           >
             {greetingText}
             {greetingName ? `, ${greetingName}` : ""} 👋
           </Text>
 
+          <SectionErrorBoundary name={t("section_onboarding_guide")}>
+            <OnboardingGuideCard />
+          </SectionErrorBoundary>
           <SectionErrorBoundary name={t("section_net_worth")}>
             <TotalNetWorthCard
               totalNetWorth={totalNetWorth}
@@ -210,9 +213,6 @@ export default function DashboardScreen(): React.JSX.Element {
           </SectionErrorBoundary>
           <SectionErrorBoundary name={t("section_sms_import")}>
             <SmsImportStatusCard />
-          </SectionErrorBoundary>
-          <SectionErrorBoundary name={t("section_onboarding_guide")}>
-            <OnboardingGuideCard />
           </SectionErrorBoundary>
           <SectionErrorBoundary name={t("section_live_rates")}>
             <LiveRates

@@ -116,11 +116,11 @@ function SmsPermissionGate({
           />
         </View>
 
-        <Text className="mb-3 text-center text-xl font-semibold text-text-primary">
+        <Text className="mb-3 text-center text-xl font-semibold text-slate-800 dark:text-slate-25">
           {t("sms_scan_title")}
         </Text>
 
-        <Text className="mb-8 text-center text-base text-text-secondary">
+        <Text className="mb-8 text-center text-base text-slate-600 dark:text-slate-300">
           {t("sms_scan_instructions")}
         </Text>
 
@@ -147,13 +147,13 @@ function SmsPermissionGate({
         )}
 
         <TouchableOpacity activeOpacity={0.7} onPress={onBack}>
-          <Text className="text-base text-text-secondary">
+          <Text className="text-base text-slate-600 dark:text-slate-300">
             {tCommon("back")}
           </Text>
         </TouchableOpacity>
 
         {isBlocked && (
-          <Text className="mt-6 text-center text-sm text-text-muted">
+          <Text className="mt-6 text-center text-sm text-slate-500 dark:text-slate-500">
             {t("sms_scan_instructions")}
           </Text>
         )}

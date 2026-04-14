@@ -174,7 +174,7 @@ function OnboardingGuideCardComponent(): React.ReactElement | null {
     totalSteps > 0 ? (completedCount / totalSteps) * 100 : 0;
 
   return (
-    <View className="rounded-xl mt-4 overflow-hidden bg-slate-100 dark:bg-slate-800">
+    <View className="rounded-xl mt-4 mb-4 overflow-hidden bg-slate-100 dark:bg-slate-800">
       {/* ── Header Row ── */}
       <TouchableOpacity
         onPress={handleToggleExpand}
@@ -183,7 +183,7 @@ function OnboardingGuideCardComponent(): React.ReactElement | null {
       >
         <View className="flex-row items-center gap-x-2">
           <Ionicons name="rocket" size={18} color={palette.nileGreen[500]} />
-          <Text className="text-[14px] font-semibold text-text-primary">
+          <Text className="text-[14px] font-semibold text-slate-800 dark:text-slate-25">
             {t("setup_guide")}
           </Text>
           <View className="px-2 py-0.5 rounded-full bg-nileGreen-100 dark:bg-slate-900">
@@ -227,7 +227,7 @@ function OnboardingGuideCardComponent(): React.ReactElement | null {
           activeOpacity={0.7}
           className="flex-row items-center justify-between px-4 pt-3 pb-3.5"
         >
-          <Text className="text-[13px] text-text-secondary">
+          <Text className="text-[13px] text-slate-600 dark:text-slate-300">
             <Text className="font-medium">{t("next")}: </Text>
             {activeStep ? t(activeStep.labelKey) : ""}
           </Text>
@@ -261,7 +261,7 @@ function OnboardingGuideCardComponent(): React.ReactElement | null {
           {/* Dismiss */}
           <View className="mt-4 flex-row justify-end">
             <TouchableOpacity onPress={handleDismiss} hitSlop={8}>
-              <Text className="text-[12px] font-medium text-text-muted">
+              <Text className="text-[12px] font-medium text-slate-400 dark:text-slate-500">
                 {t("dismiss")}
               </Text>
             </TouchableOpacity>

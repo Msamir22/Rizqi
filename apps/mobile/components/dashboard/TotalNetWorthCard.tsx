@@ -119,7 +119,12 @@ function TotalNetWorthCardComponent({
               <ActivityIndicator size="small" color="#FFF" />
             </View>
           ) : (
-            <Text className="mt-1 text-[42px] font-extrabold tracking-tight text-white">
+            <Text
+              className="mt-1 text-[42px] font-extrabold tracking-tight text-white text-center"
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.6}
+            >
               {formatCurrency({
                 amount: totalNetWorth ?? 0,
                 currency: preferredCurrency,
