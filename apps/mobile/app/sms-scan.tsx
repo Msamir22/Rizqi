@@ -12,15 +12,21 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import { Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
+import { Ionicons } from "@expo/vector-icons";
 import { SUPPORTED_CURRENCIES, type ParsedSmsTransaction } from "@astik/logic";
 import { SmsScanProgress } from "@/components/sms-sync/SmsScanProgress";
-import { useSmsScan } from "@/hooks/useSmsScan";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { useAllCategories } from "@/context/CategoriesContext";
 import { useSmsScanContext } from "@/context/SmsScanContext";
+import { useSmsScan } from "@/hooks/useSmsScan";
+import { useSmsPermission } from "@/hooks/useSmsPermission";
 import { useSmsSync } from "@/hooks/useSmsSync";
 import { loadExistingSmsHashes } from "@/services/sms-sync-service";
-import { useAllCategories } from "@/context/CategoriesContext";
+import { palette } from "@/constants/colors";
 import type { ParseSmsContext } from "@/services/ai-sms-parser-service";
 
 // ---------------------------------------------------------------------------
@@ -55,21 +61,134 @@ function getTopCategories(
 }
 
 // ---------------------------------------------------------------------------
+// Permission Gate
+// ---------------------------------------------------------------------------
+
+/**
+ * Shown when SMS permission is not yet granted.
+ * Provides a button to request permission or open settings (if blocked).
+ */
+function SmsPermissionGate({
+  status,
+  isLoading,
+  onRequest,
+  onOpenSettings,
+  onBack,
+}: {
+  readonly status: "undetermined" | "denied" | "blocked";
+  readonly isLoading: boolean;
+  readonly onRequest: () => void;
+  readonly onOpenSettings: () => void;
+  readonly onBack: () => void;
+}): React.JSX.Element {
+  const { t } = useTranslation("transactions");
+  const { t: tCommon } = useTranslation("common");
+  if (isLoading) {
+    return (
+      <SafeAreaView
+        className="flex-1 items-center justify-center bg-slate-50 dark:bg-slate-900"
+        edges={["top", "bottom"]}
+      >
+        <Skeleton width={200} height={24} borderRadius={8} />
+        <Skeleton
+          width={280}
+          height={16}
+          borderRadius={4}
+          style={{ marginTop: 16 }}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  const isBlocked = status === "blocked";
+
+  return (
+    <SafeAreaView
+      className="flex-1 bg-slate-50 dark:bg-slate-900"
+      edges={["top", "bottom"]}
+    >
+      <View className="flex-1 items-center justify-center px-8">
+        <View className="mb-6 h-20 w-20 items-center justify-center rounded-full bg-nileGreen-500/10">
+          <Ionicons
+            name="chatbubble-ellipses-outline"
+            size={40}
+            color={palette.nileGreen[500]}
+          />
+        </View>
+
+        <Text className="mb-3 text-center text-xl font-semibold text-text-primary">
+          {t("sms_scan_title")}
+        </Text>
+
+        <Text className="mb-8 text-center text-base text-text-secondary">
+          {t("sms_scan_instructions")}
+        </Text>
+
+        {isBlocked ? (
+          <TouchableOpacity
+            className="mb-4 w-full rounded-xl bg-nileGreen-500 py-4"
+            activeOpacity={0.8}
+            onPress={onOpenSettings}
+          >
+            <Text className="text-center text-base font-semibold text-slate-25">
+              {tCommon("open_settings")}
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            className="mb-4 w-full rounded-xl bg-nileGreen-500 py-4"
+            activeOpacity={0.8}
+            onPress={onRequest}
+          >
+            <Text className="text-center text-base font-semibold text-slate-25">
+              {t("allow_sms_access")}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity activeOpacity={0.7} onPress={onBack}>
+          <Text className="text-base text-text-secondary">
+            {tCommon("back")}
+          </Text>
+        </TouchableOpacity>
+
+        {isBlocked && (
+          <Text className="mt-6 text-center text-sm text-text-muted">
+            {t("sms_scan_instructions")}
+          </Text>
+        )}
+      </View>
+    </SafeAreaView>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 /**
  * SMS Scan Progress Screen.
  *
- * Automatically starts scanning on mount and displays live progress.
- * On completion with results, "Review Transactions" navigates to the
- * review page. Empty or error states provide back/retry options.
+ * Includes a permission gate: if READ_SMS is not granted, the user is
+ * prompted to allow access before scanning begins. This keeps the
+ * permission logic in the route so all callers benefit from it.
+ *
+ * Automatically starts scanning on mount (after permission) and displays
+ * live progress. On completion with results, "Review Transactions"
+ * navigates to the review page. Empty or error states provide
+ * back/retry options.
  *
  * When scanMode is "incremental" and lastSyncTimestamp exists, only messages
  * newer than that timestamp are scanned. "full" scans all messages.
  */
 export default function SmsScanScreen(): React.JSX.Element {
   const router = useRouter();
+  const {
+    status: permissionStatus,
+    isLoading: isPermissionLoading,
+    requestPermission,
+    openSettings,
+  } = useSmsPermission();
   const { status, progress, result, transactions, error, startScan } =
     useSmsScan();
 
@@ -111,14 +230,15 @@ export default function SmsScanScreen(): React.JSX.Element {
   // Track whether scan has been initiated to prevent double-start
   const scanInitiated = useRef(false);
 
-  // Auto-start scan on mount — waits until accounts/categories are loaded
+  // Auto-start scan on mount — waits until permission is granted and categories loaded
   useEffect(() => {
+    if (permissionStatus !== "granted") return;
     if (!isAiContextReady) return;
     if (!scanInitiated.current) {
       scanInitiated.current = true;
       initiateScan().catch(console.error);
     }
-  }, [initiateScan, isAiContextReady]);
+  }, [initiateScan, isAiContextReady, permissionStatus]);
 
   const handleReviewPress = (): void => {
     if (transactions.length > 0) {
@@ -140,6 +260,25 @@ export default function SmsScanScreen(): React.JSX.Element {
     () => getTopCategories(transactions),
     [transactions]
   );
+
+  // ── Permission gate ──
+  // Show permission request UI if READ_SMS is not granted.
+  // All hooks are called above (unconditionally) to satisfy Rules of Hooks.
+  if (permissionStatus !== "granted") {
+    return (
+      <SmsPermissionGate
+        status={permissionStatus}
+        isLoading={isPermissionLoading}
+        onRequest={() => {
+          requestPermission().catch(() => {});
+        }}
+        onOpenSettings={() => {
+          openSettings().catch(() => {});
+        }}
+        onBack={handleBackPress}
+      />
+    );
+  }
 
   return (
     <SafeAreaView

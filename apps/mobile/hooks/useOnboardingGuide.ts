@@ -86,11 +86,12 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
   }, [profileLoaded, smsLoaded]);
 
   // ── Observe profile for setupGuideCompleted ──
+  // Use observeWithColumns to react to field-level changes (not just add/remove)
   useEffect(() => {
     const subscription = database
       .get<Profile>("profiles")
       .query(Q.where("deleted", false), Q.take(1))
-      .observe()
+      .observeWithColumns(["setup_guide_completed"])
       .subscribe({
         next: (profiles) => {
           setProfile(profiles[0] ?? null);
