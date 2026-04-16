@@ -239,6 +239,16 @@ for asset transactions)
 
 > Last 10 sessions for context continuity
 
+### Session: 2026-04-16 (16:00)
+
+- **Topic:** Onboarding Card Redesign + SMS Permission Gate + Dashboard Fixes
+- **Accomplished:** Redesigned OnboardingGuideCard as compact expandable card
+  (Mockup 4 from Stitch). Fixed dismiss reactivity (WatermelonDB mutable record
+  reference). Added SMS permission gate to /sms-scan with auto-request for
+  first-time users. Fixed text-text-primary dark mode contrast, currency
+  wrapping, card ordering. Created 3 GitHub issues (#219-#221).
+- **Outcome:** PR #218 on branch fix/onboarding-sms-permission with 5 commits.
+
 ### Session: 2026-02-12 (09:44)
 
 - **Topic:** Concurrent Sync Fix & Category Selector

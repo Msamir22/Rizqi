@@ -55,7 +55,7 @@ function TopNavComponent({
         )}
 
         {/* Logo */}
-        <RizqiLogo width={80} height={25} />
+        <RizqiLogo width={100} height={25} />
 
         {/* Spacer */}
         <View className="flex-1" />

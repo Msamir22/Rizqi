@@ -58,7 +58,14 @@
         }
       ],
       "./plugins/withSmsBroadcastReceiver",
-      "@sentry/react-native"
+      [
+        "@sentry/react-native",
+        {
+          "url": "https://sentry.io/",
+          "project": "react-native",
+          "organization": "mohamed-samir-de"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
