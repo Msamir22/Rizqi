@@ -6,28 +6,26 @@ import { useTheme } from "../../context/ThemeContext";
 interface RizqiLogoProps {
   width: number;
   height: number;
-  color?: string;
 }
 
 /**
  * Rizqi Logo Component
  *
- * Renders the Rizqi logo using imported SVG files.
+ * Renders the Rizqi wordmark using imported SVG files (viewBox-cropped to text only).
  * Switches between white-text (dark mode) and dark-text (light mode) versions.
  *
  * Usage:
- * <RizqiLogo width={120} height={40} />
+ * <RizqiLogo width={80} height={25} />
  */
 export function RizqiLogo({
   width,
   height,
-  color,
 }: RizqiLogoProps): React.ReactElement {
   const { isDark } = useTheme();
 
   if (isDark) {
-    return <RizqiDarkLogoSvg width={width} height={height} color={color} />;
+    return <RizqiDarkLogoSvg width={width} height={height} />;
   }
 
-  return <RizqiLightLogoSvg width={width} height={height} color={color} />;
+  return <RizqiLightLogoSvg width={width} height={height} />;
 }

@@ -55,7 +55,7 @@ function TopNavComponent({
         )}
 
         {/* Logo */}
-        <RizqiLogo width={80} height={25} color={theme.text.primary} />
+        <RizqiLogo width={80} height={25} />
 
         {/* Spacer */}
         <View className="flex-1" />
