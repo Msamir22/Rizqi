@@ -175,7 +175,7 @@ function ThisMonthComponent(): React.JSX.Element {
   const title = PERIOD_LABELS[selectedPeriod];
 
   return (
-    <View className="my-3 rounded-2xl border p-4 overflow-hidden bg-slate-100/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700">
+    <View className="my-4 rounded-2xl border p-4 overflow-hidden bg-slate-100/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700">
       {/* Header */}
       <View className="flex-row items-center justify-between mb-4">
         <Text className="text-lg font-bold text-slate-800 dark:text-slate-25">
@@ -212,9 +212,7 @@ function ThisMonthComponent(): React.JSX.Element {
           <View className="flex-1 ms-5 gap-2">
             {/* Income */}
             <View className="flex-row items-center">
-              <Text className="text-[13px] font-medium me-1.5 text-slate-500 dark:text-slate-400">
-                {t("income_label")}
-              </Text>
+              <Text className="stat-label me-1.5">{t("income_label")}</Text>
               <Text className="text-sm font-semibold text-nileGreen-500">
                 {formatCurrency({
                   amount: data.totalIncome,
@@ -226,9 +224,7 @@ function ThisMonthComponent(): React.JSX.Element {
 
             {/* Expenses */}
             <View className="flex-row items-center">
-              <Text className="text-[13px] font-medium me-1.5 text-slate-500 dark:text-slate-400">
-                {t("expenses_label")}
-              </Text>
+              <Text className="stat-label me-1.5">{t("expenses_label")}</Text>
               <Text className="text-sm font-semibold text-red-500">
                 {formatCurrency({
                   amount: data.totalExpenses,
@@ -240,7 +236,7 @@ function ThisMonthComponent(): React.JSX.Element {
 
             {/* Saved / Deficit */}
             <View className="flex-row items-center">
-              <Text className="text-[13px] font-medium me-1.5 text-slate-500 dark:text-slate-400">
+              <Text className="stat-label me-1.5">
                 {data.savings >= 0 ? t("saved_label") : t("deficit_label")}
               </Text>
               <Text

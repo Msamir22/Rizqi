@@ -77,6 +77,89 @@ function calculateTrend(
  *  - a "Gold 24K" entry showing the preferred-currency price per gram rounded and localized,
  *  - a "Silver" entry showing the preferred-currency price per gram with two decimals.
  */
+/**
+ * Build the currency pair rate entry (e.g. USD/EGP).
+ * When the preferred currency IS USD, uses EUR as a reference instead.
+ */
+function buildCurrencyRate(
+  latestRates: MarketRate,
+  previousDayRate: MarketRate | null,
+  preferredCurrency: CurrencyType
+): Rate {
+  const displayCurrency: CurrencyType =
+    preferredCurrency === "USD" ? "EUR" : preferredCurrency;
+  const currencyRate = latestRates.getRate("USD", displayCurrency);
+  const previousRate = previousDayRate
+    ? previousDayRate.getRate("USD", displayCurrency)
+    : null;
+
+  return {
+    id: "1",
+    label: `USD/${displayCurrency}`,
+    value: currencyRate.toFixed(2),
+    trend: calculateTrend(currencyRate, previousRate),
+    type: "currency",
+  };
+}
+
+/**
+ * Build the gold 24K rate entry, priced per gram in the preferred currency.
+ */
+function buildGoldRate(
+  latestRates: MarketRate,
+  previousDayRate: MarketRate | null,
+  preferredCurrency: CurrencyType,
+  t: (key: string) => string
+): Rate {
+  const symbol =
+    CURRENCY_INFO_MAP[preferredCurrency]?.symbol ?? preferredCurrency;
+  const goldInPreferred = getMetalPrice("GOLD", latestRates, preferredCurrency);
+  const prevGoldInPreferred = previousDayRate
+    ? getMetalPrice("GOLD", previousDayRate, preferredCurrency)
+    : null;
+
+  return {
+    id: "2",
+    label: t("gold_24k_label").replace(":", ""),
+    value: `${symbol} ${Math.round(goldInPreferred).toLocaleString()}/g`,
+    trend: calculateTrend(goldInPreferred, prevGoldInPreferred),
+    type: "gold",
+  };
+}
+
+/**
+ * Build the silver rate entry, priced per gram in the preferred currency.
+ */
+function buildSilverRate(
+  latestRates: MarketRate,
+  previousDayRate: MarketRate | null,
+  preferredCurrency: CurrencyType,
+  t: (key: string) => string
+): Rate {
+  const symbol =
+    CURRENCY_INFO_MAP[preferredCurrency]?.symbol ?? preferredCurrency;
+  const silverInPreferred = getMetalPrice(
+    "SILVER",
+    latestRates,
+    preferredCurrency
+  );
+  const prevSilverInPreferred = previousDayRate
+    ? getMetalPrice("SILVER", previousDayRate, preferredCurrency)
+    : null;
+
+  return {
+    id: "3",
+    label: t("silver_label").replace(":", ""),
+    value: `${symbol} ${silverInPreferred.toFixed(2)}/g`,
+    trend: calculateTrend(silverInPreferred, prevSilverInPreferred),
+    type: "silver",
+  };
+}
+
+/**
+ * Assemble the full list of rates displayed in the LiveRates component.
+ * Returns an empty array when no rate data is available.
+ */
 function buildRatesDisplay(
   latestRates: MarketRate | null,
   previousDayRate: MarketRate | null,
@@ -87,55 +170,10 @@ function buildRatesDisplay(
     return [];
   }
 
-  // Show how many units of the preferred currency per 1 USD
-  // e.g. EGP/USD = 47.50 means 1 USD buys 47.50 EGP
-  // When preferred IS USD, show EUR/USD as a meaningful reference pair
-  const displayCurrency: CurrencyType =
-    preferredCurrency === "USD" ? "EUR" : preferredCurrency;
-  const currencyRate = latestRates.getRate("USD", displayCurrency);
-  const previousRate = previousDayRate
-    ? previousDayRate.getRate("USD", displayCurrency)
-    : null;
-
-  const symbol =
-    CURRENCY_INFO_MAP[preferredCurrency]?.symbol ?? preferredCurrency;
-
-  const goldInPreferred = getMetalPrice("GOLD", latestRates, preferredCurrency);
-  const silverInPreferred = getMetalPrice(
-    "SILVER",
-    latestRates,
-    preferredCurrency
-  );
-
-  const prevGoldInPreferred = previousDayRate
-    ? getMetalPrice("GOLD", previousDayRate, preferredCurrency)
-    : null;
-  const prevSilverInPreferred = previousDayRate
-    ? getMetalPrice("SILVER", previousDayRate, preferredCurrency)
-    : null;
-
   return [
-    {
-      id: "1",
-      label: `USD/${displayCurrency}`,
-      value: currencyRate.toFixed(2),
-      trend: calculateTrend(currencyRate, previousRate),
-      type: "currency",
-    },
-    {
-      id: "2",
-      label: t("gold_24k_label").replace(":", ""),
-      value: `${symbol} ${Math.round(goldInPreferred).toLocaleString()}/g`,
-      trend: calculateTrend(goldInPreferred, prevGoldInPreferred),
-      type: "gold",
-    },
-    {
-      id: "3",
-      label: t("silver_label").replace(":", ""),
-      value: `${symbol} ${silverInPreferred.toFixed(2)}/g`,
-      trend: calculateTrend(silverInPreferred, prevSilverInPreferred),
-      type: "silver",
-    },
+    buildCurrencyRate(latestRates, previousDayRate, preferredCurrency),
+    buildGoldRate(latestRates, previousDayRate, preferredCurrency, t),
+    buildSilverRate(latestRates, previousDayRate, preferredCurrency, t),
   ];
 }
 
@@ -205,7 +243,7 @@ function LiveRatesComponent({
   }, []);
 
   return (
-    <View className="my-3">
+    <View className="my-4">
       <View className="mb-3 flex-row items-center justify-between">
         <View className="flex-row items-center">
           <Text className="header-text ms-1 text-slate-800 dark:text-slate-50">
@@ -271,9 +309,7 @@ function LiveRatesComponent({
               <Text className={`me-1 text-[13px] font-medium ${config.label}`}>
                 {rate.label}:
               </Text>
-              <Text className="text-[13px] font-semibold text-slate-800 dark:text-slate-100">
-                {rate.value}
-              </Text>
+              <Text className="stat-value">{rate.value}</Text>
 
               {rate.trend !== "flat" && (
                 <MaterialIcons

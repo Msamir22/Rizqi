@@ -20,6 +20,7 @@ import {
   View,
 } from "react-native";
 import { useTranslation } from "react-i18next";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TextField } from "@/components/ui/TextField";
 import { palette } from "@/constants/colors";
 import { useAccounts } from "@/hooks/useAccounts";
@@ -45,6 +46,7 @@ export function PayNowModal({
   onSuccess,
 }: PayNowModalProps): React.JSX.Element | null {
   const { accounts } = useAccounts();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation("transactions");
   const { t: tCommon } = useTranslation("common");
   const [amount, setAmount] = useState<string>("");
@@ -91,7 +93,13 @@ export function PayNowModal({
       onRequestClose={onClose}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View className="flex-1 bg-black/50 items-center justify-center px-5">
+        <View
+          className="flex-1 bg-black/50 items-center justify-center px-5"
+          style={{
+            paddingTop: insets.top,
+            paddingBottom: Math.max(insets.bottom, 16),
+          }}
+        >
           <View className="w-full max-w-[340px] rounded-[20px] border p-6 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
             {/* Header */}
             <Text className="text-lg font-bold text-center mb-5 text-slate-800 dark:text-slate-25">

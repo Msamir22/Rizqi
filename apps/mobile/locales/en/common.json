@@ -144,7 +144,7 @@
   "go": "Go",
   "setup_guide": "Setup Guide",
   "setup_guide_progress": "{{completed}} of {{total}} complete",
-  "onboarding_step_cash_account": "Cash account created",
+  "onboarding_step_cash_account": "Add your cash account",
   "onboarding_step_bank_account": "Add your bank account",
   "onboarding_step_first_transaction": "Record your first transaction",
   "onboarding_step_spending_budget": "Set a spending budget",

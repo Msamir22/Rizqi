@@ -9,6 +9,10 @@
 
 import { palette } from "@/constants/colors";
 import { ConfirmationModal } from "@/components/modals/ConfirmationModal";
+import {
+  DrawerMenuSection,
+  type DrawerMenuItem,
+} from "@/components/navigation/DrawerMenuSection";
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
@@ -48,17 +52,9 @@ import { useTranslation } from "react-i18next";
 // Types
 // =============================================================================
 
-interface MenuItem {
-  id: string;
-  labelKey: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  route?: string;
-  onPress?: () => void;
-}
-
 interface MenuSection {
   titleKey: string;
-  items: MenuItem[];
+  items: DrawerMenuItem[];
 }
 
 interface AppDrawerProps {
@@ -310,27 +306,12 @@ export function AppDrawer({
             {/* Menu sections */}
             <View className="flex-1 p-4">
               {MENU_SECTIONS.map((section) => (
-                <View key={section.titleKey} className="mb-4">
-                  <Text className="text-xs font-semibold mb-2 text-slate-400 dark:text-slate-500">
-                    {tDrawer(section.titleKey)}
-                  </Text>
-                  {section.items.map((item) => (
-                    <TouchableOpacity
-                      key={item.id}
-                      onPress={() => item.route && handleNavigation(item.route)}
-                      className="flex-row items-center py-3"
-                    >
-                      <Ionicons
-                        name={item.icon}
-                        size={22}
-                        color={isDark ? palette.slate[300] : palette.slate[600]}
-                      />
-                      <Text className="ms-4 text-base text-slate-800 dark:text-white">
-                        {tCommon(item.labelKey)}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                <DrawerMenuSection
+                  key={section.titleKey}
+                  titleKey={section.titleKey}
+                  items={section.items}
+                  onItemPress={handleNavigation}
+                />
               ))}
             </View>
 

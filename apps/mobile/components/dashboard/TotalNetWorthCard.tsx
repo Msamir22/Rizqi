@@ -58,7 +58,7 @@ function TotalNetWorthCardComponent({
   const glowHeight = 60;
 
   return (
-    <View className="relative my-2 items-center justify-center">
+    <View className="relative my-4 items-center justify-center">
       {/* Bottom Glow */}
       <View
         className="absolute bottom-[-35px] items-center z-[-1]"

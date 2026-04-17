@@ -41,3 +41,13 @@
 .caption-text {
   @apply text-[11px] text-slate-400 dark:text-slate-500;
 }
+
+/* Stat label — small secondary labels (e.g. "Income:", "Expenses:") */
+.stat-label {
+  @apply text-[13px] font-medium text-slate-500 dark:text-slate-400;
+}
+
+/* Stat value — paired with stat-label for small numeric values */
+.stat-value {
+  @apply text-[13px] font-semibold text-slate-800 dark:text-slate-100;
+}

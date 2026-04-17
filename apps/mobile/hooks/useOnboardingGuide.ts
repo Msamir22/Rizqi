@@ -232,19 +232,19 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
         key: "cash_account",
         labelKey: "onboarding_step_cash_account",
         isComplete: hasCashAccount,
-        route: "/(tabs)/accounts",
+        route: "/add-account",
       },
       {
         key: "bank_account",
         labelKey: "onboarding_step_bank_account",
         isComplete: hasBankAccount,
-        route: "/(tabs)/accounts",
+        route: "/add-account",
       },
       {
         key: "first_transaction",
         labelKey: "onboarding_step_first_transaction",
         isComplete: hasTransaction,
-        route: "/(tabs)/transactions",
+        route: "/add-transaction",
       },
       {
         key: "spending_budget",

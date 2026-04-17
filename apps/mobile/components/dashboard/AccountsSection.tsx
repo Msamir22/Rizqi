@@ -177,7 +177,7 @@ function AccountsSectionComponent({
   }, []);
 
   return (
-    <View className="my-3">
+    <View className="my-4">
       {/* Header Row */}
       <View className="flex-row items-center justify-between mb-3">
         <Text className="text-lg font-bold text-slate-800 dark:text-slate-50">

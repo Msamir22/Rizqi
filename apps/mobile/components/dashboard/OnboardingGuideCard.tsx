@@ -174,7 +174,7 @@ function OnboardingGuideCardComponent(): React.ReactElement | null {
     totalSteps > 0 ? (completedCount / totalSteps) * 100 : 0;
 
   return (
-    <View className="rounded-xl mt-4 mb-4 overflow-hidden bg-slate-100 dark:bg-slate-800">
+    <View className="rounded-xl my-4 overflow-hidden bg-slate-100 dark:bg-slate-800">
       {/* ── Header Row ── */}
       <TouchableOpacity
         onPress={handleToggleExpand}

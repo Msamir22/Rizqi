@@ -105,7 +105,7 @@ function RecentTransactionsComponent({
   }, []);
 
   return (
-    <>
+    <View className="my-4">
       {/* Header */}
       <View className="mb-3 flex-row items-center justify-between px-1">
         <Text className="header-text">{t("recent_transactions")}</Text>
@@ -140,7 +140,7 @@ function RecentTransactionsComponent({
           ))}
         </View>
       )}
-    </>
+    </View>
   );
 }
 

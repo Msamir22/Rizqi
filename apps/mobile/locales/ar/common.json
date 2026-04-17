@@ -159,7 +159,7 @@
   "go": "ابدأ",
   "setup_guide": "دليل الإعداد",
   "setup_guide_progress": "{{completed}} من {{total}} مكتمل",
-  "onboarding_step_cash_account": "تم إنشاء حساب النقد",
+  "onboarding_step_cash_account": "أضف حسابك النقدي",
   "onboarding_step_bank_account": "أضف حسابك البنكي",
   "onboarding_step_first_transaction": "سجّل أول معاملة",
   "onboarding_step_spending_budget": "حدد ميزانية الإنفاق",

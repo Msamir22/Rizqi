@@ -134,7 +134,7 @@ function UpcomingPaymentsComponent(): React.JSX.Element {
   }
 
   return (
-    <View className="mt-3 mb-6 rounded-2xl border p-4 overflow-hidden bg-slate-100/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700">
+    <View className="my-4 rounded-2xl border p-4 overflow-hidden bg-slate-100/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700">
       {/* Header */}
       <View className="flex-row items-center justify-between mb-3">
         <Text className="text-lg font-bold text-slate-800 dark:text-slate-25">
@@ -227,9 +227,7 @@ function UpcomingPaymentsComponent(): React.JSX.Element {
 
           {/* Total Due — uses filtered total */}
           <View className="flex-row items-center justify-between mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
-            <Text className="text-[13px] font-medium text-slate-500 dark:text-slate-400">
-              {t("total_due")}
-            </Text>
+            <Text className="stat-label">{t("total_due")}</Text>
             <Text className="text-base font-bold text-nileGreen-500">
               {formatCurrency({
                 amount: totalDueFiltered,
