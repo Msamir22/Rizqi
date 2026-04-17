@@ -12,6 +12,7 @@
 
 import { z } from "zod";
 import { supabase } from "./supabase";
+import { logger } from "@/utils/logger";
 
 import type { Category } from "@astik/db";
 import {
@@ -115,18 +116,17 @@ function parseAiResponse(data: unknown): ChunkAiResult {
   const emptyResult: ChunkAiResult = { transactions: [], hasError: false };
 
   if (typeof data !== "object" || data === null) {
-    console.warn(
-      "[ai-sms-parser] parseAiResponse: data is not an object",
-      typeof data
-    );
+    logger.warn("[ai-sms-parser] parseAiResponse: data is not an object", {
+      dataType: typeof data,
+    });
     return emptyResult;
   }
 
   const obj = data as Record<string, unknown>;
   if (!Array.isArray(obj.transactions)) {
-    console.warn(
-      "[ai-sms-parser] parseAiResponse: no 'transactions' array in response. Keys:",
-      Object.keys(obj)
+    logger.warn(
+      "[ai-sms-parser] parseAiResponse: no 'transactions' array in response",
+      { keys: Object.keys(obj) }
     );
     return emptyResult;
   }
@@ -140,18 +140,18 @@ function parseAiResponse(data: unknown): ChunkAiResult {
       transactions.push(parsed.data);
     } else {
       invalidCount++;
-      console.warn(
-        "[ai-sms-parser] Skipping malformed transaction entry:",
+      logger.warn("[ai-sms-parser] Skipping malformed transaction entry", {
         raw,
-        parsed.error.issues
-      );
+        issues: parsed.error.issues,
+      });
     }
   }
 
   if (invalidCount > 0) {
-    console.warn(
-      `[ai-sms-parser] parseAiResponse: ${invalidCount}/${obj.transactions.length} transactions failed validation`
-    );
+    logger.warn("[ai-sms-parser] parseAiResponse: validation failures", {
+      invalidCount,
+      total: obj.transactions.length,
+    });
   }
 
   return { transactions, hasError: false };
@@ -180,19 +180,19 @@ function mapAiTransactions(
 
     const currency = normalizeCurrency(aiTx.currency);
     if (!candidate) {
-      console.warn(
-        `[ai-sms-parser] Unknown messageId: ${aiTx.messageId}, skipping`
-      );
+      logger.warn("[ai-sms-parser] Unknown messageId, skipping", {
+        messageId: aiTx.messageId,
+      });
       continue;
     }
 
     // Filter out untrusted transactions (promotional offers, ambiguous messages)
     if (!aiTx.isTrusted) {
-      // eslint-disable-next-line no-console
-      console.info(
-        `[ai-sms-parser] Untrusted transaction from ${candidate.message.address}, ` +
-          `amount: ${aiTx.amount} ${aiTx.currency}, skipping`
-      );
+      logger.info("[ai-sms-parser] Untrusted transaction, skipping", {
+        sender: candidate.message.address,
+        amount: aiTx.amount,
+        currency: aiTx.currency,
+      });
       continue;
     }
 
@@ -252,7 +252,32 @@ async function invokeParseChunk(
       response.error instanceof Error
         ? response.error.message
         : String(response.error);
-    console.error("[ai-sms-parser] Chunk error:", errorMsg);
+
+    // supabase-js wraps non-2xx responses in FunctionsHttpError with a
+    // generic message. The actual status + body live on `error.context`
+    // (a Response). Read them so we can tell auth (401) apart from
+    // payload/runtime errors (4xx/5xx) without guessing.
+    let status: number | undefined;
+    let bodyText = "";
+    const ctx = (response.error as { context?: unknown }).context;
+    if (ctx instanceof Response) {
+      status = ctx.status;
+      try {
+        bodyText = await ctx.clone().text();
+      } catch {
+        bodyText = "<unreadable response body>";
+      }
+    }
+
+    logger.error(
+      "[ai-sms-parser] parse-sms chunk failed",
+      response.error instanceof Error ? response.error : new Error(errorMsg),
+      {
+        status,
+        body: bodyText.slice(0, 500),
+        chunkSize: messagesPayload.length,
+      }
+    );
     return errorResult;
   }
 
@@ -316,9 +341,8 @@ export async function parseSmsWithAi(
   if (candidates.length === 0) return emptyResult;
 
   if (USE_MOCK_DATA) {
-    // eslint-disable-next-line no-console
-    console.info(
-      "[ai-sms-parser] 🟡 Using MOCK parsed transactions to save AI tokens."
+    logger.info(
+      "[ai-sms-parser] Using MOCK parsed transactions to save AI tokens"
     );
     return { transactions: [...MOCK_PARSED_TRANSACTIONS] };
   }
@@ -385,10 +409,11 @@ export async function parseSmsWithAi(
         const firstHalf = currentChunk.messages.slice(0, midpoint);
         const secondHalf = currentChunk.messages.slice(midpoint);
 
-        console.warn(
-          `[ai-sms-parser] Chunk of ${currentChunk.messages.length} failed. ` +
-            `Splitting into ${firstHalf.length} + ${secondHalf.length} and retrying.`
-        );
+        logger.warn("[ai-sms-parser] Chunk failed, splitting for retry", {
+          failedSize: currentChunk.messages.length,
+          firstHalfSize: firstHalf.length,
+          secondHalfSize: secondHalf.length,
+        });
 
         // Replace the failed chunk's slot with 2 retry sub-chunks.
         // We splice them right after the current index so they're processed next.
@@ -429,8 +454,11 @@ export async function parseSmsWithAi(
 
     return { transactions: allResults };
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("[ai-sms-parser] Unexpected error:", message);
+    logger.error(
+      "[ai-sms-parser] Unexpected error during parseSmsWithAi",
+      err,
+      { candidateCount: candidates.length }
+    );
     return emptyResult;
   }
 }

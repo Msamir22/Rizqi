@@ -1,12 +1,11 @@
 /**
  * OnboardingGuideCard
  *
- * Dashboard card showing a 5-step setup checklist for new users.
- * Each step reactively tracks completion via WatermelonDB observers.
- * Displays progress bar, step states (completed/active/upcoming),
- * and a dismiss action.
+ * Compact, expandable dashboard card showing a 5-step setup checklist
+ * for new users. Collapsed by default — shows progress pill + next step.
+ * Expands to reveal all steps with completion state.
  *
- * Mockup reference: Stitch project 13253418811527315493
+ * Mockup reference: Stitch project 13253418811527315493, Mockup 4
  *
  * @module OnboardingGuideCard
  */
@@ -20,12 +19,12 @@ import { logger } from "@/utils/logger";
 
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { memo, useCallback, useMemo } from "react";
+import React, { memo, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Text, TouchableOpacity, View } from "react-native";
 
 // =============================================================================
-// STEP ITEM SUB-COMPONENTS
+// STEP ITEM (EXPANDED VIEW)
 // =============================================================================
 
 interface StepItemProps {
@@ -36,7 +35,7 @@ interface StepItemProps {
 }
 
 /**
- * Individual step row in the onboarding checklist.
+ * Individual step row in the expanded checklist.
  * Three visual states: completed, active, upcoming.
  */
 function StepItemComponent({
@@ -50,11 +49,11 @@ function StepItemComponent({
   // ── Completed step ──
   if (step.isComplete) {
     return (
-      <View className="flex-row items-center gap-x-3 opacity-85">
-        <View className="w-6 h-6 rounded-full items-center justify-center bg-nileGreen-500/20">
-          <Ionicons name="checkmark" size={14} color={palette.nileGreen[500]} />
+      <View className="flex-row items-center gap-x-3">
+        <View className="w-5 h-5 rounded-full items-center justify-center bg-nileGreen-500">
+          <Ionicons name="checkmark" size={12} color={palette.slate[25]} />
         </View>
-        <Text className="text-sm text-slate-400 line-through">
+        <Text className="text-[13px] text-slate-400 line-through">
           {t(step.labelKey)}
         </Text>
       </View>
@@ -67,25 +66,21 @@ function StepItemComponent({
       <TouchableOpacity
         onPress={onPress}
         activeOpacity={0.7}
-        className="flex-row items-center justify-between p-3 -mx-1 rounded-lg border"
-        style={{
-          backgroundColor: `${palette.nileGreen[500]}1A`,
-          borderColor: `${palette.nileGreen[500]}33`,
-        }}
+        className="flex-row items-center justify-between"
       >
         <View className="flex-row items-center gap-x-3 flex-1">
-          <View className="w-6 h-6 rounded-full items-center justify-center border-2 border-nileGreen-500">
-            <Text className="text-[11px] font-bold text-nileGreen-500">
+          <View className="w-5 h-5 rounded-full items-center justify-center border-2 border-nileGreen-500">
+            <Text className="text-[10px] font-bold text-nileGreen-500">
               {index + 1}
             </Text>
           </View>
-          <Text className="text-sm font-semibold text-nileGreen-500">
+          <Text className="text-[13px] font-semibold text-nileGreen-500">
             {t(step.labelKey)}
           </Text>
         </View>
-        <View className="px-3.5 py-1.5 rounded-full bg-nileGreen-500">
-          <Text className="text-xs font-bold text-nileGreen-900">
-            {t("add")}
+        <View className="px-3 py-1 rounded-full bg-nileGreen-500">
+          <Text className="text-[10px] font-bold uppercase text-slate-25">
+            {t("go")}
           </Text>
         </View>
       </TouchableOpacity>
@@ -94,23 +89,21 @@ function StepItemComponent({
 
   // ── Upcoming step ──
   return (
-    <View className="flex-row items-center gap-x-3 opacity-85">
-      <View className="w-6 h-6 rounded-full items-center justify-center border border-slate-300 dark:border-slate-600">
-        <Text className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+    <View className="flex-row items-center gap-x-3 opacity-50">
+      <View className="w-5 h-5 rounded-full items-center justify-center border border-slate-400">
+        <Text className="text-[10px] font-bold text-slate-400">
           {index + 1}
         </Text>
       </View>
       <View className="flex-row items-center gap-x-2">
-        <Text className="text-sm text-slate-500 dark:text-slate-400">
-          {t(step.labelKey)}
-        </Text>
-        {step.isNew ? (
-          <View className="px-2 py-0.5 rounded-[10px] bg-nileGreen-500/20">
+        <Text className="text-[13px] text-slate-400">{t(step.labelKey)}</Text>
+        {step.isNew && (
+          <View className="px-2 py-0.5 rounded-full bg-nileGreen-500/20">
             <Text className="text-[10px] font-bold tracking-wider text-nileGreen-500">
               {t("new_badge")}
             </Text>
           </View>
-        ) : null}
+        )}
       </View>
     </View>
   );
@@ -125,6 +118,8 @@ const StepItem = memo(StepItemComponent);
 function OnboardingGuideCardComponent(): React.ReactElement | null {
   const { t } = useTranslation("common");
   const router = useRouter();
+  const [isExpanded, setIsExpanded] = useState(false);
+
   const {
     steps,
     completedCount,
@@ -141,6 +136,8 @@ function OnboardingGuideCardComponent(): React.ReactElement | null {
     [steps]
   );
 
+  const activeStep = activeStepIndex >= 0 ? steps[activeStepIndex] : undefined;
+
   const handleStepPress = useCallback(
     (route?: string): void => {
       if (route) {
@@ -150,6 +147,12 @@ function OnboardingGuideCardComponent(): React.ReactElement | null {
     [router]
   );
 
+  const handleNextStepPress = useCallback((): void => {
+    if (activeStep?.route) {
+      router.push(activeStep.route as never);
+    }
+  }, [activeStep, router]);
+
   const handleDismiss = useCallback((): void => {
     dismiss().catch((error: unknown) => {
       logger.warn("Failed to persist onboarding guide dismissal", {
@@ -157,6 +160,10 @@ function OnboardingGuideCardComponent(): React.ReactElement | null {
       });
     });
   }, [dismiss]);
+
+  const handleToggleExpand = useCallback((): void => {
+    setIsExpanded((prev) => !prev);
+  }, []);
 
   // Don't render if dismissed, all complete, or still loading
   if (isDismissed || isAllComplete || isLoading) {
@@ -167,58 +174,100 @@ function OnboardingGuideCardComponent(): React.ReactElement | null {
     totalSteps > 0 ? (completedCount / totalSteps) * 100 : 0;
 
   return (
-    <View className="rounded-xl p-5 mt-4 border border-slate-300/25 overflow-hidden bg-slate-100 dark:bg-slate-800">
-      {/* Header */}
-      <View className="flex-row justify-between items-start mb-4">
-        <View>
-          <View className="flex-row items-center gap-x-2 mb-1">
-            <Ionicons name="rocket" size={20} color={palette.nileGreen[500]} />
-            <Text className="text-lg font-semibold text-text-primary">
-              {t("setup_guide")}
+    <View className="rounded-xl mt-4 mb-4 overflow-hidden bg-slate-100 dark:bg-slate-800">
+      {/* ── Header Row ── */}
+      <TouchableOpacity
+        onPress={handleToggleExpand}
+        activeOpacity={0.7}
+        className="flex-row items-center justify-between px-4 pt-3.5"
+      >
+        <View className="flex-row items-center gap-x-2">
+          <Ionicons name="rocket" size={18} color={palette.nileGreen[500]} />
+          <Text className="text-[14px] font-semibold text-slate-800 dark:text-slate-25">
+            {t("setup_guide")}
+          </Text>
+          <View className="px-2 py-0.5 rounded-full bg-nileGreen-100 dark:bg-slate-900">
+            <Text className="text-[11px] font-bold text-nileGreen-700 dark:text-nileGreen-500">
+              {completedCount}/{totalSteps}
             </Text>
           </View>
-          <Text className="text-sm font-medium text-text-secondary">
-            {t("setup_guide_progress", {
-              completed: completedCount,
-              total: totalSteps,
-            })}
-          </Text>
         </View>
-      </View>
 
-      {/* Progress Bar */}
-      <View className="h-1.5 rounded-full w-full mb-6 bg-slate-200 dark:bg-slate-900">
+        <View className="flex-row items-center gap-x-2">
+          {/* Dismiss X button (visible in collapsed state) */}
+          {!isExpanded && (
+            <TouchableOpacity
+              onPress={handleDismiss}
+              hitSlop={8}
+              activeOpacity={0.6}
+            >
+              <Ionicons name="close" size={16} color={palette.slate[400]} />
+            </TouchableOpacity>
+          )}
+          <Ionicons
+            name={isExpanded ? "chevron-up" : "chevron-down"}
+            size={16}
+            color={palette.slate[400]}
+          />
+        </View>
+      </TouchableOpacity>
+
+      {/* ── Progress Bar ── */}
+      <View className="mx-4 mt-3 h-1 rounded-full bg-slate-200 dark:bg-slate-900">
         <View
           className="h-full rounded-full bg-nileGreen-500"
           style={{ width: `${progressPercentage}%` }}
         />
       </View>
 
-      {/* Steps Checklist */}
-      <View className="gap-4">
-        {steps.map((step, index) => (
-          <StepItem
-            key={step.key}
-            step={step}
-            index={index}
-            isActive={index === activeStepIndex}
-            onPress={
-              index === activeStepIndex
-                ? () => handleStepPress(step.route)
-                : undefined
-            }
-          />
-        ))}
-      </View>
-
-      {/* Dismiss */}
-      <View className="mt-6 flex-row justify-end">
-        <TouchableOpacity onPress={handleDismiss} hitSlop={8}>
-          <Text className="text-sm font-medium py-2 px-3 text-text-secondary">
-            {t("dismiss")}
+      {/* ── Collapsed: Next Step Row ── */}
+      {!isExpanded && (
+        <TouchableOpacity
+          onPress={handleNextStepPress}
+          activeOpacity={0.7}
+          className="flex-row items-center justify-between px-4 pt-3 pb-3.5"
+        >
+          <Text className="text-[13px] text-slate-600 dark:text-slate-300">
+            <Text className="font-medium">{t("next")}: </Text>
+            {activeStep ? t(activeStep.labelKey) : ""}
           </Text>
+          <Ionicons
+            name="arrow-forward"
+            size={16}
+            color={palette.nileGreen[500]}
+          />
         </TouchableOpacity>
-      </View>
+      )}
+
+      {/* ── Expanded: Full Step List ── */}
+      {isExpanded && (
+        <View className="px-4 pt-4 pb-3.5">
+          <View className="gap-3">
+            {steps.map((step, index) => (
+              <StepItem
+                key={step.key}
+                step={step}
+                index={index}
+                isActive={index === activeStepIndex}
+                onPress={
+                  index === activeStepIndex
+                    ? () => handleStepPress(step.route)
+                    : undefined
+                }
+              />
+            ))}
+          </View>
+
+          {/* Dismiss */}
+          <View className="mt-4 flex-row justify-end">
+            <TouchableOpacity onPress={handleDismiss} hitSlop={8}>
+              <Text className="text-[12px] font-medium text-slate-400 dark:text-slate-500">
+                {t("dismiss")}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 }

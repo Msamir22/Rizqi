@@ -18,6 +18,7 @@
 
 import { supabase } from "./supabase";
 import { z } from "zod";
+import { logger } from "@/utils/logger";
 
 import type { Category, CurrencyType } from "@astik/db";
 import {
@@ -198,9 +199,25 @@ export async function parseVoiceWithAi(
     clearTimeout(timeoutId);
 
     if (response.error) {
-      console.error(
-        "[ai-voice-parser] Edge Function error:",
-        response.error.message
+      // Try to surface the actual status/body from the FunctionsHttpError.
+      let status: number | undefined;
+      let bodyText = "";
+      const ctx = (response.error as { context?: unknown }).context;
+      if (ctx instanceof Response) {
+        status = ctx.status;
+        try {
+          bodyText = await ctx.clone().text();
+        } catch {
+          bodyText = "<unreadable response body>";
+        }
+      }
+
+      logger.error(
+        "[ai-voice-parser] parse-voice Edge Function error",
+        response.error instanceof Error
+          ? response.error
+          : new Error(response.error.message),
+        { status, body: bodyText.slice(0, 500) }
       );
       return {
         kind: "network",
@@ -211,11 +228,10 @@ export async function parseVoiceWithAi(
     const rawData = response.data;
     const parsed = ParseVoiceResponseSchema.safeParse(rawData);
     if (!parsed.success) {
-      console.error(
-        "[ai-voice-parser] Malformed backend response shape:",
-        parsed.error.issues,
-        "rawData:",
-        rawData
+      logger.error(
+        "[ai-voice-parser] Malformed backend response shape",
+        new Error("Response schema validation failed"),
+        { issues: parsed.error.issues, rawData }
       );
       return {
         kind: "schema",
@@ -226,7 +242,10 @@ export async function parseVoiceWithAi(
 
     const data = parsed.data;
     if (data.error) {
-      console.error("[ai-voice-parser] Edge Function error:", data.error);
+      logger.error(
+        "[ai-voice-parser] Edge Function returned error payload",
+        new Error(data.error)
+      );
       return {
         kind: "network",
         message: data.error,
@@ -244,11 +263,10 @@ export async function parseVoiceWithAi(
       if (parsed.success) {
         validTransactions.push(parsed.data);
       } else {
-        console.warn(
-          "[ai-voice-parser] Skipping malformed transaction entry:",
+        logger.warn("[ai-voice-parser] Skipping malformed transaction entry", {
           raw,
-          parsed.error.issues
-        );
+          issues: parsed.error.issues,
+        });
       }
     }
 
@@ -264,10 +282,10 @@ export async function parseVoiceWithAi(
     // silently dropping all transactions and returning a misleading "empty" error.
     const categoryMap: CategoryMap = buildCategoryMap(options.categoryRecords);
     if (categoryMap.size === 0) {
-      console.error(
-        "[ai-voice-parser] Category data unavailable — categoryMap is empty.",
-        "categoryRecords length:",
-        options.categoryRecords.length
+      logger.error(
+        "[ai-voice-parser] Category data unavailable — categoryMap is empty",
+        new Error("Empty categoryMap"),
+        { categoryRecordsLength: options.categoryRecords.length }
       );
       return {
         kind: "config",
@@ -323,10 +341,12 @@ export async function parseVoiceWithAi(
           aiDetectedCurrency,
         });
       } catch (error) {
-        console.warn(
-          "[ai-voice-parser] Skipping semantically invalid transaction:",
-          aiTx,
-          error
+        logger.warn(
+          "[ai-voice-parser] Skipping semantically invalid transaction",
+          {
+            aiTx,
+            error: error instanceof Error ? error.message : String(error),
+          }
         );
       }
     }
@@ -357,7 +377,7 @@ export async function parseVoiceWithAi(
     }
 
     const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("[ai-voice-parser] Unexpected error:", message);
+    logger.error("[ai-voice-parser] Unexpected error", err);
     return {
       kind: "unknown",
       message,

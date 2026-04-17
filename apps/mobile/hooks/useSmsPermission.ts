@@ -60,6 +60,14 @@ export function useSmsPermission(): UseSmsPermissionResult {
 
   /**
    * Check the current permission state without requesting.
+   *
+   * NOTE: Android's `PermissionsAndroid.check()` only returns a boolean — it
+   * cannot distinguish between "undetermined", "denied", and "blocked".
+   * Only `request()` returns that detail. Therefore, when `check()` reports
+   * non-granted, we must PRESERVE the current status instead of resetting it
+   * to "undetermined", otherwise a recheck (e.g. on AppState change after
+   * the native dialog closes) would clobber the "denied"/"blocked" result
+   * from a prior request and make the Allow button appear to do nothing.
    */
   const checkPermission = useCallback(async (): Promise<void> => {
     if (!isAndroid) {
@@ -69,12 +77,18 @@ export function useSmsPermission(): UseSmsPermissionResult {
     }
 
     try {
-      const result = await PermissionsAndroid.check(
+      const granted = await PermissionsAndroid.check(
         PermissionsAndroid.PERMISSIONS.READ_SMS
       );
-      setStatus(result ? "granted" : "undetermined");
+      setStatus((current) => {
+        if (granted) return "granted";
+        // If previously "granted" but now not, user revoked in Settings.
+        if (current === "granted") return "denied";
+        // Otherwise preserve current state (undetermined/denied/blocked).
+        return current;
+      });
     } catch {
-      setStatus("undetermined");
+      // Preserve current status on error.
     } finally {
       setIsLoading(false);
     }
