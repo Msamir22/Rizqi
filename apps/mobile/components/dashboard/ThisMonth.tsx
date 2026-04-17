@@ -10,15 +10,10 @@ import { formatCurrency } from "@rizqi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useCallback, useState } from "react";
-import {
-  ActivityIndicator,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import { palette } from "@/constants/colors";
+import { ThisMonthSkeleton } from "@/components/dashboard/skeletons/ThisMonthSkeleton";
 import { useTheme } from "@/context/ThemeContext";
 import {
   PERIOD_LABELS,
@@ -174,6 +169,10 @@ function ThisMonthComponent(): React.JSX.Element {
 
   const title = PERIOD_LABELS[selectedPeriod];
 
+  if (isLoading) {
+    return <ThisMonthSkeleton />;
+  }
+
   return (
     <View className="my-4 rounded-2xl border p-4 overflow-hidden bg-slate-100/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700">
       {/* Header */}
@@ -199,60 +198,54 @@ function ThisMonthComponent(): React.JSX.Element {
       </View>
 
       {/* Content */}
-      {isLoading ? (
-        <View className="h-24 items-center justify-center">
-          <ActivityIndicator size="small" color={palette.nileGreen[500]} />
-        </View>
-      ) : (
-        <View className="flex-row items-center mb-4">
-          {/* Ring Gauge */}
-          <RingGauge percentage={data.spentPercentage} />
+      <View className="flex-row items-center mb-4">
+        {/* Ring Gauge */}
+        <RingGauge percentage={data.spentPercentage} />
 
-          {/* Stats */}
-          <View className="flex-1 ms-5 gap-2">
-            {/* Income */}
-            <View className="flex-row items-center">
-              <Text className="stat-label me-1.5">{t("income_label")}</Text>
-              <Text className="text-sm font-semibold text-nileGreen-500">
-                {formatCurrency({
-                  amount: data.totalIncome,
-                  currency: preferredCurrency,
-                })}{" "}
-                ↑
-              </Text>
-            </View>
+        {/* Stats */}
+        <View className="flex-1 ms-5 gap-2">
+          {/* Income */}
+          <View className="flex-row items-center">
+            <Text className="stat-label me-1.5">{t("income_label")}</Text>
+            <Text className="text-sm font-semibold text-nileGreen-500">
+              {formatCurrency({
+                amount: data.totalIncome,
+                currency: preferredCurrency,
+              })}{" "}
+              ↑
+            </Text>
+          </View>
 
-            {/* Expenses */}
-            <View className="flex-row items-center">
-              <Text className="stat-label me-1.5">{t("expenses_label")}</Text>
-              <Text className="text-sm font-semibold text-red-500">
-                {formatCurrency({
-                  amount: data.totalExpenses,
-                  currency: preferredCurrency,
-                })}{" "}
-                ↓
-              </Text>
-            </View>
+          {/* Expenses */}
+          <View className="flex-row items-center">
+            <Text className="stat-label me-1.5">{t("expenses_label")}</Text>
+            <Text className="text-sm font-semibold text-red-500">
+              {formatCurrency({
+                amount: data.totalExpenses,
+                currency: preferredCurrency,
+              })}{" "}
+              ↓
+            </Text>
+          </View>
 
-            {/* Saved / Deficit */}
-            <View className="flex-row items-center">
-              <Text className="stat-label me-1.5">
-                {data.savings >= 0 ? t("saved_label") : t("deficit_label")}
-              </Text>
-              <Text
-                className={`text-sm font-semibold ${data.savings >= 0 ? "text-gold-600" : "text-red-500"}`}
-              >
-                {formatCurrency({
-                  amount: Math.abs(data.savings),
-                  currency: preferredCurrency,
-                })}{" "}
-                ({Math.abs(data.savingsPercentage)}%){" "}
-                {data.savings >= 0 ? "✓" : "⚠"}
-              </Text>
-            </View>
+          {/* Saved / Deficit */}
+          <View className="flex-row items-center">
+            <Text className="stat-label me-1.5">
+              {data.savings >= 0 ? t("saved_label") : t("deficit_label")}
+            </Text>
+            <Text
+              className={`text-sm font-semibold ${data.savings >= 0 ? "text-gold-600" : "text-red-500"}`}
+            >
+              {formatCurrency({
+                amount: Math.abs(data.savings),
+                currency: preferredCurrency,
+              })}{" "}
+              ({Math.abs(data.savingsPercentage)}%){" "}
+              {data.savings >= 0 ? "✓" : "⚠"}
+            </Text>
           </View>
         </View>
-      )}
+      </View>
 
       {/* Divider Line */}
       <View className="h-[1px] bg-slate-200 dark:bg-slate-700 -mx-4 mb-3" />

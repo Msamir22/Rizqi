@@ -1,11 +1,12 @@
 import { palette } from "@/constants/colors";
+import { TotalNetWorthSkeleton } from "@/components/dashboard/skeletons/TotalNetWorthSkeleton";
 import { CurrencyType } from "@rizqi/db";
 import { formatCurrency } from "@rizqi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTranslation } from "react-i18next";
 import React from "react";
-import { ActivityIndicator, Dimensions, Text, View } from "react-native";
+import { Dimensions, Text, View } from "react-native";
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 
 interface Props {
@@ -38,6 +39,10 @@ function TotalNetWorthCardComponent({
   isLoading,
 }: Props): React.JSX.Element {
   const { t } = useTranslation("common");
+
+  if (isLoading) {
+    return <TotalNetWorthSkeleton />;
+  }
 
   // Determine arrow icon and color based on percentage change
   const isPositive =
@@ -114,23 +119,17 @@ function TotalNetWorthCardComponent({
             {t("total_net_worth")}
           </Text>
           {/* Main Amount */}
-          {isLoading ? (
-            <View className="my-3">
-              <ActivityIndicator size="small" color="#FFF" />
-            </View>
-          ) : (
-            <Text
-              className="mt-1 text-[42px] font-extrabold tracking-tight text-white text-center"
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.6}
-            >
-              {formatCurrency({
-                amount: totalNetWorth ?? 0,
-                currency: preferredCurrency,
-              })}
-            </Text>
-          )}
+          <Text
+            className="mt-1 text-[42px] font-extrabold tracking-tight text-white text-center"
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.6}
+          >
+            {formatCurrency({
+              amount: totalNetWorth ?? 0,
+              currency: preferredCurrency,
+            })}
+          </Text>
           {/* Secondary Amount (USD) */}
           {!isPreferredCurrencyUSD && (
             <Text className="text-base font-medium text-slate-100 opacity-80">

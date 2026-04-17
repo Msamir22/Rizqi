@@ -1,10 +1,11 @@
 import { palette } from "@/constants/colors";
+import { RecentTransactionsSkeleton } from "@/components/dashboard/skeletons/RecentTransactionsSkeleton";
 import { useCategoryLookup } from "@/context/CategoriesContext";
 import { formatTransactionDate } from "@/utils/transactions";
 import { Category, Transaction } from "@rizqi/db";
 import { router } from "expo-router";
 import React, { useCallback } from "react";
-import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
+import { Text, TouchableOpacity, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { CategoryIcon } from "../common/CategoryIcon";
 import { EmptyStateCard } from "../ui/EmptyStateCard";
@@ -104,6 +105,10 @@ function RecentTransactionsComponent({
     router.push("/add-transaction");
   }, []);
 
+  if (isLoading) {
+    return <RecentTransactionsSkeleton />;
+  }
+
   return (
     <View className="my-4">
       {/* Header */}
@@ -117,11 +122,7 @@ function RecentTransactionsComponent({
       </View>
 
       {/* Transactions List */}
-      {isLoading ? (
-        <View className="items-center py-8">
-          <ActivityIndicator size="small" color={palette.nileGreen[500]} />
-        </View>
-      ) : transactions.length === 0 ? (
+      {transactions.length === 0 ? (
         <EmptyStateCard
           onPress={handleAddTransaction}
           icon="receipt-outline"

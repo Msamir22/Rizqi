@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { palette } from "@/constants/colors";
+import { LiveRatesSkeleton } from "@/components/dashboard/skeletons/LiveRatesSkeleton";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "react-i18next";
 import { formatTimeAgo } from "@/utils/dateHelpers";
@@ -241,6 +242,13 @@ function LiveRatesComponent({
   const handlePress = useCallback((): void => {
     router.push("/live-rates" as never);
   }, []);
+
+  // Show skeleton on initial load (no data yet). When rates exist but we're
+  // refreshing, keep showing the stale pills with the existing small inline
+  // spinner — matches "refresh indicator" not "content loading".
+  if (isLoading && ratesDisplay.length === 0) {
+    return <LiveRatesSkeleton />;
+  }
 
   return (
     <View className="my-4">

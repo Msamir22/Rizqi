@@ -8,6 +8,7 @@
 
 import { useToast } from "@/components/ui/Toast";
 import { palette } from "@/constants/colors";
+import { UpcomingPaymentsSkeleton } from "@/components/dashboard/skeletons/UpcomingPaymentsSkeleton";
 import {
   useRecurringPayments,
   getBillsPeriodDateRange,
@@ -19,13 +20,7 @@ import { formatCurrency } from "@rizqi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import { useTranslation } from "react-i18next";
@@ -133,6 +128,10 @@ function UpcomingPaymentsComponent(): React.JSX.Element {
     return <></>;
   }
 
+  if (isLoading) {
+    return <UpcomingPaymentsSkeleton />;
+  }
+
   return (
     <View className="my-4 rounded-2xl border p-4 overflow-hidden bg-slate-100/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700">
       {/* Header */}
@@ -187,11 +186,7 @@ function UpcomingPaymentsComponent(): React.JSX.Element {
         ))}
       </ScrollView>
 
-      {isLoading ? (
-        <View className="h-[180px] items-center justify-center">
-          <ActivityIndicator size="small" color={palette.nileGreen[500]} />
-        </View>
-      ) : payments.length === 0 ? (
+      {payments.length === 0 ? (
         /* Empty state (FR-010) */
         <View className="h-[120px] items-center justify-center">
           <Ionicons

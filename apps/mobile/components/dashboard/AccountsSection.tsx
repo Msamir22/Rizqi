@@ -4,14 +4,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  ActivityIndicator,
-  Dimensions,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Dimensions, Text, TouchableOpacity, View } from "react-native";
 import { palette } from "@/constants/colors";
+import { AccountsSectionSkeleton } from "@/components/dashboard/skeletons/AccountsSectionSkeleton";
 import { EmptyStateCard } from "../ui/EmptyStateCard";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -131,17 +126,6 @@ function AccountCard({ data, width }: AccountCardProps): React.JSX.Element {
   );
 }
 
-function LoadingState(): React.JSX.Element {
-  return (
-    <View
-      style={{ height: CARD_HEIGHT }}
-      className="items-center justify-center"
-    >
-      <ActivityIndicator size="small" color={palette.nileGreen[500]} />
-    </View>
-  );
-}
-
 // =============================================================================
 // Main Component
 // =============================================================================
@@ -176,6 +160,10 @@ function AccountsSectionComponent({
     router.push("/add-account");
   }, []);
 
+  if (isLoading) {
+    return <AccountsSectionSkeleton />;
+  }
+
   return (
     <View className="my-4">
       {/* Header Row */}
@@ -201,9 +189,7 @@ function AccountsSectionComponent({
       </View>
 
       {/* Content */}
-      {isLoading ? (
-        <LoadingState />
-      ) : cardData.length === 0 ? (
+      {cardData.length === 0 ? (
         <EmptyStateCard
           onPress={handleAddAccount}
           icon="wallet-outline"
