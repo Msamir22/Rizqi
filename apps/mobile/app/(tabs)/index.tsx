@@ -30,19 +30,14 @@ import { logger } from "@/utils/logger";
 import type { CurrencyType } from "@rizqi/db";
 import { CURRENCY_INFO_MAP } from "@rizqi/logic";
 import { useRouter } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
-  type LayoutChangeEvent,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
   RefreshControl,
   ScrollView,
   Text,
   View,
 } from "react-native";
-// INVESTIGATION(025-dashboard-scroll-jump): import for Hypothesis 1 (SafeArea inset timing).
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
 /**
@@ -65,54 +60,6 @@ export default function DashboardScreen(): React.JSX.Element {
   const [isCurrencyPickerOpen, setIsCurrencyPickerOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const isDbReady = useDatabaseReady();
-
-  // INVESTIGATION(025-dashboard-scroll-jump): Hypothesis 1 — log SafeArea insets across
-  // the first ~10 renders to detect whether `top` transitions from 0 to the real inset.
-  const insets = useSafeAreaInsets();
-  const renderCountRef = useRef(0);
-  renderCountRef.current += 1;
-  if (renderCountRef.current <= 10) {
-    logger.debug("[H1][scroll-jump] render insets", {
-      render: renderCountRef.current,
-      top: insets.top,
-      bottom: insets.bottom,
-      left: insets.left,
-      right: insets.right,
-    });
-  }
-
-  // INVESTIGATION(025-dashboard-scroll-jump): Hypothesis 2 — log scroll offset + content
-  // size changes during the cold-start load sequence to detect the content-height race.
-  const lastScrollLogRef = useRef(0);
-  const handleScrollInstrumented = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>): void => {
-      const now = Date.now();
-      if (now - lastScrollLogRef.current < 100) return;
-      lastScrollLogRef.current = now;
-      logger.debug("[H2][scroll-jump] onScroll", {
-        y: e.nativeEvent.contentOffset.y,
-        contentH: e.nativeEvent.contentSize.height,
-        layoutH: e.nativeEvent.layoutMeasurement.height,
-      });
-    },
-    []
-  );
-  const handleContentSizeChange = useCallback(
-    (w: number, h: number): void => {
-      logger.debug("[H2][scroll-jump] onContentSizeChange", { w, h });
-    },
-    []
-  );
-
-  // INVESTIGATION(025-dashboard-scroll-jump): Hypothesis 4 — log the dashboard root
-  // container height across frames to detect Tabs scene-measurement resize.
-  const handleRootLayout = useCallback(
-    (e: LayoutChangeEvent): void => {
-      const { width, height } = e.nativeEvent.layout;
-      logger.debug("[H4][scroll-jump] dashboard root onLayout", { width, height });
-    },
-    []
-  );
   const { t } = useTranslation("common");
   const { profile } = useProfile();
   const { sync } = useSync();
@@ -223,10 +170,6 @@ export default function DashboardScreen(): React.JSX.Element {
       <ScrollView
         contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + 20 }}
         showsVerticalScrollIndicator={false}
-        // INVESTIGATION(025-dashboard-scroll-jump): Hypothesis 2 instrumentation.
-        onScroll={handleScrollInstrumented}
-        onContentSizeChange={handleContentSizeChange}
-        scrollEventThrottle={16}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -238,11 +181,7 @@ export default function DashboardScreen(): React.JSX.Element {
           />
         }
       >
-        <View
-          className="px-5 pt-[10px]"
-          // INVESTIGATION(025-dashboard-scroll-jump): Hypothesis 4 instrumentation.
-          onLayout={handleRootLayout}
-        >
+        <View className="px-5 pt-[10px]">
           <TopNav
             onMenuPress={handleMenuPress}
             currencyCode={preferredCurrency}

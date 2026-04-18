@@ -7,11 +7,10 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import { useVoiceTransactionFlow } from "@/hooks/useVoiceTransactionFlow";
-import { logger } from "@/utils/logger";
 import { buildCategoryTree } from "@rizqi/logic";
 import { Tabs, useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo } from "react";
-import { type LayoutChangeEvent, View } from "react-native";
+import React, { useEffect, useMemo } from "react";
+import { View } from "react-native";
 
 export default function TabLayout(): React.ReactElement {
   const { isDark } = useTheme();
@@ -48,15 +47,8 @@ export default function TabLayout(): React.ReactElement {
     autoStart,
   });
 
-  // INVESTIGATION(025-dashboard-scroll-jump): Hypothesis 4 — log the Tabs outer
-  // container height across frames to detect scene-measurement resize at cold start.
-  const handleTabsOuterLayout = useCallback((e: LayoutChangeEvent): void => {
-    const { width, height } = e.nativeEvent.layout;
-    logger.debug("[H4][scroll-jump] tabs outer onLayout", { width, height });
-  }, []);
-
   return (
-    <View className="flex-1" onLayout={handleTabsOuterLayout}>
+    <View className="flex-1">
       <Tabs
         tabBar={(props) => (
           <CustomBottomTabBar
