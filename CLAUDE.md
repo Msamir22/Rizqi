@@ -89,6 +89,12 @@ Dependency direction: `apps/ → packages/logic → packages/db`. **Never revers
 - Clean up side effects in `useEffect` return function.
 - Use `react-native-safe-area-context`, `KeyboardAvoidingView`, and
   `SafeAreaProvider` for safe areas. No hardcoded safe area padding.
+  `SafeAreaProvider` at the root MUST pass `initialMetrics={initialWindowMetrics}`
+  so the very first render has the correct top inset (otherwise `expo-router` /
+  `react-native-screens` shadow the context and `useSafeAreaInsets()` returns
+  `top: 0` on render 1, causing cold-start scroll-jump). Apply the inset exactly
+  once per screen — do not nest a `SafeAreaView` inside a subtree that already
+  sits under a parent that applied `paddingTop`.
 - Use `react-navigation` and `expo-router` for file-based routing.
 - Use Zod for runtime validation. Derive types with `z.infer<typeof schema>` —
   don't duplicate type definitions.
