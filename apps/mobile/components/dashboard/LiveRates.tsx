@@ -229,10 +229,15 @@ function LiveRatesComponent({
     router.push("/live-rates" as never);
   }, []);
 
-  // Show skeleton on initial load (no data yet). When rates exist but we're
-  // refreshing, keep showing the stale pills with the existing small inline
-  // spinner — matches "refresh indicator" not "content loading".
-  if (isLoading && ratesDisplay.length === 0) {
+  // Show the skeleton only on the true first load (no cached rates yet).
+  // During a pull-to-refresh of existing rates, keep the stale pills on
+  // screen and rely on the small inline spinner in the header — that's a
+  // "refresh indicator", not a "content loading" state. Both guards are
+  // required: `isLoading` alone would clobber existing pills on refresh;
+  // `ratesDisplay.length === 0` alone would render an empty block when
+  // the first load fails.
+  const showSkeleton = isLoading && ratesDisplay.length === 0;
+  if (showSkeleton) {
     return <LiveRatesSkeleton />;
   }
 
