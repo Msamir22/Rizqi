@@ -25,6 +25,11 @@ import {
   SafeAreaProvider,
   initialWindowMetrics,
 } from "react-native-safe-area-context";
+// INVESTIGATION(025-dashboard-scroll-jump v2): confirm initialWindowMetrics is non-null
+// on the primary device. If this logs `null` or `{insets: {top: 0, ...}}`, the fix is
+// a no-op on this device and we need a different approach.
+// eslint-disable-next-line no-console
+console.log("[scroll-jump v2] initialWindowMetrics at import", initialWindowMetrics);
 
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { ThemeProvider, useTheme } from "../context/ThemeContext";

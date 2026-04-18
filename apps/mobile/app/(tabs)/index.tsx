@@ -30,7 +30,7 @@ import { logger } from "@/utils/logger";
 import type { CurrencyType } from "@rizqi/db";
 import { CURRENCY_INFO_MAP } from "@rizqi/logic";
 import { useRouter } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   RefreshControl,
@@ -38,6 +38,10 @@ import {
   Text,
   View,
 } from "react-native";
+// INVESTIGATION(025-dashboard-scroll-jump v2): verify that initialMetrics is actually
+// making render 1 see the real top inset. If render 1 still shows top: 0, the fix
+// didn't take effect on this device.
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
 /**
@@ -60,6 +64,18 @@ export default function DashboardScreen(): React.JSX.Element {
   const [isCurrencyPickerOpen, setIsCurrencyPickerOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const isDbReady = useDatabaseReady();
+
+  // INVESTIGATION(025-dashboard-scroll-jump v2): log insets on first 3 renders.
+  const insetsV2 = useSafeAreaInsets();
+  const renderCountV2Ref = useRef(0);
+  renderCountV2Ref.current += 1;
+  if (renderCountV2Ref.current <= 3) {
+    logger.debug("[v2][scroll-jump] render insets", {
+      render: renderCountV2Ref.current,
+      top: insetsV2.top,
+    });
+  }
+
   const { t } = useTranslation("common");
   const { profile } = useProfile();
   const { sync } = useSync();
