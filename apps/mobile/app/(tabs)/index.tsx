@@ -46,7 +46,8 @@ const SCROLL_CONTENT_STYLE = {
   paddingBottom: TAB_BAR_HEIGHT + 20,
 } as const;
 
-const REFRESH_COLORS: string[] = [palette.nileGreen[500]];
+const REFRESH_TINT_COLOR = palette.nileGreen[500];
+const REFRESH_COLORS: string[] = [REFRESH_TINT_COLOR];
 
 /**
  * Returns a time-based greeting key for i18n.
@@ -184,7 +185,7 @@ export default function DashboardScreen(): React.JSX.Element {
             onRefresh={() => {
               void handleRefresh();
             }}
-            tintColor={palette.nileGreen[500]}
+            tintColor={REFRESH_TINT_COLOR}
             colors={REFRESH_COLORS}
           />
         }

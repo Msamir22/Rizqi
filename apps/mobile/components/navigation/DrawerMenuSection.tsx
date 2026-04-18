@@ -28,6 +28,7 @@ interface DrawerMenuSectionProps {
   readonly titleKey: string;
   readonly items: readonly DrawerMenuItem[];
   readonly onItemPress: (route: string) => void;
+  readonly className?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -38,6 +39,7 @@ function DrawerMenuSectionComponent({
   titleKey,
   items,
   onItemPress,
+  className = "mb-4",
 }: DrawerMenuSectionProps): React.JSX.Element {
   const { t: tCommon } = useTranslation("common");
   const { t: tDrawer } = useTranslation("drawer");
@@ -46,7 +48,7 @@ function DrawerMenuSectionComponent({
   const iconColor = isDark ? palette.slate[300] : palette.slate[600];
 
   return (
-    <View className="mb-4">
+    <View className={className}>
       <Text className="text-xs font-semibold mb-2 text-slate-400 dark:text-slate-500">
         {tDrawer(titleKey)}
       </Text>

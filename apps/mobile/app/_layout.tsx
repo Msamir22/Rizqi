@@ -11,6 +11,7 @@ import {
   NotoSansArabic_600SemiBold,
   NotoSansArabic_700Bold,
 } from "@expo-google-fonts/noto-sans-arabic";
+import { ReadexPro_700Bold } from "@expo-google-fonts/readex-pro";
 import * as Sentry from "@sentry/react-native";
 import { useFonts } from "expo-font";
 import { I18nextProvider } from "react-i18next";
@@ -20,7 +21,10 @@ import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, Platform, type AppStateStatus } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import {
+  SafeAreaProvider,
+  initialWindowMetrics,
+} from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { ThemeProvider, useTheme } from "../context/ThemeContext";
@@ -80,6 +84,7 @@ function RootLayout(): React.ReactNode {
     NotoSansArabic_500Medium,
     NotoSansArabic_600SemiBold,
     NotoSansArabic_700Bold,
+    ReadexPro_700Bold,
   });
 
   const [i18nInitialized, setI18nInitialized] = useState(false);
@@ -188,7 +193,7 @@ function RootLayout(): React.ReactNode {
                       <SmsScanProvider>
                         <LocaleProvider>
                           <ThemeProvider>
-                            <SafeAreaProvider>
+                            <SafeAreaProvider initialMetrics={initialWindowMetrics}>
                               <ToastProvider>
                                 <AuthGuard>
                                   <RootLayoutNav />

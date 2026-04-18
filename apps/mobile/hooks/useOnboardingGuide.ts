@@ -80,19 +80,35 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
   const [hasTransaction, setHasTransaction] = useState(false);
   const [hasBudget, setHasBudget] = useState(false);
   const [hasSmsImported, setHasSmsImported] = useState(false);
-  // NOTE: isLoading tracks the profile observation. WatermelonDB observers
-  // for accounts/transactions/budgets emit synchronously on subscribe, so
-  // those states are immediately available.
   const [isLoading, setIsLoading] = useState(true);
 
-  // Track loading for profile; mark done when it emits.
   const [profileLoaded, setProfileLoaded] = useState(false);
+  const [cashLoaded, setCashLoaded] = useState(false);
+  const [bankLoaded, setBankLoaded] = useState(false);
+  const [txLoaded, setTxLoaded] = useState(false);
+  const [budgetLoaded, setBudgetLoaded] = useState(false);
+  // SMS observer is skipped on iOS, so mark it pre-loaded on non-Android.
+  const [smsLoaded, setSmsLoaded] = useState(Platform.OS !== "android");
 
   useEffect(() => {
-    if (profileLoaded) {
+    if (
+      profileLoaded &&
+      cashLoaded &&
+      bankLoaded &&
+      txLoaded &&
+      budgetLoaded &&
+      smsLoaded
+    ) {
       setIsLoading(false);
     }
-  }, [profileLoaded]);
+  }, [
+    profileLoaded,
+    cashLoaded,
+    bankLoaded,
+    txLoaded,
+    budgetLoaded,
+    smsLoaded,
+  ]);
 
   // ── Observe profile for setupGuideCompleted ──
   // Use observeWithColumns to react to field-level changes (not just add/remove)
@@ -133,9 +149,11 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       .subscribe({
         next: (count) => {
           setHasCashAccount(count > 0);
+          setCashLoaded(true);
         },
         error: (error: unknown) => {
           logger.error("Failed to observe cash accounts", error);
+          setCashLoaded(true);
         },
       });
 
@@ -151,9 +169,11 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       .subscribe({
         next: (count) => {
           setHasBankAccount(count > 0);
+          setBankLoaded(true);
         },
         error: (error: unknown) => {
           logger.error("Failed to observe bank accounts", error);
+          setBankLoaded(true);
         },
       });
 
@@ -169,9 +189,11 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       .subscribe({
         next: (count) => {
           setHasTransaction(count > 0);
+          setTxLoaded(true);
         },
         error: (error: unknown) => {
           logger.error("Failed to observe transactions", error);
+          setTxLoaded(true);
         },
       });
 
@@ -187,9 +209,11 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       .subscribe({
         next: (count) => {
           setHasBudget(count > 0);
+          setBudgetLoaded(true);
         },
         error: (error: unknown) => {
           logger.error("Failed to observe budgets", error);
+          setBudgetLoaded(true);
         },
       });
 
@@ -216,9 +240,11 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       .subscribe({
         next: (count) => {
           setHasSmsImported(count > 0);
+          setSmsLoaded(true);
         },
         error: (error: unknown) => {
           logger.error("Failed to observe SMS-imported transactions", error);
+          setSmsLoaded(true);
         },
       });
 

@@ -14,12 +14,6 @@
       "sourceRoot": "apps/mobile",
       "projectType": "application",
       "tags": []
-    },
-    "api": {
-      "root": "apps/api",
-      "sourceRoot": "apps/api/src",
-      "projectType": "application",
-      "tags": []
     }
   },
   "plugins": [
@@ -35,5 +29,5 @@
       "cache": true
     }
   },
-  "nxCloudId": "694844c0de84d31c1414e8da"
+  "neverConnectToCloud": true
 }

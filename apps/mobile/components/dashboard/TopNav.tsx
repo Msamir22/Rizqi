@@ -3,7 +3,6 @@ import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "@/context/ThemeContext";
 import { RizqiLogo } from "../ui/RizqiLogo";
 
@@ -35,8 +34,13 @@ function TopNavComponent({
   const { theme } = useTheme();
   const { t } = useTranslation("common");
 
+  // Top inset is handled by the parent StarryBackground, which applies
+  // `paddingTop` sourced directly from `initialWindowMetrics.insets.top` on a
+  // plain View (it does NOT use SafeAreaView). Nesting a SafeAreaView here
+  // would reintroduce the double-inset behavior that caused the cold-start
+  // scroll-jump reported in issue #234.
   return (
-    <SafeAreaView edges={["top"]} className="pb-2">
+    <View className="pb-2">
       <View className="flex-row items-center mt-2">
         {/* Hamburger Menu */}
         {onMenuPress && (
@@ -121,7 +125,7 @@ function TopNavComponent({
           </TouchableOpacity>
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
