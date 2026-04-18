@@ -27,6 +27,23 @@ A friction-less mobile money tracker for the Egyptian market.
     /ui - Design system (ready)
 ```
 
+## Prerequisites
+
+- **Node.js 20+** and npm
+- **Supabase CLI** (installed globally — required for `db:*` and `fn:deploy:*`
+  scripts). We install it globally rather than via npm to avoid a flaky ~90MB
+  postinstall binary download that has stalled CI for hours.
+  - **macOS**: `brew install supabase/tap/supabase`
+  - **Windows (scoop)**:
+    `scoop bucket add supabase https://github.com/supabase/scoop-bucket.git && scoop install supabase`
+  - **Windows (manual)**: download
+    [supabase_windows_amd64.zip](https://github.com/supabase/cli/releases/latest),
+    extract `supabase.exe` to a folder, and add that folder to your user `PATH`.
+  - **Linux**: see
+    [Supabase CLI install docs](https://supabase.com/docs/guides/local-development/cli/getting-started).
+
+  Verify with `supabase --version`.
+
 ## Quick Start
 
 ```bash

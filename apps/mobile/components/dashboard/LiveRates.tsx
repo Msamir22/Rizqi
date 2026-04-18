@@ -64,20 +64,6 @@ function calculateTrend(
 }
 
 /**
- * Build the list of live rate items (currency pair, gold, silver) formatted for display.
- *
- * If `latestRates` is null, returns an empty array.
- *
- * @param latestRates - Most recent market rates used to compute current display values
- * @param previousDayRate - Prior-day market rates used to determine trends; may be null
- * @param preferredCurrency - User's preferred currency; when `"USD"` this function uses `"EUR"` as the displayed currency pair base
- * @param t - Translation function from metals namespace
- * @returns An array of three Rate entries:
- *  - a currency pair entry labeled `<displayCurrency>/USD` with adaptive decimal precision,
- *  - a "Gold 24K" entry showing the preferred-currency price per gram rounded and localized,
- *  - a "Silver" entry showing the preferred-currency price per gram with two decimals.
- */
-/**
  * Build the currency pair rate entry (e.g. USD/EGP).
  * When the preferred currency IS USD, uses EUR as a reference instead.
  */

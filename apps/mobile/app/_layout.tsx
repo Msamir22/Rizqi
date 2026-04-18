@@ -21,7 +21,10 @@ import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, Platform, type AppStateStatus } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import {
+  SafeAreaProvider,
+  initialWindowMetrics,
+} from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { ThemeProvider, useTheme } from "../context/ThemeContext";
@@ -190,7 +193,7 @@ function RootLayout(): React.ReactNode {
                       <SmsScanProvider>
                         <LocaleProvider>
                           <ThemeProvider>
-                            <SafeAreaProvider>
+                            <SafeAreaProvider initialMetrics={initialWindowMetrics}>
                               <ToastProvider>
                                 <AuthGuard>
                                   <RootLayoutNav />
