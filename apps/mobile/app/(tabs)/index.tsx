@@ -2,7 +2,7 @@ import { CurrencyPicker } from "@/components/currency/CurrencyPicker";
 import { AccountsSection } from "@/components/dashboard/AccountsSection";
 import { LiveRates } from "@/components/dashboard/LiveRates";
 import { OnboardingGuideCard } from "@/components/dashboard/OnboardingGuideCard";
-
+import { DashboardSkeleton } from "@/components/dashboard/skeletons/DashboardSkeleton";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { ThisMonth } from "@/components/dashboard/ThisMonth";
 import { TopNav } from "@/components/dashboard/TopNav";
@@ -31,13 +31,7 @@ import type { CurrencyType } from "@rizqi/db";
 import { CURRENCY_INFO_MAP } from "@rizqi/logic";
 import { useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
-import {
-  ActivityIndicator,
-  RefreshControl,
-  ScrollView,
-  Text,
-  View,
-} from "react-native";
+import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
 // Static style objects — extracted to module scope to keep referential
@@ -163,13 +157,14 @@ export default function DashboardScreen(): React.JSX.Element {
   // Overall loading state
   const isLoading = accountsLoading || ratesLoading || netWorthLoading;
 
-  // Show loading state until database is ready
+  // Show the full dashboard skeleton while WatermelonDB is still initializing
+  // so the user sees the real content layout immediately instead of a blank
+  // spinner. Section-level hooks handle their own loading states once the DB
+  // is ready.
   if (!isDbReady) {
     return (
       <StarryBackground>
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={palette.nileGreen[500]} />
-        </View>
+        <DashboardSkeleton />
       </StarryBackground>
     );
   }

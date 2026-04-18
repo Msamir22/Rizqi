@@ -11,6 +11,7 @@
  */
 
 import { palette } from "@/constants/colors";
+import { OnboardingGuideCardSkeleton } from "@/components/dashboard/skeletons/OnboardingGuideCardSkeleton";
 import {
   useOnboardingGuide,
   type OnboardingStep,
@@ -165,8 +166,15 @@ function OnboardingGuideCardComponent(): React.ReactElement | null {
     setIsExpanded((prev) => !prev);
   }, []);
 
-  // Don't render if dismissed, all complete, or still loading
-  if (isDismissed || isAllComplete || isLoading) {
+  // While the profile observation is still loading we don't yet know whether
+  // the card should be hidden. Render a skeleton during that brief window so
+  // the dashboard doesn't shift layout when the card appears/disappears.
+  if (isLoading) {
+    return <OnboardingGuideCardSkeleton />;
+  }
+
+  // Don't render if dismissed or all steps are complete.
+  if (isDismissed || isAllComplete) {
     return null;
   }
 

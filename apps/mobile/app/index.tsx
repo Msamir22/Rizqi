@@ -11,12 +11,12 @@
  * @module Index
  */
 
-import { palette } from "@/constants/colors";
+import { DashboardSkeleton } from "@/components/dashboard/skeletons/DashboardSkeleton";
+import { StarryBackground } from "@/components/ui/StarryBackground";
 import { HAS_ONBOARDED_KEY } from "@/constants/storage-keys";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Redirect } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
 
 export default function Index(): React.ReactNode {
   const [isReady, setIsReady] = useState(false);
@@ -43,11 +43,17 @@ export default function Index(): React.ReactNode {
     });
   }, []);
 
+  // While reading the onboarding flag from AsyncStorage, show the dashboard
+  // skeleton so users heading to /(tabs) (the common path — only brand-new
+  // users hit /onboarding) see a seamless content-shaped transition from
+  // here into the dashboard. For users going to /onboarding, this is a
+  // brief (~<50ms) flash before the redirect, which is still less jarring
+  // than a full-screen spinner.
   if (!isReady) {
     return (
-      <View className="flex-1 justify-center items-center bg-slate-50 dark:bg-slate-900">
-        <ActivityIndicator size="large" color={palette.nileGreen[500]} />
-      </View>
+      <StarryBackground>
+        <DashboardSkeleton />
+      </StarryBackground>
     );
   }
 
