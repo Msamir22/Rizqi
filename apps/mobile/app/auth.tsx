@@ -21,7 +21,6 @@
 import { palette } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
-import { HAS_ONBOARDED_KEY } from "@/constants/storage-keys";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
@@ -34,7 +33,6 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { FormView } from "@/components/auth/FormView";
 import { VerificationPendingView } from "@/components/auth/VerificationPendingView";
@@ -78,22 +76,12 @@ export default function AuthScreen(): React.JSX.Element {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [networkError, setNetworkError] = useState<string | null>(null);
 
-  // Guard: If user becomes authenticated, navigate away
+  // Guard: If user becomes authenticated, navigate to the routing gate
   useEffect(() => {
     if (isAuthLoading) return;
     if (isAuthenticated) {
-      // Check if user has onboarded
-      AsyncStorage.getItem(HAS_ONBOARDED_KEY)
-        .then((value) => {
-          if (value === "true") {
-            router.replace("/(tabs)");
-          } else {
-            router.replace("/onboarding");
-          }
-        })
-        .catch(() => {
-          router.replace("/onboarding");
-        });
+      // index.tsx handles the profile-driven routing decision
+      router.replace("/");
     }
   }, [isAuthenticated, isAuthLoading, router]);
 

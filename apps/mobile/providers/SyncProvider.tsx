@@ -24,12 +24,22 @@ import { syncDatabase } from "../services/sync";
 const SYNC_INTERVAL_ACTIVE = 15 * 60 * 1000; // 15 minutes when app is active
 const SYNC_INTERVAL_BACKGROUND = 30 * 60 * 1000; // 30 minutes when backgrounded
 
+/** Timeout for the initial pull-sync before declaring failure (FR-006). */
+const INITIAL_SYNC_TIMEOUT_MS = 20_000;
+
+/** State machine for the initial pull-sync that gates post-sign-in routing. */
+export type InitialSyncState = "in-progress" | "success" | "failed" | "timeout";
+
 interface SyncContextValue {
   isSyncing: boolean;
   isInitialSync: boolean;
   lastSyncedAt: Date | null;
   syncError: Error | null;
   sync: (forceFullSync?: boolean) => Promise<void>;
+  /** Resolved after the initial pull-sync completes or times out. */
+  readonly initialSyncState: InitialSyncState;
+  /** Re-trigger the initial sync. Returns the new state when resolved. */
+  readonly retryInitialSync: () => Promise<InitialSyncState>;
 }
 
 const SyncContext = createContext<SyncContextValue | null>(null);
@@ -47,6 +57,8 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
   const [appState, setAppState] = useState<AppStateStatus>(
     AppState.currentState
   );
+  const [initialSyncState, setInitialSyncState] =
+    useState<InitialSyncState>("in-progress");
 
   const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -54,7 +66,6 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
     // Check if authenticated before syncing
     const authenticated = await checkIsAuthenticated();
     if (!authenticated) {
-      // TODO: Replace with structured logging (e.g., Sentry)
       return;
     }
 
@@ -73,6 +84,41 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
       setIsSyncing(false);
     }
   }, []);
+
+  /**
+   * Runs the initial sync with a 20-second timeout race.
+   * Returns the final InitialSyncState.
+   */
+  const runInitialSync = useCallback(async (): Promise<InitialSyncState> => {
+    setInitialSyncState("in-progress");
+
+    let syncResult: InitialSyncState = "success";
+
+    try {
+      await Promise.race([
+        sync(true),
+        new Promise<never>((_resolve, reject) => {
+          setTimeout(
+            () => reject(new Error("initial-sync-timeout")),
+            INITIAL_SYNC_TIMEOUT_MS
+          );
+        }),
+      ]);
+    } catch (error) {
+      syncResult =
+        error instanceof Error && error.message === "initial-sync-timeout"
+          ? "timeout"
+          : "failed";
+    }
+
+    setInitialSyncState(syncResult);
+    return syncResult;
+  }, [sync]);
+
+  /** Re-trigger the initial sync from the retry screen. */
+  const retryInitialSync = useCallback(async (): Promise<InitialSyncState> => {
+    return runInitialSync();
+  }, [runInitialSync]);
 
   /**
    * Set up the sync interval based on app state.
@@ -155,24 +201,23 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
 
       // Check user is authenticated before syncing
       if (!isAuthenticated) {
-        // TODO: Replace with structured logging (e.g., Sentry)
-        setupSyncInterval(true); // Still set up interval for retry
+        setupSyncInterval(true);
+        setInitialSyncState("success");
         return;
       }
 
       // Check if data was cleared (empty local DB but authenticated)
-      // checkDataClearedAndSync will call sync(true) if DB is empty,
-      // so we only do a regular sync if the DB wasn't empty
       const accountsCollection = database.get("accounts");
       const count = await accountsCollection.query().fetchCount();
 
       if (count === 0) {
-        // TODO: Replace with structured logging (e.g., Sentry)
         setIsInitialSync(true);
-        await sync(true);
+        await runInitialSync();
         setIsInitialSync(false);
       } else {
+        // Non-empty DB — data already exists, sync is non-blocking
         await sync();
+        setInitialSyncState("success");
       }
 
       // Set up initial interval (app starts active)
@@ -180,7 +225,7 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
     };
 
     initialSync().catch(() => {
-      // TODO: Replace with structured logging (e.g., Sentry)
+      setInitialSyncState("failed");
     });
 
     // Cleanup interval on unmount
@@ -199,8 +244,18 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
       lastSyncedAt,
       syncError,
       sync,
+      initialSyncState,
+      retryInitialSync,
     }),
-    [isSyncing, isInitialSync, lastSyncedAt, syncError, sync]
+    [
+      isSyncing,
+      isInitialSync,
+      lastSyncedAt,
+      syncError,
+      sync,
+      initialSyncState,
+      retryInitialSync,
+    ]
   );
 
   return <SyncContext.Provider value={value}>{children}</SyncContext.Provider>;

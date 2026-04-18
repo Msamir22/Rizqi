@@ -20,7 +20,7 @@
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { ensureCashAccount } from "@/services/account-service";
-import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
+import { completeOnboarding } from "@/services/profile-service";
 import type { CurrencyType } from "@rizqi/db";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -68,8 +68,6 @@ export function WalletCreationStep({
   const { t } = useTranslation("onboarding");
   const [phase, setPhase] = useState<WalletCreationPhase>("loading");
 
-  const { setPreferredCurrency } = usePreferredCurrency();
-
   useEffect(() => {
     let isMounted = true;
 
@@ -81,13 +79,6 @@ export function WalletCreationStep({
       if (result.error) {
         setPhase("error");
       } else {
-        // Persist the selected currency as the user's preferred currency.
-        // Non-critical — wallet was created, so we still show success.
-        try {
-          await setPreferredCurrency(currency);
-        } catch (e) {
-          console.error("Failed to set preferred currency:", e);
-        }
         if (!isMounted) return;
         setPhase("success");
       }
@@ -108,6 +99,9 @@ export function WalletCreationStep({
     if (phase === "error") {
       onError();
     } else {
+      // Flip the onboarding_completed flag (FR-011). Fire-and-forget —
+      // the flag syncs to the server on the next push-sync cycle.
+      completeOnboarding().catch(() => {});
       onComplete();
     }
   }, [phase, onComplete, onError]);

@@ -7,13 +7,21 @@
  * @module storage-keys
  */
 
-/** Set to `"true"` after the user completes onboarding. */
+/**
+ * @deprecated Use `profiles.onboarding_completed` (WatermelonDB) instead.
+ * Retained for one release cycle to support pre-release devices that may still
+ * write this key. Removal tracked in follow-up GitHub issue.
+ */
 export const HAS_ONBOARDED_KEY = "hasOnboarded";
 
 /** ISO timestamp when the user first launched the app. */
 export const FIRST_USE_DATE_KEY = "@rizqi/first-use-date";
 
-/** User's preferred language: "en" or "ar". */
+/**
+ * @deprecated Use `profiles.preferred_language` (WatermelonDB) instead.
+ * Retained for one release cycle to support pre-release devices that may still
+ * write this key. Removal tracked in follow-up GitHub issue.
+ */
 export const LANGUAGE_KEY = "@rizqi/language";
 
 // =============================================================================

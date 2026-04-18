@@ -16,9 +16,7 @@
  * @module AuthCallbackRoute
  */
 
-import { HAS_ONBOARDED_KEY } from "@/constants/storage-keys";
 import { useAuth } from "@/context/AuthContext";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect } from "react";
 import { View } from "react-native";
@@ -45,7 +43,7 @@ export default function AuthCallbackScreen(): React.JSX.Element {
   const params = useLocalSearchParams();
 
   useEffect(() => {
-    const handleRedirect = async (): Promise<void> => {
+    const handleRedirect = (): void => {
       if (isLoading) return;
 
       if (!isAuthenticated) {
@@ -62,18 +60,14 @@ export default function AuthCallbackScreen(): React.JSX.Element {
       }
 
       try {
-        const value = await AsyncStorage.getItem(HAS_ONBOARDED_KEY);
-        if (value === "true") {
-          router.replace("/(tabs)");
-        } else {
-          router.replace("/onboarding");
-        }
+        // index.tsx handles the profile-driven routing decision
+        router.replace("/");
       } catch {
-        router.replace("/(tabs)");
+        router.replace("/");
       }
     };
 
-    void handleRedirect();
+    handleRedirect();
   }, [router, isAuthenticated, isLoading, params]);
 
   // Render nothing while redirecting

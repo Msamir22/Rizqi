@@ -977,33 +977,37 @@ WatermelonDB for offline access.
 
 ### 12.2 Table: `profiles`
 
-| Column                  | Type        | Required | Description                                       |
-| ----------------------- | ----------- | -------- | ------------------------------------------------- |
-| `id`                    | UUID        | ✅       | Primary Key (same as auth.users.id)               |
-| `user_id`               | UUID        | ✅       | FK → auth.users (unique)                          |
-| `first_name`            | TEXT        | ❌       | From Google or manual sign-up                     |
-| `last_name`             | TEXT        | ❌       | From Google or manual sign-up                     |
-| `display_name`          | TEXT        | ❌       | For greeting ("Good Morning, Mohamed")            |
-| `avatar_url`            | TEXT        | ❌       | From Google profile or custom                     |
-| `preferred_currency`    | CHAR(3)     | ✅       | Default: 'EGP'                                    |
-| `theme`                 | ENUM        | ✅       | `'LIGHT'`, `'DARK'`, `'SYSTEM'` (default: SYSTEM) |
-| `sms_detection_enabled` | BOOLEAN     | ✅       | Toggle SMS auto-detection (default: false)        |
-| `onboarding_completed`  | BOOLEAN     | ✅       | Track first-time setup (default: false)           |
-| `notification_settings` | JSONB       | ❌       | Per-notification-type toggles                     |
-| `created_at`            | TIMESTAMPTZ | ✅       | Auto-generated                                    |
-| `updated_at`            | TIMESTAMPTZ | ✅       | For WatermelonDB sync                             |
-| `deleted`               | BOOLEAN     | ✅       | Soft delete for sync (default: false)             |
+| Column                  | Type        | Required | Description                                            |
+| ----------------------- | ----------- | -------- | ------------------------------------------------------ |
+| `id`                    | UUID        | ✅       | Primary Key (same as auth.users.id)                    |
+| `user_id`               | UUID        | ✅       | FK → auth.users (unique)                               |
+| `first_name`            | TEXT        | ❌       | From Google or manual sign-up                          |
+| `last_name`             | TEXT        | ❌       | From Google or manual sign-up                          |
+| `display_name`          | TEXT        | ❌       | For greeting ("Good Morning, Mohamed")                 |
+| `avatar_url`            | TEXT        | ❌       | From Google profile or custom                          |
+| `preferred_currency`    | CHAR(3)     | ✅       | Default: 'EGP'                                         |
+| `preferred_language`    | TEXT        | ❌       | `'en'` or `'ar'` (set at Language step)                |
+| `theme`                 | ENUM        | ✅       | `'LIGHT'`, `'DARK'`, `'SYSTEM'` (default: SYSTEM)      |
+| `sms_detection_enabled` | BOOLEAN     | ✅       | Toggle SMS auto-detection (default: false)             |
+| `onboarding_completed`  | BOOLEAN     | ✅       | Track first-time setup (default: false)                |
+| `slides_viewed`         | BOOLEAN     | ✅       | Whether onboarding slides were viewed (default: false) |
+| `notification_settings` | JSONB       | ❌       | Per-notification-type toggles                          |
+| `created_at`            | TIMESTAMPTZ | ✅       | Auto-generated                                         |
+| `updated_at`            | TIMESTAMPTZ | ✅       | For WatermelonDB sync                                  |
+| `deleted`               | BOOLEAN     | ✅       | Soft delete for sync (default: false)                  |
 
 ### 12.3 Profile Creation Flow
 
 ```
-1. User opens app → signInAnonymously()
+1. User opens app → sign-up or sign-in required (no anonymous access)
 2. System creates profile with:
    - user_id = auth.uid()
-   - preferred_currency = 'EGP'
+   - preferred_currency = 'EGP' (seeded by handle_new_user trigger)
+   - preferred_language = NULL (set at Language step)
    - theme = 'SYSTEM'
    - sms_detection_enabled = false
    - onboarding_completed = false
+   - slides_viewed = false
 
 3. User signs up with Google:
    - first_name, last_name, display_name, avatar_url populated from Google
@@ -1012,6 +1016,45 @@ WatermelonDB for offline access.
    - User enters first_name, last_name in sign-up form
    - display_name = first_name
 ```
+
+### 12.4 Onboarding Flow (4 Steps)
+
+**Decision (2026-04-18):** The onboarding flow is a mandatory 4-step sequence
+shown to users whose `onboarding_completed` flag is `false`. The routing gate at
+`apps/mobile/app/index.tsx` reads the profile from WatermelonDB after a blocking
+initial pull-sync and determines the user's next screen.
+
+**Step order:**
+
+1. **Language** (mandatory) — User selects `'en'` or `'ar'`. Persists
+   `preferred_language` to the profile row. Replaces the legacy AsyncStorage
+   `LANGUAGE_KEY` as the server-authoritative source.
+2. **Slides carousel** (skippable) — Onboarding slides introducing the app. User
+   can skip or view all. Either action sets `slides_viewed = true`.
+3. **Currency** (mandatory, no skip) — User selects their preferred currency.
+   The app auto-creates a cash account in that currency. No skip button is
+   shown. Replaces the previous skip-with-fallback behavior.
+4. **Cash-account confirmation** — Informational message confirming the
+   auto-created cash account. Dismissing this step sets
+   `onboarding_completed = true` on the profile.
+
+**Server-authoritative fields:**
+
+- `preferred_language` and `preferred_currency` are persisted to the remote
+  profile (Supabase), not just AsyncStorage. They survive reinstall, device
+  switch, and sign-in from a new device.
+- `onboarding_completed` is the single routing gate. Per-step signals
+  (`preferred_language`, `slides_viewed`, cash-account presence) are used only
+  to determine the resume point when the overall flag is false.
+
+**Legacy keys retired from the onboarding gate:**
+
+- `HAS_ONBOARDED_KEY` (AsyncStorage) — previously used by `index.tsx` to gate
+  onboarding. No longer read by the routing gate. The export is retained with a
+  `@deprecated` JSDoc for one release cycle.
+- `LANGUAGE_KEY` (AsyncStorage) — previously used to persist language locally
+  only. No longer read for the onboarding flow. Retained with `@deprecated`
+  JSDoc; removal tracked as a follow-up issue.
 
 ---
 

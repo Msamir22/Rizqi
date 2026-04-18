@@ -1,55 +1,85 @@
 /**
- * App Entry Point
+ * App Entry Point — Routing Gate
  *
- * Handles initial routing after authentication is confirmed by AuthGuard.
- * Only checks onboarding status — auth is enforced by the layout-level guard.
+ * Determines the user's first screen after authentication by reading the
+ * profile state from WatermelonDB (post initial pull-sync). Replaces the
+ * legacy AsyncStorage HAS_ONBOARDED_KEY gate.
  *
- * Flow:
- * 1. AuthGuard ensures user is authenticated before this renders
- * 2. Check onboarding → redirect to `/(tabs)` or `/onboarding`
+ * Priority:
+ * 1. Sync in-progress → show loading skeleton
+ * 2. Sync failed/timeout → RetrySyncScreen
+ * 3. Profile.onboardingCompleted = true → dashboard
+ * 4. Resume at first incomplete step → onboarding
  *
  * @module Index
  */
 
+import { Account, database } from "@rizqi/db";
 import { DashboardSkeleton } from "@/components/dashboard/skeletons/DashboardSkeleton";
+import { RetrySyncScreen } from "@/components/ui/RetrySyncScreen";
 import { StarryBackground } from "@/components/ui/StarryBackground";
-import { HAS_ONBOARDED_KEY } from "@/constants/storage-keys";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useProfile } from "@/hooks/useProfile";
+import { useSync } from "@/providers/SyncProvider";
+import { performLogout } from "@/services/logout-service";
+import {
+  buildRoutingDecisionLog,
+  getRoutingDecision,
+} from "@/utils/routing-decision";
 import { Redirect } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { Q } from "@nozbe/watermelondb";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { logger } from "@/utils/logger";
 
 export default function Index(): React.ReactNode {
-  const [isReady, setIsReady] = useState(false);
-  const [hasOnboarded, setHasOnboarded] = useState(false);
+  const { initialSyncState, retryInitialSync } = useSync();
+  const { profile, isLoading: isProfileLoading } = useProfile();
+  const [hasCashAccount, setHasCashAccount] = useState(false);
+  const hasLoggedRef = useRef(false);
 
+  // Observe cash-account presence for the routing gate (Option B per data-model.md § 3)
   useEffect(() => {
-    const init = async (): Promise<void> => {
-      try {
-        const value = await AsyncStorage.getItem(HAS_ONBOARDED_KEY);
-        if (value === "true") {
-          setHasOnboarded(true);
-        }
-      } catch {
-        // TODO: Replace with structured logging (e.g., Sentry)
-        // Failed to read onboarding status — default to not onboarded
-      } finally {
-        setIsReady(true);
-      }
-    };
+    const subscription = database
+      .get<Account>("accounts")
+      .query(Q.where("type", "CASH"), Q.where("deleted", false), Q.take(1))
+      .observe()
+      .subscribe({
+        next: (accounts) => setHasCashAccount(accounts.length > 0),
+        error: () => setHasCashAccount(false),
+      });
 
-    init().catch(() => {
-      // Ensure isReady is always set even if the async IIFE throws
-      setIsReady(true);
-    });
+    return () => subscription.unsubscribe();
   }, []);
 
-  // While reading the onboarding flag from AsyncStorage, show the dashboard
-  // skeleton so users heading to /(tabs) (the common path — only brand-new
-  // users hit /onboarding) see a seamless content-shaped transition from
-  // here into the dashboard. For users going to /onboarding, this is a
-  // brief (~<50ms) flash before the redirect, which is still less jarring
-  // than a full-screen spinner.
-  if (!isReady) {
+  const routingInputs = {
+    syncState: initialSyncState,
+    onboardingCompleted: profile?.onboardingCompleted ?? false,
+    hasPreferredLanguage: !!profile?.preferredLanguage,
+    slidesViewed: profile?.slidesViewed ?? false,
+    hasCashAccount,
+  };
+
+  const outcome = getRoutingDecision(routingInputs);
+
+  // FR-014: Emit one structured log per routing-gate evaluation
+  useEffect(() => {
+    if (!hasLoggedRef.current && initialSyncState !== "in-progress") {
+      hasLoggedRef.current = true;
+      logger.info("onboarding.routing.decision", {
+        ...buildRoutingDecisionLog(routingInputs, outcome),
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- log once per resolved sync state
+  }, [initialSyncState]);
+
+  /** Sign-out handler for RetrySyncScreen — uses existing logout service. */
+  const handleSignOut = useCallback(() => {
+    performLogout(database).catch(() => {});
+    // Explicitly return void to satisfy ESLint
+    return;
+  }, []);
+
+  // Show loading skeleton while profile is being observed or sync is running
+  if (initialSyncState === "in-progress" || isProfileLoading) {
     return (
       <StarryBackground>
         <DashboardSkeleton />
@@ -57,9 +87,26 @@ export default function Index(): React.ReactNode {
     );
   }
 
-  if (hasOnboarded) {
-    return <Redirect href="/(tabs)" />;
-  } else {
-    return <Redirect href="/onboarding" />;
+  switch (outcome) {
+    case "dashboard":
+      return <Redirect href="/(tabs)" />;
+    case "retry":
+      return (
+        <RetrySyncScreen
+          onRetry={(): void => {
+            retryInitialSync().catch(() => {});
+          }}
+          onSignOut={handleSignOut}
+        />
+      );
+    case "loading":
+      return (
+        <StarryBackground>
+          <DashboardSkeleton />
+        </StarryBackground>
+      );
+    default:
+      // language | slides | currency | cash-account-confirmation → onboarding
+      return <Redirect href="/onboarding" />;
   }
 }

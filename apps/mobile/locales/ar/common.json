@@ -177,5 +177,10 @@
   "section_accounts": "الحسابات",
   "section_this_month": "هذا الشهر",
   "section_upcoming_payments": "المدفوعات القادمة",
-  "section_recent_transactions": "المعاملات الأخيرة"
+  "section_recent_transactions": "المعاملات الأخيرة",
+  "sync_failed_title": "تعذر تحميل حسابك",
+  "sync_failed_description": "حاولنا تنزيل أحدث بياناتك لكن لم نتمكن من الوصول إلى الخوادم.",
+  "sign_out": "تسجيل الخروج",
+  "sync_helper_text": "لا يزال لا يعمل؟ تحقق من اتصالك بالإنترنت.",
+  "cash_account_creation_failed": "فشل إنشاء الحساب النقدي"
 }

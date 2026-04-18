@@ -627,7 +627,9 @@ export type Database = {
           notification_settings: Json | null;
           onboarding_completed: boolean;
           preferred_currency: string;
+          preferred_language: string | null;
           setup_guide_completed: boolean;
+          slides_viewed: boolean;
           sms_detection_enabled: boolean;
           theme: Database["public"]["Enums"]["theme_preference"];
           updated_at: string;
@@ -644,7 +646,9 @@ export type Database = {
           notification_settings?: Json | null;
           onboarding_completed?: boolean;
           preferred_currency?: string;
+          preferred_language?: string | null;
           setup_guide_completed?: boolean;
+          slides_viewed?: boolean;
           sms_detection_enabled?: boolean;
           theme?: Database["public"]["Enums"]["theme_preference"];
           updated_at?: string;
@@ -661,7 +665,9 @@ export type Database = {
           notification_settings?: Json | null;
           onboarding_completed?: boolean;
           preferred_currency?: string;
+          preferred_language?: string | null;
           setup_guide_completed?: boolean;
+          slides_viewed?: boolean;
           sms_detection_enabled?: boolean;
           theme?: Database["public"]["Enums"]["theme_preference"];
           updated_at?: string;
