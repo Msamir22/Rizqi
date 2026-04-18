@@ -19,7 +19,7 @@ import { logger } from "@/utils/logger";
 import Svg, { Circle, Defs, RadialGradient, Stop } from "react-native-svg";
 
 interface Props {
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 interface StarConfig {

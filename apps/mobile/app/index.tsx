@@ -11,7 +11,6 @@
  * @module Index
  */
 
-import { DashboardSkeleton } from "@/components/dashboard/skeletons/DashboardSkeleton";
 import { StarryBackground } from "@/components/ui/StarryBackground";
 import { HAS_ONBOARDED_KEY } from "@/constants/storage-keys";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -43,18 +42,14 @@ export default function Index(): React.ReactNode {
     });
   }, []);
 
-  // While reading the onboarding flag from AsyncStorage, show the dashboard
-  // skeleton so users heading to /(tabs) (the common path — only brand-new
-  // users hit /onboarding) see a seamless content-shaped transition from
-  // here into the dashboard. For users going to /onboarding, this is a
-  // brief (~<50ms) flash before the redirect, which is still less jarring
-  // than a full-screen spinner.
+  // While reading the onboarding flag from AsyncStorage we don't yet know
+  // whether the user is destination-bound for the dashboard or onboarding,
+  // so render a neutral backdrop rather than a content-shaped skeleton.
+  // Showing DashboardSkeleton here flashes a fake dashboard for brand-new
+  // users who are about to be redirected to /onboarding — more jarring
+  // than a neutral transition.
   if (!isReady) {
-    return (
-      <StarryBackground>
-        <DashboardSkeleton />
-      </StarryBackground>
-    );
+    return <StarryBackground />;
   }
 
   if (hasOnboarded) {
