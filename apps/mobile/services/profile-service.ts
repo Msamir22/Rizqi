@@ -91,12 +91,13 @@ export async function setPreferredLanguage(
  * Set the user's preferred currency AND create the cash account in that
  * currency. Resolves FR-009 + FR-010.
  *
- * Two sequential `database.write()` calls (NOT nested). WatermelonDB
- * serializes writers via a global queue; wrapping `ensureCashAccount` inside
- * an outer `database.write` caused a nested-write deadlock with a warning of
- * the form "The writer you're trying to run ... can't be performed yet,
- * because there are N other readers/writers in the queue." — observed at the
- * currency step.
+ * One `database.write()` lives in this file (the profile update on line 115).
+ * `ensureCashAccount` owns its own writer internally, so the two operations
+ * run as two sequential (not nested) writes from WatermelonDB's perspective.
+ * Wrapping both in a single outer `database.write` caused a nested-write
+ * deadlock with a warning of the form "The writer you're trying to run ...
+ * can't be performed yet, because there are N other readers/writers in the
+ * queue." — observed at the currency step.
  *
  * Atomicity caveat: if step 1 succeeds and step 2 fails, the profile has a
  * new `preferred_currency` but no cash account. This is acceptable because

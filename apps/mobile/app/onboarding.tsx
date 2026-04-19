@@ -11,7 +11,11 @@
  * (`onboarding:<userId>:step`) via the onboarding-cursor-service. On every
  * forward transition we persist the next-unfinished step so a subsequent app
  * launch (same user, same device) resumes where they left off. On completion
- * the cursor is cleared atomically with flipping profiles.onboarding_completed.
+ * `completeOnboarding()` flips `profiles.onboarding_completed` first, then
+ * clears the AsyncStorage cursor as a best-effort cleanup — the two stores
+ * are independent, so the operation is NOT atomic. A stale cursor after a
+ * successful DB flag flip is harmless because the router gate reads the DB
+ * flag only.
  *
  * See spec FR-004, FR-008, FR-011, data-model.md § 3.
  *
@@ -244,7 +248,16 @@ export default function OnboardingScreen(): React.JSX.Element | null {
         // applies the language to the in-memory i18n state (Principle IV).
         // The screen no longer calls changeLanguage directly.
         await setPreferredLanguage(language);
-        await writeOnboardingStep(userId, "slides");
+        // Cursor write is best-effort — per data-model.md § 3, an
+        // AsyncStorage failure here is acceptable (next launch resumes
+        // from the language step, which is idempotent). Don't let it
+        // block the phase transition.
+        writeOnboardingStep(userId, "slides").catch((err: unknown) => {
+          logger.warn(
+            "onboarding.language.cursorWrite.failed",
+            err instanceof Error ? { message: err.message } : { error: err }
+          );
+        });
         setPhase("carousel");
       } catch (error) {
         logger.warn(
@@ -285,7 +298,16 @@ export default function OnboardingScreen(): React.JSX.Element | null {
       if (!userId) return;
       try {
         await setPreferredCurrencyAndCreateCashAccount(currency);
-        await writeOnboardingStep(userId, "cash-account");
+        // Cursor write is best-effort — per data-model.md § 3, an
+        // AsyncStorage failure here is acceptable (next launch resumes
+        // at the currency step, which is idempotent). Don't let it
+        // block the phase transition.
+        writeOnboardingStep(userId, "cash-account").catch((err: unknown) => {
+          logger.warn(
+            "onboarding.currency.cursorWrite.failed",
+            err instanceof Error ? { message: err.message } : { error: err }
+          );
+        });
         setSelectedCurrency(currency);
         setPhase("wallet-creation");
       } catch (error) {

@@ -5,6 +5,15 @@
  * Two actions only: Retry (re-triggers sync) and Sign out (clears session).
  * No top-app-bar — the retry screen has no valid close destination.
  *
+ * **Theming note:** this screen intentionally renders in the dark palette
+ * regardless of the system / app theme setting. The approved mockup
+ * (`mockups/retry-sync-screen.html`) is a single forced-dark variant because
+ * (a) it only appears pre-sign-in / pre-profile-load, when no user theme
+ * preference has been read yet, and (b) the status-card + red accent chip
+ * were tuned against a dark backdrop. That's why the `slate-*` classes here
+ * don't carry `dark:` variants and the `text-text-primary` /
+ * `text-text-secondary` semantic tokens aren't used — don't "fix" them.
+ *
  * Mockup reference: specs/024-skip-returning-onboarding/mockups/retry-sync-screen.html
  *
  * @module RetrySyncScreen

@@ -83,7 +83,7 @@ the feature's data contract.
 
 ### Key format
 
-```
+```text
 onboarding:<userId>:step
 ```
 
@@ -154,16 +154,16 @@ cursor and starting at the right phase; see FR-004.
 
 ## 5. Validation rules sourced from requirements
 
-| FR     | Validation rule                                                                          | Enforced where                                                                                                                                                                                                                                                                        |
-| ------ | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| FR-007 | `preferred_language` ∈ `{'en', 'ar'}`.                                                   | Postgres enum (authoritative) + `profile-service.setPreferredLanguage(language: PreferredLanguageCode)` — type imported from `@rizqi/db` (auto-generated).                                                                                                                            |
-| FR-008 | AsyncStorage cursor value is one of the four named steps.                                | `onboarding-cursor-service.writeOnboardingStep()` accepts a typed `OnboardingStep` parameter.                                                                                                                                                                                         |
-| FR-009 | Currency step requires a non-null `preferred_currency` AND a corresponding cash account. | `profile-service.setPreferredCurrencyAndCreateCashAccount()` — atomic `database.write` that updates profile + calls `ensureCashAccount`.                                                                                                                                              |
-| FR-010 | Cash account must exist after currency step.                                             | Same function as FR-009.                                                                                                                                                                                                                                                              |
-| FR-011 | `onboarding_completed` flips to `true` AND the cursor is cleared atomically.             | `profile-service.completeOnboarding()` — single `database.write` + the AsyncStorage removal runs inside the same async function. If the cursor removal fails, log but do not rollback the DB write (the user is done; a stale cursor is harmless because the gate reads the DB flag). |
-| FR-012 | Routing gate runs on every post-auth entry.                                              | `apps/mobile/app/index.tsx` (the gate). No caching of outcome.                                                                                                                                                                                                                        |
-| FR-013 | `setup_guide_completed` is untouched.                                                    | Code review; no writes to that column in any new service function.                                                                                                                                                                                                                    |
-| FR-015 | Legacy AsyncStorage keys deleted.                                                        | `apps/mobile/constants/storage-keys.ts` exports removed; all callers either deleted or migrated to the new key/DB.                                                                                                                                                                    |
+| FR     | Validation rule                                                                          | Enforced where                                                                                                                                                                                                                                                                                                                                                                 |
+| ------ | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| FR-007 | `preferred_language` ∈ `{'en', 'ar'}`.                                                   | Postgres enum (authoritative) + `profile-service.setPreferredLanguage(language: PreferredLanguageCode)` — type imported from `@rizqi/db` (auto-generated).                                                                                                                                                                                                                     |
+| FR-008 | AsyncStorage cursor value is one of the four named steps.                                | `onboarding-cursor-service.writeOnboardingStep()` accepts a typed `OnboardingStep` parameter.                                                                                                                                                                                                                                                                                  |
+| FR-009 | Currency step requires a non-null `preferred_currency` AND a corresponding cash account. | `profile-service.setPreferredCurrencyAndCreateCashAccount()` — sequential (not atomic): one `database.write` updates the profile, then `ensureCashAccount` runs in its own inner writer. Wrapping both in a single outer writer causes a WatermelonDB deadlock, so they intentionally aren't atomic. The onboarding cursor stays at `"currency"` until this function resolves. |
+| FR-010 | Cash account must exist after currency step.                                             | Same function as FR-009.                                                                                                                                                                                                                                                                                                                                                       |
+| FR-011 | `onboarding_completed` flips to `true`; the cursor is cleared best-effort afterward.     | `profile-service.completeOnboarding()` — `database.write` flips the DB flag, then the AsyncStorage cursor removal runs in the same async function as a best-effort cleanup. If the cursor removal fails, log but do not rollback the DB write (a stale cursor is harmless because the router gate reads the DB flag only).                                                     |
+| FR-012 | Routing gate runs on every post-auth entry.                                              | `apps/mobile/app/index.tsx` (the gate). No caching of outcome.                                                                                                                                                                                                                                                                                                                 |
+| FR-013 | `setup_guide_completed` is untouched.                                                    | Code review; no writes to that column in any new service function.                                                                                                                                                                                                                                                                                                             |
+| FR-015 | Legacy AsyncStorage keys deleted.                                                        | `apps/mobile/constants/storage-keys.ts` exports removed; all callers either deleted or migrated to the new key/DB.                                                                                                                                                                                                                                                             |
 
 ## 6. Out-of-scope entities
 
@@ -206,12 +206,17 @@ ALTER TABLE profiles
 -- RLS: no policy changes; the existing profiles policies cover the new column.
 ```
 
-Post-migration commands per Constitution VII:
+Post-migration commands per Constitution VII — local-first workflow:
 
-1. `npm run db:push` (applies SQL to remote Supabase).
-2. `npm run db:migrate` (regenerates `packages/db/src/schema.ts`,
-   `supabase-types.ts`, `migrations.ts`, and `base-profile.ts`).
+1. Author the SQL under `supabase/migrations/NNN_*.sql` (local file, not via the
+   Supabase dashboard or MCP).
+2. `npm run db:migrate` — regenerates `packages/db/src/schema.ts`,
+   `supabase-types.ts`, `migrations.ts`, and `base-profile.ts` from the new SQL.
 3. Commit the migration SQL and all regenerated files together.
+
+Remote deployment (`npm run db:push` against the linked Supabase project) is a
+separate release step handled during merge/deploy — not part of the local spec
+commands.
 
 ### WatermelonDB representation note
 

@@ -71,16 +71,25 @@ jest.mock("@/utils/logger", () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
 
-// RetrySyncScreen pulled in via the gate — give it a tagged stub.
+// RetrySyncScreen pulled in via the gate — stub that forwards the two
+// callbacks onto the node's `onRetry` / `onSignOut` props so tests can
+// invoke them via renderer lookup.
 jest.mock("@/components/ui/RetrySyncScreen", () => {
   /* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
   const ReactMod = require("react");
   const RN = require("react-native");
   return {
-    RetrySyncScreen: (): React.ReactElement =>
+    RetrySyncScreen: (props: {
+      onRetry: () => void;
+      onSignOut: () => void;
+    }): React.ReactElement =>
       ReactMod.createElement(
         RN.View,
-        { testID: "retry-screen" },
+        {
+          testID: "retry-screen",
+          onRetry: props.onRetry,
+          onSignOut: props.onSignOut,
+        },
         null
       ) as React.ReactElement,
   };
@@ -193,5 +202,39 @@ describe("index.tsx routing gate", () => {
     });
     const renderer = renderGate();
     expect(findRedirectHref(renderer)).toBe("/(tabs)");
+  });
+
+  it("wires the retry screen's Sign out callback to performLogout (guards against the gate dropping the handler)", () => {
+    setState({ syncState: "failed", onboardingCompleted: false });
+    const renderer = renderGate();
+
+    const nodes = renderer.root.findAllByProps({ testID: "retry-screen" });
+    const node = nodes[0] as { props: { onSignOut?: () => void } } | undefined;
+    expect(node).toBeDefined();
+
+    node?.props.onSignOut?.();
+
+    expect(mockPerformLogout).toHaveBeenCalledTimes(1);
+  });
+
+  it("wires the retry screen's Retry callback to retryInitialSync", () => {
+    const retrySpy = jest.fn().mockResolvedValue("success");
+    mockUseSync.mockReturnValue({
+      initialSyncState: "failed",
+      retryInitialSync: retrySpy,
+    });
+    mockUseProfile.mockReturnValue({
+      profile: { onboardingCompleted: false },
+      isLoading: false,
+    });
+    const renderer = renderGate();
+
+    const nodes = renderer.root.findAllByProps({ testID: "retry-screen" });
+    const node = nodes[0] as { props: { onRetry?: () => void } } | undefined;
+    expect(node).toBeDefined();
+
+    node?.props.onRetry?.();
+
+    expect(retrySpy).toHaveBeenCalledTimes(1);
   });
 });

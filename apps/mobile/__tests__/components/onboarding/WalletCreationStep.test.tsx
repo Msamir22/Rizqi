@@ -123,6 +123,7 @@ jest.mock("expo-linear-gradient", () => {
 
 import { WalletCreationStep } from "@/components/onboarding/WalletCreationStep";
 import { TouchableOpacity } from "react-native";
+import type { CurrencyType } from "@rizqi/db";
 
 // =============================================================================
 // Helpers
@@ -131,7 +132,7 @@ import { TouchableOpacity } from "react-native";
 async function renderStep(
   overrides: Partial<{
     userId: string;
-    currency: "EGP" | "USD";
+    currency: CurrencyType;
     onComplete: () => void;
     onError: () => void;
   }> = {}
@@ -141,7 +142,7 @@ async function renderStep(
     renderer = RTR.create(
       React.createElement(WalletCreationStep, {
         userId: overrides.userId ?? "user-1",
-        currency: (overrides.currency ?? "EGP") as "EGP",
+        currency: overrides.currency ?? "EGP",
         onComplete: overrides.onComplete ?? jest.fn(),
         onError: overrides.onError ?? jest.fn(),
       })

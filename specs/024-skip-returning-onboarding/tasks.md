@@ -395,10 +395,16 @@ out.
       not expose a callable `signOut()` suitable for direct invocation, file a
       sub-investigation rather than inventing a new logout path — do not bypass
       the structured logout flow.
-- [ ] T038 [US4] Extend `apps/mobile/__tests__/app/index.test.tsx` with two
+- [ ] ~~T038 [US4] Extend `apps/mobile/__tests__/app/index.test.tsx` with two
       full-flow integration tests: (a) `initialSyncState='failed'` → tap Retry →
       stub sync resolves → dashboard; (b) `failed` → tap Sign out → session
-      cleared, redirected to `/auth`.
+      cleared, redirected to `/auth`.~~ **Deferred to follow-up:** the unit
+      coverage landed in PR #238 (`__tests__/app/index.test.tsx` pins all six
+      routing outcomes including the retry-screen branch, and
+      `__tests__/components/RetrySyncScreen.test.tsx` pins the Retry / Sign-out
+      button wiring). A full cold-start Retry→dashboard flow belongs in the
+      Detox/Maestro E2E harness, which has not landed on this branch. Follow-up
+      ticket will track this once the E2E harness scaffold is in.
 
 **Checkpoint**: All four user stories independently functional. Feature behavior
 complete.
