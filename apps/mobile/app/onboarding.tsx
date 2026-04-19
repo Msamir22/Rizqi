@@ -329,7 +329,9 @@ export default function OnboardingScreen(): React.JSX.Element | null {
   // ---------------------------------------------------------------------
   const handleNext = useCallback((): void => {
     if (currentIndex === slides.length - 1) {
-      void handleCarouselFinish().catch(() => {});
+      // Inner handler owns its own try/catch + logger.warn; no outer
+      // swallow required.
+      void handleCarouselFinish();
     } else {
       carouselRef.current?.next();
     }
@@ -377,7 +379,7 @@ export default function OnboardingScreen(): React.JSX.Element | null {
     return (
       <LanguagePickerStep
         onLanguageSelected={(lang): void => {
-          void handleLanguageSelected(lang).catch(() => {});
+          void handleLanguageSelected(lang);
         }}
         isLoading={isChangingLanguage}
         initialLanguage={i18n.language === "ar" ? "ar" : "en"}
@@ -392,7 +394,7 @@ export default function OnboardingScreen(): React.JSX.Element | null {
     return (
       <CurrencyPickerStep
         onCurrencySelected={(currency): void => {
-          void handleCurrencySelected(currency).catch(() => {});
+          void handleCurrencySelected(currency);
         }}
       />
     );
@@ -407,7 +409,7 @@ export default function OnboardingScreen(): React.JSX.Element | null {
         userId={userId}
         currency={selectedCurrency}
         onComplete={(): void => {
-          void handleOnboardingComplete().catch(() => {});
+          void handleOnboardingComplete();
         }}
         onError={(): void => {
           // On error the user hasn't truly completed onboarding — do NOT
@@ -445,7 +447,7 @@ export default function OnboardingScreen(): React.JSX.Element | null {
       <TouchableOpacity
         className="absolute p-2 end-6 z-10"
         onPress={(): void => {
-          void handleCarouselFinish().catch(() => {});
+          void handleCarouselFinish();
         }}
         style={{ top: insets.top + 16 }}
       >

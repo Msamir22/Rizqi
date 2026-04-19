@@ -16,9 +16,11 @@ import {
   type PreferredLanguageCode,
   database,
 } from "@rizqi/db";
+import { Q } from "@nozbe/watermelondb";
 import { changeLanguage } from "@/i18n/changeLanguage";
 import { ensureCashAccount } from "@/services/account-service";
 import { clearOnboardingStep } from "@/services/onboarding-cursor-service";
+import { getCurrentUserId } from "@/services/supabase";
 import { logger } from "@/utils/logger";
 import { t } from "i18next";
 
@@ -27,13 +29,30 @@ import { t } from "i18next";
 // =============================================================================
 
 /**
- * Returns the first non-deleted profile row. Throws if none exists —
- * a profile should always be present after the initial pull-sync.
+ * Returns the authenticated user's profile row.
+ *
+ * Scoped by `user_id` to match the pattern used by other services (account,
+ * budget, metal-holding, etc.) — even though the local DB typically contains
+ * only one profile at a time (logout wipes it), querying by userId is the
+ * correct long-term pattern and protects against future multi-account /
+ * account-switching features from picking up the wrong row.
+ *
+ * Throws if either the auth session is missing or the profile row is absent
+ * (both should not happen after a successful initial pull-sync).
  */
 async function getProfile(): Promise<Profile> {
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    throw new Error(
+      "Cannot load profile: no authenticated user in the session."
+    );
+  }
+
   const collection = database.get<Profile>("profiles");
-  const profiles = await collection.query().fetch();
-  const profile = profiles.find((p) => !p.deleted);
+  const profiles = await collection
+    .query(Q.where("user_id", userId), Q.where("deleted", Q.notEq(true)))
+    .fetch();
+  const profile = profiles[0];
   if (!profile) {
     throw new Error(
       "No profile row found. Profile should exist after initial sync."

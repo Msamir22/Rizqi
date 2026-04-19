@@ -60,6 +60,9 @@ export function AppReadyGate(): null {
   const { initialSyncState } = useSync();
   const { profile, isLoading: profileIsLoading } = useProfile();
   const hiddenRef = useRef(false);
+  // Prevents concurrent hide attempts while an earlier one is in flight,
+  // without permanently latching on a rejection (CR review on AppReadyGate.tsx:108).
+  const hideInFlightRef = useRef(false);
 
   const ready = computeReady(
     authIsLoading,
@@ -69,8 +72,12 @@ export function AppReadyGate(): null {
   );
 
   useEffect(() => {
-    if (!ready || hiddenRef.current) return;
-    hiddenRef.current = true;
+    // `hiddenRef` is only set AFTER `SplashScreen.hideAsync()` succeeds, so
+    // a rejected hide (rare but possible) doesn't permanently trap the user
+    // behind the native splash. `hideInFlightRef` blocks concurrent attempts
+    // while the async hide is pending.
+    if (!ready || hiddenRef.current || hideInFlightRef.current) return;
+    hideInFlightRef.current = true;
 
     const storedLanguage = profile?.preferredLanguage as
       | SupportedLanguage
@@ -97,11 +104,15 @@ export function AppReadyGate(): null {
 
       try {
         await SplashScreen.hideAsync();
+        hiddenRef.current = true;
       } catch (error) {
         logger.warn(
           "appReadyGate.splash.hideAsync.failed",
           error instanceof Error ? { message: error.message } : { error }
         );
+        // Leave hiddenRef=false so a subsequent render can retry the hide.
+      } finally {
+        hideInFlightRef.current = false;
       }
     };
 

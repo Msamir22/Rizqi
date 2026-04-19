@@ -96,6 +96,18 @@ interface CommonTranslations {
   readonly select: string;
   readonly coming_soon: string;
   readonly charts_subtitle: string;
+
+  // Sync / retry screen (feature 024). Declared here — NOT in
+  // SettingsTranslations — because RetrySyncScreen + profile-service use
+  // `useTranslation("common")` and the keys live in `locales/*/common.json`.
+  // Schema namespace must match the JSON namespace; a mismatch would fail
+  // the i18n coverage check at build time.
+  readonly sync_failed_title: string;
+  readonly sync_failed_chip: string;
+  readonly sync_failed_description: string;
+  readonly sync_helper_text: string;
+  readonly sign_out: string;
+  readonly cash_account_creation_failed: string;
 }
 
 /** Transactions namespace */
@@ -309,13 +321,11 @@ interface SettingsTranslations {
   readonly rescan_title: string;
   readonly rescan_message: string;
   readonly rescan_confirm: string;
-  readonly sync_failed_title: string;
-  readonly sync_failed_chip: string;
-  readonly sync_failed_description: string;
+  // NOTE: sync_failed_title/chip/description/helper_text/sign_out/
+  // cash_account_creation_failed moved to CommonTranslations (where the
+  // common.json keys actually live). sync_failed_message and proceed_anyway
+  // below are used from settings.json by AppDrawer/settings.tsx.
   readonly sync_failed_message: string;
-  readonly sync_helper_text: string;
-  readonly sign_out: string;
-  readonly cash_account_creation_failed: string;
   readonly proceed_anyway: string;
 }
 

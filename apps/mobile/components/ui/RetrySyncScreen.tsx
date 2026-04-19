@@ -47,7 +47,7 @@ export function RetrySyncScreen({
       {/* Status Card */}
       <View className="w-full max-w-[342px] bg-slate-800 rounded-2xl p-6 items-center shadow-lg">
         {/* Icon Tile */}
-        <View className="w-12 h-12 rounded-xl items-center justify-center mb-5 bg-red-500/12">
+        <View className="w-12 h-12 rounded-xl items-center justify-center mb-5 bg-red-500/10">
           <Ionicons name="cloud-offline" size={24} color={palette.red[400]} />
         </View>
 
