@@ -8,7 +8,7 @@
 
 import { Model } from "@nozbe/watermelondb";
 import { date, field, readonly } from "@nozbe/watermelondb/decorators";
-import type { ThemePreference } from "../../types";
+import type { PreferredLanguageCode, ThemePreference } from "../../types";
 
 export abstract class BaseProfile extends Model {
   static table = "profiles";
@@ -22,9 +22,8 @@ export abstract class BaseProfile extends Model {
   @field("notification_settings") notificationSettingsRaw?: string;
   @field("onboarding_completed") onboardingCompleted!: boolean;
   @field("preferred_currency") preferredCurrency!: string;
-  @field("preferred_language") preferredLanguage?: string;
+  @field("preferred_language") preferredLanguage!: PreferredLanguageCode;
   @field("setup_guide_completed") setupGuideCompleted!: boolean;
-  @field("slides_viewed") slidesViewed!: boolean;
   @field("sms_detection_enabled") smsDetectionEnabled!: boolean;
   @field("theme") theme!: ThemePreference;
   @date("updated_at") updatedAt!: Date;
