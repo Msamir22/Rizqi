@@ -626,7 +626,8 @@ export type Database = {
           last_name: string | null;
           notification_settings: Json | null;
           onboarding_completed: boolean;
-          preferred_currency: string;
+          preferred_currency: Database["public"]["Enums"]["currency_type"];
+          preferred_language: Database["public"]["Enums"]["preferred_language_code"];
           setup_guide_completed: boolean;
           sms_detection_enabled: boolean;
           theme: Database["public"]["Enums"]["theme_preference"];
@@ -643,7 +644,8 @@ export type Database = {
           last_name?: string | null;
           notification_settings?: Json | null;
           onboarding_completed?: boolean;
-          preferred_currency?: string;
+          preferred_currency?: Database["public"]["Enums"]["currency_type"];
+          preferred_language?: Database["public"]["Enums"]["preferred_language_code"];
           setup_guide_completed?: boolean;
           sms_detection_enabled?: boolean;
           theme?: Database["public"]["Enums"]["theme_preference"];
@@ -660,7 +662,8 @@ export type Database = {
           last_name?: string | null;
           notification_settings?: Json | null;
           onboarding_completed?: boolean;
-          preferred_currency?: string;
+          preferred_currency?: Database["public"]["Enums"]["currency_type"];
+          preferred_language?: Database["public"]["Enums"]["preferred_language_code"];
           setup_guide_completed?: boolean;
           sms_detection_enabled?: boolean;
           theme?: Database["public"]["Enums"]["theme_preference"];
@@ -1033,6 +1036,7 @@ export type Database = {
       debt_type: "LENT" | "BORROWED";
       gold_karat_enum: "24" | "22" | "21" | "18" | "14" | "10";
       metal_type: "GOLD" | "SILVER" | "PLATINUM" | "PALLADIUM";
+      preferred_language_code: "en" | "ar";
       recurring_action: "AUTO_CREATE" | "NOTIFY";
       recurring_frequency:
         | "DAILY"
@@ -1225,6 +1229,7 @@ export const Constants = {
       debt_type: ["LENT", "BORROWED"],
       gold_karat_enum: ["24", "22", "21", "18", "14", "10"],
       metal_type: ["GOLD", "SILVER", "PLATINUM", "PALLADIUM"],
+      preferred_language_code: ["en", "ar"],
       recurring_action: ["AUTO_CREATE", "NOTIFY"],
       recurring_frequency: [
         "DAILY",

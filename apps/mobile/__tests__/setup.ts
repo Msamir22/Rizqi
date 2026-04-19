@@ -36,3 +36,42 @@ jest.mock("@sentry/react-native", () => ({
     })
   ),
 }));
+
+// Mock @expo/vector-icons — module-level load checks expo-font's
+// loadedNativeFonts which is not initialized under the jest-expo preset.
+// Tests that render components using these icons would otherwise crash
+// with "loadedNativeFonts.forEach is not a function".
+jest.mock("@expo/vector-icons", () => {
+  const NullIcon = (): null => null;
+  return new Proxy(
+    {},
+    {
+      get: (): typeof NullIcon => NullIcon,
+    }
+  );
+});
+
+// Mock the internal AppState module that react-native/index.js re-requires
+// on every property access. Patching the returned object in place does not
+// stick, so we mock the underlying module directly. We cannot `jest.mock`
+// the whole "react-native" module (breaks jest-expo's component mocks which
+// read `displayName` on every exported component during setup).
+jest.mock("react-native/Libraries/AppState/AppState", () => ({
+  currentState: "active",
+  addEventListener: jest.fn(() => ({ remove: jest.fn() })),
+  removeEventListener: jest.fn(),
+}));
+
+// Ditto — the individual icon-family entrypoints used directly by some files.
+jest.mock("@expo/vector-icons/Ionicons", () => {
+  const NullIcon = (): null => null;
+  return { __esModule: true, default: NullIcon };
+});
+jest.mock("@expo/vector-icons/FontAwesome5", () => {
+  const NullIcon = (): null => null;
+  return { __esModule: true, default: NullIcon };
+});
+jest.mock("@expo/vector-icons/MaterialCommunityIcons", () => {
+  const NullIcon = (): null => null;
+  return { __esModule: true, default: NullIcon };
+});

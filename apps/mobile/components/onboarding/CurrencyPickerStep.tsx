@@ -42,16 +42,11 @@ import { useTranslation } from "react-i18next";
 interface CurrencyPickerStepProps {
   /** Called when the user taps "Continue" with the selected currency code. */
   readonly onCurrencySelected: (currency: CurrencyType) => void;
-  /** Called when the user taps "Skip" — no cash account will be created. */
-  readonly onSkip: () => void;
 }
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-
-/** Fallback pre-selected currency when timezone detection fails (target market). */
-const FALLBACK_CURRENCY: CurrencyType = "EGP";
 
 /**
  * Fixed item height for getItemLayout optimisation.
@@ -65,7 +60,6 @@ const CURRENCY_ITEM_HEIGHT = 80;
 
 export function CurrencyPickerStep({
   onCurrencySelected,
-  onSkip,
 }: CurrencyPickerStepProps): React.JSX.Element {
   const insets = useSafeAreaInsets();
   const { theme, isDark } = useTheme();
@@ -75,7 +69,7 @@ export function CurrencyPickerStep({
 
   // Detect suggested currency from timezone (one-time on mount)
   const suggestedCurrency = useMemo(
-    (): CurrencyType => detectCurrencyFromTimezone() ?? FALLBACK_CURRENCY,
+    (): CurrencyType => detectCurrencyFromTimezone() ?? "EGP",
     []
   );
 
@@ -192,18 +186,11 @@ export function CurrencyPickerStep({
         />
       )}
 
-      {/* Header with Skip */}
+      {/* Header */}
       <View className="px-6 pb-4" style={{ paddingTop: insets.top + 16 }}>
-        <View className="flex-row items-center justify-between mb-2">
-          <Text className="text-3xl font-bold text-text-primary dark:text-text-primary-dark">
-            {t("choose_your_currency")}
-          </Text>
-          <TouchableOpacity onPress={onSkip} activeOpacity={0.7}>
-            <Text className="text-base text-text-secondary dark:text-text-secondary-dark">
-              {t("skip")}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <Text className="text-3xl font-bold text-text-primary dark:text-text-primary-dark mb-2">
+          {t("choose_your_currency")}
+        </Text>
         <Text className="text-sm text-text-secondary dark:text-text-secondary-dark leading-5">
           {t("currency_description")}
         </Text>

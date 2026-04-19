@@ -192,5 +192,17 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 16,
+      steps: [
+        addColumns({
+          table: "profiles",
+          columns: [
+            { name: "preferred_language", type: "string", isOptional: true },
+            { name: "slides_viewed", type: "boolean" },
+          ],
+        }),
+      ],
+    },
   ],
 });

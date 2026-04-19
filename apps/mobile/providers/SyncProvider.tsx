@@ -19,10 +19,17 @@ import { useAuth } from "../context/AuthContext";
 import { isAuthenticated as checkIsAuthenticated } from "../services/supabase";
 import { completeInterruptedLogout } from "../services/logout-service";
 import { syncDatabase } from "../services/sync";
+import { logger } from "../utils/logger";
 
 // Sync intervals in milliseconds
 const SYNC_INTERVAL_ACTIVE = 15 * 60 * 1000; // 15 minutes when app is active
 const SYNC_INTERVAL_BACKGROUND = 30 * 60 * 1000; // 30 minutes when backgrounded
+
+/** Timeout for the initial pull-sync before declaring failure (FR-006). */
+const INITIAL_SYNC_TIMEOUT_MS = 20_000;
+
+/** State machine for the initial pull-sync that gates post-sign-in routing. */
+export type InitialSyncState = "in-progress" | "success" | "failed" | "timeout";
 
 interface SyncContextValue {
   isSyncing: boolean;
@@ -30,6 +37,10 @@ interface SyncContextValue {
   lastSyncedAt: Date | null;
   syncError: Error | null;
   sync: (forceFullSync?: boolean) => Promise<void>;
+  /** Resolved after the initial pull-sync completes or times out. */
+  readonly initialSyncState: InitialSyncState;
+  /** Re-trigger the initial sync. Returns the new state when resolved. */
+  readonly retryInitialSync: () => Promise<InitialSyncState>;
 }
 
 const SyncContext = createContext<SyncContextValue | null>(null);
@@ -47,6 +58,8 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
   const [appState, setAppState] = useState<AppStateStatus>(
     AppState.currentState
   );
+  const [initialSyncState, setInitialSyncState] =
+    useState<InitialSyncState>("in-progress");
 
   const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -54,7 +67,6 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
     // Check if authenticated before syncing
     const authenticated = await checkIsAuthenticated();
     if (!authenticated) {
-      // TODO: Replace with structured logging (e.g., Sentry)
       return;
     }
 
@@ -73,6 +85,49 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
       setIsSyncing(false);
     }
   }, []);
+
+  /**
+   * Runs the initial sync with a 20-second timeout race.
+   * Returns the final InitialSyncState.
+   */
+  const runInitialSync = useCallback(async (): Promise<InitialSyncState> => {
+    setInitialSyncState("in-progress");
+
+    let syncResult: InitialSyncState = "success";
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+
+    try {
+      await Promise.race([
+        sync(true),
+        new Promise<never>((_resolve, reject) => {
+          timeoutHandle = setTimeout(
+            () => reject(new Error("initial-sync-timeout")),
+            INITIAL_SYNC_TIMEOUT_MS
+          );
+        }),
+      ]);
+    } catch (error) {
+      syncResult =
+        error instanceof Error && error.message === "initial-sync-timeout"
+          ? "timeout"
+          : "failed";
+    } finally {
+      // Always clear the timer — otherwise the losing branch of Promise.race
+      // leaks a pending timer that fires 20s later with an unhandled rejection
+      // on the detached Promise (fires after Android/iOS wake-ups too).
+      if (timeoutHandle !== null) {
+        clearTimeout(timeoutHandle);
+      }
+    }
+
+    setInitialSyncState(syncResult);
+    return syncResult;
+  }, [sync]);
+
+  /** Re-trigger the initial sync from the retry screen. */
+  const retryInitialSync = useCallback(async (): Promise<InitialSyncState> => {
+    return runInitialSync();
+  }, [runInitialSync]);
 
   /**
    * Set up the sync interval based on app state.
@@ -155,24 +210,35 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
 
       // Check user is authenticated before syncing
       if (!isAuthenticated) {
-        // TODO: Replace with structured logging (e.g., Sentry)
-        setupSyncInterval(true); // Still set up interval for retry
+        setupSyncInterval(true);
+        setInitialSyncState("success");
         return;
       }
 
       // Check if data was cleared (empty local DB but authenticated)
-      // checkDataClearedAndSync will call sync(true) if DB is empty,
-      // so we only do a regular sync if the DB wasn't empty
       const accountsCollection = database.get("accounts");
       const count = await accountsCollection.query().fetchCount();
 
       if (count === 0) {
-        // TODO: Replace with structured logging (e.g., Sentry)
         setIsInitialSync(true);
-        await sync(true);
+        await runInitialSync();
         setIsInitialSync(false);
       } else {
-        await sync();
+        // Non-empty DB — data already exists, so the app is fully usable
+        // offline. Mark the initial-sync gate as "success" immediately so
+        // the routing gate unblocks, then run the background sync
+        // non-awaited. Previously this path `await`ed `sync()`, which on a
+        // slow network could leave `initialSyncState === "in-progress"`
+        // well past the 20s timeout and violate FR-006 for returning users.
+        setInitialSyncState("success");
+        sync().catch((error: unknown) => {
+          // Background sync failure is non-fatal; regular sync-interval retries
+          // will recover. Log so it is diagnosable but don't flip the gate.
+          logger.warn(
+            "sync.backgroundRefreshOnBoot.failed",
+            error instanceof Error ? { message: error.message } : { error }
+          );
+        });
       }
 
       // Set up initial interval (app starts active)
@@ -180,7 +246,7 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
     };
 
     initialSync().catch(() => {
-      // TODO: Replace with structured logging (e.g., Sentry)
+      setInitialSyncState("failed");
     });
 
     // Cleanup interval on unmount
@@ -199,8 +265,18 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
       lastSyncedAt,
       syncError,
       sync,
+      initialSyncState,
+      retryInitialSync,
     }),
-    [isSyncing, isInitialSync, lastSyncedAt, syncError, sync]
+    [
+      isSyncing,
+      isInitialSync,
+      lastSyncedAt,
+      syncError,
+      sync,
+      initialSyncState,
+      retryInitialSync,
+    ]
   );
 
   return <SyncContext.Provider value={value}>{children}</SyncContext.Provider>;

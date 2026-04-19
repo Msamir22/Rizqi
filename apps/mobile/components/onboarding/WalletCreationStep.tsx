@@ -20,7 +20,6 @@
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { ensureCashAccount } from "@/services/account-service";
-import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import type { CurrencyType } from "@rizqi/db";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -68,8 +67,6 @@ export function WalletCreationStep({
   const { t } = useTranslation("onboarding");
   const [phase, setPhase] = useState<WalletCreationPhase>("loading");
 
-  const { setPreferredCurrency } = usePreferredCurrency();
-
   useEffect(() => {
     let isMounted = true;
 
@@ -81,13 +78,6 @@ export function WalletCreationStep({
       if (result.error) {
         setPhase("error");
       } else {
-        // Persist the selected currency as the user's preferred currency.
-        // Non-critical — wallet was created, so we still show success.
-        try {
-          await setPreferredCurrency(currency);
-        } catch (e) {
-          console.error("Failed to set preferred currency:", e);
-        }
         if (!isMounted) return;
         setPhase("success");
       }
@@ -98,16 +88,19 @@ export function WalletCreationStep({
     return (): void => {
       isMounted = false;
     };
-    // setPreferredCurrency is not wrapped in useCallback (returns a new ref
-    // each render). Including it would re-trigger wallet creation on every
-    // render. Safe to omit — the function identity doesn't affect behaviour.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Effect owns wallet creation for (userId, currency). `setPhase` is a
+    // stable `useState` setter, so it doesn't need to appear in deps.
   }, [userId, currency]);
 
   const handleContinue = useCallback((): void => {
     if (phase === "error") {
       onError();
     } else {
+      // The onboarding screen (parent) owns the `completeOnboarding` DB
+      // write and AsyncStorage cursor clear so the call can be awaited
+      // before navigation. Don't duplicate it here — calling it from both
+      // places caused a latent race (see PR review Finding #1). Just
+      // forward the completion signal upward.
       onComplete();
     }
   }, [phase, onComplete, onError]);

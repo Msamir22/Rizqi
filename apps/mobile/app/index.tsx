@@ -1,60 +1,106 @@
 /**
- * App Entry Point
+ * App Entry Point — Routing Gate
  *
- * Handles initial routing after authentication is confirmed by AuthGuard.
- * Only checks onboarding status — auth is enforced by the layout-level guard.
+ * Binary gate driven by profiles.onboarding_completed (from WatermelonDB,
+ * post initial pull-sync). Per-step resume lives in onboarding.tsx via
+ * AsyncStorage cursor; this gate only decides dashboard-vs-onboarding.
  *
- * Flow:
- * 1. AuthGuard ensures user is authenticated before this renders
- * 2. Check onboarding → redirect to `/(tabs)` or `/onboarding`
+ * Priority (see utils/routing-decision.ts for the authoritative rule):
+ * 1. Sync in-progress / profile loading → neutral backdrop (splash)
+ * 2. onboarding_completed = true → dashboard (regardless of sync state —
+ *    offline-first for returning users)
+ * 3. Sync succeeded AND flag = false → onboarding (resume via cursor)
+ * 4. Sync failed/timeout AND flag = false → retry screen
  *
  * @module Index
  */
 
-import { StarryBackground } from "@/components/ui/StarryBackground";
-import { HAS_ONBOARDED_KEY } from "@/constants/storage-keys";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { database } from "@rizqi/db";
+import { RetrySyncScreen } from "@/components/ui/RetrySyncScreen";
+import { useProfile } from "@/hooks/useProfile";
+import { useSync } from "@/providers/SyncProvider";
+import { performLogout } from "@/services/logout-service";
+import {
+  buildRoutingDecisionLog,
+  getRoutingDecision,
+} from "@/utils/routing-decision";
+import { logger } from "@/utils/logger";
 import { Redirect } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 
 export default function Index(): React.ReactNode {
-  const [isReady, setIsReady] = useState(false);
-  const [hasOnboarded, setHasOnboarded] = useState(false);
+  const { initialSyncState, retryInitialSync } = useSync();
+  const { profile, isLoading: isProfileLoading } = useProfile();
+  const hasLoggedRef = useRef(false);
 
+  const onboardingCompleted = profile?.onboardingCompleted ?? false;
+
+  const routingInputs = {
+    syncState: initialSyncState,
+    onboardingCompleted,
+  };
+  const outcome = getRoutingDecision(routingInputs);
+
+  // FR-014: one structured log per gate evaluation (no PII).
+  //
+  // Fires once the sync AND profile observation have both settled — logging
+  // before `isProfileLoading` resolves would emit `onboardingCompleted:false`
+  // for an already-onboarded returning user and poison the telemetry
+  // (review Finding #5). The payload is rebuilt inside the effect from the
+  // same primitive inputs that appear in the dep array, so there is no
+  // need to suppress exhaustive-deps; `hasLoggedRef` guarantees the log
+  // fires at most once per session.
   useEffect(() => {
-    const init = async (): Promise<void> => {
-      try {
-        const value = await AsyncStorage.getItem(HAS_ONBOARDED_KEY);
-        if (value === "true") {
-          setHasOnboarded(true);
-        }
-      } catch {
-        // TODO: Replace with structured logging (e.g., Sentry)
-        // Failed to read onboarding status — default to not onboarded
-      } finally {
-        setIsReady(true);
-      }
-    };
+    const syncSettled = initialSyncState !== "in-progress";
+    const profileSettled = !isProfileLoading;
+    if (hasLoggedRef.current || !syncSettled || !profileSettled) return;
 
-    init().catch(() => {
-      // Ensure isReady is always set even if the async IIFE throws
-      setIsReady(true);
+    hasLoggedRef.current = true;
+    const inputs = { syncState: initialSyncState, onboardingCompleted };
+    logger.info("onboarding.routing.decision", {
+      ...buildRoutingDecisionLog(inputs, getRoutingDecision(inputs)),
+    });
+  }, [initialSyncState, isProfileLoading, onboardingCompleted]);
+
+  /** Sign-out handler for RetrySyncScreen — uses existing logout service. */
+  const handleSignOut = useCallback((): void => {
+    performLogout(database).catch((error: unknown) => {
+      logger.warn(
+        "onboarding.retryScreen.signOut.failed",
+        error instanceof Error ? { message: error.message } : { error }
+      );
     });
   }, []);
 
-  // While reading the onboarding flag from AsyncStorage we don't yet know
-  // whether the user is destination-bound for the dashboard or onboarding,
-  // so render a neutral backdrop rather than a content-shaped skeleton.
-  // Showing DashboardSkeleton here flashes a fake dashboard for brand-new
-  // users who are about to be redirected to /onboarding — more jarring
-  // than a neutral transition.
-  if (!isReady) {
-    return <StarryBackground />;
+  /** Retry handler for RetrySyncScreen — re-enters the initial sync. */
+  const handleRetry = useCallback((): void => {
+    retryInitialSync().catch((error: unknown) => {
+      logger.warn(
+        "onboarding.retryScreen.retryInitialSync.failed",
+        error instanceof Error ? { message: error.message } : { error }
+      );
+    });
+  }, [retryInitialSync]);
+
+  // Loading states render nothing — the native Expo splash screen is held
+  // by <AppReadyGate /> (see _layout.tsx) until sync + profile resolve, so
+  // users never see a blank/starry backdrop between splash and the real
+  // screen.
+  if (initialSyncState === "in-progress" || isProfileLoading) {
+    return null;
   }
 
-  if (hasOnboarded) {
-    return <Redirect href="/(tabs)" />;
-  } else {
-    return <Redirect href="/onboarding" />;
+  switch (outcome) {
+    case "dashboard":
+      return <Redirect href="/(tabs)" />;
+    case "retry":
+      return (
+        <RetrySyncScreen onRetry={handleRetry} onSignOut={handleSignOut} />
+      );
+    case "loading":
+      return null;
+    default:
+      // "onboarding" — resume handled by onboarding.tsx via AsyncStorage cursor
+      return <Redirect href="/onboarding" />;
   }
 }

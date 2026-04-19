@@ -60,6 +60,7 @@ export type DebtStatus =
 export type DebtType = "LENT" | "BORROWED";
 export type GoldKaratEnum = "24" | "22" | "21" | "18" | "14" | "10";
 export type MetalType = "GOLD" | "SILVER" | "PLATINUM" | "PALLADIUM";
+export type PreferredLanguageCode = "en" | "ar";
 export type RecurringAction = "AUTO_CREATE" | "NOTIFY";
 export type RecurringFrequency =
   | "DAILY"
