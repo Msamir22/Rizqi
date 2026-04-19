@@ -11,7 +11,6 @@
  */
 
 import { palette } from "@/constants/colors";
-import { OnboardingGuideCardSkeleton } from "@/components/dashboard/skeletons/OnboardingGuideCardSkeleton";
 import {
   useOnboardingGuide,
   type OnboardingStep,
@@ -166,15 +165,13 @@ function OnboardingGuideCardComponent(): React.ReactElement | null {
     setIsExpanded((prev) => !prev);
   }, []);
 
-  // While the profile observation is still loading we don't yet know whether
-  // the card should be hidden. Render a skeleton during that brief window so
-  // the dashboard doesn't shift layout when the card appears/disappears.
-  if (isLoading) {
-    return <OnboardingGuideCardSkeleton />;
-  }
-
-  // Don't render if dismissed or all steps are complete.
-  if (isDismissed || isAllComplete) {
+  // Don't render if dismissed, all complete, or still loading.
+  // NOTE: `useOnboardingGuide` deliberately defaults `isDismissed` to `true`
+  // while the profile observation is in flight, so `isLoading` returning
+  // null here avoids flashing any content for returning users who have
+  // already dismissed the card. Showing a skeleton in this window caused
+  // exactly the flash we want to prevent.
+  if (isDismissed || isAllComplete || isLoading) {
     return null;
   }
 

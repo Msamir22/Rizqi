@@ -28,6 +28,17 @@ export function ThisMonthSkeleton(): React.JSX.Element {
           <Skeleton width="75%" height={14} borderRadius={4} />
         </View>
       </View>
+
+      {/* Divider — matches ThisMonth's -mx-4 divider */}
+      <View className="h-[1px] bg-slate-200 dark:bg-slate-700 -mx-4 mb-3" />
+
+      {/* Period filter chips placeholder */}
+      <View className="flex-row gap-x-2 -mx-4 px-4">
+        <Skeleton width={68} height={30} borderRadius={15} />
+        <Skeleton width={72} height={30} borderRadius={15} />
+        <Skeleton width={80} height={30} borderRadius={15} />
+        <Skeleton width={64} height={30} borderRadius={15} />
+      </View>
     </View>
   );
 }
