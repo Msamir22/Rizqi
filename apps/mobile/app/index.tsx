@@ -16,7 +16,6 @@
 
 import { database } from "@rizqi/db";
 import { RetrySyncScreen } from "@/components/ui/RetrySyncScreen";
-import { StarryBackground } from "@/components/ui/StarryBackground";
 import { useProfile } from "@/hooks/useProfile";
 import { useSync } from "@/providers/SyncProvider";
 import { performLogout } from "@/services/logout-service";
@@ -57,13 +56,12 @@ export default function Index(): React.ReactNode {
     });
   }, []);
 
-  // While reading the onboarding flag we don't yet know whether the user is
-  // destination-bound for the dashboard or onboarding, so render a neutral
-  // backdrop rather than a content-shaped skeleton. Showing DashboardSkeleton
-  // here flashes a fake dashboard for brand-new users who are about to be
-  // redirected to /onboarding — more jarring than a neutral transition.
+  // Loading states render nothing — the native Expo splash screen is held
+  // by <AppReadyGate /> (see _layout.tsx) until sync + profile resolve, so
+  // users never see a blank/starry backdrop between splash and the real
+  // screen.
   if (initialSyncState === "in-progress" || isProfileLoading) {
-    return <StarryBackground />;
+    return null;
   }
 
   switch (outcome) {
@@ -79,7 +77,7 @@ export default function Index(): React.ReactNode {
         />
       );
     case "loading":
-      return <StarryBackground />;
+      return null;
     default:
       // "onboarding" — resume handled by onboarding.tsx via AsyncStorage cursor
       return <Redirect href="/onboarding" />;

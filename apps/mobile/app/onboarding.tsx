@@ -3,34 +3,47 @@
  *
  * Multi-phase onboarding flow:
  * 1. Language Picker — user selects their language (mandatory)
- * 2. Carousel — feature tour with 3 slides (skippable)
- * 3. CurrencyPickerStep — user selects their currency (mandatory, no skip)
+ * 2. Carousel — feature tour with 3 slides (skippable: viewing or skipping both advance)
+ * 3. CurrencyPickerStep — user selects their currency (mandatory, no skip per FR-009)
  * 4. WalletCreationStep — creates cash account + confirmation message
  *
- * The initial phase is determined by the user's profile state (resume-aware).
- * Each step persists its output to the profile via profile-service,
- * replacing all AsyncStorage usage.
+ * The initial phase is read from the per-user AsyncStorage cursor
+ * (`onboarding:<userId>:step`) via the onboarding-cursor-service. On every
+ * forward transition we persist the next-unfinished step so a subsequent app
+ * launch (same user, same device) resumes where they left off. On completion
+ * the cursor is cleared atomically with flipping profiles.onboarding_completed.
+ *
+ * See spec FR-004, FR-008, FR-011, data-model.md § 3.
  *
  * @module OnboardingScreen
  */
 
 import { palette } from "@/constants/colors";
+import { useToast } from "@/components/ui/Toast";
+import { CurrencyPickerStep } from "@/components/onboarding/CurrencyPickerStep";
+import { LanguagePickerStep } from "@/components/onboarding/LanguagePickerStep";
+import { WalletCreationStep } from "@/components/onboarding/WalletCreationStep";
 import { useAuth } from "@/context/AuthContext";
-import { changeLanguage } from "@/i18n/changeLanguage";
-import { useProfile } from "@/hooks/useProfile";
-import {
-  setPreferredLanguage,
-  markSlidesViewed,
-  setPreferredCurrencyAndCreateCashAccount,
-} from "@/services/profile-service";
 import { useTheme } from "@/context/ThemeContext";
-import { useTranslation } from "react-i18next";
-import type { CurrencyType } from "@rizqi/db";
+import { useProfile } from "@/hooks/useProfile";
+import { changeLanguage } from "@/i18n/changeLanguage";
+import {
+  readOnboardingStep,
+  writeOnboardingStep,
+  type OnboardingStep,
+} from "@/services/onboarding-cursor-service";
+import {
+  completeOnboarding,
+  setPreferredCurrencyAndCreateCashAccount,
+  setPreferredLanguage,
+} from "@/services/profile-service";
+import { logger } from "@/utils/logger";
 import {
   FontAwesome5,
   Ionicons,
   MaterialCommunityIcons,
 } from "@expo/vector-icons";
+import type { CurrencyType, PreferredLanguageCode } from "@rizqi/db";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, {
@@ -49,11 +62,7 @@ import {
 } from "react-native";
 import Carousel, { ICarouselInstance } from "react-native-reanimated-carousel";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-import { useToast } from "@/components/ui/Toast";
-import { CurrencyPickerStep } from "@/components/onboarding/CurrencyPickerStep";
-import { LanguagePickerStep } from "@/components/onboarding/LanguagePickerStep";
-import { WalletCreationStep } from "@/components/onboarding/WalletCreationStep";
+import { useTranslation } from "react-i18next";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -78,6 +87,22 @@ interface OnboardingSlide {
 // ---------------------------------------------------------------------------
 
 const { width: PAGE_WIDTH, height: PAGE_HEIGHT } = Dimensions.get("window");
+
+/** Map the persisted cursor value to an `OnboardingPhase`. */
+function cursorToPhase(cursor: OnboardingStep | null): OnboardingPhase {
+  switch (cursor) {
+    case "slides":
+      return "carousel";
+    case "currency":
+      return "currency-picker";
+    case "cash-account":
+      return "wallet-creation";
+    case "language":
+    case null:
+    default:
+      return "language-picker";
+  }
+}
 
 function getOnboardingSlides(t: (key: string) => string): OnboardingSlide[] {
   return [
@@ -133,87 +158,66 @@ export default function OnboardingScreen(): React.JSX.Element | null {
   const [currentIndex, setCurrentIndex] = useState(0);
   const slides = useMemo(() => getOnboardingSlides(tOnboarding), [tOnboarding]);
 
-  // Derive initial phase from profile (resume-aware)
+  // Profile is loaded by the parent gate (index.tsx) before we route here,
+  // so `profile` becomes non-null quickly after mount.
   const { profile } = useProfile();
+  const userId = profile?.userId ?? null;
 
-  const getInitialPhase = useCallback((): OnboardingPhase => {
-    if (!profile) return "language-picker";
-    if (profile.onboardingCompleted) return "wallet-creation"; // safety fallback
-    if (!profile.preferredLanguage) return "language-picker";
-    if (!profile.slidesViewed) return "carousel";
-    // User has language + slides but no cash account → currency step
-    // (hasCashAccount is checked by index.tsx; if it routes here with
-    //  cash-account-confirmation outcome, the profile has a cash account
-    //  but the flag is false. Pre-seed selectedCurrency so wallet-creation
-    //  can show the confirmation directly.)
-    if (profile.preferredCurrency) {
-      setSelectedCurrency(profile.preferredCurrency as CurrencyType);
-      if (profile.userId) setUserId(profile.userId);
-      return "wallet-creation";
-    }
-    return "currency-picker";
-  }, [profile]);
-
-  const [phase, setPhase] = useState<OnboardingPhase>(getInitialPhase);
+  // Phase resolution happens asynchronously (we have to read AsyncStorage).
+  // Start as null → render nothing → resolve → render the target phase.
+  const [phase, setPhase] = useState<OnboardingPhase | null>(null);
   const [selectedCurrency, setSelectedCurrency] = useState<CurrencyType | null>(
     null
   );
-  const [userId, setUserId] = useState<string | null>(null);
+
   const { isLoading: isAuthLoading } = useAuth();
   const { showToast } = useToast();
 
-  // Re-evaluate phase when profile loads
+  // ---------------------------------------------------------------------
+  // Phase resolution from the AsyncStorage cursor
+  // ---------------------------------------------------------------------
   useEffect(() => {
-    if (profile) {
-      setPhase(getInitialPhase());
-      if (profile.userId) setUserId(profile.userId);
-    }
-  }, [profile, getInitialPhase]);
+    let cancelled = false;
+    const resolvePhase = async (): Promise<void> => {
+      if (!userId) return;
+      try {
+        const cursor = await readOnboardingStep(userId);
+        if (cancelled) return;
+        const nextPhase = cursorToPhase(cursor);
+        setPhase(nextPhase);
+
+        // Resume at the wallet-creation confirmation only makes sense if we
+        // already know which currency was picked. The cash account's
+        // currency is the source of truth — but for simplicity we use the
+        // profile's preferredCurrency, which was written atomically alongside
+        // account creation in setPreferredCurrencyAndCreateCashAccount.
+        if (nextPhase === "wallet-creation" && profile?.preferredCurrency) {
+          setSelectedCurrency(profile.preferredCurrency as CurrencyType);
+        }
+      } catch (error) {
+        logger.warn(
+          "onboarding.resumePhase.failed",
+          error instanceof Error ? { message: error.message } : { error }
+        );
+        // Fallback: start from the beginning rather than hanging on null.
+        setPhase("language-picker");
+      }
+    };
+    void resolvePhase();
+    return (): void => {
+      cancelled = true;
+    };
+  }, [userId, profile?.preferredCurrency]);
+
+  // ---------------------------------------------------------------------
+  // Navigation helpers
+  // ---------------------------------------------------------------------
+  const pendingNavigationRef = useRef(false);
 
   const navigateAfterOnboarding = useCallback((): void => {
     if (isAuthLoading) return;
     router.replace("/(tabs)");
   }, [router, isAuthLoading]);
-
-  const pendingNavigationRef = useRef(false);
-
-  /** Carousel finish — mark slides viewed, move to currency picker. */
-  const handleCarouselFinish = useCallback(async (): Promise<void> => {
-    try {
-      await markSlidesViewed();
-      setPhase("currency-picker");
-    } catch {
-      router.replace("/(tabs)");
-    }
-  }, [router]);
-
-  /** Currency selected — persist + create cash account, then show confirmation. */
-  const handleCurrencySelected = useCallback(
-    async (currency: CurrencyType): Promise<void> => {
-      try {
-        const { accountId: _accountId } =
-          await setPreferredCurrencyAndCreateCashAccount(currency);
-        setSelectedCurrency(currency);
-        setPhase("wallet-creation");
-      } catch {
-        showToast({
-          type: "error",
-          title: tCommon("error"),
-          message: tCommon("error_generic"),
-        });
-      }
-    },
-    [showToast, tCommon]
-  );
-
-  /** Navigate to main app (from wallet creation or error fallback). */
-  const handleGoToApp = useCallback((): void => {
-    if (isAuthLoading) {
-      pendingNavigationRef.current = true;
-      return;
-    }
-    navigateAfterOnboarding();
-  }, [navigateAfterOnboarding, isAuthLoading]);
 
   useEffect(() => {
     if (!isAuthLoading && pendingNavigationRef.current) {
@@ -222,18 +226,28 @@ export default function OnboardingScreen(): React.JSX.Element | null {
     }
   }, [isAuthLoading, navigateAfterOnboarding]);
 
-  /** Language selected — persist + change i18n, then show carousel. */
+  // ---------------------------------------------------------------------
+  // Transition handlers
+  // ---------------------------------------------------------------------
+
   const [isChangingLanguage, setIsChangingLanguage] = useState(false);
 
+  /** Language picked — persist + apply + advance cursor to "slides". */
   const handleLanguageSelected = useCallback(
-    async (language: "en" | "ar"): Promise<void> => {
+    async (language: PreferredLanguageCode): Promise<void> => {
+      if (!userId) return;
       if (isChangingLanguage) return;
       setIsChangingLanguage(true);
       try {
         await changeLanguage(language);
         await setPreferredLanguage(language);
+        await writeOnboardingStep(userId, "slides");
         setPhase("carousel");
-      } catch {
+      } catch (error) {
+        logger.warn(
+          "onboarding.language.failed",
+          error instanceof Error ? { message: error.message } : { error }
+        );
         showToast({
           type: "error",
           title: tCommon("error"),
@@ -243,9 +257,73 @@ export default function OnboardingScreen(): React.JSX.Element | null {
         setIsChangingLanguage(false);
       }
     },
-    [isChangingLanguage, tCommon, showToast]
+    [userId, isChangingLanguage, tCommon, showToast]
   );
 
+  /** Carousel finished or skipped — advance cursor to "currency". */
+  const handleCarouselFinish = useCallback(async (): Promise<void> => {
+    if (!userId) return;
+    try {
+      await writeOnboardingStep(userId, "currency");
+      setPhase("currency-picker");
+    } catch (error) {
+      logger.warn(
+        "onboarding.carousel.cursorWrite.failed",
+        error instanceof Error ? { message: error.message } : { error }
+      );
+      // Cursor write is best-effort; advance the local phase regardless.
+      setPhase("currency-picker");
+    }
+  }, [userId]);
+
+  /** Currency picked — persist currency + create cash account, advance cursor. */
+  const handleCurrencySelected = useCallback(
+    async (currency: CurrencyType): Promise<void> => {
+      if (!userId) return;
+      try {
+        await setPreferredCurrencyAndCreateCashAccount(currency);
+        await writeOnboardingStep(userId, "cash-account");
+        setSelectedCurrency(currency);
+        setPhase("wallet-creation");
+      } catch (error) {
+        logger.warn(
+          "onboarding.currency.failed",
+          error instanceof Error ? { message: error.message } : { error }
+        );
+        showToast({
+          type: "error",
+          title: tCommon("error"),
+          message: tCommon("error_generic"),
+        });
+      }
+    },
+    [userId, showToast, tCommon]
+  );
+
+  /** Cash-account confirmation dismissed — flip flag, clear cursor, navigate. */
+  const handleOnboardingComplete = useCallback(async (): Promise<void> => {
+    try {
+      await completeOnboarding();
+    } catch (error) {
+      logger.warn(
+        "onboarding.complete.failed",
+        error instanceof Error ? { message: error.message } : { error }
+      );
+      // Fall through and still navigate — a failed flag write means the
+      // user will see onboarding again on next launch, which is the safe
+      // failure mode (not silently losing data).
+    }
+
+    if (isAuthLoading) {
+      pendingNavigationRef.current = true;
+      return;
+    }
+    navigateAfterOnboarding();
+  }, [isAuthLoading, navigateAfterOnboarding]);
+
+  // ---------------------------------------------------------------------
+  // Carousel helpers
+  // ---------------------------------------------------------------------
   const handleNext = useCallback((): void => {
     if (currentIndex === slides.length - 1) {
       void handleCarouselFinish().catch(() => {});
@@ -282,12 +360,12 @@ export default function OnboardingScreen(): React.JSX.Element | null {
     [isDark]
   );
 
-  // Redirect fallback if wallet-creation reached without prerequisites
-  useEffect(() => {
-    if (phase === "wallet-creation" && selectedCurrency && !userId) {
-      router.replace("/(tabs)");
-    }
-  }, [phase, selectedCurrency, userId, router]);
+  // ---------------------------------------------------------------------
+  // Guards
+  // ---------------------------------------------------------------------
+
+  // Wait for userId + phase resolution before rendering any step.
+  if (!userId || phase === null) return null;
 
   // -----------------------------------------------------------------------
   // Phase: Language Picker
@@ -296,7 +374,7 @@ export default function OnboardingScreen(): React.JSX.Element | null {
     return (
       <LanguagePickerStep
         onLanguageSelected={(lang): void => {
-          handleLanguageSelected(lang).catch(() => {});
+          void handleLanguageSelected(lang).catch(() => {});
         }}
         isLoading={isChangingLanguage}
         initialLanguage={i18n.language === "ar" ? "ar" : "en"}
@@ -311,27 +389,42 @@ export default function OnboardingScreen(): React.JSX.Element | null {
     return (
       <CurrencyPickerStep
         onCurrencySelected={(currency): void => {
-          handleCurrencySelected(currency).catch(() => {});
+          void handleCurrencySelected(currency).catch(() => {});
         }}
       />
     );
   }
 
   // -----------------------------------------------------------------------
-  // Phase: Wallet Creation
+  // Phase: Wallet Creation / Cash-account confirmation
   // -----------------------------------------------------------------------
   if (phase === "wallet-creation" && selectedCurrency) {
-    if (!userId) return null;
-
     return (
       <WalletCreationStep
         userId={userId}
         currency={selectedCurrency}
-        onComplete={handleGoToApp}
-        onError={handleGoToApp}
+        onComplete={(): void => {
+          void handleOnboardingComplete().catch(() => {});
+        }}
+        onError={(): void => {
+          // On error the user hasn't truly completed onboarding — do NOT
+          // flip the DB flag or clear the cursor. Just navigate away so the
+          // app isn't stuck; next launch resumes at the cash-account step
+          // and they can retry.
+          if (isAuthLoading) {
+            pendingNavigationRef.current = true;
+            return;
+          }
+          navigateAfterOnboarding();
+        }}
       />
     );
   }
+
+  // If we reached wallet-creation but selectedCurrency is still null (edge
+  // case: resume cursor said "cash-account" but profile.preferredCurrency
+  // hasn't loaded yet), render nothing and wait for the effect above.
+  if (phase === "wallet-creation") return null;
 
   // -----------------------------------------------------------------------
   // Phase: Carousel (default)
@@ -367,7 +460,7 @@ export default function OnboardingScreen(): React.JSX.Element | null {
         autoPlay={false}
         data={slides}
         scrollAnimationDuration={500}
-        onSnapToItem={(index) => setCurrentIndex(index)}
+        onSnapToItem={(index): void => setCurrentIndex(index)}
         renderItem={renderCarouselItem}
         style={{ marginTop: insets.top + 40 }}
       />

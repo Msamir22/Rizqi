@@ -7,22 +7,18 @@
  * @module storage-keys
  */
 
-/**
- * @deprecated Use `profiles.onboarding_completed` (WatermelonDB) instead.
- * Retained for one release cycle to support pre-release devices that may still
- * write this key. Removal tracked in follow-up GitHub issue.
- */
-export const HAS_ONBOARDED_KEY = "hasOnboarded";
-
 /** ISO timestamp when the user first launched the app. */
 export const FIRST_USE_DATE_KEY = "@rizqi/first-use-date";
 
 /**
- * @deprecated Use `profiles.preferred_language` (WatermelonDB) instead.
- * Retained for one release cycle to support pre-release devices that may still
- * write this key. Removal tracked in follow-up GitHub issue.
+ * Per-user onboarding-step cursor (feature 024).
+ *
+ * Full key format is `onboarding:<userId>:step` — this constant is only the
+ * namespace prefix. Read/write goes through `services/onboarding-cursor-service.ts`
+ * which handles the userId interpolation. Kept here only for discoverability
+ * — there should be no direct AsyncStorage callers outside the cursor service.
  */
-export const LANGUAGE_KEY = "@rizqi/language";
+export const ONBOARDING_CURSOR_PREFIX = "onboarding";
 
 // =============================================================================
 // Logout Keys
@@ -33,10 +29,11 @@ export const LOGOUT_IN_PROGRESS_KEY = "@rizqi/logout-in-progress";
 
 /**
  * AsyncStorage keys that MUST be cleared on logout.
- * Device-level keys (e.g. `HAS_ONBOARDED_KEY`) are intentionally excluded
- * so the user is not forced through onboarding again on the same device.
+ * Device-level keys are intentionally excluded so the user is not forced
+ * through onboarding again on the same device.
  */
 export const CLEARABLE_USER_KEYS: readonly string[] = [
   FIRST_USE_DATE_KEY,
-  // LANGUAGE_KEY intentionally excluded — language preference persists across accounts
+  // Onboarding cursor is per-user; it persists across sign-out so a returning
+  // user resumes at the right step (FR-011 / clarifications 2026-04-18).
 ] as const;

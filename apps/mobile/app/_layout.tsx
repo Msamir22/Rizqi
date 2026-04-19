@@ -26,6 +26,7 @@ import {
   initialWindowMetrics,
 } from "react-native-safe-area-context";
 
+import { AppReadyGate } from "../components/AppReadyGate";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { ThemeProvider, useTheme } from "../context/ThemeContext";
 import { LocaleProvider } from "../context/LocaleContext";
@@ -104,14 +105,10 @@ function RootLayout(): React.ReactNode {
       });
   }, []);
 
-  // Hide splash screen once fonts and i18n are loaded
-  useEffect(() => {
-    if ((fontsLoaded || fontError) && i18nInitialized) {
-      SplashScreen.hideAsync().catch((error: unknown) => {
-        logger.warn("Failed to hide splash screen", { error });
-      });
-    }
-  }, [fontsLoaded, fontError, i18nInitialized]);
+  // Splash screen is hidden by <AppReadyGate /> further down the tree,
+  // which waits for fonts + i18n + auth + initial sync + profile all to be
+  // ready before hiding. This prevents the blank-backdrop flash between
+  // splash and the first real screen render. See components/AppReadyGate.tsx.
 
   // Initialize notifications and live detection lifecycle
   const cleanupRef = useRef<(() => void) | null>(null);
@@ -193,11 +190,14 @@ function RootLayout(): React.ReactNode {
                       <SmsScanProvider>
                         <LocaleProvider>
                           <ThemeProvider>
-                            <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+                            <SafeAreaProvider
+                              initialMetrics={initialWindowMetrics}
+                            >
                               <ToastProvider>
                                 <AuthGuard>
                                   <RootLayoutNav />
                                   <InitialSyncOverlay />
+                                  <AppReadyGate />
                                 </AuthGuard>
                               </ToastProvider>
                             </SafeAreaProvider>

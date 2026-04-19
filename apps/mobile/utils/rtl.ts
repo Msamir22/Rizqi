@@ -2,9 +2,6 @@ import * as Localization from "expo-localization";
 import { I18nManager, Platform } from "react-native";
 import * as Updates from "expo-updates";
 
-import { LANGUAGE_KEY } from "@/constants/storage-keys";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
 /**
  * Apply RTL layout and reload the app bundle.
  *
@@ -53,24 +50,4 @@ export function getDeviceLanguage(): string {
  */
 export function isDeviceLanguageArabic(): boolean {
   return getDeviceLanguage() === "ar";
-}
-
-/**
- * Get the current language from AsyncStorage.
- * Falls back to device locale if not set.
- *
- * @returns Promise<"en" | "ar"> - Current language code
- */
-export async function getCurrentLanguage(): Promise<"en" | "ar"> {
-  try {
-    const stored = await AsyncStorage.getItem(LANGUAGE_KEY);
-    if (stored === "en" || stored === "ar") {
-      return stored;
-    }
-    // No stored preference — fall back to device locale
-    return isDeviceLanguageArabic() ? "ar" : "en";
-  } catch {
-    // If AsyncStorage fails, fall back to device locale
-    return isDeviceLanguageArabic() ? "ar" : "en";
-  }
 }

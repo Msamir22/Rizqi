@@ -1,7 +1,5 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import i18n from "./index";
 
-import { LANGUAGE_KEY } from "@/constants/storage-keys";
 import { applyRTL } from "@/utils/rtl";
 
 export type { SupportedLanguage } from "./translation-schema";
@@ -11,9 +9,15 @@ import type { SupportedLanguage } from "./translation-schema";
  * Change the app language and apply RTL if needed.
  *
  * This function:
- * 1. Saves the language preference to AsyncStorage
- * 2. Updates the i18next language
- * 3. Applies RTL layout changes (triggers reload for Arabic)
+ * 1. Updates the i18next language
+ * 2. Applies RTL layout changes (triggers reload for Arabic)
+ *
+ * NOTE (feature 024, 2026-04-18): persistence of the user's choice is the
+ * CALLER's responsibility — this function no longer writes to AsyncStorage.
+ * Onboarding and Settings call `profile-service.setPreferredLanguage(lang)`
+ * alongside `changeLanguage(lang)`; that mutation writes to
+ * `profiles.preferred_language` (WatermelonDB + Supabase sync). The legacy
+ * `LANGUAGE_KEY` is gone (FR-015).
  *
  * NOTE: When switching to/from Arabic, the app will reload (1-2s loading screen).
  * This is a platform limitation and expected behavior.
@@ -21,9 +25,6 @@ import type { SupportedLanguage } from "./translation-schema";
  * @param lang - Language code ("en" or "ar")
  */
 export async function changeLanguage(lang: SupportedLanguage): Promise<void> {
-  // Save to AsyncStorage for persistence
-  await AsyncStorage.setItem(LANGUAGE_KEY, lang);
-
   // Update i18next language
   await i18n.changeLanguage(lang);
 

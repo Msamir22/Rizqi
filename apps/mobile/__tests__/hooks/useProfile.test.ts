@@ -92,7 +92,7 @@ function renderHook(): {
     resultRef.current = { profile: null, isLoading: true };
   }
 
-  const HookWrapper = (): React.JSX.Element => {
+  const HookWrapper = (): React.JSX.Element | null => {
     const hookVal = useProfile();
     resultRef.current = hookVal;
     return null;

@@ -80,7 +80,7 @@ function renderAndCapture(): {
   const resultRef =
     React.createRef() as React.MutableRefObject<SyncContextSnapshot>;
 
-  const CaptureComponent = (): React.JSX.Element => {
+  const CaptureComponent = (): React.JSX.Element | null => {
     const { initialSyncState, retryInitialSync } = useSync();
     resultRef.current = { initialSyncState, retryInitialSync };
     return null;
