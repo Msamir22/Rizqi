@@ -1,0 +1,197 @@
+/**
+ * Integration tests for the post-auth routing gate (T020) at app/index.tsx.
+ *
+ * FR-012: runs on every post-auth entry — no caching of outcome.
+ * Offline-first corollary: an onboarded user routes to the dashboard even
+ * when the current sync state is "failed" or "timeout".
+ *
+ * Tests:
+ * - loading state (sync in-progress OR profile loading) renders null.
+ * - sync=success + onboardingCompleted=true → dashboard redirect.
+ * - sync=success + onboardingCompleted=false → onboarding redirect.
+ * - sync=failed  + onboardingCompleted=false → retry screen.
+ * - sync=failed  + onboardingCompleted=true  → dashboard (offline-first).
+ */
+
+import React from "react";
+
+interface ReactTestRendererInstance {
+  root: {
+    findAllByProps: (m: Record<string, unknown>) => unknown[];
+    findAllByType: (t: unknown) => unknown[];
+  };
+  toJSON: () => unknown;
+  unmount: () => void;
+}
+interface ReactTestRendererModule {
+  create: (el: React.ReactElement) => ReactTestRendererInstance;
+}
+// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
+const RTR: ReactTestRendererModule = require("react-test-renderer");
+
+// =============================================================================
+// Mocks
+// =============================================================================
+
+const mockUseSync = jest.fn();
+const mockUseProfile = jest.fn();
+const mockPerformLogout = jest.fn().mockResolvedValue(undefined);
+
+// Tag the Redirect element with its `href` so the test can assert the target
+// without depending on expo-router internals.
+jest.mock("expo-router", () => ({
+  Redirect: (props: { href: string }): React.ReactElement => {
+    /* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
+    const ReactMod = require("react");
+    const RN = require("react-native");
+    return ReactMod.createElement(
+      RN.View,
+      { testID: "redirect", "data-href": props.href },
+      null
+    ) as React.ReactElement;
+    /* eslint-enable @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
+  },
+}));
+
+jest.mock("@rizqi/db", () => ({ database: {} }));
+
+jest.mock("@/providers/SyncProvider", () => ({
+  useSync: (): unknown => mockUseSync(),
+}));
+
+jest.mock("@/hooks/useProfile", () => ({
+  useProfile: (): unknown => mockUseProfile(),
+}));
+
+jest.mock("@/services/logout-service", () => ({
+  performLogout: (): Promise<void> => mockPerformLogout() as Promise<void>,
+}));
+
+jest.mock("@/utils/logger", () => ({
+  logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+}));
+
+// RetrySyncScreen pulled in via the gate — give it a tagged stub.
+jest.mock("@/components/ui/RetrySyncScreen", () => {
+  /* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
+  const ReactMod = require("react");
+  const RN = require("react-native");
+  return {
+    RetrySyncScreen: (): React.ReactElement =>
+      ReactMod.createElement(
+        RN.View,
+        { testID: "retry-screen" },
+        null
+      ) as React.ReactElement,
+  };
+  /* eslint-enable @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
+});
+
+// =============================================================================
+// Under test
+// =============================================================================
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
+const IndexModule = require("../../app/index.tsx") as {
+  default: (props: unknown) => React.ReactNode;
+};
+const Index = IndexModule.default;
+
+// =============================================================================
+// Helpers
+// =============================================================================
+
+function setState(opts: {
+  syncState: "in-progress" | "success" | "failed" | "timeout";
+  isProfileLoading?: boolean;
+  onboardingCompleted?: boolean;
+}): void {
+  mockUseSync.mockReturnValue({
+    initialSyncState: opts.syncState,
+    retryInitialSync: jest.fn().mockResolvedValue(opts.syncState),
+  });
+  mockUseProfile.mockReturnValue({
+    profile: { onboardingCompleted: opts.onboardingCompleted ?? false },
+    isLoading: opts.isProfileLoading ?? false,
+  });
+}
+
+function renderGate(): ReactTestRendererInstance {
+  return RTR.create(React.createElement(Index));
+}
+
+function findRedirectHref(
+  renderer: ReactTestRendererInstance
+): string | undefined {
+  const hits = renderer.root.findAllByProps({ testID: "redirect" });
+  const node = hits[0] as { props?: { [key: string]: unknown } } | undefined;
+  return node?.props?.["data-href"] as string | undefined;
+}
+
+// =============================================================================
+// Tests
+// =============================================================================
+
+describe("index.tsx routing gate", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("renders null while sync is still in progress", () => {
+    setState({ syncState: "in-progress" });
+    const renderer = renderGate();
+    expect(renderer.toJSON()).toBeNull();
+  });
+
+  it("renders null while the profile is still loading (even after sync success)", () => {
+    setState({ syncState: "success", isProfileLoading: true });
+    const renderer = renderGate();
+    expect(renderer.toJSON()).toBeNull();
+  });
+
+  it("redirects to /(tabs) when sync succeeded and onboarding is already completed", () => {
+    setState({
+      syncState: "success",
+      onboardingCompleted: true,
+    });
+    const renderer = renderGate();
+    expect(findRedirectHref(renderer)).toBe("/(tabs)");
+  });
+
+  it("redirects to /onboarding when sync succeeded and onboarding is NOT completed", () => {
+    setState({
+      syncState: "success",
+      onboardingCompleted: false,
+    });
+    const renderer = renderGate();
+    expect(findRedirectHref(renderer)).toBe("/onboarding");
+  });
+
+  it("renders the retry screen when sync failed and the user has NOT onboarded yet", () => {
+    setState({
+      syncState: "failed",
+      onboardingCompleted: false,
+    });
+    const renderer = renderGate();
+    const hits = renderer.root.findAllByProps({ testID: "retry-screen" });
+    expect(hits.length).toBeGreaterThan(0);
+  });
+
+  it("routes an onboarded user to the dashboard even when sync FAILED — offline-first guarantee", () => {
+    setState({
+      syncState: "failed",
+      onboardingCompleted: true,
+    });
+    const renderer = renderGate();
+    expect(findRedirectHref(renderer)).toBe("/(tabs)");
+  });
+
+  it("routes an onboarded user to the dashboard even when sync TIMED OUT — offline-first guarantee", () => {
+    setState({
+      syncState: "timeout",
+      onboardingCompleted: true,
+    });
+    const renderer = renderGate();
+    expect(findRedirectHref(renderer)).toBe("/(tabs)");
+  });
+});

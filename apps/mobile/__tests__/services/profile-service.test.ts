@@ -127,6 +127,16 @@ jest.mock("@/utils/logger", () => ({
 }));
 
 // =============================================================================
+// Mock: supabase — profile-service imports getCurrentUserId. The real
+// supabase client throws at module load when EXPO_PUBLIC_SUPABASE_URL is
+// missing, so we provide a lightweight mock.
+// =============================================================================
+
+jest.mock("@/services/supabase", () => ({
+  getCurrentUserId: jest.fn().mockResolvedValue("user-1"),
+}));
+
+// =============================================================================
 // Import module under test (after mocks)
 // =============================================================================
 

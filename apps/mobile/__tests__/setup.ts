@@ -51,6 +51,17 @@ jest.mock("@expo/vector-icons", () => {
   );
 });
 
+// Mock the internal AppState module that react-native/index.js re-requires
+// on every property access. Patching the returned object in place does not
+// stick, so we mock the underlying module directly. We cannot `jest.mock`
+// the whole "react-native" module (breaks jest-expo's component mocks which
+// read `displayName` on every exported component during setup).
+jest.mock("react-native/Libraries/AppState/AppState", () => ({
+  currentState: "active",
+  addEventListener: jest.fn(() => ({ remove: jest.fn() })),
+  removeEventListener: jest.fn(),
+}));
+
 // Ditto — the individual icon-family entrypoints used directly by some files.
 jest.mock("@expo/vector-icons/Ionicons", () => {
   const NullIcon = (): null => null;
