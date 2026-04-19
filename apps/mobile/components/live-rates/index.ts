@@ -13,5 +13,5 @@ export { LiveRatesEmptyState } from "./LiveRatesEmptyState";
 export { LiveRatesFooter } from "./LiveRatesFooter";
 export { LiveRatesHeader } from "./LiveRatesHeader";
 export { LiveRatesScreen } from "./LiveRatesScreen";
-export { LiveRatesSkeleton } from "./LiveRatesSkeleton";
+export { LiveRatesScreenSkeleton } from "./LiveRatesScreenSkeleton";
 export { MetalCard } from "./MetalCard";

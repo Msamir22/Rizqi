@@ -105,7 +105,7 @@ function RecentTransactionsComponent({
     router.push("/add-transaction");
   }, []);
 
-  if (isLoading) {
+  if (isLoading && transactions.length === 0) {
     return <RecentTransactionsSkeleton />;
   }
 

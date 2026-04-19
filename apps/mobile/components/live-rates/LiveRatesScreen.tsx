@@ -31,7 +31,7 @@ import { GoldHeroCard } from "./GoldHeroCard";
 import { LiveRatesEmptyState } from "./LiveRatesEmptyState";
 import { LiveRatesFooter } from "./LiveRatesFooter";
 import { LiveRatesHeader } from "./LiveRatesHeader";
-import { LiveRatesSkeleton } from "./LiveRatesSkeleton";
+import { LiveRatesScreenSkeleton } from "./LiveRatesScreenSkeleton";
 import { MetalCard } from "./MetalCard";
 
 // =============================================================================
@@ -77,7 +77,7 @@ export function LiveRatesScreen(): React.JSX.Element {
       <LiveRatesHeader isConnected={isConnected} isStale={isStale} />
 
       {isLoading && !hasData ? (
-        <LiveRatesSkeleton />
+        <LiveRatesScreenSkeleton />
       ) : !hasData ? (
         <ScrollView
           showsVerticalScrollIndicator={false}

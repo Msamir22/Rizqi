@@ -283,7 +283,12 @@ export default function SmsScanScreen(): React.JSX.Element {
   // indefinitely. Navigate the user back instead.
   useEffect(() => {
     if (Platform.OS !== "android") {
-      router.back();
+      if (router.canGoBack()) {
+        router.back();
+        return;
+      }
+
+      router.replace("/(tabs)");
     }
   }, [router]);
 

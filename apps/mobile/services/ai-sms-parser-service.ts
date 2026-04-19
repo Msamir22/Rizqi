@@ -199,7 +199,7 @@ function mapAiTransactions(
       // enum for correlation and debugging.
       logger.info("[ai-sms-parser] Untrusted transaction, skipping", {
         messageId: aiTx.messageId,
-        currency: aiTx.currency,
+        currency,
       });
       continue;
     }

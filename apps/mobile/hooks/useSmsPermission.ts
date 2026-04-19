@@ -136,7 +136,10 @@ export function useSmsPermission(): UseSmsPermissionResult {
 
         setStatus(newStatus);
         return newStatus;
-      } catch {
+      } catch (error: unknown) {
+        logger.warn("PermissionsAndroid.request(READ_SMS) threw", {
+          error: error instanceof Error ? error.message : String(error),
+        });
         setStatus("denied");
         return "denied";
       }

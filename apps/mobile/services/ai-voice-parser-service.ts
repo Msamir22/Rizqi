@@ -367,8 +367,11 @@ export async function parseVoiceWithAi(
         logger.warn(
           "[ai-voice-parser] Skipping semantically invalid transaction",
           {
-            categorySystemName: aiTx.categorySystemName,
-            currency: aiTx.currency,
+            categorySystemNameLength: aiTx.categorySystemName,
+            currency: aiTx.currency
+              ? normalizeCurrencySafe(aiTx.currency, validatedCurrency)
+              : null,
+
             error: error instanceof Error ? error.message : String(error),
           }
         );

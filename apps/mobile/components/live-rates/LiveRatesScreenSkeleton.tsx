@@ -32,7 +32,7 @@ const GAP = 12;
 // Component
 // =============================================================================
 
-export function LiveRatesSkeleton(): React.JSX.Element {
+export function LiveRatesScreenSkeleton(): React.JSX.Element {
   return (
     <View className="px-5 pt-2">
       {/* Hero Gold Card skeleton */}
