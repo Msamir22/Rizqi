@@ -179,12 +179,15 @@ export function AppDrawer({
     }).start();
   }, [visible, slideAnim]);
 
-  const handleNavigation = (route: string): void => {
-    onClose();
-    setTimeout(() => {
-      router.push(route as never);
-    }, 100);
-  };
+  const handleNavigation = useCallback(
+    (route: string): void => {
+      onClose();
+      setTimeout(() => {
+        router.push(route as never);
+      }, 100);
+    },
+    [onClose]
+  );
 
   const handleLogoutPress = useCallback(async (): Promise<void> => {
     setIsLoggingOut(true);
