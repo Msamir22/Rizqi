@@ -93,6 +93,28 @@ function getCursorServiceMocks(): CursorServiceMocks {
 }
 
 // =============================================================================
+// Mock: i18n changeLanguage — setPreferredLanguage now owns the i18n apply
+// per PR #238 review Finding #6. Mocking here prevents i18next state mutation
+// (which would fail without loaded translation resources) during the unit test
+// AND lets us assert the service invokes it.
+// =============================================================================
+
+jest.mock("@/i18n/changeLanguage", () => {
+  const changeLanguage = jest.fn().mockResolvedValue(undefined);
+  return { changeLanguage, __mocks: { changeLanguage } };
+});
+
+interface ChangeLanguageMocks {
+  changeLanguage: jest.Mock;
+}
+
+function getChangeLanguageMocks(): ChangeLanguageMocks {
+  return jest.requireMock<{ __mocks: ChangeLanguageMocks }>(
+    "@/i18n/changeLanguage"
+  ).__mocks;
+}
+
+// =============================================================================
 // Mock: logger
 // =============================================================================
 
@@ -169,7 +191,18 @@ describe("setPreferredLanguage", () => {
     expect(mockWrite).toHaveBeenCalledTimes(1);
   });
 
-  it("accepts 'ar' as a supported language", async (): Promise<void> => {
+  it("also calls i18n changeLanguage so the UI updates in sync (guards PR #238 Finding #6)", async (): Promise<void> => {
+    const profile = createMockProfile();
+    setupProfileFound(profile);
+
+    await setPreferredLanguage("en");
+
+    const { changeLanguage } = getChangeLanguageMocks();
+    expect(changeLanguage).toHaveBeenCalledTimes(1);
+    expect(changeLanguage).toHaveBeenCalledWith("en");
+  });
+
+  it("accepts 'ar' as a supported language and forwards it to changeLanguage", async (): Promise<void> => {
     const profile = createMockProfile();
     setupProfileFound(profile);
 
@@ -177,6 +210,8 @@ describe("setPreferredLanguage", () => {
 
     const { mockWrite } = getDbMocks();
     expect(mockWrite).toHaveBeenCalledTimes(1);
+    const { changeLanguage } = getChangeLanguageMocks();
+    expect(changeLanguage).toHaveBeenCalledWith("ar");
   });
 
   it("throws if no profile row exists", async (): Promise<void> => {

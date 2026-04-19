@@ -79,11 +79,17 @@ export declare function getRoutingDecision(
 // --- Profile mutations (implemented in services/profile-service.ts) ---------
 
 /**
- * Persist the language the user picked at the Language step.
- * Resolves FR-007.
+ * Persist the language the user picked at the Language step AND apply it to
+ * the in-memory i18n + RTL state. Resolves FR-007.
  *
- * Writes `profiles.preferred_language` via `database.write()`. Also calls the
- * existing `changeLanguage()` i18n helper so the UI updates immediately.
+ * Implementation:
+ * 1. `database.write()` sets `profiles.preferred_language`.
+ * 2. Awaits `changeLanguage(language)` so the UI updates immediately AND the
+ *    RTL flag is reapplied (reload triggered by expo-updates on language flip).
+ *
+ * This is the SINGLE entry point for language changes (Principle IV — no
+ * business logic in screens). Callers MUST NOT invoke `changeLanguage`
+ * themselves; it is owned by the service.
  *
  * Throws if no profile row exists for the current user (should not happen
  * post-sync; caller logs and falls back to `retry`).
@@ -93,12 +99,19 @@ export declare function setPreferredLanguage(
 ): Promise<void>;
 
 /**
- * Atomic operation: set the user's preferred currency AND create the cash
- * account in that currency. Resolves FR-009 + FR-010.
+ * Set the user's preferred currency AND create the cash account in that
+ * currency. Resolves FR-009 + FR-010.
  *
- * - Wraps both writes in a single `database.write()` to avoid partial state.
- * - Idempotent: calling twice with the same currency is a no-op on the
- *   cash-account creation (`ensureCashAccount` is idempotent by design).
+ * Implementation note: two SEQUENTIAL `database.write()` calls, NOT nested.
+ * `ensureCashAccount` owns its own writer; wrapping it inside an outer
+ * `database.write` triggers WatermelonDB's nested-write deadlock (visible
+ * as "The writer you're trying to run ... can't be performed yet" warnings).
+ *
+ * Atomicity caveat: if step 1 succeeds and step 2 fails, the profile has a
+ * new `preferred_currency` but no cash account. Acceptable because
+ * (a) `ensureCashAccount` is idempotent, and (b) the AsyncStorage cursor
+ * only advances to "cash-account" AFTER this call returns successfully, so
+ * the next launch replays the currency step and retries creation.
  *
  * Returns the accountId of the cash account (existing or newly created).
  */
@@ -119,7 +132,15 @@ export declare function setPreferredCurrencyAndCreateCashAccount(
  * and a stale cursor is harmless because the router reads the DB flag. Step 1
  * is the contract-critical write.
  *
- * Idempotent — safe to call if already completed (no-op).
+ * **Callers MUST `await` this call before navigating.** A rejected promise
+ * means step 1 failed; continuing to the dashboard would leave the user with
+ * `onboarding_completed = false` and they would re-enter the onboarding flow
+ * on the next launch. `WalletCreationStep` intentionally does NOT call this
+ * itself — it forwards the completion signal upward to `app/onboarding.tsx`,
+ * which owns the await-then-navigate sequence.
+ *
+ * Idempotent — safe to call if already completed (no-op on the DB write;
+ * the cursor clear still runs defensively).
  */
 export declare function completeOnboarding(userId: string): Promise<void>;
 

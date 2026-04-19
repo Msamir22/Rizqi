@@ -20,7 +20,6 @@
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { ensureCashAccount } from "@/services/account-service";
-import { completeOnboarding } from "@/services/profile-service";
 import type { CurrencyType } from "@rizqi/db";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -99,9 +98,11 @@ export function WalletCreationStep({
     if (phase === "error") {
       onError();
     } else {
-      // Flip the onboarding_completed flag (FR-011). Fire-and-forget —
-      // the flag syncs to the server on the next push-sync cycle.
-      completeOnboarding().catch(() => {});
+      // The onboarding screen (parent) owns the `completeOnboarding` DB
+      // write and AsyncStorage cursor clear so the call can be awaited
+      // before navigation. Don't duplicate it here — calling it from both
+      // places caused a latent race (see PR review Finding #1). Just
+      // forward the completion signal upward.
       onComplete();
     }
   }, [phase, onComplete, onError]);
