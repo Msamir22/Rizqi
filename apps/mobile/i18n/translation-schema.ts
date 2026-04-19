@@ -310,7 +310,12 @@ interface SettingsTranslations {
   readonly rescan_message: string;
   readonly rescan_confirm: string;
   readonly sync_failed_title: string;
+  readonly sync_failed_chip: string;
+  readonly sync_failed_description: string;
   readonly sync_failed_message: string;
+  readonly sync_helper_text: string;
+  readonly sign_out: string;
+  readonly cash_account_creation_failed: string;
   readonly proceed_anyway: string;
 }
 

@@ -164,6 +164,7 @@
   "section_upcoming_payments": "Upcoming Payments",
   "section_recent_transactions": "Recent Transactions",
   "sync_failed_title": "Couldn't load your account",
+  "sync_failed_chip": "SYNC FAILED",
   "sync_failed_description": "We tried to download your latest data but couldn't reach our servers.",
   "sign_out": "Sign out",
   "sync_helper_text": "Still not working? Check your internet connection.",

@@ -107,7 +107,7 @@ function buildGoldRate(
 
   return {
     id: "2",
-    label: t("gold_24k_label").replace(":", ""),
+    label: t("gold_24k_pill"),
     value: `${symbol} ${Math.round(goldInPreferred).toLocaleString()}/g`,
     trend: calculateTrend(goldInPreferred, prevGoldInPreferred),
     type: "gold",
@@ -136,7 +136,7 @@ function buildSilverRate(
 
   return {
     id: "3",
-    label: t("silver_label").replace(":", ""),
+    label: t("silver_pill"),
     value: `${symbol} ${silverInPreferred.toFixed(2)}/g`,
     trend: calculateTrend(silverInPreferred, prevSilverInPreferred),
     type: "silver",

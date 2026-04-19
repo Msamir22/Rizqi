@@ -51,10 +51,12 @@ export function RetrySyncScreen({
           <Ionicons name="cloud-offline" size={24} color={palette.red[400]} />
         </View>
 
-        {/* Status Chip */}
+        {/* Status Chip — dedicated i18n key per review Finding #3.
+            Previously derived via sync_failed_title.split(" ").slice(-2),
+            which breaks in Arabic (RTL + different word order). */}
         <View className="px-3 py-1 rounded-full mb-4 bg-red-500/15">
           <Text className="text-xs font-semibold uppercase tracking-wider text-red-400">
-            {t("sync_failed_title").split(" ").slice(-2).join(" ")}
+            {t("sync_failed_chip")}
           </Text>
         </View>
 
@@ -74,6 +76,8 @@ export function RetrySyncScreen({
           <TouchableOpacity
             onPress={onSignOut}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={t("sign_out")}
             className="flex-1 h-12 items-center justify-center rounded-xl border border-slate-700"
           >
             <Text className="text-[15px] font-medium text-slate-25">
@@ -85,6 +89,8 @@ export function RetrySyncScreen({
           <TouchableOpacity
             onPress={onRetry}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={t("retry")}
             className="flex-1 h-12 items-center justify-center rounded-xl bg-nileGreen-500"
             // NativeWind v4 crash: shadow on TouchableOpacity must use inline style
             // eslint-disable-next-line react-native/no-inline-styles
