@@ -267,7 +267,7 @@ mobile-DB feature.
      preserved — moving it would break existing behavior.
    - Cash-account tooltip is a NEW independent component (`CashAccountTooltip`)
      with its own visibility logic:
-     ```
+     ```text
      visible = isFirstRunPending
              && !shouldShowPrompt                // wait for SMS prompt to clear (Android)
              && !onboarding_flags.cash_account_tooltip_dismissed

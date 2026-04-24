@@ -244,21 +244,44 @@ export function AnchoredTooltip({
       return;
     }
 
+    // A single rAF can still fire before the anchor has committed its layout
+    // (e.g. the dashboard is still settling when `isFirstRunPending` flips).
+    // If `measureInWindow` returns 0×0, retry on the next frame up to
+    // `MAX_ATTEMPTS` times before giving up. Giving up is safe — the
+    // tooltip renders null, so the user just does not see it (graceful
+    // degradation); a hard crash on absent metrics would be worse.
+    const MAX_ATTEMPTS = 5;
     let cancelled = false;
-    const raf = requestAnimationFrame(() => {
+    let rafHandle = 0;
+    let attempts = 0;
+
+    const attemptMeasure = (): void => {
       if (cancelled) return;
-      anchorRef.current?.measureInWindow(
-        (x: number, y: number, width: number, height: number) => {
-          if (!cancelled && width > 0 && height > 0) {
-            setAnchorMetrics({ x, y, width, height });
+      attempts += 1;
+      rafHandle = requestAnimationFrame(() => {
+        if (cancelled) return;
+        anchorRef.current?.measureInWindow(
+          (x: number, y: number, width: number, height: number) => {
+            if (cancelled) return;
+            if (width > 0 && height > 0) {
+              setAnchorMetrics({ x, y, width, height });
+              return;
+            }
+            if (attempts < MAX_ATTEMPTS) {
+              attemptMeasure();
+            }
+            // else: anchor never stabilized — render null via the
+            // `!anchorMetrics` guard below.
           }
-        }
-      );
-    });
+        );
+      });
+    };
+
+    attemptMeasure();
 
     return () => {
       cancelled = true;
-      cancelAnimationFrame(raf);
+      cancelAnimationFrame(rafHandle);
       setAnchorMetrics(null);
     };
   }, [visible, anchorRef]);

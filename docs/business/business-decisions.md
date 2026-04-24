@@ -1000,7 +1000,7 @@ WatermelonDB for offline access.
 
 ### 12.3 Profile Creation Flow
 
-```
+```text
 1. User opens app → pre-auth Slides shown if AsyncStorage `intro:seen` is false
 2. User taps Sign-up CTA on slides → auth screen → sign-up succeeds
 3. System creates profile with (via the `handle_new_user` trigger + column defaults):

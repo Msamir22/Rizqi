@@ -307,7 +307,19 @@ export async function confirmCurrencyAndOnboard(
     });
   });
 
-  options?.onTransactionCommitted?.();
+  // Post-commit callback — the DB state is already durably committed by the
+  // time we get here, so a throwing callback (e.g. an unrelated setState
+  // blowing up downstream) MUST NOT surface as a `confirmCurrencyAndOnboard`
+  // rejection. The caller would then see an error toast and believe the
+  // write failed, tempting them to retry an already-successful operation.
+  try {
+    options?.onTransactionCommitted?.();
+  } catch (error: unknown) {
+    logger.warn(
+      "onboarding.confirmCurrencyAndOnboard.onTransactionCommitted.failed",
+      error instanceof Error ? { message: error.message } : { error }
+    );
+  }
 
   // Defensive cursor clear — non-critical
   try {
