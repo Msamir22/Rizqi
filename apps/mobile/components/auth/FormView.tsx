@@ -145,10 +145,10 @@ export function FormView({
 
       {/* Welcome Section */}
       <View className="items-center gap-2 mb-6">
-        <Text className="text-[28px] font-bold text-center text-text-primary">
+        <Text className="text-[28px] font-bold text-center text-text-primary dark:text-text-primary-dark">
           {t("welcome_title")}
         </Text>
-        <Text className="text-base text-center text-text-secondary max-w-[320px] leading-6">
+        <Text className="text-base text-center text-text-secondary dark:text-text-secondary-dark max-w-[320px] leading-6">
           {t("welcome_tagline")}
         </Text>
       </View>
@@ -162,7 +162,7 @@ export function FormView({
             style={{ gap: 6 }}
           >
             <PillIcon pill={pill} size={14} color={pillIconColor} />
-            <Text className="text-xs font-medium text-text-secondary">
+            <Text className="text-xs font-medium text-text-secondary dark:text-text-secondary-dark">
               {t(pill.translationKey)}
             </Text>
           </View>
@@ -219,7 +219,7 @@ export function FormView({
             size={14}
             color={trustIconColor}
           />
-          <Text className="text-xs text-text-muted">
+          <Text className="text-xs text-text-muted dark:text-text-muted-dark">
             {t("trust_encrypted")}
           </Text>
         </View>
@@ -229,7 +229,9 @@ export function FormView({
             size={14}
             color={trustIconColor}
           />
-          <Text className="text-xs text-text-muted">{t("trust_private")}</Text>
+          <Text className="text-xs text-text-muted dark:text-text-muted-dark">
+            {t("trust_private")}
+          </Text>
         </View>
       </View>
     </>
