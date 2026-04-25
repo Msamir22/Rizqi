@@ -5,6 +5,7 @@
   "pitch_slide_voice_eyebrow": "٠١ · الصوت",
   "pitch_slide_voice_headline": "تتبع مصاريفك بصوتك.",
   "pitch_slide_voice_subhead": "تكلم كأنك بتتكلم مع صاحبك. رزقي يسمع، ويحفظها لك.",
+  "pitch_slide_voice_listening": "بيستمع…",
   "pitch_slide_voice_transcript": "دفعت لسه ٢٠٠ جنيه قهوة مع أحمد",
   "pitch_slide_voice_status_saved": "محفوظة تلقائيًا",
   "pitch_slide_voice_status_just_now": "الآن",
@@ -37,6 +38,7 @@
   "pitch_skip": "تخطي",
   "pitch_continue": "متابعة",
   "pitch_get_started": "هيا بنا",
+  "pitch_back": "الشريحة السابقة",
 
   "currency_step_title": "اختر العملة الأساسية",
   "currency_step_subtitle": "دي عملة حسابك الأول. تقدر تغيرها بعدين من الإعدادات.",

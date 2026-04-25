@@ -79,10 +79,12 @@ const REQUIRED_SCALAR_KEYS: Record<string, readonly string[]> = {
     "pitch_skip",
     "pitch_continue",
     "pitch_get_started",
+    "pitch_back",
     // Pitch slide 1 — Voice
     "pitch_slide_voice_eyebrow",
     "pitch_slide_voice_headline",
     "pitch_slide_voice_subhead",
+    "pitch_slide_voice_listening",
     "pitch_slide_voice_transcript",
     "pitch_slide_voice_status_saved",
     "pitch_slide_voice_status_just_now",

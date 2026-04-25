@@ -1,7 +1,9 @@
 import React, { useCallback } from "react";
 import { View } from "react-native";
 import { useTranslation } from "react-i18next";
+import { Ionicons } from "@expo/vector-icons";
 import { AnchoredTooltip } from "@/components/ui/AnchoredTooltip";
+import { palette } from "@/constants/colors";
 import { useFirstRunTooltip } from "@/context/FirstRunTooltipContext";
 import { useDismissOnBack } from "@/hooks/useDismissOnBack";
 import { useOnboardingFlags } from "@/hooks/useOnboardingFlags";
@@ -58,6 +60,15 @@ export function CashAccountTooltip({
 
   if (!visible) return null;
 
+  // Per mockup `05-tooltip-cash-account.png`: small green-tinted circle with
+  // a leaf/check-mark icon above the title. We use the project's Ionicons
+  // sparkles glyph to communicate "we set this up for you" / fresh-bloom.
+  const tooltipIcon = (
+    <View className="h-8 w-8 items-center justify-center rounded-full bg-nileGreen-500/15">
+      <Ionicons name="sparkles" size={16} color={palette.nileGreen[600]} />
+    </View>
+  );
+
   return (
     <AnchoredTooltip
       visible={visible}
@@ -66,6 +77,7 @@ export function CashAccountTooltip({
       body={t("cash_account_tooltip_body")}
       primaryLabel={t("cash_account_tooltip_got_it")}
       onPrimaryPress={handleDismiss}
+      icon={tooltipIcon}
       anchorSide="above"
     />
   );

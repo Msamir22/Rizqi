@@ -5,6 +5,7 @@
   "pitch_slide_voice_eyebrow": "01 · VOICE",
   "pitch_slide_voice_headline": "Track with your voice.",
   "pitch_slide_voice_subhead": "Talk naturally — like you would to a friend. Rizqi listens, parses, and saves it for you.",
+  "pitch_slide_voice_listening": "Listening…",
   "pitch_slide_voice_transcript": "Just paid 200 pounds for coffee with Ahmed",
   "pitch_slide_voice_status_saved": "Saved automatically",
   "pitch_slide_voice_status_just_now": "Just now",
@@ -37,6 +38,7 @@
   "pitch_skip": "Skip",
   "pitch_continue": "Continue",
   "pitch_get_started": "Get Started",
+  "pitch_back": "Previous slide",
 
   "currency_step_title": "Choose your primary currency",
   "currency_step_subtitle": "This is the currency of your first account. You can change it later from Settings.",

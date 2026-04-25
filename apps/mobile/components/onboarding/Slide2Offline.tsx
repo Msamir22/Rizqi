@@ -1,46 +1,115 @@
 import React from "react";
 import { View, Text } from "react-native";
 import { useTranslation } from "react-i18next";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { palette } from "@/constants/colors";
 import { PitchMockCard } from "./PitchMockCard";
+
+/**
+ * Mock card for the Offline-first pitch slide (iOS only).
+ *
+ * Mirrors `specs/026-onboarding-restructure/mockups/02b-slide-offline-ios.png`:
+ *  - Top row: 📡 "Offline mode" pill (slate) + "⚡ INSTANT" pill (green).
+ *  - Section heading: "RECENTLY ADDED".
+ *  - 3-row recent transaction list — emoji + amount + category · time + chevron.
+ *  - Footer row: lightning + "All saved instantly" + "{N} pending" pill.
+ *
+ * Numeric mock values are baked into the illustration and not translated —
+ * see `// i18n-ignore` comments.
+ */
+interface MockTx {
+  readonly emoji: string;
+  readonly amount: string;
+  readonly category: string;
+  readonly time: string;
+}
+
+const MOCK_TX: readonly MockTx[] = [
+  {
+    emoji: "☕",
+    amount: "200 EGP",
+    category: "Food & Drinks",
+    time: "12:45 PM",
+  },
+  { emoji: "🚌", amount: "85 EGP", category: "Transport", time: "12:52 PM" },
+  { emoji: "🛒", amount: "340 EGP", category: "Groceries", time: "1:03 PM" },
+];
 
 export function Slide2Offline(): React.ReactElement {
   const { t } = useTranslation("onboarding");
 
   return (
     <PitchMockCard>
-      {/* Status pills */}
-      <View className="flex-row items-center gap-2">
-        <View className="rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-700">
+      {/* Status pills row */}
+      <View className="flex-row items-center justify-between">
+        <View
+          className="flex-row items-center rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-700"
+          style={{ gap: 4 }}
+        >
+          <MaterialCommunityIcons
+            name="wifi-off"
+            size={12}
+            color={palette.slate[500]}
+          />
           <Text className="text-xs font-medium text-slate-600 dark:text-slate-300">
             {t("pitch_slide_offline_status_offline")}
           </Text>
         </View>
-        <View className="rounded-full bg-amber-100 px-3 py-1 dark:bg-amber-900/30">
-          <Text className="text-xs font-medium text-amber-700 dark:text-amber-400">
+        <View className="rounded-full bg-nileGreen-500/15 px-3 py-1">
+          <Text className="text-xs font-bold uppercase tracking-wider text-nileGreen-700 dark:text-nileGreen-300">
             {t("pitch_slide_offline_status_instant")}
           </Text>
         </View>
       </View>
 
-      {/* Recently added header */}
-      <Text className="mt-4 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+      {/* Section heading */}
+      <Text className="mt-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
         {t("pitch_slide_offline_recently_added")}
       </Text>
 
-      {/* Placeholder items */}
-      {[1, 2, 3].map((i) => (
-        <View
-          key={i}
-          className="mt-2 h-3 rounded bg-slate-100 dark:bg-slate-700"
-          style={{ width: `${90 - i * 15}%` }}
-        />
-      ))}
+      {/* Recent transaction stack */}
+      <View className="mt-2" style={{ gap: 8 }}>
+        {MOCK_TX.map((tx) => (
+          <View
+            key={tx.amount + tx.time}
+            className="flex-row items-center"
+            style={{ gap: 10 }}
+          >
+            <View className="h-8 w-8 items-center justify-center rounded-full bg-slate-50 dark:bg-slate-700">
+              <Text className="text-base">{tx.emoji}</Text>
+            </View>
+            <View className="flex-1">
+              <Text className="text-sm font-semibold text-slate-900 dark:text-white">
+                {/* i18n-ignore: numeric mock value baked into the illustration */}
+                {tx.amount}
+              </Text>
+              <Text className="text-xs text-slate-500 dark:text-slate-400">
+                {/* i18n-ignore: mock category + timestamp string for the illustration */}
+                {tx.category} · {tx.time}
+              </Text>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={14}
+              color={palette.slate[400]}
+            />
+          </View>
+        ))}
+      </View>
 
-      {/* Bottom status */}
-      <View className="mt-4 border-t border-slate-100 pt-3 dark:border-slate-700">
-        <Text className="text-xs font-medium text-nileGreen-600 dark:text-nileGreen-400">
-          {t("pitch_slide_offline_all_saved")}
-        </Text>
+      {/* Footer */}
+      <View className="mt-4 flex-row items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-700">
+        <View className="flex-row items-center" style={{ gap: 6 }}>
+          <Ionicons name="flash" size={12} color={palette.nileGreen[500]} />
+          <Text className="text-xs font-medium text-nileGreen-700 dark:text-nileGreen-300">
+            {t("pitch_slide_offline_all_saved")}
+          </Text>
+        </View>
+        <View className="rounded-full bg-slate-100 px-2.5 py-0.5 dark:bg-slate-700">
+          <Text className="text-[10px] font-semibold text-slate-600 dark:text-slate-300">
+            {t("pitch_slide_offline_pending", { count: 3 })}
+          </Text>
+        </View>
       </View>
     </PitchMockCard>
   );

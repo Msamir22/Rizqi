@@ -36,7 +36,8 @@ export function PitchCarousel(): React.ReactElement {
   const totalSlides = SLIDES.length;
 
   /**
-   * Skip / Get-Started handler.
+   * Skip / Get-Started handler — used by the top-right Skip on slides 1–2 and
+   * by the "Get Started" CTA on the last slide.
    *
    * Navigation MUST always run — even if `markIntroSeen` rejects. The flag is
    * a best-effort AsyncStorage write (the service already logs + swallows
@@ -57,6 +58,26 @@ export function PitchCarousel(): React.ReactElement {
     carouselRef.current?.scrollTo({ index, animated: true });
     setCurrentSlide(index);
   }, []);
+
+  /**
+   * Per-slide advance handler:
+   *  - On slides 1 and 2 → scroll forward to the next slide.
+   *  - On the last slide → mark intro seen + navigate to /auth.
+   */
+  const handleAdvance = useCallback((): void => {
+    if (currentSlide < totalSlides - 1) {
+      goToSlide(currentSlide + 1);
+      return;
+    }
+    void handleComplete();
+  }, [currentSlide, totalSlides, goToSlide, handleComplete]);
+
+  /** Last-slide back-to-previous handler. */
+  const handlePrevious = useCallback((): void => {
+    if (currentSlide > 0) {
+      goToSlide(currentSlide - 1);
+    }
+  }, [currentSlide, goToSlide]);
 
   useFocusEffect(
     useCallback(() => {
@@ -89,12 +110,12 @@ export function PitchCarousel(): React.ReactElement {
               headline={t(`pitch_slide_${item.key}_headline`)}
               subhead={t(`pitch_slide_${item.key}_subhead`)}
               isLast={index === totalSlides - 1}
+              hasPrevious={index > 0}
               onSkip={() => {
                 void handleComplete();
               }}
-              onGetStarted={() => {
-                void handleComplete();
-              }}
+              onPrevious={handlePrevious}
+              onAdvance={handleAdvance}
             >
               <SlideComponent />
             </PitchSlide>
@@ -102,11 +123,17 @@ export function PitchCarousel(): React.ReactElement {
         }}
       />
 
-      {/* Pagination dots */}
-      <View className="absolute bottom-8 left-0 right-0 flex-row items-center justify-center gap-2">
-        {SLIDES.map((_, i) => (
+      {/* Pagination dots — sit just above the CTA row that PitchSlide renders.
+          The PitchSlide CTA reserves `mb-8` (32px) + ~56px button height, so
+          we offset the dots by ~104px from the bottom to clear it. */}
+      <View
+        pointerEvents="none"
+        className="absolute left-0 right-0 flex-row items-center justify-center gap-2"
+        style={{ bottom: 104 }}
+      >
+        {SLIDES.map((slide, i) => (
           <View
-            key={i}
+            key={slide.key}
             className={`h-2 rounded-full ${
               i === currentSlide
                 ? "w-6 bg-nileGreen-500"

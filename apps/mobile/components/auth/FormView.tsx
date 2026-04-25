@@ -138,8 +138,12 @@ export function FormView({
 
   return (
     <>
-      {/* Language Switcher -- top-right corner */}
-      <View className="self-end mb-4">
+      {/* Language Switcher — top-start corner per mockup
+          `specs/026-onboarding-restructure/mockups/04-auth-light.png`.
+          `self-start` aligns to the leading edge (left in LTR / right in
+          RTL); the previous `self-end` was a regression that placed it on
+          the trailing edge. */}
+      <View className="self-start mb-4">
         <LanguageSwitcherPill />
       </View>
 
@@ -153,18 +157,26 @@ export function FormView({
         </Text>
       </View>
 
-      {/* 2x2 Value-Prop Pill Grid */}
-      <View className="flex-row flex-wrap justify-center gap-2.5 mb-8">
-        {VALUE_PILLS.map((pill) => (
-          <View
-            key={pill.translationKey}
-            className="flex-row items-center rounded-full bg-slate-100 dark:bg-slate-800 px-3.5 py-2"
-            style={{ gap: 6 }}
-          >
-            <PillIcon pill={pill} size={14} color={pillIconColor} />
-            <Text className="text-xs font-medium text-text-secondary dark:text-text-secondary-dark">
-              {t(pill.translationKey)}
-            </Text>
+      {/* 2×2 Value-Prop Pill Grid (per mockup 04-auth-light.png).
+          Explicit two-row layout with `flex-1` per pill so the grid is always
+          2-up regardless of phone width. The previous `flex-wrap` approach
+          allowed 3 of the 4 pills to fit on a single row at common widths
+          (~360-400dp), producing a 3+1 layout that did not match the mockup. */}
+      <View className="gap-2.5 mb-8">
+        {[0, 2].map((rowStart) => (
+          <View key={rowStart} className="flex-row" style={{ gap: 10 }}>
+            {VALUE_PILLS.slice(rowStart, rowStart + 2).map((pill) => (
+              <View
+                key={pill.translationKey}
+                className="flex-1 flex-row items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 px-3.5 py-2"
+                style={{ gap: 6 }}
+              >
+                <PillIcon pill={pill} size={14} color={pillIconColor} />
+                <Text className="text-xs font-medium text-text-secondary dark:text-text-secondary-dark">
+                  {t(pill.translationKey)}
+                </Text>
+              </View>
+            ))}
           </View>
         ))}
       </View>

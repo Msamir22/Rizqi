@@ -1,6 +1,9 @@
 import React from "react";
+import { View } from "react-native";
 import { useTranslation } from "react-i18next";
+import { FontAwesome5 } from "@expo/vector-icons";
 import { AnchoredTooltip } from "@/components/ui/AnchoredTooltip";
+import { palette } from "@/constants/colors";
 import { useMicButtonRef } from "@/context/MicButtonRefContext";
 import { useDismissOnBack } from "@/hooks/useDismissOnBack";
 
@@ -25,6 +28,18 @@ export function MicButtonTooltip({
 
   if (!visible || !micRef) return null;
 
+  // Per mockup `06-tooltip-mic-button.png`: green-tinted circle with a mic
+  // glyph centered above the title.
+  const tooltipIcon = (
+    <View className="h-10 w-10 items-center justify-center rounded-full bg-nileGreen-500/15">
+      <FontAwesome5
+        name="microphone"
+        size={16}
+        color={palette.nileGreen[600]}
+      />
+    </View>
+  );
+
   return (
     <AnchoredTooltip
       visible={visible}
@@ -35,6 +50,7 @@ export function MicButtonTooltip({
       onPrimaryPress={onTryItNow}
       onClose={onClose}
       closeAccessibilityLabel={tCommon("cancel")}
+      icon={tooltipIcon}
       anchorSide="above"
     />
   );
