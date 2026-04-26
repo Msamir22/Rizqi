@@ -14,6 +14,10 @@ interface PitchSlideProps {
    *  back-arrow (replacing the language pill). Slide 1 keeps the language
    *  pill at top-left because there is nowhere to go back to. */
   readonly hasPrevious: boolean;
+  /** Zero-based index of THIS slide (passed in for the pagination dots). */
+  readonly slideIndex: number;
+  /** Total number of slides — used to render the dot row. */
+  readonly totalSlides: number;
   readonly onSkip: () => void;
   readonly onPrevious: () => void;
   readonly onAdvance: () => void;
@@ -50,6 +54,8 @@ export function PitchSlide({
   subhead,
   isLast,
   hasPrevious,
+  slideIndex,
+  totalSlides,
   onSkip,
   onPrevious,
   onAdvance,
@@ -57,8 +63,13 @@ export function PitchSlide({
 }: PitchSlideProps): React.ReactElement {
   const { t } = useTranslation("onboarding");
 
+  // Build the dot indices once per `totalSlides` change. `Array.from` with
+  // an index map gives a stable list of integers without using a magic
+  // empty array constant.
+  const dotIndices = Array.from({ length: totalSlides }, (_, i) => i);
+
   return (
-    <View className="flex-1 px-6 pt-14 bg-background dark:bg-background-dark">
+    <View className="flex-1 px-6 pt-14 pb-8 bg-background dark:bg-background-dark">
       {/* Top bar — back-arrow on slides 2+3, language pill on slide 1 only. */}
       <View className="flex-row items-center justify-between">
         {hasPrevious ? (
@@ -95,16 +106,40 @@ export function PitchSlide({
         {headline}
       </Text>
 
-      <Text className="mt-3 text-center text-base leading-relaxed text-slate-600 dark:text-slate-300">
+      {/* Subhead is constrained to ~300px so its line breaks match the
+          mockups (e.g. `03-slide-live-market.png` wraps to 3 lines:
+          "...priced this / minute, not yesterday. Your net / worth always
+          tells the truth."). The previous full-width subhead wrapped to
+          only 2 lines on common phone widths (user-reported 2026-04-26).
+          `self-center` re-centers the now-narrower text in the slide. */}
+      <Text className="mt-3 max-w-[300px] self-center text-center text-base leading-relaxed text-slate-600 dark:text-slate-300">
         {subhead}
       </Text>
 
-      {/* Mock-content card slot — uses justify-center to vertically center
-          the card in the remaining space rather than pinning it to the very
-          bottom (the previous `flex-1 + items-center justify-center` left a
-          large gap between the subhead and the card on tall screens). */}
-      <View className="my-6 flex-1 items-center justify-center">
-        {children}
+      {/* Mock-content card sits directly below the subhead — no extra
+          vertical-center gap. The previous `flex-1 + justify-center`
+          padded the card halfway down the leftover space, which the user
+          flagged as "empty space between subtitle and card". */}
+      <View className="mt-6 items-center">{children}</View>
+
+      {/* Spacer pushes the dot row + CTA to the bottom of the slide. */}
+      <View className="flex-1" />
+
+      {/* Pagination dots — rendered inside the slide's flow layout (not as
+          an absolute overlay) so they always sit above the CTA with a
+          deterministic gap, regardless of safe-area inset or device font
+          metrics. */}
+      <View className="mb-6 flex-row items-center justify-center gap-2">
+        {dotIndices.map((i) => (
+          <View
+            key={i}
+            className={`h-2 rounded-full ${
+              i === slideIndex
+                ? "w-6 bg-nileGreen-500"
+                : "w-2 bg-slate-300 dark:bg-slate-600"
+            }`}
+          />
+        ))}
       </View>
 
       {/* Bottom CTA */}
@@ -114,7 +149,7 @@ export function PitchSlide({
         accessibilityLabel={
           isLast ? t("pitch_get_started") : t("pitch_continue")
         }
-        className="mb-8 items-center justify-center rounded-2xl bg-nileGreen-500 py-4 active:bg-nileGreen-600 dark:bg-nileGreen-600"
+        className="items-center justify-center rounded-2xl bg-nileGreen-500 py-4 active:bg-nileGreen-600 dark:bg-nileGreen-600"
       >
         <Text className="text-base font-semibold text-white">
           {isLast ? t("pitch_get_started") : t("pitch_continue")}

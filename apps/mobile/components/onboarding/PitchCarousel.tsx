@@ -103,6 +103,13 @@ export function PitchCarousel(): React.ReactElement {
         height={screenHeight}
         data={[...SLIDES]}
         defaultIndex={0}
+        // `react-native-reanimated-carousel` defaults to `loop={true}`,
+        // which wraps slide 1 ←→ slide 3 when the user swipes off either
+        // end (user-reported 2026-04-26: "sliding left from the first slide
+        // to the last one is not allowed"). Pre-auth pitch is a strictly
+        // sequential narrative — keep navigation one-way and let the
+        // explicit top-left back-arrow on slides 2-3 handle backtracking.
+        loop={false}
         onScrollEnd={(index: number): void => setCurrentSlide(index)}
         renderItem={({ item, index }): React.ReactElement => {
           const SlideComponent = item.component;
@@ -112,6 +119,8 @@ export function PitchCarousel(): React.ReactElement {
               subhead={t(`pitch_slide_${item.key}_subhead`)}
               isLast={index === totalSlides - 1}
               hasPrevious={index > 0}
+              slideIndex={index}
+              totalSlides={totalSlides}
               onSkip={() => {
                 void handleComplete();
               }}
@@ -123,27 +132,13 @@ export function PitchCarousel(): React.ReactElement {
           );
         }}
       />
-
-      {/* Pagination dots — positioned above the CTA. PitchSlide renders the
-          CTA with `mb-8` (32px) bottom inset + ~56px button height, so the
-          dots sit at `bottom: 32 + 56 + 16` ≈ 104px to clear the button
-          and add a comfortable 16px gap. */}
-      <View
-        pointerEvents="none"
-        className="absolute left-0 right-0 flex-row items-center justify-center gap-2"
-        style={{ bottom: 104 }}
-      >
-        {SLIDES.map((slide, i) => (
-          <View
-            key={slide.key}
-            className={`h-2 rounded-full ${
-              i === currentSlide
-                ? "w-6 bg-nileGreen-500"
-                : "w-2 bg-slate-300 dark:bg-slate-600"
-            }`}
-          />
-        ))}
-      </View>
+      {/* Pagination dots are rendered INSIDE each slide (PitchSlide) as
+          part of the layout flow rather than as an absolute overlay here.
+          The previous absolute `bottom: 104` calculation was off on devices
+          with bottom safe-area insets / Arabic font metrics and the dots
+          ended up overlapping the Continue/Get Started button (user-
+          reported 2026-04-26). In-flow positioning makes the gap
+          deterministic. */}
     </View>
   );
 }
