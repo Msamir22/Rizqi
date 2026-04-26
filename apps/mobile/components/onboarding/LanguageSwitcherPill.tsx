@@ -272,14 +272,20 @@ export function LanguageSwitcherPill(): React.ReactElement {
           - transparent: overlay the current screen without dimming.
           - animationType=none: instant open/close, a fade reads as sluggish.
           - onRequestClose: handles the Android hardware back button.
-          - statusBarTranslucent: aligns the Modal coordinate space with
-            measureInWindow so the popover lands at the right Y. */}
+          - statusBarTranslucent INTENTIONALLY OMITTED (defaults to false).
+            Setting it to true on Android makes the Modal extend behind the
+            status bar, so the Modal's coordinate origin moves up by
+            STATUS_BAR_HEIGHT. measureInWindow keeps returning the pill's Y
+            in window coords (which exclude the status bar), so the popover
+            ended up STATUS_BAR_HEIGHT pixels too high — visually covering
+            the pill instead of sitting below it (user-reported 2026-04-26).
+            Keeping statusBarTranslucent=false aligns the two coordinate
+            spaces. */}
       <Modal
         visible={isOpen && pillRect !== null}
         transparent
         animationType="none"
         onRequestClose={handleClose}
-        statusBarTranslucent
       >
         {/* Full-screen tap-target backdrop. Pressable with a StyleSheet
             style is the safe pattern inside Modal per the
