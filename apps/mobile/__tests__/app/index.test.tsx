@@ -25,6 +25,7 @@ interface ReactTestRendererInstance {
 }
 interface ReactTestRendererModule {
   create: (el: React.ReactElement) => ReactTestRendererInstance;
+  act: (cb: () => void | Promise<void>) => void;
 }
 // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
 const RTR: ReactTestRendererModule = require("react-test-renderer");
@@ -169,20 +170,40 @@ function findRedirectHref(
 // =============================================================================
 
 describe("index.tsx routing gate", () => {
+  // Use fake timers for the whole suite. The gate schedules a setTimeout
+  // (PROFILE_OBSERVATION_GRACE_MS) inside its useEffect whenever sync has
+  // settled but profile is still null; on real timers, that callback fires
+  // ~4s after a test ends, attempts to setState on an unmounted tree, and
+  // crashes the next test by reading mocks that beforeEach has just cleared.
   beforeEach(() => {
+    jest.useFakeTimers();
     jest.clearAllMocks();
   });
 
-  it("renders null while sync is still in progress", () => {
-    setState({ syncState: "in-progress" });
-    const renderer = renderGate();
-    expect(renderer.toJSON()).toBeNull();
+  afterEach(() => {
+    jest.clearAllTimers();
+    jest.useRealTimers();
   });
 
-  it("renders null while the profile is still loading (even after sync success)", () => {
+  it("renders the loader (NOT null) while sync is still in progress — keeps the screen non-blank under the InitialSyncOverlay fade-in", () => {
+    setState({ syncState: "in-progress" });
+    const renderer = renderGate();
+    // No redirect, no retry — just the BootLoadingView.
+    expect(findRedirectHref(renderer)).toBeUndefined();
+    expect(
+      renderer.root.findAllByProps({ testID: "retry-screen" })
+    ).toHaveLength(0);
+    expect(renderer.toJSON()).not.toBeNull();
+  });
+
+  it("renders the loader (NOT null) while the profile is still loading (even after sync success)", () => {
     setState({ syncState: "success", isProfileLoading: true });
     const renderer = renderGate();
-    expect(renderer.toJSON()).toBeNull();
+    expect(findRedirectHref(renderer)).toBeUndefined();
+    expect(
+      renderer.root.findAllByProps({ testID: "retry-screen" })
+    ).toHaveLength(0);
+    expect(renderer.toJSON()).not.toBeNull();
   });
 
   it("redirects to /(tabs) when sync succeeded and onboarding is already completed", () => {
@@ -239,17 +260,33 @@ describe("index.tsx routing gate", () => {
   it("does NOT route to /onboarding when sync succeeded but profile observation is still null", () => {
     setState({ syncState: "success", profileNull: true });
     const renderer = renderGate();
-    // Should render null (loading splash held by AppReadyGate), not redirect
-    // to /onboarding.
-    expect(renderer.toJSON()).toBeNull();
+    // Should render the BootLoadingView (themed loader during the grace
+    // window) — NOT a redirect to /onboarding, and NOT null/blank
+    // (AppReadyGate has already released the native splash by this point,
+    // so a `null` here would surface a blank screen — see
+    // BootLoadingView in app/index.tsx).
     expect(findRedirectHref(renderer)).toBeUndefined();
+    expect(
+      renderer.root.findAllByProps({ testID: "retry-screen" })
+    ).toHaveLength(0);
+    // Loader present (ActivityIndicator is rendered).
+    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    const ActivityIndicator = require("react-native").ActivityIndicator;
+    expect(
+      renderer.root.findAllByType(
+        ActivityIndicator as unknown as React.ComponentType
+      ).length
+    ).toBeGreaterThan(0);
   });
 
-  it("does NOT route to /onboarding when sync is in-progress and profile is null", () => {
+  it("renders loader (no redirect, no retry) when sync is in-progress and profile is null", () => {
     setState({ syncState: "in-progress", profileNull: true });
     const renderer = renderGate();
-    expect(renderer.toJSON()).toBeNull();
     expect(findRedirectHref(renderer)).toBeUndefined();
+    expect(
+      renderer.root.findAllByProps({ testID: "retry-screen" })
+    ).toHaveLength(0);
+    expect(renderer.toJSON()).not.toBeNull();
   });
 
   it("falls back to retry screen when sync FAILED AND the profile is still null (escape hatch from the race-guard wait)", () => {
@@ -265,6 +302,50 @@ describe("index.tsx routing gate", () => {
     const renderer = renderGate();
     const hits = renderer.root.findAllByProps({ testID: "retry-screen" });
     expect(hits.length).toBeGreaterThan(0);
+  });
+
+  // Bounded escape hatch — the post-sync race-guard MUST NOT trap the user on
+  // a loading screen indefinitely when sync reports "success" but the profile
+  // observation never produces a row. An authenticated user MUST have a
+  // profile (DB trigger creates one on signup), so this state is a data
+  // inconsistency — surface RetrySyncScreen so the user has a path forward
+  // (sign out + try again) rather than falling through to /onboarding and
+  // overwriting potentially-existing cloud data (user-report 2026-04-27).
+  //
+  // NOTE: RetrySyncScreen is a temporary stand-in for this branch — sync
+  // technically succeeded, so "Couldn't load your account" + Retry isn't
+  // a perfect fit. The intended replacement is a dedicated
+  // ContactSupportScreen (see TODO in app/index.tsx). When that lands,
+  // update this test's expectation accordingly.
+  it("escapes to retry screen after the grace period elapses when sync=success but profile stays null (data inconsistency — RetrySyncScreen is a temporary stand-in until ContactSupportScreen exists)", () => {
+    setState({ syncState: "success", profileNull: true });
+
+    // Wrap initial render in act() so the useEffect that schedules the
+    // grace timer actually runs (in legacy react-test-renderer mode the
+    // effect would otherwise not commit until the next external trigger).
+    let renderer: ReactTestRendererInstance | undefined;
+    RTR.act(() => {
+      renderer = renderGate();
+    });
+    if (!renderer) throw new Error("renderer not initialised");
+
+    // Before grace elapses → BootLoadingView, NO redirect, NO retry.
+    expect(findRedirectHref(renderer)).toBeUndefined();
+    expect(
+      renderer.root.findAllByProps({ testID: "retry-screen" })
+    ).toHaveLength(0);
+
+    // Advance past the 4s grace window so the bounded timer fires AND
+    // flush the resulting setState through act() so the tree re-renders.
+    RTR.act(() => {
+      jest.advanceTimersByTime(5_000);
+    });
+
+    // After grace → retry screen. NEVER /onboarding — that would skip
+    // an already-onboarded user past their data on the next sync.
+    const hits = renderer.root.findAllByProps({ testID: "retry-screen" });
+    expect(hits.length).toBeGreaterThan(0);
+    expect(findRedirectHref(renderer)).toBeUndefined();
   });
 
   it("wires the retry screen's Sign out callback to performLogout (guards against the gate dropping the handler)", () => {
