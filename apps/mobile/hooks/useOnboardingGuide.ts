@@ -125,6 +125,12 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Default to `true` (dismissed) while the profile observer is still
+  // settling — `setupGuideCompleted` is `null` until the first
+  // observable emission. Defaulting to dismissed here means the
+  // OnboardingGuideCard stays hidden during the first render after
+  // mount instead of flashing in and then collapsing once the real
+  // value arrives. Becomes accurate after the observer's first emit.
   const isDismissed = setupGuideCompleted ?? true;
 
   // ── Observe bank accounts ──

@@ -34,23 +34,36 @@ import type { OAuthProvider } from "@/services/supabase";
 // Types
 // =============================================================================
 
-interface ValuePill {
-  readonly translationKey: string;
-  readonly icon:
-    | "microphone"
-    | "message-text"
-    | "trending-up"
-    | "diamond-stone";
-  /**
-   * Icon set sourced per icon. `trending-up` is FontAwesome5 PRO ONLY in
-   * v5 — the free-tier `FontAwesome5Free-Regular` font shipped with
-   * `@expo/vector-icons` does not contain the glyph, which logged a noisy
-   * "not a valid icon name" warning on the auth screen (user-report
-   * 2026-04-26). Swapped to `MaterialCommunityIcons.trending-up`, which
-   * exists in the free tier.
-   */
-  readonly iconSet: "FontAwesome5" | "MaterialCommunityIcons";
-}
+/**
+ * Discriminated union over the icon-set field.
+ *
+ * The earlier design used a single `interface` with a flat
+ * `icon: "microphone" | ... | "diamond-stone"` plus an `iconSet`
+ * discriminator and `as keyof typeof <set>.glyphMap` casts in
+ * `PillIcon`. That type didn't actually verify each name belonged in
+ * its assigned library — which is exactly the failure mode that bit
+ * the `trending-up` glyph (FontAwesome5 Pro-only on the free font →
+ * runtime "not a valid icon name" warning, user-reported 2026-04-26).
+ *
+ * As a discriminated union the compiler narrows `pill.icon` by
+ * `iconSet` branch, so the same regression is impossible at the type
+ * level and the `as keyof typeof ... .glyphMap` casts can go away.
+ *
+ * Note: project style normally prefers `interface` over `type`, but
+ * discriminated unions are the idiomatic shape here and the win in
+ * type-safety justifies the exception.
+ */
+type ValuePill =
+  | {
+      readonly translationKey: string;
+      readonly iconSet: "FontAwesome5";
+      readonly icon: keyof typeof FontAwesome5.glyphMap;
+    }
+  | {
+      readonly translationKey: string;
+      readonly iconSet: "MaterialCommunityIcons";
+      readonly icon: keyof typeof MaterialCommunityIcons.glyphMap;
+    };
 
 export interface FormViewProps {
   readonly isDark: boolean;
@@ -103,22 +116,13 @@ interface PillIconProps {
 }
 
 function PillIcon({ pill, size, color }: PillIconProps): React.JSX.Element {
+  // The discriminated union narrows `pill.icon` to the correct glyph
+  // map per branch, so we no longer need the `as keyof typeof
+  // ...glyphMap` casts the previous design required.
   if (pill.iconSet === "FontAwesome5") {
-    return (
-      <FontAwesome5
-        name={pill.icon as keyof typeof FontAwesome5.glyphMap}
-        size={size}
-        color={color}
-      />
-    );
+    return <FontAwesome5 name={pill.icon} size={size} color={color} />;
   }
-  return (
-    <MaterialCommunityIcons
-      name={pill.icon as keyof typeof MaterialCommunityIcons.glyphMap}
-      size={size}
-      color={color}
-    />
-  );
+  return <MaterialCommunityIcons name={pill.icon} size={size} color={color} />;
 }
 
 // =============================================================================
