@@ -343,6 +343,61 @@ interface OnboardingTranslations {
   readonly select_currency: string;
   readonly create_wallet: string;
   readonly skip: string;
+
+  // Pre-auth pitch slides
+  // (eyebrow keys removed 2026-04-26 per user direction — slides no longer
+  //  show the "01 · VOICE" / "02 · SMS" / "03 · LIVE MARKET" pre-title.)
+  readonly pitch_slide_voice_headline: string;
+  readonly pitch_slide_voice_subhead: string;
+  readonly pitch_slide_voice_listening: string;
+  readonly pitch_slide_voice_transcript: string;
+  readonly pitch_slide_voice_status_saved: string;
+  readonly pitch_slide_voice_status_just_now: string;
+  readonly pitch_slide_voice_category_food: string;
+  readonly pitch_slide_voice_account: string;
+  readonly pitch_slide_sms_headline: string;
+  readonly pitch_slide_sms_subhead: string;
+  readonly pitch_slide_sms_bank_label: string;
+  readonly pitch_slide_sms_bank_body: string;
+  readonly pitch_slide_sms_detected: string;
+  readonly pitch_slide_sms_category_groceries: string;
+  readonly pitch_slide_sms_status_imported: string;
+  readonly pitch_slide_offline_headline: string;
+  readonly pitch_slide_offline_subhead: string;
+  readonly pitch_slide_offline_status_offline: string;
+  readonly pitch_slide_offline_status_instant: string;
+  readonly pitch_slide_offline_recently_added: string;
+  readonly pitch_slide_offline_all_saved: string;
+  readonly pitch_slide_offline_pending: string;
+  readonly pitch_slide_live_market_headline: string;
+  readonly pitch_slide_live_market_subhead: string;
+  readonly pitch_slide_live_market_net_worth_label: string;
+  readonly pitch_slide_live_market_gold_label: string;
+  readonly pitch_slide_live_market_silver_label: string;
+  readonly pitch_slide_live_market_usd_label: string;
+  readonly pitch_slide_live_market_live_caption: string;
+  readonly pitch_skip: string;
+  readonly pitch_continue: string;
+  readonly pitch_get_started: string;
+
+  // Currency step
+  readonly currency_step_title: string;
+  readonly currency_step_subtitle: string;
+  readonly currency_step_confirm: string;
+  readonly currency_step_signout: string;
+  readonly currency_step_error_generic: string;
+
+  // Setup guide steps (feature 026)
+  readonly onboarding_step_voice_transaction: string;
+  readonly onboarding_step_auto_track_bank_sms: string;
+
+  // First-run tooltips (feature 026)
+  readonly cash_account_tooltip_title: string;
+  readonly cash_account_tooltip_body: string;
+  readonly cash_account_tooltip_got_it: string;
+  readonly mic_button_tooltip_title: string;
+  readonly mic_button_tooltip_body: string;
+  readonly mic_button_tooltip_try_it_now: string;
 }
 
 /** Categories namespace — keyed by system_name */
@@ -539,6 +594,16 @@ interface AuthTranslations {
   readonly verification_email_sent: string;
   readonly resend_verification_failed: string;
   readonly reset_email_failed: string;
+
+  // Welcome screen
+  readonly welcome_title: string;
+  readonly welcome_tagline: string;
+  readonly pill_voice: string;
+  readonly pill_bank_sms: string;
+  readonly pill_live_rates: string;
+  readonly pill_gold_silver: string;
+  readonly trust_encrypted: string;
+  readonly trust_private: string;
 }
 
 /** Metals namespace */

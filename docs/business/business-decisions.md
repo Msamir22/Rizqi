@@ -977,84 +977,173 @@ WatermelonDB for offline access.
 
 ### 12.2 Table: `profiles`
 
-| Column                  | Type        | Required | Description                                            |
-| ----------------------- | ----------- | -------- | ------------------------------------------------------ |
-| `id`                    | UUID        | ✅       | Primary Key (same as auth.users.id)                    |
-| `user_id`               | UUID        | ✅       | FK → auth.users (unique)                               |
-| `first_name`            | TEXT        | ❌       | From Google or manual sign-up                          |
-| `last_name`             | TEXT        | ❌       | From Google or manual sign-up                          |
-| `display_name`          | TEXT        | ❌       | For greeting ("Good Morning, Mohamed")                 |
-| `avatar_url`            | TEXT        | ❌       | From Google profile or custom                          |
-| `preferred_currency`    | CHAR(3)     | ✅       | Default: 'EGP'                                         |
-| `preferred_language`    | TEXT        | ❌       | `'en'` or `'ar'` (set at Language step)                |
-| `theme`                 | ENUM        | ✅       | `'LIGHT'`, `'DARK'`, `'SYSTEM'` (default: SYSTEM)      |
-| `sms_detection_enabled` | BOOLEAN     | ✅       | Toggle SMS auto-detection (default: false)             |
-| `onboarding_completed`  | BOOLEAN     | ✅       | Track first-time setup (default: false)                |
-| `slides_viewed`         | BOOLEAN     | ✅       | Whether onboarding slides were viewed (default: false) |
-| `notification_settings` | JSONB       | ❌       | Per-notification-type toggles                          |
-| `created_at`            | TIMESTAMPTZ | ✅       | Auto-generated                                         |
-| `updated_at`            | TIMESTAMPTZ | ✅       | For WatermelonDB sync                                  |
-| `deleted`               | BOOLEAN     | ✅       | Soft delete for sync (default: false)                  |
+| Column                  | Type        | Required | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ----------------------- | ----------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                    | UUID        | ✅       | Primary Key (same as auth.users.id)                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `user_id`               | UUID        | ✅       | FK → auth.users (unique)                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `first_name`            | TEXT        | ❌       | From Google or manual sign-up                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `last_name`             | TEXT        | ❌       | From Google or manual sign-up                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `display_name`          | TEXT        | ❌       | For greeting ("Good Morning, Mohamed")                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `avatar_url`            | TEXT        | ❌       | From Google profile or custom                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `preferred_currency`    | CHAR(3)     | ✅       | Default: 'EGP'                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `preferred_language`    | TEXT        | ❌       | `'en'` or `'ar'`. Overwritten atomically inside `confirmCurrencyAndOnboard` with the user's currently-active runtime language (which already reflects any pre-auth `LanguageSwitcherPill` choice). The device-scoped `@rizqi/intro-locale-override` AsyncStorage key is NOT cleared afterward (FR-030).                                                                                                                                                                                           |
+| `theme`                 | ENUM        | ✅       | `'LIGHT'`, `'DARK'`, `'SYSTEM'` (default: SYSTEM)                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `sms_detection_enabled` | BOOLEAN     | ✅       | Toggle SMS auto-detection (default: false)                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `onboarding_completed`  | BOOLEAN     | ✅       | **Routing signal** (FR-031). Flipped `true` atomically inside `confirmCurrencyAndOnboard` alongside the cash-account create + currency + language writes. The routing gate in `apps/mobile/app/index.tsx` reads this field to decide Currency-step vs dashboard. `preferred_currency` cannot be used as the routing signal because it's `NOT NULL DEFAULT 'EGP'` — always populated, so it cannot distinguish "never onboarded" from "legitimately chose EGP". (Decision: 2026-04-22, issue #246) |
+| ~~`slides_viewed`~~     | ~~BOOLEAN~~ | ❌       | **DEPRECATED** — moved to AsyncStorage (`intro:seen`, device-scoped). The slides are pre-auth (no profile to write to at the moment of completion), so a per-user profile column was the wrong source of truth. Column to be dropped in a follow-up migration. (Decision: 2026-04-22, issue #246)                                                                                                                                                                                                 |
+| `notification_settings` | JSONB       | ❌       | Per-notification-type toggles                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `setup_guide_completed` | BOOLEAN     | ✅       | Dashboard setup-guide card dismissal flag (default: false)                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `onboarding_flags`      | JSONB       | ✅       | Per-profile first-run tooltip dismissal markers (default: `'{}'`). Keys: `cash_account_tooltip_dismissed`, `voice_tooltip_seen`. Added by feature 026.                                                                                                                                                                                                                                                                                                                                            |
+| `created_at`            | TIMESTAMPTZ | ✅       | Auto-generated                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `updated_at`            | TIMESTAMPTZ | ✅       | For WatermelonDB sync                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `deleted`               | BOOLEAN     | ✅       | Soft delete for sync (default: false)                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 
 ### 12.3 Profile Creation Flow
 
-```
-1. User opens app → sign-up or sign-in required (no anonymous access)
-2. System creates profile with:
+```text
+1. User opens app → pre-auth Slides shown if AsyncStorage `intro:seen` is false
+2. User taps Sign-up CTA on slides → auth screen → sign-up succeeds
+3. System creates profile with (via the `handle_new_user` trigger + column defaults):
    - user_id = auth.uid()
-   - preferred_currency = 'EGP' (seeded by handle_new_user trigger)
-   - preferred_language = NULL (set at Language step)
+   - preferred_currency = 'EGP' (NOT NULL DEFAULT — overwritten on Currency step)
+   - preferred_language = 'en' (NOT NULL DEFAULT — overwritten on Currency step)
    - theme = 'SYSTEM'
    - sms_detection_enabled = false
-   - onboarding_completed = false
-   - slides_viewed = false
+   - onboarding_completed = false (flipped true atomically on Currency confirmation — THIS is the routing signal)
+   - onboarding_flags = '{}' (per-profile tooltip dismissal markers)
 
-3. User signs up with Google:
+4. User signs up with Google:
    - first_name, last_name, display_name, avatar_url populated from Google
 
-4. User signs up with email:
+5. User signs up with email:
    - User enters first_name, last_name in sign-up form
    - display_name = first_name
 ```
 
-### 12.4 Onboarding Flow (4 Steps)
+### 12.4 Onboarding Flow
 
-**Decision (2026-04-18):** The onboarding flow is a mandatory 4-step sequence
-shown to users whose `onboarding_completed` flag is `false`. The routing gate at
-`apps/mobile/app/index.tsx` reads the profile from WatermelonDB after a blocking
-initial pull-sync and determines the user's next screen.
+**Decision (2026-04-22, issue #246):** The onboarding flow has been restructured
+into a **pre-auth pitch** (slides + auto-detected language) and a **single
+required post-auth step** (currency selection). The previous 4-step post-auth
+wizard has been removed in favor of a leaner first-run experience that surfaces
+voice + SMS auto-import as the primary value props from the very first dashboard
+view, with the `OnboardingGuideCard` carrying the "complete your setup" weight
+afterward.
 
-**Step order:**
+This decision supersedes the earlier 4-step decision (2026-04-18). No production
+users existed at the time of the decision, so no migration considerations apply.
 
-1. **Language** (mandatory) — User selects `'en'` or `'ar'`. Persists
-   `preferred_language` to the profile row. Replaces the legacy AsyncStorage
-   `LANGUAGE_KEY` as the server-authoritative source.
-2. **Slides carousel** (skippable) — Onboarding slides introducing the app. User
-   can skip or view all. Either action sets `slides_viewed = true`.
-3. **Currency** (mandatory, no skip) — User selects their preferred currency.
-   The app auto-creates a cash account in that currency. No skip button is
-   shown. Replaces the previous skip-with-fallback behavior.
-4. **Cash-account confirmation** — Informational message confirming the
-   auto-created cash account. Dismissing this step sets
-   `onboarding_completed = true` on the profile.
+#### Pre-auth (device-scoped via AsyncStorage)
 
-**Server-authoritative fields:**
+Gated by AsyncStorage flag `intro:seen` (boolean, device-local). Shown on the
+very first launch of the app on a given device, regardless of whether the user
+ever signs in.
 
-- `preferred_language` and `preferred_currency` are persisted to the remote
-  profile (Supabase), not just AsyncStorage. They survive reinstall, device
-  switch, and sign-in from a new device.
-- `onboarding_completed` is the single routing gate. Per-step signals
-  (`preferred_language`, `slides_viewed`, cash-account presence) are used only
-  to determine the resume point when the overall flag is false.
+1. **Auto-detect language** from the device locale on first launch. Fallback to
+   `en` if device locale isn't an available app language. The selected language
+   is applied immediately to render the slides themselves.
+2. **Slides carousel** with two persistent affordances:
+   - **Language switcher** in the corner (tap to change language; persists to
+     AsyncStorage `intro:locale_override` and applies immediately).
+   - **Skip** affordance (top-right corner, subordinate weight to language
+     switcher).
+3. **Completion of slides**: AsyncStorage `intro:seen` is set to `true` ONLY
+   when the user explicitly taps Skip OR reaches the last slide. Partial views
+   (force-quit mid-carousel) do NOT count — the user gets another chance on next
+   launch.
+4. Final slide CTA: **Get Started** (or equivalent) → auth screen.
 
-**Legacy keys retired from the onboarding gate:**
+Returning users on the same device with `intro:seen = true` go straight to the
+auth screen on subsequent launches — no slides, no language picker.
+
+#### Auth (unchanged scope)
+
+- Renders in `intro:locale_override` if set, else device locale.
+- This issue does not modify the auth screen itself.
+
+#### Post-auth (single required step)
+
+Routing gate at `apps/mobile/app/index.tsx` reads the profile from WatermelonDB
+after the initial pull-sync, then routes based on
+`profiles.onboarding_completed` (per FR-031):
+
+- **`onboarding_completed = false`** → show Currency step.
+  - Currency selection is required (no skip).
+  - On confirmation, `confirmCurrencyAndOnboard` performs a single atomic
+    `database.write()` that:
+    - Creates the default cash account in the chosen currency
+    - Overwrites `profiles.preferred_currency` with the chosen currency
+    - Overwrites `profiles.preferred_language` with the currently-active runtime
+      language (already reflects any `LanguageSwitcherPill` choice)
+    - Flips `profiles.onboarding_completed = true`
+  - The `@rizqi/intro-locale-override` AsyncStorage key is NOT cleared afterward
+    — it persists as a device-level preference (FR-030).
+  - Routes to dashboard.
+- **`onboarding_completed = true`** → routes directly to dashboard.
+
+**Why not `preferred_currency` as the routing signal?** The column is
+`NOT NULL DEFAULT 'EGP'` (migration 042), so it always carries a value on a
+newly-inserted profile and cannot distinguish "never onboarded" from
+"legitimately chose EGP".
+
+Sign-out is reachable from the Currency step. On confirmed sign-out, the user
+returns to pre-auth state (slides if `intro:seen = false`, auth otherwise).
+
+#### Dashboard first-run experience
+
+A new user lands on the dashboard and sees, in order:
+
+1. **SMS permission popup** (existing behavior, unchanged).
+2. **First-run tooltip** anchored to the auto-created cash account: "We set this
+   up for you — delete it if you don't track cash." Dismissible in one tap;
+   never re-appears on the same device.
+3. **`OnboardingGuideCard`** (existing component, restructured) with 4 steps in
+   order: **Add bank account → Try voice transaction → Enable SMS auto-import →
+   Set a budget**. (SMS step is hidden on iOS.) Step completion is data-derived
+   (account/transaction/budget existence), not flag-based. The card is the
+   persistent "complete your setup" surface — it replaces the dashboard Setup
+   cards previously used for the same purpose.
+
+#### Field maintenance
+
+- **`profiles.preferred_currency`** is the single routing gate for "is the user
+  onboarded." Derived state, not a separate flag.
+- **`profiles.onboarding_completed`** is set to `true` on currency confirmation
+  but NOT read by routing logic today. It is maintained for future use (e.g., a
+  future required compliance step). Documented as such to avoid stale-field
+  trap.
+- **`profiles.preferred_language`** is set on first sign-up if NULL; never
+  overwritten on subsequent sign-ins. The pre-auth language is a hint, not an
+  authority — server value wins.
+- **AsyncStorage `intro:seen`** (boolean, device-scoped) — tracks whether the
+  pre-auth slides have been completed on this device.
+- **AsyncStorage `intro:locale_override`** (string, device-scoped, optional) —
+  tracks an explicit user override of the auto-detected pre-auth language.
+- **Accepted UX trade-off**: a brief (~0.2s) language flip on first sign-in for
+  multi-device users where the server's `preferred_language` differs from the
+  pre-auth locale. No mitigation shipped; revisit if user complaints surface.
+
+#### Removed in this restructure
+
+- **`profiles.slides_viewed`** column — deprecated; source of truth moved to
+  AsyncStorage `intro:seen` (correct scope: device-local, since slides are
+  pre-auth and there's no profile to write to). Drop migration tracked as a
+  follow-up.
+- **Language step** — removed; replaced by auto-detect + corner language
+  switcher.
+- **Cash-account confirmation step** — removed; replaced by the first-run
+  dashboard tooltip.
+- **Multi-step post-auth wizard** — removed; reduced to single Currency step.
+- **AsyncStorage step cursor** — not needed (no multi-step flow).
+
+#### Legacy keys retired from the onboarding gate
 
 - `HAS_ONBOARDED_KEY` (AsyncStorage) — previously used by `index.tsx` to gate
   onboarding. No longer read by the routing gate. The export is retained with a
   `@deprecated` JSDoc for one release cycle.
-- `LANGUAGE_KEY` (AsyncStorage) — previously used to persist language locally
-  only. No longer read for the onboarding flow. Retained with `@deprecated`
-  JSDoc; removal tracked as a follow-up issue.
+- `LANGUAGE_KEY` (AsyncStorage) — previously used to persist language locally.
+  No longer read for the onboarding flow. Retained with `@deprecated` JSDoc;
+  removal tracked as a follow-up.
 
 ---
 

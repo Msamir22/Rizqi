@@ -72,7 +72,7 @@ const READONLY_FIELDS = ["created_at"];
 
 // JSON fields - these get a "Raw" suffix and require manual getters in extended models
 // The getter should parse the JSON string into the proper TypeScript interface
-const JSON_FIELDS = ["notification_settings"];
+const JSON_FIELDS = ["notification_settings", "onboarding_flags"];
 
 // =============================================================================
 // VERSION RESOLUTION
@@ -220,7 +220,14 @@ function parseSupabaseTypes(content) {
  * Parse a column type from Supabase types to WatermelonDB type
  */
 function parseColumnType(rawType, columnName, enums) {
-  const isOptional = rawType.includes("| null");
+  // JSON columns are stored as TEXT in WatermelonDB and may legitimately
+  // hold an empty string between migration and the first server sync,
+  // even when the upstream Supabase column is `NOT NULL DEFAULT '{}'`.
+  // Marking them `isOptional: true` mirrors the way `notification_settings`
+  // is treated and silences "string vs string|null" mismatches against the
+  // raw column the getter parses (round-2 review #18).
+  const isJsonColumn = JSON_FIELDS.includes(columnName);
+  const isOptional = rawType.includes("| null") || isJsonColumn;
   const cleanType = rawType.replace(/\s*\|\s*null/g, "").trim();
 
   // Check if it's an enum reference
@@ -350,6 +357,11 @@ export interface NotificationSettings {
   recurring_reminders: boolean;
   budget_alerts: boolean;
   low_balance_warnings: boolean;
+}
+
+export interface OnboardingFlags {
+  readonly cash_account_tooltip_dismissed?: boolean;
+  readonly voice_tooltip_seen?: boolean;
 }
 `;
 }

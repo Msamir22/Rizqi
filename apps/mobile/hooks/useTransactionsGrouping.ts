@@ -8,7 +8,13 @@ import {
   getStartOfWeek,
   isSameDay,
 } from "@/utils/dateHelpers";
-import { database, Transaction, Transfer, type CurrencyType } from "@rizqi/db";
+import {
+  Account,
+  database,
+  Transaction,
+  Transfer,
+  type CurrencyType,
+} from "@rizqi/db";
 import { convertCurrency } from "@rizqi/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
@@ -16,6 +22,7 @@ import { useMarketRates } from "./useMarketRates";
 import { useNetWorth } from "./useNetWorth";
 import { PeriodFilter } from "./usePeriodSummary";
 import { usePreferredCurrency } from "./usePreferredCurrency";
+import { buildAccountDisplayNames } from "@/utils/account-display";
 
 export type TransactionTypeFilter = "All" | "Income" | "Expense" | "Transfer";
 
@@ -235,12 +242,26 @@ export function useTransactionsGrouping(
         ),
       ].sort((a, b) => b.dateInMs - a.dateInMs);
 
+      // Resolve display names against the FULL non-deleted account list so
+      // duplicate-named accounts (e.g. two "Cash" accounts in different
+      // currencies) get a "({currency})" suffix in the transaction list —
+      // per spec 026-followup. The map is built once per fetch and reused
+      // for every transaction/transfer row.
+      const allAccounts = await database
+        .get<Account>("accounts")
+        .query(Q.where("deleted", Q.notEq(true)))
+        .fetch();
+      const displayNames = buildAccountDisplayNames(allAccounts);
+      const resolveName = (account: { id?: string; name: string }): string =>
+        (account.id !== undefined ? displayNames.get(account.id) : undefined) ??
+        account.name;
+
       // Fetch account names for all items
       const combined: DisplayTransaction[] = await Promise.all(
         combinedRaw.map(async (item) => {
           if (item._type === "transaction") {
             const account = await item.account.fetch().catch(() => {
-              return { name: "Unknown" };
+              return { id: undefined, name: "Unknown" };
             });
             const category = await item.category.fetch().catch(() => null);
             const iconConfig = (
@@ -249,21 +270,21 @@ export function useTransactionsGrouping(
               } | null
             )?.iconConfig;
             return Object.assign(Object.create(item), {
-              accountName: account.name,
+              accountName: resolveName(account),
               categoryName: category?.displayName ?? "Unknown",
               categoryIconName: iconConfig?.iconName ?? "help-circle",
               categoryIconLibrary: iconConfig?.iconLibrary ?? "Ionicons",
             }) as DisplayTransaction;
           } else {
             const fromAccount = await item.fromAccount.fetch().catch(() => {
-              return { name: "Unknown" };
+              return { id: undefined, name: "Unknown" };
             });
             const toAccount = await item.toAccount.fetch().catch(() => {
-              return { name: "Unknown" };
+              return { id: undefined, name: "Unknown" };
             });
             return Object.assign(Object.create(item), {
-              fromAccountName: fromAccount.name,
-              toAccountName: toAccount.name,
+              fromAccountName: resolveName(fromAccount),
+              toAccountName: resolveName(toAccount),
             }) as DisplayTransaction;
           }
         })

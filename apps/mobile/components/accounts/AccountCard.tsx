@@ -9,6 +9,14 @@ interface AccountCardProps {
   account: Account;
   latestRates: MarketRate | null;
   onPress?: () => void;
+  /**
+   * Resolved display name (per `account-display.ts`). Parents that render
+   * a list SHOULD compute the map once via `buildAccountDisplayNames` /
+   * `useAccountDisplayNames` and pass the resolved string down to avoid
+   * duplicate-name confusion (e.g. two "Cash" accounts in EGP and USD).
+   * Falls back to the raw `account.name` when omitted.
+   */
+  displayName?: string;
 }
 
 /**
@@ -25,6 +33,7 @@ export function AccountCard({
   account,
   latestRates,
   onPress,
+  displayName,
 }: AccountCardProps): React.JSX.Element {
   const config: { icon: keyof typeof Ionicons.glyphMap; color: string } =
     useMemo(() => {
@@ -94,7 +103,7 @@ export function AccountCard({
         {/* Content */}
         <View className="flex-1">
           <Text className="text-base font-bold text-slate-800 dark:text-white">
-            {account.name}
+            {displayName ?? account.name}
           </Text>
           <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 mt-0.5 uppercase tracking-wide">
             {subtitle}

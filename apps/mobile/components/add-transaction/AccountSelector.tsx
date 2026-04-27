@@ -2,7 +2,9 @@ import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { Account } from "@rizqi/db";
 import { Ionicons } from "@expo/vector-icons";
+import { useMemo } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { buildAccountDisplayNames } from "@/utils/account-display";
 
 interface AccountSelectorProps {
   accounts: Account[];
@@ -20,6 +22,13 @@ export function AccountSelector({
   mainColor = palette.nileGreen[600],
 }: AccountSelectorProps): React.JSX.Element {
   const { isDark } = useTheme();
+  // Resolve display names so duplicate-named accounts (e.g. two "Cash"
+  // accounts in different currencies) are visually disambiguated in the
+  // picker — per spec 026-followup.
+  const displayNames = useMemo(
+    (): Map<string, string> => buildAccountDisplayNames(accounts),
+    [accounts]
+  );
   return (
     <View className="mb-4">
       {label && (
@@ -92,7 +101,7 @@ export function AccountSelector({
                       : "text-slate-600 dark:text-slate-400"
                   }`}
                 >
-                  {account.name}
+                  {displayNames.get(account.id) ?? account.name}
                 </Text>
                 {isSelected && (
                   <Text className="text-[10px] text-slate-400 dark:text-slate-500">

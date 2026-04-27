@@ -13,7 +13,6 @@ import { ScrollView, View } from "react-native";
 
 import { AccountsSectionSkeleton } from "./AccountsSectionSkeleton";
 import { LiveRatesSkeleton } from "./LiveRatesSkeleton";
-import { OnboardingGuideCardSkeleton } from "./OnboardingGuideCardSkeleton";
 import { RecentTransactionsSkeleton } from "./RecentTransactionsSkeleton";
 import { ThisMonthSkeleton } from "./ThisMonthSkeleton";
 import { TotalNetWorthSkeleton } from "./TotalNetWorthSkeleton";
@@ -53,7 +52,6 @@ export function DashboardSkeleton(): React.JSX.Element {
     >
       <View className="px-5 pt-[10px]">
         <TopNavSkeleton />
-        <OnboardingGuideCardSkeleton />
         <TotalNetWorthSkeleton />
         <LiveRatesSkeleton />
         <AccountsSectionSkeleton />

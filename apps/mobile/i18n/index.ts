@@ -3,6 +3,7 @@ import { initReactI18next } from "react-i18next";
 import * as Localization from "expo-localization";
 
 import { validateTranslationResources } from "./translation-schemas";
+import { readIntroLocaleOverride } from "@/services/intro-flag-service";
 
 // Import translation files
 import enCommon from "../locales/en/common.json";
@@ -63,18 +64,21 @@ const resources: Resource = {
 };
 
 /**
- * Detect the initial language from the device locale.
+ * Detect the initial language for i18next.
  *
- * NOTE (feature 024, 2026-04-18): the legacy AsyncStorage-backed
- * LANGUAGE_KEY is gone — language is now stored on
- * `profiles.preferred_language` in WatermelonDB and read after the initial
- * pull-sync completes. At app-launch time we can't reach the DB yet, so we
- * fall back to the device locale. Once the profile is loaded, the splash
- * coordinator in `_layout.tsx` syncs i18n to `profile.preferredLanguage`
- * before hiding the splash, so any mismatch between device locale and
- * stored preference is invisible to the user.
+ * Priority:
+ * 1. Device-scoped override (set by `LanguageSwitcherPill` on any pre-auth
+ *    surface) — read via `readIntroLocaleOverride()` so error handling and
+ *    the `"en" | "ar"` validation live in a single source of truth.
+ * 2. Device locale from `expo-localization`.
+ * 3. English fallback.
+ *
+ * A null override (absent or storage error) transparently falls through to
+ * the device locale — the hook / service layer swallows and logs the error.
  */
-function detectInitialLanguage(): "en" | "ar" {
+async function detectInitialLanguage(): Promise<"en" | "ar"> {
+  const override = await readIntroLocaleOverride();
+  if (override !== null) return override;
   const deviceLanguage = Localization.getLocales()[0]?.languageCode ?? "en";
   return deviceLanguage === "ar" ? "ar" : "en";
 }
@@ -92,7 +96,7 @@ export async function initI18n(): Promise<void> {
     resources as { en: Record<string, unknown>; ar: Record<string, unknown> }
   );
 
-  const language = detectInitialLanguage();
+  const language = await detectInitialLanguage();
 
   i18next.use(initReactI18next);
 

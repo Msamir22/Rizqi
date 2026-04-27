@@ -59,12 +59,88 @@ const REQUIRED_SCALAR_KEYS: Record<string, readonly string[]> = {
     "error",
     "language_change_error_title",
     "language_change_failed",
+    // feature 026 — onboarding guide card
+    "onboarding_step_bank_account",
+    "onboarding_step_spending_budget",
+    "new_badge",
+    "setup_guide",
+    "go",
+    "next",
+    "dismiss",
   ],
   settings: [
     "title",
     "language",
     "language_change_error_title",
     "language_change_failed",
+  ],
+  onboarding: [
+    // Pitch chrome
+    "pitch_skip",
+    "pitch_continue",
+    "pitch_get_started",
+    "pitch_back",
+    // Pitch slide 1 — Voice
+    // (eyebrow key removed 2026-04-26 per user direction — slides no longer
+    //  show the "01 · VOICE" / "02 · SMS" / "03 · LIVE MARKET" pre-title.)
+    "pitch_slide_voice_headline",
+    "pitch_slide_voice_subhead",
+    "pitch_slide_voice_listening",
+    "pitch_slide_voice_transcript",
+    "pitch_slide_voice_status_saved",
+    "pitch_slide_voice_status_just_now",
+    "pitch_slide_voice_category_food",
+    "pitch_slide_voice_account",
+    // Pitch slide 2A — SMS (Android)
+    "pitch_slide_sms_headline",
+    "pitch_slide_sms_subhead",
+    "pitch_slide_sms_bank_label",
+    "pitch_slide_sms_bank_body",
+    "pitch_slide_sms_detected",
+    "pitch_slide_sms_category_groceries",
+    "pitch_slide_sms_status_imported",
+    // Pitch slide 2B — Offline (iOS)
+    "pitch_slide_offline_headline",
+    "pitch_slide_offline_subhead",
+    "pitch_slide_offline_status_offline",
+    "pitch_slide_offline_status_instant",
+    "pitch_slide_offline_recently_added",
+    "pitch_slide_offline_all_saved",
+    "pitch_slide_offline_pending",
+    // Pitch slide 3 — Live market
+    "pitch_slide_live_market_headline",
+    "pitch_slide_live_market_subhead",
+    "pitch_slide_live_market_net_worth_label",
+    "pitch_slide_live_market_gold_label",
+    "pitch_slide_live_market_silver_label",
+    "pitch_slide_live_market_usd_label",
+    "pitch_slide_live_market_live_caption",
+    // Currency step
+    "currency_step_title",
+    "currency_step_subtitle",
+    "currency_step_confirm",
+    "currency_step_signout",
+    "currency_step_error_generic",
+    // Setup guide step labels (voice + SMS only live here; bank/budget live in common)
+    "onboarding_step_voice_transaction",
+    "onboarding_step_auto_track_bank_sms",
+    // First-run tooltips
+    "cash_account_tooltip_title",
+    "cash_account_tooltip_body",
+    "cash_account_tooltip_got_it",
+    "mic_button_tooltip_title",
+    "mic_button_tooltip_body",
+    "mic_button_tooltip_try_it_now",
+  ],
+  auth: [
+    "welcome_title",
+    "welcome_tagline",
+    "pill_voice",
+    "pill_bank_sms",
+    "pill_live_rates",
+    "pill_gold_silver",
+    "trust_encrypted",
+    "trust_private",
   ],
 };
 

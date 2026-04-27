@@ -1,4 +1,4 @@
-import { NotificationSettings } from "../types";
+import type { NotificationSettings, OnboardingFlags } from "../types";
 import { BaseProfile } from "./base/base-profile";
 
 export class Profile extends BaseProfile {
@@ -8,6 +8,15 @@ export class Profile extends BaseProfile {
       return JSON.parse(this.notificationSettingsRaw) as NotificationSettings;
     } catch {
       return undefined;
+    }
+  }
+
+  get onboardingFlags(): OnboardingFlags {
+    if (!this.onboardingFlagsRaw) return {};
+    try {
+      return JSON.parse(this.onboardingFlagsRaw) as OnboardingFlags;
+    } catch {
+      return {};
     }
   }
 

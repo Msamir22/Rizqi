@@ -6,6 +6,15 @@ import {
 } from "../validation/account-validation";
 import { usePreferredCurrency } from "./usePreferredCurrency";
 
+interface UseAccountFormOptions {
+  /**
+   * Pre-select an account type. Used by deep-links such as the
+   * OnboardingGuideCard "Add bank account" step which should land the user
+   * on the form with BANK already chosen.
+   */
+  readonly initialAccountType?: AccountFormData["accountType"];
+}
+
 interface UseAccountFormResult {
   formData: AccountFormData;
   errors: ValidationErrors;
@@ -31,12 +40,15 @@ interface UseAccountFormResult {
  * - `isValid` — `true` if the current `formData` passes validation, `false` otherwise
  * - `isTouched` — mapping of form fields to a boolean indicating whether each field has been interacted with
  */
-export function useAccountForm(): UseAccountFormResult {
+export function useAccountForm(
+  options: UseAccountFormOptions = {}
+): UseAccountFormResult {
   const { preferredCurrency } = usePreferredCurrency();
+  const { initialAccountType } = options;
 
   const [formData, setFormData] = useState<AccountFormData>({
     name: "",
-    accountType: "CASH",
+    accountType: initialAccountType ?? "CASH",
     currency: preferredCurrency,
     balance: "",
     bankName: "",
@@ -98,7 +110,7 @@ export function useAccountForm(): UseAccountFormResult {
   const resetForm = useCallback((): void => {
     setFormData({
       name: "",
-      accountType: "CASH",
+      accountType: initialAccountType ?? "CASH",
       currency: preferredCurrency,
       balance: "",
       bankName: "",
@@ -107,7 +119,7 @@ export function useAccountForm(): UseAccountFormResult {
     });
     setErrors({});
     setIsTouched({});
-  }, [preferredCurrency]);
+  }, [preferredCurrency, initialAccountType]);
 
   const isValid = useMemo((): boolean => {
     const { isValid } = validateAccountForm(formData);

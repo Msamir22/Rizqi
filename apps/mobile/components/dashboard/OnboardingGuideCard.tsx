@@ -128,6 +128,7 @@ function OnboardingGuideCardComponent(): React.ReactElement | null {
     isLoading,
     isAllComplete,
     dismiss,
+    onVoiceStepAction,
   } = useOnboardingGuide();
 
   // Find the first incomplete step (active step)
@@ -139,19 +140,22 @@ function OnboardingGuideCardComponent(): React.ReactElement | null {
   const activeStep = activeStepIndex >= 0 ? steps[activeStepIndex] : undefined;
 
   const handleStepPress = useCallback(
-    (route?: string): void => {
-      if (route) {
-        router.push(route as never);
+    (step: OnboardingStep): void => {
+      if (step.key === "voice_transaction") {
+        onVoiceStepAction();
+        return;
+      }
+      if (step.route) {
+        router.push(step.route as never);
       }
     },
-    [router]
+    [router, onVoiceStepAction]
   );
 
   const handleNextStepPress = useCallback((): void => {
-    if (activeStep?.route) {
-      router.push(activeStep.route as never);
-    }
-  }, [activeStep, router]);
+    if (!activeStep) return;
+    handleStepPress(activeStep);
+  }, [activeStep, handleStepPress]);
 
   const handleDismiss = useCallback((): void => {
     dismiss().catch((error: unknown) => {
@@ -256,7 +260,7 @@ function OnboardingGuideCardComponent(): React.ReactElement | null {
                 isActive={index === activeStepIndex}
                 onPress={
                   index === activeStepIndex
-                    ? () => handleStepPress(step.route)
+                    ? () => handleStepPress(step)
                     : undefined
                 }
               />
@@ -273,6 +277,13 @@ function OnboardingGuideCardComponent(): React.ReactElement | null {
           </View>
         </View>
       )}
+
+      {/* Mic tooltip is rendered at the dashboard root (`app/(tabs)/index.tsx`)
+          because the AnchoredTooltip overlay uses `absoluteFillObject`,
+          which would otherwise be clipped by the `overflow-hidden` on this
+          card and positioned in this card's local coordinate frame
+          instead of window-absolute. State is shared via
+          `MicTooltipContext`. */}
     </View>
   );
 }

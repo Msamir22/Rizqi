@@ -6,11 +6,18 @@
  * AsyncStorage cursor; this gate only decides dashboard-vs-onboarding.
  *
  * Priority (see utils/routing-decision.ts for the authoritative rule):
- * 1. Sync in-progress / profile loading → neutral backdrop (splash)
- * 2. onboarding_completed = true → dashboard (regardless of sync state —
- *    offline-first for returning users)
- * 3. Sync succeeded AND flag = false → onboarding (resume via cursor)
- * 4. Sync failed/timeout AND flag = false → retry screen
+ * 1. Auth or intro-seen still loading → splash (return null).
+ * 2. Unauthenticated → pitch (if !intro-seen) or auth.
+ * 3. Sync in-progress OR profile-observation hasn't emitted yet → splash.
+ * 4. Authenticated but `profile === null` (race between sync "success" and
+ *    the observation actually emitting the pulled row) → splash, OR retry
+ *    screen if sync genuinely failed / timed out. NEVER falls through to
+ *    onboarding — that would skip an already-onboarded returning user
+ *    past their data (user-report 2026-04-24).
+ * 5. onboarding_completed = true → dashboard (regardless of sync state —
+ *    offline-first for returning users).
+ * 6. Sync succeeded AND flag = false → onboarding (Currency step).
+ * 7. Sync failed/timeout AND flag = false → retry screen.
  *
  * @module Index
  */
@@ -18,7 +25,9 @@
 import { database } from "@rizqi/db";
 import { RetrySyncScreen } from "@/components/ui/RetrySyncScreen";
 import { useProfile } from "@/hooks/useProfile";
+import { useIntroSeen } from "@/hooks/useIntroSeen";
 import { useSync } from "@/providers/SyncProvider";
+import { useAuth } from "@/context/AuthContext";
 import { performLogout } from "@/services/logout-service";
 import {
   buildRoutingDecisionLog,
@@ -29,6 +38,8 @@ import { Redirect } from "expo-router";
 import React, { useCallback, useEffect, useRef } from "react";
 
 export default function Index(): React.ReactNode {
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { isSeen: introSeen, isLoading: isIntroLoading } = useIntroSeen();
   const { initialSyncState, retryInitialSync } = useSync();
   const { profile, isLoading: isProfileLoading } = useProfile();
   const hasLoggedRef = useRef(false);
@@ -86,7 +97,41 @@ export default function Index(): React.ReactNode {
   // by <AppReadyGate /> (see _layout.tsx) until sync + profile resolve, so
   // users never see a blank/starry backdrop between splash and the real
   // screen.
+  if (isAuthLoading || isIntroLoading) {
+    return null;
+  }
+
+  // Pre-auth routing: first-time visitors see pitch, returning visitors go
+  // straight to auth. introSeen is device-scoped (FR-029/FR-030).
+  if (!isAuthenticated) {
+    if (!introSeen) return <Redirect href="/pitch" />;
+    return <Redirect href="/auth" />;
+  }
+
   if (initialSyncState === "in-progress" || isProfileLoading) {
+    return null;
+  }
+
+  // Authenticated user but `useProfile` returned `null`. This is a
+  // race condition — `useProfile.isLoading` flips false on the FIRST
+  // observation emission, even when that emission is an empty array
+  // (no profile rows present locally yet). It can happen when the
+  // SyncProvider has marked `initialSyncState = "success"` BEFORE
+  // WatermelonDB's observation pipeline has emitted the freshly-pulled
+  // row (user-report 2026-04-24: already-onboarded users were getting
+  // routed to the Currency step on cold launch despite
+  // `onboarding_completed = true` in the DB).
+  //
+  // Trust that an authenticated user MUST have a profile and wait it
+  // out, EXCEPT when sync genuinely failed / timed out — in which case
+  // we surface the retry screen so the user isn't stuck on a blank
+  // screen. Sign-out also clears auth and unblocks the gate naturally.
+  if (isAuthenticated && profile === null) {
+    if (initialSyncState === "failed" || initialSyncState === "timeout") {
+      return (
+        <RetrySyncScreen onRetry={handleRetry} onSignOut={handleSignOut} />
+      );
+    }
     return null;
   }
 

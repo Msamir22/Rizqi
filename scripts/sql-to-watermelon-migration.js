@@ -175,8 +175,11 @@ function parseAlterTableAddColumn(stmt, result) {
 
   // Extract individual ADD COLUMN clauses
   // Handles comma-separated multi-column ADD statements
+  // The type capture group matches everything after the column name up to the
+  // next ADD COLUMN clause, a trailing comma, or end-of-statement. This handles
+  // complex DEFAULT expressions like `'{}'::JSONB`, `NOW()`, `gen_random_uuid()`.
   const addColumnRegex =
-    /ADD\s+COLUMN\s+(?:IF\s+NOT\s+EXISTS\s+)?(\w+)\s+([A-Za-z][A-Za-z0-9_ (),.]*?)(?=\s*(?:,\s*ADD\s|,\s*$|$))/gi;
+    /ADD\s+COLUMN\s+(?:IF\s+NOT\s+EXISTS\s+)?(\w+)\s+([\s\S]+?)(?=\s*(?:,\s*ADD\s+COLUMN|$))/gi;
 
   let match;
   while ((match = addColumnRegex.exec(stmt)) !== null) {

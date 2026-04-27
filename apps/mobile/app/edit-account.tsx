@@ -41,6 +41,7 @@ import { ACCOUNT_TYPES, CURRENCIES } from "@/constants/accounts";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { useAccountById } from "@/hooks/useAccountById";
+import { useAccountDisplayName } from "@/hooks/useAccountDisplayNames";
 import { useDeleteAccount } from "@/hooks/useDeleteAccount";
 import { useEditAccountForm } from "@/hooks/useEditAccountForm";
 import { useUpdateAccount } from "@/hooks/useUpdateAccount";
@@ -139,6 +140,10 @@ function EditAccountForm({
 }: EditAccountFormProps): React.JSX.Element {
   const { t } = useTranslation("accounts");
   const { t: tCommon } = useTranslation("common");
+  // Resolve a display name (with currency suffix on duplicate names) so the
+  // header + delete sheet show e.g. "Cash (EGP)" instead of an ambiguous
+  // "Cash" — per spec 026-followup.
+  const displayName = useAccountDisplayName(account);
   const {
     formData,
     errors,
@@ -313,7 +318,7 @@ function EditAccountForm({
               />
             </View>
             <Text className="mb-2 text-center text-xl font-black text-slate-900 dark:text-white">
-              {account.name}
+              {displayName || account.name}
             </Text>
             <Text className="text-center text-sm font-bold text-slate-500 dark:text-slate-400">
               {accountTypeLabel} • {currency}
@@ -495,7 +500,7 @@ function EditAccountForm({
           );
         }}
         onCancel={() => setShowDeleteSheet(false)}
-        accountName={account.name}
+        accountName={displayName || account.name}
         accountBalance={account.balance}
         currencyCode={currency}
         linkedRecords={linkedCounts}

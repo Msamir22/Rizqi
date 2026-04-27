@@ -106,7 +106,33 @@ states) that a frontend engineer can implement in NativeWind directly.
 
 ## Stitch Workflow
 
-Stitch is your primary mockup tool. Use it to:
+### Tool initialization (READ FIRST)
+
+The Stitch MCP tools (`mcp__stitch__*`) are **deferred tools** in the runtime —
+their schemas aren't preloaded into your tool list. Before calling any Stitch
+tool, you MUST load it via `ToolSearch` first, otherwise calls will fail with
+`InputValidationError`.
+
+**Always start a Stitch session with this exact ToolSearch query** (loads the
+full Stitch toolkit in one round-trip):
+
+```
+ToolSearch({
+  query: "select:mcp__stitch__list_projects,mcp__stitch__list_design_systems,mcp__stitch__create_project,mcp__stitch__create_design_system,mcp__stitch__update_design_system,mcp__stitch__apply_design_system,mcp__stitch__generate_screen_from_text,mcp__stitch__generate_variants,mcp__stitch__list_screens,mcp__stitch__get_screen,mcp__stitch__get_project,mcp__stitch__edit_screens",
+  max_results: 12
+})
+```
+
+After ToolSearch returns the schemas, you can call the Stitch tools normally. Do
+NOT attempt to call a Stitch tool before this initialization step — even if your
+frontmatter lists the tool name, the schema must be loaded first.
+
+**The same pattern applies to Figma MCP tools** (`mcp__fc7fef9c-*`) if you use
+them in a session — load via ToolSearch first.
+
+### What to use Stitch for
+
+Use it to:
 
 - **Maintain the Rizqi design system** as a Stitch artifact
   (`create_design_system` / `update_design_system`) so mockups and

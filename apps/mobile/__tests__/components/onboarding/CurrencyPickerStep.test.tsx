@@ -37,20 +37,18 @@ const RTR: ReactTestRendererModule = require("react-test-renderer");
 // =============================================================================
 
 const mockDetectCurrency = jest.fn();
-// Mirror the service contract so we can guard against the component ever
-// importing it by mistake — Finding from earlier reviews: this step must
-// delegate persistence upwards.
-const mockSetPreferredCurrencyAndCreateCashAccount = jest.fn();
+// Mirror the persistence contract so we can guard against the component
+// ever importing it by mistake — this step must delegate persistence
+// upwards via `onCurrencySelected`, never call a service directly.
+const mockConfirmCurrencyAndOnboard = jest.fn();
 
 jest.mock("@/utils/currency-detection", () => ({
   detectCurrencyFromTimezone: (): unknown => mockDetectCurrency(),
 }));
 
 jest.mock("@/services/profile-service", () => ({
-  setPreferredCurrencyAndCreateCashAccount: (
-    ...args: unknown[]
-  ): Promise<void> =>
-    mockSetPreferredCurrencyAndCreateCashAccount(...args) as Promise<void>,
+  confirmCurrencyAndOnboard: (...args: unknown[]): Promise<void> =>
+    mockConfirmCurrencyAndOnboard(...args) as Promise<void>,
 }));
 
 jest.mock("@/context/ThemeContext", () => ({
@@ -196,7 +194,7 @@ describe("CurrencyPickerStep", () => {
     expect(onCurrencySelected).toHaveBeenCalledWith(tappedCode);
   });
 
-  it("never calls setPreferredCurrencyAndCreateCashAccount directly — persistence is the parent's job", () => {
+  it("never calls confirmCurrencyAndOnboard directly — persistence is the parent's job", () => {
     mockDetectCurrency.mockReturnValue("EGP");
 
     const renderer = RTR.create(
@@ -210,6 +208,6 @@ describe("CurrencyPickerStep", () => {
     const continueBtn = buttons[buttons.length - 1];
     (continueBtn?.props.onPress as () => void | undefined)?.();
 
-    expect(mockSetPreferredCurrencyAndCreateCashAccount).not.toHaveBeenCalled();
+    expect(mockConfirmCurrencyAndOnboard).not.toHaveBeenCalled();
   });
 });

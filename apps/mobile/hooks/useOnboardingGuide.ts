@@ -5,18 +5,17 @@
  * Reactively observes WatermelonDB to determine which onboarding steps
  * the user has completed, and whether the guide has been dismissed.
  *
- * The guide is only shown when `profile.setupGuideCompleted` is `false`.
- * When the user dismisses the card or all steps are complete, the field
- * is set to `true` in WatermelonDB (syncs to Supabase).
+ * Steps (Android — 4 steps):
+ * 1. Bank account added
+ * 2. Voice transaction recorded (source = "VOICE")
+ * 3. Auto-track bank SMS (any transaction with sms_body_hash)
+ * 4. Spending budget set
  *
- * Steps:
- * 1. Cash account created (any account with type "CASH" exists for the user)
- * 2. Bank account added (any account with type "BANK" exists)
- * 3. First transaction recorded (any non-deleted transaction exists)
- * 4. Spending budget set (any active budget exists)
- * 5. SMS auto-import enabled (at least one transaction imported from SMS —
- *    detected via `sms_body_hash` on any transaction; scoped per-user since
- *    WatermelonDB is wiped on logout)
+ * iOS omits the SMS step (3 steps total).
+ *
+ * The mic-tooltip state machine lives in `@/context/MicTooltipContext` so
+ * the overlay can render at the dashboard root (full-screen positioning).
+ * This hook re-exports the context values so callers see a single API.
  *
  * @module useOnboardingGuide
  */
@@ -26,39 +25,37 @@ import { Account, Budget, Profile, Transaction, database } from "@rizqi/db";
 import { Q } from "@nozbe/watermelondb";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Platform } from "react-native";
+import { useMicTooltip } from "@/context/MicTooltipContext";
+import { setSetupGuideCompleted as persistSetupGuideCompleted } from "@/services/profile-service";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 export interface OnboardingStep {
-  /** Unique key for the step */
   readonly key: string;
-  /** i18n translation key for the step label */
   readonly labelKey: string;
-  /** Whether this step is complete */
   readonly isComplete: boolean;
-  /** Route to navigate to when the step's action is tapped */
   readonly route?: string;
-  /** Whether this step has a "New" badge */
   readonly isNew?: boolean;
 }
 
 interface UseOnboardingGuideResult {
-  /** Ordered list of onboarding steps with completion state */
   readonly steps: readonly OnboardingStep[];
-  /** Number of completed steps */
   readonly completedCount: number;
-  /** Total number of steps */
   readonly totalSteps: number;
-  /** Whether the guide has been completed/dismissed by the user */
   readonly isDismissed: boolean;
-  /** Whether state is still loading */
   readonly isLoading: boolean;
-  /** Whether all steps are complete */
   readonly isAllComplete: boolean;
-  /** Dismiss the guide card (sets setupGuideCompleted = true in DB) */
   readonly dismiss: () => Promise<void>;
+  /** Tap the voice step's action button. Manages tooltip vs direct open. */
+  readonly onVoiceStepAction: () => void;
+  /** Whether the mic tooltip is currently visible. */
+  readonly isMicTooltipVisible: boolean;
+  /** "Try it now" on mic tooltip — dismisses + opens voice. */
+  readonly onMicTooltipTryItNow: () => void;
+  /** X / hardware back on mic tooltip — dismisses only. */
+  readonly onMicTooltipClose: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -66,52 +63,47 @@ interface UseOnboardingGuideResult {
 // ---------------------------------------------------------------------------
 
 export function useOnboardingGuide(): UseOnboardingGuideResult {
-  // NOTE: Store the profile record and the setup_guide_completed value
-  // SEPARATELY. WatermelonDB mutates records in place, so reusing the same
-  // object reference on each observer emission causes React's setState to
-  // bail out (reference equality). Storing the primitive value ensures
-  // re-renders fire whenever the field changes.
   const [profile, setProfile] = useState<Profile | null>(null);
   const [setupGuideCompleted, setSetupGuideCompleted] = useState<
     boolean | null
   >(null);
-  const [hasCashAccount, setHasCashAccount] = useState(false);
   const [hasBankAccount, setHasBankAccount] = useState(false);
-  const [hasTransaction, setHasTransaction] = useState(false);
+  const [hasVoiceTransaction, setHasVoiceTransaction] = useState(false);
   const [hasBudget, setHasBudget] = useState(false);
   const [hasSmsImported, setHasSmsImported] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const [profileLoaded, setProfileLoaded] = useState(false);
-  const [cashLoaded, setCashLoaded] = useState(false);
   const [bankLoaded, setBankLoaded] = useState(false);
-  const [txLoaded, setTxLoaded] = useState(false);
+  const [voiceLoaded, setVoiceLoaded] = useState(false);
   const [budgetLoaded, setBudgetLoaded] = useState(false);
-  // SMS observer is skipped on iOS, so mark it pre-loaded on non-Android.
   const [smsLoaded, setSmsLoaded] = useState(Platform.OS !== "android");
+
+  // Mic tooltip state lives in `MicTooltipContext` (mounted at
+  // `(tabs)/_layout.tsx`) so the tooltip overlay can render at the
+  // dashboard root and not get clipped by `OnboardingGuideCard`'s
+  // `overflow-hidden`. We re-export the context values from this hook to
+  // keep `OnboardingGuideCard`'s API surface stable.
+  const {
+    isVisible: isMicTooltipVisible,
+    onVoiceStepAction,
+    onTryItNow: onMicTooltipTryItNow,
+    onDismiss: onMicTooltipClose,
+  } = useMicTooltip();
 
   useEffect(() => {
     if (
       profileLoaded &&
-      cashLoaded &&
       bankLoaded &&
-      txLoaded &&
+      voiceLoaded &&
       budgetLoaded &&
       smsLoaded
     ) {
       setIsLoading(false);
     }
-  }, [
-    profileLoaded,
-    cashLoaded,
-    bankLoaded,
-    txLoaded,
-    budgetLoaded,
-    smsLoaded,
-  ]);
+  }, [profileLoaded, bankLoaded, voiceLoaded, budgetLoaded, smsLoaded]);
 
   // ── Observe profile for setupGuideCompleted ──
-  // Use observeWithColumns to react to field-level changes (not just add/remove)
   useEffect(() => {
     const subscription = database
       .get<Profile>("profiles")
@@ -121,8 +113,6 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
         next: (profiles) => {
           const nextProfile = profiles[0] ?? null;
           setProfile(nextProfile);
-          // Store the primitive field value explicitly — see NOTE above on
-          // why we can't rely on profile object reference changes.
           setSetupGuideCompleted(nextProfile?.setupGuideCompleted ?? null);
           setProfileLoaded(true);
         },
@@ -135,32 +125,15 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Derive dismissed state from the tracked primitive value.
-  // Defaults to `true` (hidden) when the profile hasn't loaded yet to avoid
-  // a flash of the card before we know the real state.
+  // Default to `true` (dismissed) while the profile observer is still
+  // settling — `setupGuideCompleted` is `null` until the first
+  // observable emission. Defaulting to dismissed here means the
+  // OnboardingGuideCard stays hidden during the first render after
+  // mount instead of flashing in and then collapsing once the real
+  // value arrives. Becomes accurate after the observer's first emit.
   const isDismissed = setupGuideCompleted ?? true;
 
-  // ── Observe cash accounts (type = "CASH") ──
-  useEffect(() => {
-    const subscription = database
-      .get<Account>("accounts")
-      .query(Q.where("deleted", false), Q.where("type", "CASH"))
-      .observeCount()
-      .subscribe({
-        next: (count) => {
-          setHasCashAccount(count > 0);
-          setCashLoaded(true);
-        },
-        error: (error: unknown) => {
-          logger.error("Failed to observe cash accounts", error);
-          setCashLoaded(true);
-        },
-      });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  // ── Observe bank accounts (type = "BANK") ──
+  // ── Observe bank accounts ──
   useEffect(() => {
     const subscription = database
       .get<Account>("accounts")
@@ -180,20 +153,20 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
     return () => subscription.unsubscribe();
   }, []);
 
-  // ── Observe transactions (any non-deleted) ──
+  // ── Observe voice transactions (source = "VOICE") ──
   useEffect(() => {
     const subscription = database
       .get<Transaction>("transactions")
-      .query(Q.where("deleted", false))
+      .query(Q.where("deleted", Q.notEq(true)), Q.where("source", "VOICE"))
       .observeCount()
       .subscribe({
         next: (count) => {
-          setHasTransaction(count > 0);
-          setTxLoaded(true);
+          setHasVoiceTransaction(count > 0);
+          setVoiceLoaded(true);
         },
         error: (error: unknown) => {
-          logger.error("Failed to observe transactions", error);
-          setTxLoaded(true);
+          logger.error("Failed to observe voice transactions", error);
+          setVoiceLoaded(true);
         },
       });
 
@@ -220,13 +193,7 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
     return () => subscription.unsubscribe();
   }, []);
 
-  // ── Observe SMS-imported transactions (per-user via WatermelonDB) ──
-  // We look for any transaction with a non-null `sms_body_hash`, which is
-  // set only by the SMS parser. WatermelonDB is wiped on logout so this is
-  // inherently user-scoped (previously this state was read from AsyncStorage
-  // which persisted across account switches — a bug that marked the step as
-  // complete for users who had never imported SMS themselves). iOS has no
-  // SMS import, so this is Android-only.
+  // ── Observe SMS-imported transactions (Android only) ──
   useEffect(() => {
     if (Platform.OS !== "android") {
       setHasSmsImported(false);
@@ -251,43 +218,45 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
     return () => subscription.unsubscribe();
   }, []);
 
-  // ── Build steps array ──
-  const steps: readonly OnboardingStep[] = useMemo(
-    () => [
-      {
-        key: "cash_account",
-        labelKey: "onboarding_step_cash_account",
-        isComplete: hasCashAccount,
-        route: "/add-account",
-      },
+  // ── Build steps array (no cash_account — always complete) ──
+  const steps: readonly OnboardingStep[] = useMemo(() => {
+    const base: OnboardingStep[] = [
       {
         key: "bank_account",
         labelKey: "onboarding_step_bank_account",
         isComplete: hasBankAccount,
-        route: "/add-account",
+        // Deep-link to add-account with `type=BANK` pre-selected so the
+        // user lands on the correct radio option (user-reported 2026-04-26:
+        // tapping "Add bank account" landed on the form with CASH selected,
+        // forcing an extra tap).
+        route: "/add-account?type=BANK",
       },
       {
-        key: "first_transaction",
-        labelKey: "onboarding_step_first_transaction",
-        isComplete: hasTransaction,
-        route: "/add-transaction",
+        key: "voice_transaction",
+        labelKey: "onboarding_step_voice_transaction",
+        isComplete: hasVoiceTransaction,
+        isNew: true,
       },
-      {
-        key: "spending_budget",
-        labelKey: "onboarding_step_spending_budget",
-        isComplete: hasBudget,
-        route: "/create-budget",
-      },
-      {
-        key: "sms_import",
-        labelKey: "onboarding_step_sms_import",
+    ];
+
+    if (Platform.OS === "android") {
+      base.push({
+        key: "auto_track_bank_sms",
+        labelKey: "onboarding_step_auto_track_bank_sms",
         isComplete: hasSmsImported,
         route: "/sms-scan",
-        isNew: Platform.OS === "android",
-      },
-    ],
-    [hasCashAccount, hasBankAccount, hasTransaction, hasBudget, hasSmsImported]
-  );
+      });
+    }
+
+    base.push({
+      key: "spending_budget",
+      labelKey: "onboarding_step_spending_budget",
+      isComplete: hasBudget,
+      route: "/create-budget",
+    });
+
+    return base;
+  }, [hasBankAccount, hasVoiceTransaction, hasSmsImported, hasBudget]);
 
   const completedCount = useMemo(
     () => steps.filter((s) => s.isComplete).length,
@@ -296,15 +265,22 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
 
   const isAllComplete = completedCount === steps.length;
 
-  // Auto-dismiss when all steps complete
+  // Auto-dismiss when all steps complete. Delegates to the service layer so
+  // no `database.write()` lives inside a hook (Constitution IV / CLAUDE.md).
   useEffect(() => {
-    if (isAllComplete && profile && !profile.setupGuideCompleted) {
-      void database.write(async () => {
-        await profile.update((record) => {
-          record.setupGuideCompleted = true;
-        });
-      });
-    }
+    if (!isAllComplete || !profile || profile.setupGuideCompleted) return;
+
+    const run = async (): Promise<void> => {
+      try {
+        await persistSetupGuideCompleted(true);
+      } catch (error: unknown) {
+        logger.warn(
+          "onboarding.autoDismiss.failed",
+          error instanceof Error ? { message: error.message } : { error }
+        );
+      }
+    };
+    void run();
   }, [isAllComplete, profile]);
 
   const dismiss = useCallback(async (): Promise<void> => {
@@ -312,13 +288,11 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       logger.warn("Cannot dismiss setup guide: profile not loaded");
       return;
     }
-
-    await database.write(async () => {
-      await profile.update((record) => {
-        record.setupGuideCompleted = true;
-      });
-    });
+    await persistSetupGuideCompleted(true);
   }, [profile]);
+
+  // Mic-tooltip state machine moved to `MicTooltipContext` — see destructure
+  // at the top of this hook. Keeping the same return shape for callers.
 
   return {
     steps,
@@ -328,5 +302,9 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
     isLoading,
     isAllComplete,
     dismiss,
+    onVoiceStepAction,
+    isMicTooltipVisible,
+    onMicTooltipTryItNow,
+    onMicTooltipClose,
   };
 }

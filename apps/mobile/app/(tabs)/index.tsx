@@ -1,5 +1,7 @@
 import { CurrencyPicker } from "@/components/currency/CurrencyPicker";
 import { AccountsSection } from "@/components/dashboard/AccountsSection";
+import { CashAccountTooltip } from "@/components/dashboard/CashAccountTooltip";
+import { MicButtonTooltip } from "@/components/dashboard/MicButtonTooltip";
 import { LiveRates } from "@/components/dashboard/LiveRates";
 import { OnboardingGuideCard } from "@/components/dashboard/OnboardingGuideCard";
 import { DashboardSkeleton } from "@/components/dashboard/skeletons/DashboardSkeleton";
@@ -30,7 +32,7 @@ import { logger } from "@/utils/logger";
 import type { CurrencyType } from "@rizqi/db";
 import { CURRENCY_INFO_MAP } from "@rizqi/logic";
 import { useRouter } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
@@ -62,6 +64,12 @@ export default function DashboardScreen(): React.JSX.Element {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCurrencyPickerOpen, setIsCurrencyPickerOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const cashAccountRef = useRef<View>(null);
+  // Forwarded to CashAccountTooltip so it can scroll the cash-account
+  // card into view before showing — otherwise on first-run the user is
+  // at scroll-top and the cash card sits below the fold, which makes
+  // the AnchoredTooltip arrow land off-screen (user-reported 2026-04-26).
+  const scrollViewRef = useRef<ScrollView>(null);
   const isDbReady = useDatabaseReady();
   const { t } = useTranslation("common");
   const { profile } = useProfile();
@@ -172,6 +180,7 @@ export default function DashboardScreen(): React.JSX.Element {
   return (
     <StarryBackground>
       <ScrollView
+        ref={scrollViewRef}
         contentContainerStyle={SCROLL_CONTENT_STYLE}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -226,7 +235,11 @@ export default function DashboardScreen(): React.JSX.Element {
             />
           </SectionErrorBoundary>
           <SectionErrorBoundary name={t("section_accounts")}>
-            <AccountsSection accounts={accounts} isLoading={accountsLoading} />
+            <AccountsSection
+              accounts={accounts}
+              isLoading={accountsLoading}
+              cashAccountRef={cashAccountRef}
+            />
           </SectionErrorBoundary>
           <SectionErrorBoundary name={t("section_this_month")}>
             <ThisMonth />
@@ -255,6 +268,16 @@ export default function DashboardScreen(): React.JSX.Element {
         onDismiss={handleSmsDismiss}
         requestPermission={requestPermission}
       />
+      <CashAccountTooltip
+        anchorRef={cashAccountRef}
+        isSmsPromptVisible={shouldShowPrompt}
+        scrollViewRef={scrollViewRef}
+      />
+      {/* Mic-button first-run tooltip — rendered here (not inside the
+          OnboardingGuideCard) so its full-screen overlay isn't clipped by
+          the card's `overflow-hidden`. State + handlers come from
+          `MicTooltipContext`. */}
+      <MicButtonTooltip />
     </StarryBackground>
   );
 }

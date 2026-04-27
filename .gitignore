@@ -2,6 +2,11 @@
 .mcp.json
 .mcp.local.json
 
+# Claude Code / other agent session transcripts accidentally dumped at root
+*-you-are-taking-over-*.txt
+claude-session-*.txt
+.review-tmp.md
+
 # Dependencies
 node_modules/
 npm-debug.log*

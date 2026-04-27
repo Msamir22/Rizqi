@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo } from "react";
 import {
   Modal,
   ScrollView,
@@ -13,6 +13,7 @@ import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import type { Account, AccountType } from "@rizqi/db";
 import { useTranslation } from "react-i18next";
+import { buildAccountDisplayNames } from "@/utils/account-display";
 
 interface AccountSelectorModalProps {
   visible: boolean;
@@ -32,6 +33,14 @@ export function AccountSelectorModal({
   const { isDark } = useTheme();
   const { t } = useTranslation("common");
   const { t: tAccounts } = useTranslation("accounts");
+
+  // Resolve display names so duplicate-named accounts (e.g. two "Cash"
+  // accounts in different currencies) are visually disambiguated in the
+  // picker — per spec 026-followup.
+  const displayNames = useMemo(
+    (): Map<string, string> => buildAccountDisplayNames(accounts),
+    [accounts]
+  );
 
   /** Map account type enum values to their translated display labels */
   const accountTypeLabel = useCallback(
@@ -131,7 +140,7 @@ export function AccountSelectorModal({
                                 : "text-slate-800 dark:text-slate-100"
                             }`}
                           >
-                            {account.name}
+                            {displayNames.get(account.id) ?? account.name}
                           </Text>
                           <Text className="text-xs text-slate-500 dark:text-slate-400">
                             {account.currency} •{" "}

@@ -40,6 +40,7 @@ import { AuthProvider, useAuth } from "../context/AuthContext";
 import { CategoriesProvider } from "../context/CategoriesContext";
 
 import { SmsScanProvider } from "../context/SmsScanContext";
+import { FirstRunTooltipProvider } from "../context/FirstRunTooltipContext";
 import { DatabaseProvider } from "../providers/DatabaseProvider";
 import { QueryProvider } from "../providers/QueryProvider";
 import { MarketRatesRealtimeProvider } from "../providers/MarketRatesRealtimeProvider";
@@ -194,11 +195,13 @@ function RootLayout(): React.ReactNode {
                               initialMetrics={initialWindowMetrics}
                             >
                               <ToastProvider>
-                                <AuthGuard>
-                                  <RootLayoutNav />
-                                  <InitialSyncOverlay />
-                                  <AppReadyGate />
-                                </AuthGuard>
+                                <FirstRunTooltipProvider>
+                                  <AuthGuard>
+                                    <RootLayoutNav />
+                                    <InitialSyncOverlay />
+                                    <AppReadyGate />
+                                  </AuthGuard>
+                                </FirstRunTooltipProvider>
                               </ToastProvider>
                             </SafeAreaProvider>
                           </ThemeProvider>
@@ -224,10 +227,18 @@ export default Sentry.wrap(RootLayout);
  * the navigation stack already has active screens.
  *
  * Public routes that don't require authentication:
- * - "auth" — the main authentication screen
+ * - ""           — the root index route. It runs its own routing logic
+ *                   (`app/index.tsx`) which decides between `/pitch` and
+ *                   `/auth` based on `intro:seen`. AuthGuard MUST NOT
+ *                   pre-empt that decision; otherwise unauthenticated users
+ *                   are force-redirected to `/auth` before index.tsx's
+ *                   redirect to `/pitch` can run, and the pitch is never
+ *                   shown on first launch (user-report 2026-04-24).
+ * - "auth"       — the main authentication screen
  * - "auth-callback" — deep link handler for OAuth/email verification redirects
+ * - "pitch"      — the pre-auth pitch carousel
  */
-const PUBLIC_ROUTES = new Set(["auth", "auth-callback"]);
+const PUBLIC_ROUTES = new Set(["", "auth", "auth-callback", "pitch"]);
 
 function AuthGuard({
   children,
@@ -279,6 +290,7 @@ function RootLayoutNav(): React.ReactNode {
         }}
       >
         <Stack.Screen name="index" />
+        <Stack.Screen name="pitch" />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen

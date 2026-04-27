@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useLocalSearchParams } from "expo-router";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   KeyboardAvoidingView,
@@ -32,8 +33,24 @@ export default function AddAccount(): React.ReactNode {
   const { t } = useTranslation("accounts");
   const { t: tCommon } = useTranslation("common");
 
+  // Optional `?type=` URL param — used by deep-links (e.g.
+  // OnboardingGuideCard's "Add bank account" step) to pre-select the
+  // account type so the user lands on the right radio option without an
+  // extra tap. Only the three known types are honored; anything else
+  // falls through to the default ("CASH") to avoid arbitrary-string state.
+  const { type: typeParam } = useLocalSearchParams<{ type?: string }>();
+  const initialAccountType = useMemo(() => {
+    return typeParam === "BANK" ||
+      typeParam === "CASH" ||
+      typeParam === "DIGITAL_WALLET"
+      ? typeParam
+      : undefined;
+  }, [typeParam]);
+
   // Custom hooks for form state and business logic
-  const { formData, errors, updateField, validate } = useAccountForm();
+  const { formData, errors, updateField, validate } = useAccountForm({
+    initialAccountType,
+  });
 
   const { createAccount, isSubmitting } = useCreateAccount();
 

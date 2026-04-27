@@ -23,7 +23,8 @@ import { useTheme } from "../context/ThemeContext";
 import { usePreferredCurrency } from "../hooks/usePreferredCurrency";
 import { useDatabase } from "../providers/DatabaseProvider";
 import { performLogout } from "../services/logout-service";
-import { changeLanguage } from "../i18n/changeLanguage";
+import { setIntroLocaleOverride } from "@/services/intro-flag-service";
+import { setPreferredLanguage } from "@/services/profile-service";
 import { useSmsPermission } from "../hooks/useSmsPermission";
 import { useSmsSync } from "../hooks/useSmsSync";
 import { useSmsScanContext } from "../context/SmsScanContext";
@@ -216,7 +217,25 @@ export default function SettingsScreen(): React.JSX.Element {
       if (isChangingLanguage) return;
       setIsChangingLanguage(true);
       try {
-        await changeLanguage(lang);
+        // Three writes, in order, before the RTL-flip reload kicks in:
+        //
+        //   1. `setIntroLocaleOverride(lang)` — device-scoped AsyncStorage
+        //      key (FR-030). `initI18n()` reads this FIRST on cold launch,
+        //      so the next reload starts with the right language and there
+        //      is no flash of the previous locale.
+        //   2. `setPreferredLanguage(lang)` — persists to
+        //      `profile.preferred_language` AND calls `changeLanguage`.
+        //      Updating the profile is required because `AppReadyGate`
+        //      syncs the runtime to `profile.preferred_language` on cold
+        //      launch — leaving the profile stale would make the gate
+        //      revert the user's choice.
+        //
+        // The previous code called `changeLanguage` directly without
+        // updating either the override OR the profile, which caused the
+        // 2026-04-26 user-reported regression where the app reloaded but
+        // came back in the OLD language.
+        await setIntroLocaleOverride(lang);
+        await setPreferredLanguage(lang);
       } catch (error) {
         // TODO: Replace with structured logging (e.g., Sentry)
         console.error("Failed to change language:", error);

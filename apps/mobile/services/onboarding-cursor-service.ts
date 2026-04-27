@@ -1,6 +1,12 @@
 /**
  * Onboarding Cursor Service
  *
+ * @deprecated Feature 026 replaced the multi-step onboarding wizard with a
+ *   single Currency step that atomically writes currency + language +
+ *   onboarding_completed. This service is retained only for defensive cursor
+ *   cleanup inside `confirmCurrencyAndOnboard`. No new callers should be added.
+ *   See specs/026-onboarding-restructure/.
+ *
  * AsyncStorage wrapper for the per-user onboarding-step cursor used by the
  * onboarding screen to resume at the right step after an interrupted session.
  *

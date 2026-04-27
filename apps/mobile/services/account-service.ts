@@ -14,6 +14,7 @@
  */
 
 import { detectCurrencyFromTimezone } from "@/utils/currency-detection";
+import { logger } from "@/utils/logger";
 import { Account, type CurrencyType, database } from "@rizqi/db";
 import { Q } from "@nozbe/watermelondb";
 
@@ -44,6 +45,48 @@ export const CURRENCY_UNKNOWN_ERROR = "CURRENCY_UNKNOWN";
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
+
+/**
+ * Check-and-create a Cash account inside an ALREADY-OPEN writer.
+ *
+ * This is the non-writer helper that `ensureCashAccount` and
+ * `confirmCurrencyAndOnboard` share. Callers MUST be inside a
+ * `database.write()` block — this function does NOT open its own.
+ *
+ * @returns The account ID (existing or newly created).
+ */
+export async function createCashAccountWithinWriter(
+  userId: string,
+  currency: CurrencyType,
+  accountsCollection: ReturnType<typeof database.get<Account>>,
+  name?: string
+): Promise<{ readonly accountId: string; readonly created: boolean }> {
+  const normalizedUserId = userId.trim();
+
+  const existing = await accountsCollection
+    .query(
+      Q.where("type", CASH_ACCOUNT_TYPE),
+      Q.where("user_id", normalizedUserId),
+      Q.where("currency", currency),
+      Q.where("deleted", Q.notEq(true)),
+      Q.sortBy("created_at", Q.asc)
+    )
+    .fetch();
+
+  if (existing.length > 0) {
+    return { accountId: existing[0].id, created: false };
+  }
+
+  const record = await accountsCollection.create((acc) => {
+    acc.userId = normalizedUserId;
+    acc.name = name?.trim() || CASH_ACCOUNT_NAME;
+    acc.type = CASH_ACCOUNT_TYPE;
+    acc.currency = currency;
+    acc.balance = 0;
+    acc.deleted = false;
+  });
+  return { accountId: record.id, created: true };
+}
 
 /**
  * Ensure a Cash account exists for the given user in the specified currency.
@@ -85,35 +128,16 @@ export async function ensureCashAccount(
     let accountId: string | null = null;
     let created = false;
 
-    // Atomic check-and-create inside a single write block to prevent
-    // TOCTOU races when called concurrently (e.g., index.tsx + onboarding.tsx).
     await database.write(async () => {
       const accountsCollection = database.get<Account>("accounts");
-      const existing = await accountsCollection
-        .query(
-          Q.where("type", CASH_ACCOUNT_TYPE),
-          Q.where("user_id", normalizedUserId),
-          Q.where("currency", resolvedCurrency),
-          Q.where("deleted", Q.notEq(true)),
-          Q.sortBy("created_at", Q.asc)
-        )
-        .fetch();
-
-      if (existing.length > 0) {
-        accountId = existing[0].id;
-        return;
-      }
-
-      const record = await accountsCollection.create((acc) => {
-        acc.userId = normalizedUserId;
-        acc.name = name?.trim() || CASH_ACCOUNT_NAME;
-        acc.type = CASH_ACCOUNT_TYPE;
-        acc.currency = resolvedCurrency;
-        acc.balance = 0;
-        acc.deleted = false;
-      });
-      accountId = record.id;
-      created = true;
+      const result = await createCashAccountWithinWriter(
+        normalizedUserId,
+        resolvedCurrency,
+        accountsCollection,
+        name
+      );
+      accountId = result.accountId;
+      created = result.created;
     });
 
     return { created, accountId };
@@ -122,7 +146,7 @@ export async function ensureCashAccount(
       error instanceof Error
         ? error.message
         : "Unknown error creating Cash account";
-    console.error("ensureCashAccount failed:", message);
+    logger.error("ensureCashAccount failed", { message });
     return { created: false, accountId: null, error: message };
   }
 }
@@ -156,8 +180,11 @@ export async function findCashAccount(userId: string): Promise<string | null> {
       .fetch();
 
     return existing.length > 0 ? existing[0].id : null;
-  } catch (error) {
-    console.error("findCashAccount failed:", error);
+  } catch (error: unknown) {
+    logger.error(
+      "findCashAccount failed",
+      error instanceof Error ? { message: error.message } : { error }
+    );
     return null;
   }
 }

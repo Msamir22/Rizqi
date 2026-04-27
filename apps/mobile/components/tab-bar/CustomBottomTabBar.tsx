@@ -30,6 +30,8 @@ interface CustomBottomTabBarProps extends BottomTabBarProps {
   readonly onMicPress?: () => void;
   /** Whether voice recording is currently active. */
   readonly isRecording?: boolean;
+  /** Optional ref to the mic button View for tooltip anchoring. */
+  readonly micButtonRef?: React.RefObject<View>;
 }
 
 /**
@@ -70,6 +72,7 @@ function CustomBottomTabBarComponent({
   navigation,
   onMicPress,
   isRecording = false,
+  micButtonRef,
 }: CustomBottomTabBarProps): React.ReactElement {
   const insets = useSafeAreaInsets();
   const { language } = useLocale();
@@ -226,6 +229,8 @@ function CustomBottomTabBarComponent({
 
         {/* Center microphone button (elevated above tab bar) */}
         <View
+          ref={micButtonRef}
+          collapsable={false}
           className="absolute start-1/2 z-[30]"
           style={{
             top: -MIC_BUTTON_SIZE / 2 + 8,

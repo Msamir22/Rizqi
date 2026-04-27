@@ -24,6 +24,7 @@ import { PeriodFilterModal } from "@/components/modals/PeriodFilterModal";
 import { TypeFilterModal } from "@/components/modals/TypeFilterModal";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
+import { useAccountDisplayNames } from "@/hooks/useAccountDisplayNames";
 import type { ReviewableTransaction } from "@rizqi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useState } from "react";
@@ -78,6 +79,11 @@ export function TransactionReview({
   const state = useTransactionReviewState({ transactions, onSave });
   const [isFiltersVisible, setIsFiltersVisible] = useState(false);
 
+  // Resolve display names for matched accounts so duplicate-named accounts
+  // (e.g. two "Cash" accounts in different currencies) are visually
+  // disambiguated in SMS / voice review rows. Per spec 026-followup.
+  const accountDisplayNames = useAccountDisplayNames();
+
   const hasActiveFilters =
     state.searchQuery.trim().length > 0 ||
     !(state.selectedTypes.length === 1 && state.selectedTypes[0] === "All");
@@ -96,10 +102,22 @@ export function TransactionReview({
       const tx = item.tx;
       if (!tx) return null;
 
-      const accountName =
+      // Prefer the resolved display name (with currency suffix on dup
+      // names) by looking up the account ID in the global accounts map.
+      // Fall back to the literal accountName (override or matched value)
+      // when the ID isn't resolvable — e.g. for a "create new account"
+      // override that hasn't been persisted yet.
+      const accountId =
+        state.transactionOverrides.get(item.originalIndex)?.accountId ??
+        state.accountMatches.get(item.originalIndex)?.accountId ??
+        null;
+      const rawAccountName =
         state.transactionOverrides.get(item.originalIndex)?.accountName ??
         state.accountMatches.get(item.originalIndex)?.accountName ??
         null;
+      const accountName =
+        (accountId ? accountDisplayNames.get(accountId) : null) ??
+        rawAccountName;
 
       const content = getExpandedContent(tx);
 
@@ -123,6 +141,7 @@ export function TransactionReview({
     [
       state.accountMatches,
       state.transactionOverrides,
+      accountDisplayNames,
       state.invalidIndices,
       state.handleToggleItem,
       state.handleOpenEditModal,

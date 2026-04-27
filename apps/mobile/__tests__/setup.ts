@@ -4,6 +4,64 @@
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
+// Mock expo-updates — used by utils/rtl.ts (applyRTL → reloadAsync on RTL flip).
+// Not available in the worktree's node_modules here; a minimal no-op stub keeps
+// transitive imports (changeLanguage.ts → rtl.ts) from failing at test load.
+// `virtual: true` is required because the module isn't present on disk.
+jest.mock(
+  "expo-updates",
+  () => ({
+    reloadAsync: jest.fn(),
+  }),
+  { virtual: true }
+);
+
+// Mock expo-secure-store — referenced by services/supabase.ts for token storage
+// but not needed in unit tests. Supplying stubs prevents module-load failures.
+jest.mock(
+  "expo-secure-store",
+  () => ({
+    getItemAsync: jest.fn(() => Promise.resolve(null)),
+    setItemAsync: jest.fn(() => Promise.resolve()),
+    deleteItemAsync: jest.fn(() => Promise.resolve()),
+  }),
+  { virtual: true }
+);
+
+// Mock @react-native-async-storage/async-storage — pulls a native module that
+// fails to load under Jest. Supplying a minimal in-memory stub lets services
+// that depend on it (intro-flag-service, i18n init, etc.) run in tests.
+jest.mock("@react-native-async-storage/async-storage", () => {
+  const store = new Map<string, string>();
+  return {
+    __esModule: true,
+    default: {
+      getItem: jest.fn(
+        (key: string): Promise<string | null> =>
+          Promise.resolve(store.get(key) ?? null)
+      ),
+      setItem: jest.fn((key: string, value: string): Promise<void> => {
+        store.set(key, value);
+        return Promise.resolve();
+      }),
+      removeItem: jest.fn((key: string): Promise<void> => {
+        store.delete(key);
+        return Promise.resolve();
+      }),
+      clear: jest.fn((): Promise<void> => {
+        store.clear();
+        return Promise.resolve();
+      }),
+      getAllKeys: jest.fn(
+        (): Promise<string[]> => Promise.resolve(Array.from(store.keys()))
+      ),
+      multiGet: jest.fn(),
+      multiSet: jest.fn(),
+      multiRemove: jest.fn(),
+    },
+  };
+});
+
 // Mock expo-haptics (uses native module)
 jest.mock("expo-haptics", () => ({
   impactAsync: jest.fn(),

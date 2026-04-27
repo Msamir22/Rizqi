@@ -8,7 +8,8 @@
 
 import { formatCurrency } from "@rizqi/logic";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { buildAccountDisplayNames } from "@/utils/account-display";
 import {
   ActivityIndicator,
   Keyboard,
@@ -46,6 +47,13 @@ export function PayNowModal({
   onSuccess,
 }: PayNowModalProps): React.JSX.Element | null {
   const { accounts } = useAccounts();
+  // Resolve display names so duplicate-named accounts (e.g. two "Cash"
+  // accounts in different currencies) are visually disambiguated in the
+  // payment-account picker — per spec 026-followup.
+  const displayNames = useMemo(
+    (): Map<string, string> => buildAccountDisplayNames(accounts),
+    [accounts]
+  );
   const insets = useSafeAreaInsets();
   const { t } = useTranslation("transactions");
   const { t: tCommon } = useTranslation("common");
@@ -133,7 +141,10 @@ export function PayNowModal({
                     className="me-2"
                   />
                   <Text className="text-base font-medium text-slate-800 dark:text-white">
-                    {selectedAccount?.name || t("select_account")}
+                    {selectedAccount
+                      ? (displayNames.get(selectedAccount.id) ??
+                        selectedAccount.name)
+                      : t("select_account")}
                   </Text>
                 </View>
                 <Ionicons
@@ -164,7 +175,7 @@ export function PayNowModal({
                         >
                           <View className="flex-1">
                             <Text className="text-sm font-medium text-slate-800 dark:text-white">
-                              {account.name}
+                              {displayNames.get(account.id) ?? account.name}
                             </Text>
                             <Text className="text-xs text-slate-500 dark:text-slate-400">
                               {account.formattedBalance}

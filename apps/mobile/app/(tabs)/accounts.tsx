@@ -3,6 +3,7 @@ import {
   AccountTypeTabs,
   FilterType,
 } from "@/components/accounts";
+import { buildAccountDisplayNames } from "@/utils/account-display";
 import { PageHeader } from "@/components/navigation/PageHeader";
 import { Button, ButtonVariant } from "@/components/ui/Button";
 import { palette } from "@/constants/colors";
@@ -96,6 +97,15 @@ export default function Accounts(): ReactElement {
     return accounts.filter((acc) => acc.type === selectedFilter);
   }, [accounts, selectedFilter]);
 
+  // Compute the display-name map from the FULL account list (not the
+  // filtered slice) so duplicates that fall on different tabs still
+  // disambiguate consistently — e.g. "Cash (EGP)" vs "Cash (USD)" should
+  // appear the same way regardless of which tab the user is on.
+  const displayNames = useMemo(
+    (): Map<string, string> => buildAccountDisplayNames(accounts),
+    [accounts]
+  );
+
   const handleAddAccount = useCallback(() => {
     router.push("/add-account");
   }, [router]);
@@ -106,12 +116,13 @@ export default function Accounts(): ReactElement {
         <AccountCard
           account={item}
           latestRates={latestRates}
+          displayName={displayNames.get(item.id) ?? item.name}
           onPress={() => {
             router.push(`/edit-account?id=${item.id}`);
           }}
         />
       ),
-      [latestRates, router]
+      [latestRates, router, displayNames]
     );
 
   const keyExtractor = useCallback(

@@ -2,22 +2,42 @@ import { QuickActionFab } from "@/components/fab";
 import { CustomBottomTabBar } from "@/components/tab-bar/CustomBottomTabBar";
 import { VoiceRecordingOverlay } from "@/components/voice/VoiceRecordingOverlay";
 import { darkTheme, lightTheme } from "@/constants/colors";
+import {
+  MicButtonRefProvider,
+  useMicButtonRef,
+} from "@/context/MicButtonRefContext";
+import { MicTooltipProvider } from "@/context/MicTooltipContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import { useVoiceTransactionFlow } from "@/hooks/useVoiceTransactionFlow";
+import {
+  registerVoiceEntry,
+  unregisterVoiceEntry,
+} from "@/services/voice-entry-service";
 import { buildCategoryTree } from "@rizqi/logic";
 import { Tabs, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo } from "react";
 import { View } from "react-native";
 
 export default function TabLayout(): React.ReactElement {
+  return (
+    <MicButtonRefProvider>
+      <MicTooltipProvider>
+        <TabLayoutInner />
+      </MicTooltipProvider>
+    </MicButtonRefProvider>
+  );
+}
+
+function TabLayoutInner(): React.ReactElement {
   const { isDark } = useTheme();
   const { preferredCurrency } = usePreferredCurrency();
   const { categories: allCategories } = useCategories({ topLevelOnly: false });
   const { accounts } = useAccounts();
   const router = useRouter();
+  const micButtonRef = useMicButtonRef();
 
   const categoryTree = useMemo(
     () => buildCategoryTree(allCategories),
@@ -47,12 +67,24 @@ export default function TabLayout(): React.ReactElement {
     autoStart,
   });
 
+  // Register the voice entry handler so the onboarding guide's mic tooltip
+  // can trigger the voice flow via openVoiceEntry(). Unregister on unmount
+  // so a stale closure is never retained across tab-layout remounts (logout
+  // → re-login, hot reload, future multi-window architecture).
+  useEffect(() => {
+    registerVoiceEntry(voiceFlow.startFlow);
+    return (): void => {
+      unregisterVoiceEntry();
+    };
+  }, [voiceFlow.startFlow]);
+
   return (
     <View className="flex-1">
       <Tabs
         tabBar={(props) => (
           <CustomBottomTabBar
             {...props}
+            micButtonRef={micButtonRef ?? undefined}
             onMicPress={() => void voiceFlow.startFlow()}
             isRecording={
               voiceFlow.flowStatus === "recording" ||

@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { Dimensions, Text, TouchableOpacity, View } from "react-native";
 import { palette } from "@/constants/colors";
 import { AccountsSectionSkeleton } from "@/components/dashboard/skeletons/AccountsSectionSkeleton";
+import { buildAccountDisplayNames } from "@/utils/account-display";
 import { EmptyStateCard } from "../ui/EmptyStateCard";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -27,6 +28,8 @@ const ICON_CONTAINER_SIZE = 32;
 interface AccountsSectionProps {
   accounts: Account[];
   isLoading: boolean;
+  /** Optional ref to the cash-account card for tooltip anchoring. */
+  readonly cashAccountRef?: React.RefObject<View>;
 }
 
 interface AccountCardData {
@@ -133,9 +136,18 @@ function AccountCard({ data, width }: AccountCardProps): React.JSX.Element {
 function AccountsSectionComponent({
   accounts,
   isLoading,
+  cashAccountRef,
 }: AccountsSectionProps): React.JSX.Element {
   const { t } = useTranslation("accounts");
   const { t: tc } = useTranslation("common");
+
+  // Build the display-name map across the FULL account set so duplicates
+  // outside the top-3 still get disambiguated when they happen to land in
+  // the visible slice (per spec 026-followup, 2026-04-26).
+  const displayNames = useMemo(
+    (): Map<string, string> => buildAccountDisplayNames(accounts),
+    [accounts]
+  );
 
   // Transform accounts to card data (top 3)
   const cardData: AccountCardData[] = useMemo(() => {
@@ -143,14 +155,14 @@ function AccountsSectionComponent({
       const config = getAccountTypeConfig(account.type);
       return {
         id: account.id,
-        name: account.name,
+        name: displayNames.get(account.id) ?? account.name,
         balance: account.formattedBalance,
         type: account.type,
         gradient: config.gradient,
         iconName: config.iconName,
       };
     });
-  }, [accounts]);
+  }, [accounts, displayNames]);
 
   const handleSeeAll = useCallback((): void => {
     router.push("/accounts");
@@ -203,6 +215,14 @@ function AccountsSectionComponent({
           {cardData.map((card) => {
             const count = cardData.length;
             const width = (SCREEN_WIDTH - 40 - CARD_GAP * (count - 1)) / count;
+
+            if (card.type === "CASH" && cashAccountRef) {
+              return (
+                <View key={card.id} ref={cashAccountRef} collapsable={false}>
+                  <AccountCard data={card} width={width} />
+                </View>
+              );
+            }
 
             return <AccountCard key={card.id} data={card} width={width} />;
           })}

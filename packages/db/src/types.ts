@@ -85,3 +85,8 @@ export interface NotificationSettings {
   budget_alerts: boolean;
   low_balance_warnings: boolean;
 }
+
+export interface OnboardingFlags {
+  readonly cash_account_tooltip_dismissed?: boolean;
+  readonly voice_tooltip_seen?: boolean;
+}

@@ -60,11 +60,20 @@ jest.mock("@/services/account-service", () => {
         error: null,
       })
   );
-  return { ensureCashAccount, __mocks: { ensureCashAccount } };
+  const createCashAccountWithinWriter = jest.fn(
+    (): Promise<{ accountId: string; created: boolean }> =>
+      Promise.resolve({ accountId: "cash-account-1", created: true })
+  );
+  return {
+    ensureCashAccount,
+    createCashAccountWithinWriter,
+    __mocks: { ensureCashAccount, createCashAccountWithinWriter },
+  };
 });
 
 interface AccountServiceMocks {
   ensureCashAccount: jest.Mock;
+  createCashAccountWithinWriter: jest.Mock;
 }
 
 function getAccountServiceMocks(): AccountServiceMocks {
@@ -101,11 +110,17 @@ function getCursorServiceMocks(): CursorServiceMocks {
 
 jest.mock("@/i18n/changeLanguage", () => {
   const changeLanguage = jest.fn().mockResolvedValue(undefined);
-  return { changeLanguage, __mocks: { changeLanguage } };
+  const getCurrentLanguage = jest.fn().mockReturnValue("en");
+  return {
+    changeLanguage,
+    getCurrentLanguage,
+    __mocks: { changeLanguage, getCurrentLanguage },
+  };
 });
 
 interface ChangeLanguageMocks {
   changeLanguage: jest.Mock;
+  getCurrentLanguage: jest.Mock;
 }
 
 function getChangeLanguageMocks(): ChangeLanguageMocks {
@@ -142,8 +157,8 @@ jest.mock("@/services/supabase", () => ({
 
 import {
   setPreferredLanguage,
-  setPreferredCurrencyAndCreateCashAccount,
   completeOnboarding,
+  confirmCurrencyAndOnboard,
 } from "@/services/profile-service";
 
 // =============================================================================
@@ -230,37 +245,6 @@ describe("setPreferredLanguage", () => {
   });
 });
 
-describe("setPreferredCurrencyAndCreateCashAccount", () => {
-  it("wraps profile update and ensureCashAccount in a single database.write", async (): Promise<void> => {
-    const profile = createMockProfile({ userId: "user-1" });
-    setupProfileFound(profile);
-
-    const result = await setPreferredCurrencyAndCreateCashAccount("EGP");
-
-    const { mockWrite } = getDbMocks();
-    expect(mockWrite).toHaveBeenCalledTimes(1);
-
-    const { ensureCashAccount } = getAccountServiceMocks();
-    expect(ensureCashAccount).toHaveBeenCalledWith("user-1", "EGP");
-    expect(result.accountId).toBe("cash-account-1");
-  });
-
-  it("returns existing accountId when cash account already exists (idempotent)", async (): Promise<void> => {
-    const profile = createMockProfile({ userId: "user-1" });
-    setupProfileFound(profile);
-
-    const { ensureCashAccount } = getAccountServiceMocks();
-    ensureCashAccount.mockResolvedValue({
-      created: false,
-      accountId: "existing-account",
-      error: null,
-    });
-
-    const result = await setPreferredCurrencyAndCreateCashAccount("EGP");
-    expect(result.accountId).toBe("existing-account");
-  });
-});
-
 describe("completeOnboarding", () => {
   it("sets onboardingCompleted to true AND clears the AsyncStorage cursor", async (): Promise<void> => {
     const profile = createMockProfile({
@@ -310,5 +294,115 @@ describe("completeOnboarding", () => {
 
     const { mockWrite } = getDbMocks();
     expect(mockWrite).toHaveBeenCalledTimes(1);
+  });
+});
+
+// =============================================================================
+// confirmCurrencyAndOnboard — feature 026 atomic write
+// =============================================================================
+
+describe("confirmCurrencyAndOnboard", () => {
+  it("wraps all 4 mutations in a SINGLE database.write (atomicity)", async (): Promise<void> => {
+    const profile = createMockProfile({
+      onboardingCompleted: false,
+      preferredLanguage: "en",
+      preferredCurrency: "EGP",
+    });
+    setupProfileFound(profile);
+
+    await confirmCurrencyAndOnboard("USD");
+
+    const { mockWrite } = getDbMocks();
+    expect(mockWrite).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls createCashAccountWithinWriter (not ensureCashAccount) to avoid nested writers", async (): Promise<void> => {
+    const profile = createMockProfile();
+    setupProfileFound(profile);
+
+    await confirmCurrencyAndOnboard("EGP");
+
+    const { createCashAccountWithinWriter, ensureCashAccount } =
+      getAccountServiceMocks();
+    expect(createCashAccountWithinWriter).toHaveBeenCalledTimes(1);
+    expect(ensureCashAccount).not.toHaveBeenCalled();
+  });
+
+  it("writes preferredCurrency, preferredLanguage (from runtime), and onboardingCompleted=true in one update()", async (): Promise<void> => {
+    const updates: Record<string, unknown> = {};
+    const profile = createMockProfile({
+      onboardingCompleted: false,
+      preferredLanguage: "en",
+      preferredCurrency: "EGP",
+      update: jest.fn((fn: (p: Record<string, unknown>) => void) => {
+        fn(updates);
+      }),
+    });
+    setupProfileFound(profile);
+
+    const { getCurrentLanguage } = getChangeLanguageMocks();
+    getCurrentLanguage.mockReturnValue("ar");
+
+    await confirmCurrencyAndOnboard("USD");
+
+    expect(updates.preferredCurrency).toBe("USD");
+    expect(updates.preferredLanguage).toBe("ar");
+    expect(updates.onboardingCompleted).toBe(true);
+  });
+
+  it("invokes options.onTransactionCommitted after the write succeeds", async (): Promise<void> => {
+    const profile = createMockProfile();
+    setupProfileFound(profile);
+
+    const onTransactionCommitted = jest.fn();
+    await confirmCurrencyAndOnboard("EGP", { onTransactionCommitted });
+
+    expect(onTransactionCommitted).toHaveBeenCalledTimes(1);
+  });
+
+  it("does NOT call changeLanguage during the write (i18n is a post-commit concern)", async (): Promise<void> => {
+    const profile = createMockProfile({ preferredLanguage: "en" });
+    setupProfileFound(profile);
+
+    const { changeLanguage, getCurrentLanguage } = getChangeLanguageMocks();
+    getCurrentLanguage.mockReturnValue("en");
+
+    await confirmCurrencyAndOnboard("EGP");
+
+    // getCurrentLanguage is read OUTSIDE the writer; changeLanguage should
+    // NOT fire since the runtime language already matches what was written.
+    expect(changeLanguage).not.toHaveBeenCalled();
+  });
+
+  it("does NOT clear the intro-locale-override (FR-030)", (): void => {
+    // Sanity check: confirmCurrencyAndOnboard must not expose an override
+    // clearer. The intro-flag-service also MUST NOT export one. If either
+    // does, this test catches the regression.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const svc = require("@/services/profile-service") as Record<
+      string,
+      unknown
+    >;
+    expect(Object.keys(svc)).not.toContain("clearIntroLocaleOverride");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const flagSvc = require("@/services/intro-flag-service") as Record<
+      string,
+      unknown
+    >;
+    expect(Object.keys(flagSvc)).not.toContain("clearIntroLocaleOverride");
+  });
+
+  it("propagates write failures — caller must handle them", async (): Promise<void> => {
+    const profile = createMockProfile();
+    setupProfileFound(profile);
+
+    const { mockWrite } = getDbMocks();
+    mockWrite.mockImplementationOnce(() =>
+      Promise.reject(new Error("write failed"))
+    );
+
+    await expect(confirmCurrencyAndOnboard("EGP")).rejects.toThrow(
+      "write failed"
+    );
   });
 });

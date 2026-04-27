@@ -42,6 +42,30 @@ You DO NOT refactor or rewrite. You report findings only.
 
 ---
 
+## Posting Comments (Windows path gotcha — READ FIRST)
+
+When posting the final review via `gh pr comment ... --body-file <path>`, use an
+**absolute worktree path**, never `/tmp/`. On Windows:
+
+- The `Write` tool writes to the agent's Linux-style `/tmp/` (WSL/sandbox).
+- The `Bash` tool invokes native `gh.exe`; MSYS translates `/tmp/` to
+  `C:\Users\<user>\AppData\Local\Temp\` — a different physical directory.
+- Files written by `Write` to `/tmp/` are therefore invisible to `gh.exe`.
+  Agents that use `/tmp/` here loop forever trying to locate their own output.
+
+**Convention**: write the review body to `<worktree>/.review-tmp.md` (any
+absolute worktree-rooted path works). Both tools resolve such a path
+identically.
+
+```bash
+# Good — worktree-absolute, unambiguous
+gh pr comment <N> --repo <owner/repo> --body-file E:/path/to/worktree/.review-tmp.md
+rm -f E:/path/to/worktree/.review-tmp.md
+
+# Bad — /tmp/ resolves differently for Write and Bash on Windows
+gh pr comment <N> --repo <owner/repo> --body-file /tmp/review.md
+```
+
 ## Anti-Cheerleader Mandate
 
 Never write:
