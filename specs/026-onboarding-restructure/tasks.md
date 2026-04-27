@@ -222,10 +222,16 @@ FR-030, FR-039 (pitch back), FR-040.
       `apps/mobile/__tests__/components/onboarding/PitchSlide.test.tsx` —
       renders `LanguageSwitcherPill`, hides Skip when `isLast`, shows CTA text
       from i18n
-- [x] T037 [P] [US1] Hook test
-      `apps/mobile/__tests__/hooks/useIntroSeen.test.ts` and
-      `useIntroLocaleOverride.test.ts` — AsyncStorage round-trip + reactive
-      update
+- [x] T037 [P] [US1] Hook test — DROPPED. The original two-file plan
+      (`useIntroSeen.test.ts` + `useIntroLocaleOverride.test.ts`) was removed
+      during PR #248 review: the candidate tests were shallow mocks of
+      `AsyncStorage` round-trips that duplicated coverage already provided by
+      the service-level tests in
+      `apps/mobile/__tests__/services/intro-flag-service.test.ts`. Hook behavior
+      (initial-load + reactive update) is exercised indirectly by the
+      higher-level component tests (`PitchSlide`, `LanguageSwitcherPill`).
+      Recorded here so the task list reflects the actual file shape (round-2
+      review #22).
 
 **Checkpoint**: Pitch flow works end-to-end. Commit:
 `feat(026): pre-auth pitch carousel (voice/SMS-or-offline/live-market) with language switcher`.

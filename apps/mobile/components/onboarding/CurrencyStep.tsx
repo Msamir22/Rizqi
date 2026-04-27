@@ -277,16 +277,26 @@ export function CurrencyStep(): React.ReactElement {
         keyboardShouldPersistTaps="handled"
       />
 
-      {/* Confirm button — inset-aware safe-area padding. */}
+      {/* Confirm button — inset-aware safe-area padding.
+          The `bg-nileGreen-500/60` style for the disabled state used to
+          be a NativeWind class, but `bg-color/opacity` shorthand on a
+          `TouchableOpacity` triggers the NativeWind v4 CSS-interop race
+          (.claude/rules/android-modal-overlay-pattern.md "Dangerous
+          Classes"), which silently strips the background and softlocks
+          the screen on Android. Using an inline `backgroundColor`
+          dodges the race entirely. */}
       <View className="px-6" style={{ paddingBottom: insets.bottom + 16 }}>
         <TouchableOpacity
           onPress={() => {
             void handleConfirm();
           }}
           disabled={isConfirming}
-          className={`rounded-2xl py-[18px] items-center justify-center ${
-            isConfirming ? "bg-nileGreen-500/60" : "bg-nileGreen-500"
-          }`}
+          className="rounded-2xl py-[18px] items-center justify-center"
+          style={{
+            backgroundColor: isConfirming
+              ? `${palette.nileGreen[500]}99` // 0x99 ≈ 60% opacity
+              : palette.nileGreen[500],
+          }}
           activeOpacity={0.8}
         >
           <Text className="text-white font-semibold text-lg">

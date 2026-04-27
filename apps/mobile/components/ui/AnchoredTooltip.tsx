@@ -462,11 +462,16 @@ export function AnchoredTooltip({
 
   // --- Positioning ---
   // Effective card width: caller-provided override OR fall back to the
-  // standard max width. We clamp to "screen width minus margins" so a
-  // caller passing a too-large value still leaves room on both sides.
+  // standard max width, then clamped down to "screen width minus
+  // margins" so the card never overflows the viewport even on very
+  // narrow screens (round-1 review M3: `computeCardLeft` inverts when
+  // `screenWidth < CARD_MAX_WIDTH + 2 * CARD_MIN_MARGIN`). We don't
+  // upscale a smaller `cardWidth` request to fill the screen — only
+  // clamp DOWN.
+  const screenAvailable = Math.max(0, screenWidth - CARD_MIN_MARGIN * 2);
   const effectiveCardWidth = Math.min(
     cardWidth ?? CARD_MAX_WIDTH,
-    Math.max(CARD_MAX_WIDTH, screenWidth - CARD_MIN_MARGIN * 2)
+    screenAvailable
   );
 
   const { cardLeft, arrowLeft } = computeCardPosition({

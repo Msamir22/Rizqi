@@ -220,7 +220,14 @@ function parseSupabaseTypes(content) {
  * Parse a column type from Supabase types to WatermelonDB type
  */
 function parseColumnType(rawType, columnName, enums) {
-  const isOptional = rawType.includes("| null");
+  // JSON columns are stored as TEXT in WatermelonDB and may legitimately
+  // hold an empty string between migration and the first server sync,
+  // even when the upstream Supabase column is `NOT NULL DEFAULT '{}'`.
+  // Marking them `isOptional: true` mirrors the way `notification_settings`
+  // is treated and silences "string vs string|null" mismatches against the
+  // raw column the getter parses (round-2 review #18).
+  const isJsonColumn = JSON_FIELDS.includes(columnName);
+  const isOptional = rawType.includes("| null") || isJsonColumn;
   const cleanType = rawType.replace(/\s*\|\s*null/g, "").trim();
 
   // Check if it's an enum reference

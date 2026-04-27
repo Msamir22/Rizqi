@@ -209,7 +209,17 @@ export const migrations = schemaMigrations({
       steps: [
         addColumns({
           table: "profiles",
-          columns: [{ name: "onboarding_flags", type: "string" }],
+          // `isOptional: true` matches the `notification_settings`
+          // pattern earlier in this file: server-side the column is
+          // `NOT NULL DEFAULT '{}'::JSONB`, but during migration newly-
+          // attached rows can briefly hold an empty string before the
+          // first sync materializes the JSON default. The getter
+          // tolerates an empty value and returns `{}`. Marking this
+          // optional documents the intent: "the column is empty here
+          // is OK; the getter handles it" (round-2 review #18).
+          columns: [
+            { name: "onboarding_flags", type: "string", isOptional: true },
+          ],
         }),
       ],
     },

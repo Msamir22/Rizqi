@@ -237,7 +237,7 @@ export const schema = appSchema({
         { name: "last_name", type: "string", isOptional: true },
         { name: "notification_settings", type: "string", isOptional: true },
         { name: "onboarding_completed", type: "boolean" },
-        { name: "onboarding_flags", type: "string" },
+        { name: "onboarding_flags", type: "string", isOptional: true },
         { name: "preferred_currency", type: "string" },
         { name: "preferred_language", type: "string" },
         { name: "setup_guide_completed", type: "boolean" },

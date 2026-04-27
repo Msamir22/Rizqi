@@ -157,7 +157,6 @@ jest.mock("@/services/supabase", () => ({
 
 import {
   setPreferredLanguage,
-  setPreferredCurrencyAndCreateCashAccount,
   completeOnboarding,
   confirmCurrencyAndOnboard,
 } from "@/services/profile-service";
@@ -243,37 +242,6 @@ describe("setPreferredLanguage", () => {
   it("throws if no profile row exists", async (): Promise<void> => {
     setupProfileNotFound();
     await expect(setPreferredLanguage("en")).rejects.toThrow();
-  });
-});
-
-describe("setPreferredCurrencyAndCreateCashAccount", () => {
-  it("wraps profile update and ensureCashAccount in a single database.write", async (): Promise<void> => {
-    const profile = createMockProfile({ userId: "user-1" });
-    setupProfileFound(profile);
-
-    const result = await setPreferredCurrencyAndCreateCashAccount("EGP");
-
-    const { mockWrite } = getDbMocks();
-    expect(mockWrite).toHaveBeenCalledTimes(1);
-
-    const { ensureCashAccount } = getAccountServiceMocks();
-    expect(ensureCashAccount).toHaveBeenCalledWith("user-1", "EGP");
-    expect(result.accountId).toBe("cash-account-1");
-  });
-
-  it("returns existing accountId when cash account already exists (idempotent)", async (): Promise<void> => {
-    const profile = createMockProfile({ userId: "user-1" });
-    setupProfileFound(profile);
-
-    const { ensureCashAccount } = getAccountServiceMocks();
-    ensureCashAccount.mockResolvedValue({
-      created: false,
-      accountId: "existing-account",
-      error: null,
-    });
-
-    const result = await setPreferredCurrencyAndCreateCashAccount("EGP");
-    expect(result.accountId).toBe("existing-account");
   });
 });
 

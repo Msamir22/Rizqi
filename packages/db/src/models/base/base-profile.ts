@@ -25,7 +25,7 @@ export abstract class BaseProfile extends Model {
   @field("last_name") lastName?: string;
   @field("notification_settings") notificationSettingsRaw?: string;
   @field("onboarding_completed") onboardingCompleted!: boolean;
-  @field("onboarding_flags") onboardingFlagsRaw!: string;
+  @field("onboarding_flags") onboardingFlagsRaw?: string;
   @field("preferred_currency") preferredCurrency!: CurrencyType;
   @field("preferred_language") preferredLanguage!: PreferredLanguageCode;
   @field("setup_guide_completed") setupGuideCompleted!: boolean;

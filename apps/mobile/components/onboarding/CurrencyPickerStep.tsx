@@ -121,14 +121,29 @@ export function CurrencyPickerStep({
       const isSuggested =
         index === 0 && item.code === suggestedCurrency && !searchQuery;
 
+      // The selected/unselected backgrounds used to be NativeWind
+      // `bg-color/opacity` classes, but that shorthand on `Pressable`/
+      // `TouchableOpacity` triggers the NativeWind v4 CSS-interop race
+      // (.claude/rules/android-modal-overlay-pattern.md "Dangerous
+      // Classes"), which can silently strip the background on cold
+      // Android start. Inline `backgroundColor` is race-immune.
+      const rowBackgroundColor = isSelected
+        ? isDark
+          ? "rgba(16, 185, 129, 0.1)" // emerald-500 @ 10% (dark)
+          : "rgba(16, 185, 129, 0.05)" // emerald-500 @ 5% (light)
+        : isDark
+          ? "rgba(255, 255, 255, 0.05)" // white @ 5% (dark)
+          : "rgba(0, 0, 0, 0.03)"; // black @ 3% (light)
+
       return (
         <TouchableOpacity
           onPress={() => handleSelect(item.code)}
           className={`flex-row items-center py-4 px-4 mx-4 rounded-xl mb-2 ${
             isSelected
-              ? "border-2 border-nileGreen-500 bg-emerald-500/[0.05] dark:bg-emerald-500/10"
-              : "border border-transparent bg-black/[0.03] dark:bg-white/5"
+              ? "border-2 border-nileGreen-500"
+              : "border border-transparent"
           }`}
+          style={{ backgroundColor: rowBackgroundColor }}
           activeOpacity={0.7}
         >
           {/* Flag */}

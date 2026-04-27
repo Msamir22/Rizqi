@@ -19,9 +19,12 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
+
+import { useAuth } from "@/context/AuthContext";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -55,6 +58,20 @@ export function FirstRunTooltipProvider({
   children,
 }: FirstRunTooltipProviderProps): React.JSX.Element {
   const [isFirstRunPending, setIsFirstRunPending] = useState<boolean>(false);
+  const { isAuthenticated } = useAuth();
+
+  // Reset the pending flag whenever the user signs out. Without this,
+  // if a user confirms currency (which sets `isFirstRunPending = true`)
+  // and then signs out before the tooltip renders, the flag carries
+  // over into whoever signs in NEXT — they'd see a "we set this up for
+  // you" tooltip on a cash account that wasn't theirs (round-1 review
+  // M4). The provider lives above the auth boundary, so we just listen
+  // to `isAuthenticated` flipping false and clear the flag.
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setIsFirstRunPending(false);
+    }
+  }, [isAuthenticated]);
 
   const markFirstRunPending = useCallback((): void => {
     setIsFirstRunPending(true);

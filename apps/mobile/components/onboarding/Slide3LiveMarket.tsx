@@ -18,9 +18,26 @@ import { PitchMockCard } from "./PitchMockCard";
  *  - 3 asset rows: bullet + label + value with directional arrow.
  *  - Footer caption: pulsing-green "live" dot + "updated 2 min ago".
  *
- * Numeric / currency / change values are mock illustrations and are NOT
- * translated — see `// i18n-ignore` comments.
+ * ## i18n
+ *
+ * The numeric / currency / change values in this slide are
+ * mock-illustration content baked into the design (mockup
+ * `03-slide-live-market.png`). They are intentionally NOT translated —
+ * the goal is to convey the SHAPE of the live-market card, not real
+ * data. The hard-coded values (currency code "EGP", amounts like
+ * "4,218 EGP/g", percentages like "+2.1%", and the "2 min ago" caption
+ * value) live in this file directly rather than the locale files.
+ *
+ * Each occurrence has an inline `// i18n-ignore` marker so an
+ * automated audit can tell illustration-mock from real strings.
  */
+/**
+ * Minutes-ago value baked into the "live · updated N min ago" footer.
+ * Pulled out of the JSX so the magic number sits next to the other
+ * mock-illustration values in this file (round-2 review #21).
+ */
+const MOCK_LIVE_AGE_MINUTES = 2;
+
 interface MarketRow {
   readonly key: string;
   readonly bulletColor: string;
@@ -183,7 +200,12 @@ export function Slide3LiveMarket(): React.ReactElement {
       <View className="mt-3 flex-row items-center" style={{ columnGap: 6 }}>
         <LiveDot />
         <Text className="text-[10px] text-slate-400 dark:text-slate-500">
-          {t("pitch_slide_live_market_live_caption", { minutes: 2 })}
+          {/* i18n-ignore-value: `minutes` is a baked-in mock value
+              (matches "updated 2 min ago" in the mockup) — the message
+              template itself IS localized. */}
+          {t("pitch_slide_live_market_live_caption", {
+            minutes: MOCK_LIVE_AGE_MINUTES,
+          })}
         </Text>
       </View>
     </PitchMockCard>
