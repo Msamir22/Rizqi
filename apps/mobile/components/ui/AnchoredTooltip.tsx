@@ -57,6 +57,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
+import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -420,9 +421,19 @@ export function AnchoredTooltip({
             }
             if (attempts < MAX_ATTEMPTS) {
               attemptMeasure();
+              return;
             }
-            // else: anchor never stabilized — render null via the
-            // `!anchorMetrics` guard below.
+            // Anchor never stabilized after MAX_ATTEMPTS frames. We
+            // render null via the `!anchorMetrics` guard below
+            // (graceful degradation — better to skip the tooltip than
+            // crash). Log a warning so silent first-run breakage is
+            // observable in telemetry / Sentry rather than disappearing
+            // (round-2 review #14).
+            logger.warn("anchoredTooltip.measure.timeout", {
+              attempts,
+              measuredWidth: width,
+              measuredHeight: height,
+            });
           }
         );
       });

@@ -12,7 +12,6 @@ import Carousel, {
   type ICarouselInstance,
 } from "react-native-reanimated-carousel";
 import { markIntroSeen } from "@/services/intro-flag-service";
-import { logger } from "@/utils/logger";
 import { PitchSlide } from "./PitchSlide";
 import { Slide1Voice } from "./Slide1Voice";
 import { Slide2SMS } from "./Slide2SMS";
@@ -79,18 +78,15 @@ export function PitchCarousel(): React.ReactElement {
    * Skip / Get-Started handler — used by the top-right Skip on slides 1–2 and
    * by the "Get Started" CTA on the last slide.
    *
-   * Navigation MUST always run — even if `markIntroSeen` rejects. The flag is
-   * a best-effort AsyncStorage write (the service already logs + swallows
-   * internally), and blocking navigation on the write would leave the user
-   * stuck on the pitch with a frozen CTA if a transient storage error
-   * happened to occur right at this moment.
+   * Navigation MUST always run regardless of the flag write. `markIntroSeen`
+   * is best-effort and already logs + swallows internally
+   * (`apps/mobile/services/intro-flag-service.ts:80-90`), so it never
+   * rejects to this awaiter — no try/catch is needed here. Awaiting it
+   * keeps the call deterministic in the (rare) case the navigation runs
+   * synchronously enough that the flag would otherwise still be in flight.
    */
   const handleComplete = useCallback(async (): Promise<void> => {
-    try {
-      await markIntroSeen();
-    } catch (error: unknown) {
-      logger.error("pitch: failed to mark intro seen", error);
-    }
+    await markIntroSeen();
     router.push("/auth");
   }, [router]);
 

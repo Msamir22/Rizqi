@@ -53,6 +53,7 @@ import { palette } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useIntroLocaleOverride } from "@/hooks/useIntroLocaleOverride";
+import { setIntroLocaleOverride } from "@/services/intro-flag-service";
 import { setPreferredLanguage } from "@/services/profile-service";
 import { logger } from "@/utils/logger";
 
@@ -211,22 +212,30 @@ export function LanguageSwitcherPill(): React.ReactElement {
       // back. Order matters — if we wrote the profile first and the RTL
       // reload happened before the override write committed, AsyncStorage
       // would be one tick behind and the splash would show the old locale.
-      const persist = async (): Promise<void> => {
-        await setOverride(lang);
-        if (isAuthenticated) {
-          await setPreferredLanguage(lang);
-        }
-      };
-      persist()
-        .catch((error: unknown) => {
+      //
+      // Authenticated path uses `setIntroLocaleOverride` (raw service)
+      // followed by `setPreferredLanguage`, so `changeLanguage` runs
+      // exactly once (mirrors `app/settings.tsx`). Pre-auth path calls
+      // the `useIntroLocaleOverride` hook's `setOverride`, which writes
+      // the override AND calls `changeLanguage` itself — that's correct
+      // because there's no profile to persist into pre-auth.
+      void (async (): Promise<void> => {
+        try {
+          if (isAuthenticated) {
+            await setIntroLocaleOverride(lang);
+            await setPreferredLanguage(lang);
+          } else {
+            await setOverride(lang);
+          }
+        } catch (error: unknown) {
           logger.warn(
             "LanguageSwitcherPill.setOverride.failed",
             error instanceof Error ? { message: error.message } : { error }
           );
-        })
-        .finally(() => {
+        } finally {
           setIsChanging(false);
-        });
+        }
+      })();
     },
     [currentLang, setOverride, handleClose, isAuthenticated]
   );
