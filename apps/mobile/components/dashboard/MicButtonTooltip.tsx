@@ -55,6 +55,10 @@ export function MicButtonTooltip(): React.ReactElement | null {
       closeAccessibilityLabel={tCommon("cancel")}
       icon={tooltipIcon}
       anchorSide="above"
+      // Per mockup 06: icon, title, body all centered as a stack;
+      // "Try it now" is a centered green text button at the bottom.
+      layout="centered"
+      primaryButtonColor={palette.nileGreen[600]}
     />
   );
 }

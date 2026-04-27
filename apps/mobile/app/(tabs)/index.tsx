@@ -65,6 +65,11 @@ export default function DashboardScreen(): React.JSX.Element {
   const [isCurrencyPickerOpen, setIsCurrencyPickerOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const cashAccountRef = useRef<View>(null);
+  // Forwarded to CashAccountTooltip so it can scroll the cash-account
+  // card into view before showing — otherwise on first-run the user is
+  // at scroll-top and the cash card sits below the fold, which makes
+  // the AnchoredTooltip arrow land off-screen (user-reported 2026-04-26).
+  const scrollViewRef = useRef<ScrollView>(null);
   const isDbReady = useDatabaseReady();
   const { t } = useTranslation("common");
   const { profile } = useProfile();
@@ -175,6 +180,7 @@ export default function DashboardScreen(): React.JSX.Element {
   return (
     <StarryBackground>
       <ScrollView
+        ref={scrollViewRef}
         contentContainerStyle={SCROLL_CONTENT_STYLE}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -265,6 +271,7 @@ export default function DashboardScreen(): React.JSX.Element {
       <CashAccountTooltip
         anchorRef={cashAccountRef}
         isSmsPromptVisible={shouldShowPrompt}
+        scrollViewRef={scrollViewRef}
       />
       {/* Mic-button first-run tooltip — rendered here (not inside the
           OnboardingGuideCard) so its full-screen overlay isn't clipped by

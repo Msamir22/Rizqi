@@ -160,6 +160,8 @@
   "setup_guide": "دليل الإعداد",
   "setup_guide_progress": "{{completed}} من {{total}} مكتمل",
   "onboarding_step_bank_account": "أضف حساب بنكي",
+  "onboarding_step_auto_track_bank_sms": "تتبع الرسائل النصية البنكية تلقائياً",
+  "onboarding_step_voice_transaction": "جرب ادخال معاملة بصوتك",
   "onboarding_step_spending_budget": "حدد ميزانية",
   "sms_imported_count_one": "معاملة واحدة مستوردة هذا الشهر",
   "sms_imported_count_other": "{{count}} معاملات مستوردة هذا الشهر",

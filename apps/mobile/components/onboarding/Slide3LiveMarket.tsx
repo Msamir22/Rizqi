@@ -134,7 +134,7 @@ export function Slide3LiveMarket(): React.ReactElement {
           className="flex-row items-center rounded-full bg-nileGreen-500/15 px-2 py-0.5"
           style={{ columnGap: 2 }}
         >
-          <Text className="text-[10px] font-semibold text-nileGreen-700 dark:text-nileGreen-300">
+          <Text className="text-[10px] font-semibold text-nileGreen-600 dark:text-nileGreen-300">
             {/* i18n-ignore: mock percentage display. */}
             +2.1%
           </Text>

@@ -145,6 +145,8 @@
   "setup_guide": "Setup Guide",
   "setup_guide_progress": "{{completed}} of {{total}} complete",
   "onboarding_step_bank_account": "Add bank account",
+  "onboarding_step_voice_transaction": "Record transaction by your voice",
+  "onboarding_step_auto_track_bank_sms": "Auto Track Your Bank SMS",
   "onboarding_step_spending_budget": "Set a budget",
   "sms_imported_count_one": "{{count}} transaction imported this month",
   "sms_imported_count_other": "{{count}} transactions imported this month",

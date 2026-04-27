@@ -56,7 +56,7 @@ export function Slide2Offline(): React.ReactElement {
           </Text>
         </View>
         <View className="rounded-full bg-nileGreen-500/15 px-3 py-1">
-          <Text className="text-xs font-bold uppercase tracking-wider text-nileGreen-700 dark:text-nileGreen-300">
+          <Text className="text-xs font-bold uppercase tracking-wider text-nileGreen-600 dark:text-nileGreen-300">
             {t("pitch_slide_offline_status_instant")}
           </Text>
         </View>
@@ -101,7 +101,7 @@ export function Slide2Offline(): React.ReactElement {
       <View className="mt-4 flex-row items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-700">
         <View className="flex-row items-center" style={{ gap: 6 }}>
           <Ionicons name="flash" size={12} color={palette.nileGreen[500]} />
-          <Text className="text-xs font-medium text-nileGreen-700 dark:text-nileGreen-300">
+          <Text className="text-xs font-medium text-nileGreen-600 dark:text-nileGreen-300">
             {t("pitch_slide_offline_all_saved")}
           </Text>
         </View>

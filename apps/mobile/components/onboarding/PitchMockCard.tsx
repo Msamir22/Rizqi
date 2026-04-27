@@ -20,7 +20,7 @@ export function PitchMockCard({
   children,
 }: PitchMockCardProps): React.ReactElement {
   return (
-    <View className="w-full max-w-sm overflow-hidden rounded-2xl bg-white p-4 shadow-sm dark:bg-slate-800">
+    <View className="w-full max-w-sm mt-8 overflow-hidden rounded-2xl bg-white p-4 shadow-sm dark:bg-slate-800">
       {children}
     </View>
   );

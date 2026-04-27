@@ -1,21 +1,50 @@
 /**
  * AnchoredTooltip Component
  *
- * A generic first-run tooltip that shows a dimmed backdrop over the screen
- * with a tooltip card positioned relative to an anchor element, plus an
- * arrow pointing at the anchor.
+ * A first-run tooltip that shows a dimmed backdrop over the screen with a
+ * tooltip card positioned relative to an anchor element, plus a small
+ * tail (arrow) pointing at the anchor.
  *
- * Architecture & Design Rationale:
- * - Uses absolute-positioned overlay instead of React Native Modal
- *   to avoid the Android layout collapse bug with NativeWind v4.
- * - Pattern: Absolute Overlay (see .claude/rules/android-modal-overlay-pattern.md)
- * - SOLID: SRP -- positions and renders a single anchored tooltip.
+ * ## Layouts
+ *
+ * Two layouts are supported, picked via the `layout` prop:
+ *
+ *   - `"centered"` — used by `MicButtonTooltip` per mockup
+ *     `06-tooltip-mic-button.png`. The icon is centered as a block above
+ *     the title, title and body are center-aligned, and the primary
+ *     action sits centered at the bottom. An optional `X` close affordance
+ *     renders at the top-trailing corner.
+ *
+ *   - `"inline-icon"` — used by `CashAccountTooltip` per mockup
+ *     `05-tooltip-cash-account.png`. The icon sits to the leading edge
+ *     of the title (inline row), the body wraps full-width below, and
+ *     the primary action sits at the bottom-trailing corner as a text
+ *     button.
+ *
+ * ## Tail alignment
+ *
+ * The tail (small triangle pointing at the anchor) can be either:
+ *   - `"center"` (default): tip aligns with the anchor's horizontal
+ *     center; card centered horizontally on the anchor.
+ *   - `"start"`: tip sits near the card's leading bottom corner; card
+ *     aligned so its leading edge is near the anchor's leading edge.
+ *     Used for the cash-account tooltip so the bubble visibly "speaks
+ *     from" the cash card directly below it.
+ *
+ * ## Why StyleSheet, not className
+ *
+ * The overlay + card live inside an absolute-positioned overlay (not a
+ * `<Modal>`) per `.claude/rules/android-modal-overlay-pattern.md`. We
+ * keep all styles in `StyleSheet.create` to avoid the NativeWind v4
+ * race-condition that strips styles intermittently inside overlay
+ * subtrees on Android.
  *
  * @module AnchoredTooltip
  */
 
 import React, { useCallback, useEffect, useState } from "react";
 import {
+  I18nManager,
   type LayoutChangeEvent,
   StyleSheet,
   Text,
@@ -32,6 +61,9 @@ import { useTheme } from "@/context/ThemeContext";
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+
+export type AnchoredTooltipLayout = "centered" | "inline-icon";
+export type AnchoredTooltipTailAlign = "center" | "start";
 
 interface AnchoredTooltipProps {
   /** Whether the tooltip is currently visible */
@@ -57,10 +89,30 @@ interface AnchoredTooltipProps {
   readonly onClose?: () => void;
   /** Localized accessibility label for the close-X button. Required when onClose is set. */
   readonly closeAccessibilityLabel?: string;
-  /** Optional icon rendered above the title */
+  /** Optional icon rendered above (centered) or beside (inline-icon) the title */
   readonly icon?: React.ReactNode;
   /** Whether the tooltip appears above or below the anchor. Default: "above" */
   readonly anchorSide?: "above" | "below";
+  /** Layout variant — see module docstring. Default: "centered". */
+  readonly layout?: AnchoredTooltipLayout;
+  /** Tail alignment — see module docstring. Default: "center". */
+  readonly tailAlign?: AnchoredTooltipTailAlign;
+  /**
+   * Color of the primary button label. Defaults to dark slate on light
+   * mode and light slate on dark mode (a regular text-button color).
+   * Pass `palette.nileGreen[600]` for the mic-tooltip's "Try it now"
+   * green text style per mockup.
+   */
+  readonly primaryButtonColor?: string;
+  /**
+   * Override the card's fixed width. When omitted, the card uses
+   * `CARD_MAX_WIDTH` as a max (content-driven width, capped at 280).
+   * When provided, the card's width is fixed at this value — used by
+   * the cash-account tooltip to match the mockup's wide bubble that
+   * spans nearly the full accounts row on first-run (when the cash
+   * card is the only account).
+   */
+  readonly cardWidth?: number;
 }
 
 interface AnchorMetrics {
@@ -80,6 +132,13 @@ const CARD_BORDER_RADIUS = 14;
 const CARD_MAX_WIDTH = 280;
 const CARD_MIN_MARGIN = 16;
 const VERTICAL_GAP = 12;
+/**
+ * Horizontal inset of the tail's tip from the card's leading bottom
+ * corner when `tailAlign === "start"`. Picked so the tail sits clearly
+ * away from the rounded corner (`CARD_BORDER_RADIUS = 14`) and reads as
+ * an intentional speech-bubble tail rather than a tooltip glitch.
+ */
+const TAIL_CORNER_INSET = 28;
 /** Dim-backdrop opacity over the rest of the screen. */
 const BACKDROP_OPACITY = 0.3;
 /** `rgba(...)` literal used by StyleSheet — keep in sync with BACKDROP_OPACITY. */
@@ -142,42 +201,56 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  primaryButton: {
-    backgroundColor: palette.nileGreen[600],
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+  // Layouts ----------------------------------------------------------------
+  inlineHeaderRow: {
+    flexDirection: "row",
     alignItems: "center",
+    columnGap: 10,
+  },
+  centeredIconWrapper: {
+    alignSelf: "center",
+    marginBottom: 10,
+  },
+  // Title/body — color set inline so it tracks `isDark`
+  titleCentered: {
+    fontSize: 16,
+    fontWeight: "700",
+    textAlign: "center",
+    paddingHorizontal: 12,
+  },
+  titleInline: {
+    fontSize: 15,
+    fontWeight: "700",
+    flex: 1,
+  },
+  bodyCentered: {
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: "center",
+    marginTop: 8,
+    paddingHorizontal: 4,
+  },
+  bodyInline: {
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 8,
+  },
+  // Primary button
+  primaryButtonCentered: {
+    alignSelf: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     marginTop: 14,
   },
+  primaryButtonInline: {
+    alignSelf: "flex-end",
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    marginTop: 10,
+  },
   primaryButtonLabel: {
-    color: palette.slate[25],
     fontSize: 14,
-    fontWeight: "700",
-  },
-  titleTextLight: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: palette.slate[800],
-    marginBottom: 6,
-    paddingRight: 28,
-  },
-  titleTextDark: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: palette.slate[25],
-    marginBottom: 6,
-    paddingRight: 28,
-  },
-  bodyTextLight: {
-    fontSize: 13,
-    lineHeight: 19,
-    color: palette.slate[500],
-  },
-  bodyTextDark: {
-    fontSize: 13,
-    lineHeight: 19,
-    color: palette.slate[400],
+    fontWeight: "600",
   },
 });
 
@@ -185,14 +258,88 @@ const styles = StyleSheet.create({
 // Helpers
 // ---------------------------------------------------------------------------
 
+interface CardPositionInputs {
+  readonly anchor: AnchorMetrics;
+  readonly screenWidth: number;
+  readonly tailAlign: AnchoredTooltipTailAlign;
+  /** Effective horizontal width the card will render at. */
+  readonly effectiveCardWidth: number;
+}
+
+interface CardPosition {
+  /** `left` style value for the card. */
+  readonly cardLeft: number;
+  /** `left` style value for the arrow's bounding box. */
+  readonly arrowLeft: number;
+}
+
 /**
- * Compute horizontal card position centered on anchor, clamped within screen.
+ * Compute horizontal positions for the card AND the tail tip.
+ *
+ * For `tailAlign === "center"`: card is centered on the anchor (clamped
+ * to screen edges), tail tip is at the anchor's center.
+ *
+ * For `tailAlign === "start"`: the tail TIP is placed at the anchor's
+ * horizontal CENTER (so the speech-bubble visibly "speaks from" the
+ * anchor), and the card is positioned so the tail sits near one of its
+ * bottom corners. The corner is auto-picked based on which half of the
+ * screen the anchor lives in:
+ *
+ *   - Anchor in LEFT half → tail at the card's bottom-LEFT corner; the
+ *     card extends rightward off the tail.
+ *   - Anchor in RIGHT half → tail at the card's bottom-RIGHT corner;
+ *     the card extends leftward off the tail.
+ *
+ * This adapts to whatever order the consumer's parent renders its
+ * children in. Initially we always put the tail on the LEFT, but the
+ * cash account's position depends on the accounts list ordering (which
+ * sorts by balance in this app), so cash sometimes lands on the right
+ * side of the screen — making a fixed-left tail point at the WRONG
+ * sibling card (user-reported 2026-04-26).
+ *
+ * NOTE: this code intentionally works in raw window coords (LTR space).
+ * RTL flipping is handled higher up by writing `right:` instead of
+ * `left:` when `I18nManager.isRTL` is true, which the auto-swap then
+ * unwinds back to the right window-coord X.
  */
-function computeCardLeft(anchorCenterX: number, screenWidth: number): number {
-  const rawLeft = anchorCenterX - CARD_MAX_WIDTH / 2;
+function computeCardPosition({
+  anchor,
+  screenWidth,
+  tailAlign,
+  effectiveCardWidth,
+}: CardPositionInputs): CardPosition {
   const minLeft = CARD_MIN_MARGIN;
-  const maxLeft = screenWidth - CARD_MAX_WIDTH - CARD_MIN_MARGIN;
-  return Math.max(minLeft, Math.min(rawLeft, maxLeft));
+  const maxLeft = screenWidth - effectiveCardWidth - CARD_MIN_MARGIN;
+  const clamp = (value: number): number =>
+    Math.max(minLeft, Math.min(value, maxLeft));
+
+  if (tailAlign === "start") {
+    // Tail tip at the anchor's CENTER (in window coords).
+    const tailTipX = anchor.x + anchor.width / 2;
+
+    // Auto-pick which bottom corner the tail attaches to, based on the
+    // anchor's position. Anchor in left half → tail on the LEFT corner
+    // and card extends rightward; anchor in right half → tail on the
+    // RIGHT corner and card extends leftward.
+    const screenCenterX = screenWidth / 2;
+    const anchorOnRight = tailTipX > screenCenterX;
+    const desiredLeft = anchorOnRight
+      ? tailTipX + TAIL_CORNER_INSET - effectiveCardWidth
+      : tailTipX - TAIL_CORNER_INSET;
+    const cardLeft = clamp(desiredLeft);
+
+    // Arrow's bounding box is `2 * ARROW_SIZE` wide; the visible tip
+    // sits at its horizontal center. So placing the bbox at
+    // `tailTipX - ARROW_SIZE` lands the tip exactly at `tailTipX`.
+    const arrowLeft = tailTipX - ARROW_SIZE;
+    return { cardLeft, arrowLeft };
+  }
+
+  // Default: center on anchor.
+  const anchorCenterX = anchor.x + anchor.width / 2;
+  const cardLeft = clamp(anchorCenterX - effectiveCardWidth / 2);
+  const arrowLeft = anchorCenterX - ARROW_SIZE;
+  return { cardLeft, arrowLeft };
 }
 
 // ---------------------------------------------------------------------------
@@ -220,6 +367,10 @@ export function AnchoredTooltip({
   closeAccessibilityLabel,
   icon,
   anchorSide = "above",
+  layout = "centered",
+  tailAlign = "center",
+  primaryButtonColor,
+  cardWidth,
 }: AnchoredTooltipProps): React.JSX.Element | null {
   const { isDark } = useTheme();
   const [anchorMetrics, setAnchorMetrics] = useState<AnchorMetrics | null>(
@@ -299,9 +450,41 @@ export function AnchoredTooltip({
   }
 
   // --- Positioning ---
-  const anchorCenterX = anchorMetrics.x + anchorMetrics.width / 2;
-  const cardLeft = computeCardLeft(anchorCenterX, screenWidth);
-  const arrowLeft = anchorCenterX - ARROW_SIZE;
+  // Effective card width: caller-provided override OR fall back to the
+  // standard max width. We clamp to "screen width minus margins" so a
+  // caller passing a too-large value still leaves room on both sides.
+  const effectiveCardWidth = Math.min(
+    cardWidth ?? CARD_MAX_WIDTH,
+    Math.max(CARD_MAX_WIDTH, screenWidth - CARD_MIN_MARGIN * 2)
+  );
+
+  const { cardLeft, arrowLeft } = computeCardPosition({
+    anchor: anchorMetrics,
+    screenWidth,
+    tailAlign,
+    effectiveCardWidth,
+  });
+
+  // RTL handling.
+  //
+  // `cardLeft` and `arrowLeft` above are computed in window coords
+  // (LTR space — measureInWindow always returns LTR-origin coords).
+  // RN's `I18nManager.swapLeftAndRightInRTL` defaults to `true`, which
+  // auto-swaps any `left: V` to `right: V` at render time when the
+  // layout direction is RTL. That makes the tooltip land on the
+  // OPPOSITE side of the screen from the anchor — for the
+  // cash-account tooltip, the tail ended up pointing at the SAVINGS
+  // card instead of CASH (user-reported 2026-04-26).
+  //
+  // Fix: in RTL, write the position using the `right` property. The
+  // auto-swap converts `right: V` back to `left: V` at render time, so
+  // the card lands at the same window-coord X we computed.
+  const horizontalStyle = I18nManager.isRTL
+    ? { right: cardLeft }
+    : { left: cardLeft };
+  const arrowHorizontalStyle = I18nManager.isRTL
+    ? { right: arrowLeft }
+    : { left: arrowLeft };
 
   // For "above": card bottom edge = anchor.y - VERTICAL_GAP
   //   => card top = anchor.y - VERTICAL_GAP - cardHeight
@@ -310,37 +493,101 @@ export function AnchoredTooltip({
   const cardTop = isAbove
     ? anchorMetrics.y - VERTICAL_GAP - cardHeight
     : anchorMetrics.y + anchorMetrics.height + VERTICAL_GAP;
+  const cardBottom = cardTop + cardHeight;
 
-  // Arrow sits between card and anchor
+  // Tail (arrow) position.
+  //
+  // Previously this was buggy — the arrow's bounding box ended up
+  // INSIDE the card region, so it got drawn under the card and was
+  // never visible. We now anchor the arrow's BOUNDING TOP at the
+  // card's bottom edge so the tail sits cleanly in the gap between the
+  // card and the anchor. The CSS-triangle shape (a colored top border
+  // with transparent left+right borders) makes the visible tip point
+  // toward the anchor.
   const arrowTop = isAbove
-    ? anchorMetrics.y - VERTICAL_GAP - ARROW_SIZE // arrow points down toward anchor
-    : anchorMetrics.y + anchorMetrics.height + VERTICAL_GAP - ARROW_SIZE; // arrow points up toward anchor
+    ? cardBottom - 1 // -1px overlap with card, so the colored triangle visually merges with the card surface
+    : cardTop - ARROW_SIZE + 1;
 
   const arrowColor = isDark ? palette.slate[800] : palette.slate[25];
+
+  // Color tokens used by the layout-specific render paths.
+  const titleColor = isDark ? palette.slate[25] : palette.slate[800];
+  const bodyColor = isDark ? palette.slate[400] : palette.slate[500];
+  const defaultButtonColor = isDark ? palette.slate[200] : palette.slate[800];
+  const buttonLabelColor = primaryButtonColor ?? defaultButtonColor;
+
+  // Renders the inside of the card. Two layouts; both share text +
+  // button colors so theme consistency is preserved.
+  const renderCardBody = (): React.ReactNode => {
+    if (layout === "inline-icon") {
+      return (
+        <>
+          <View style={styles.inlineHeaderRow}>
+            {icon}
+            <Text style={[styles.titleInline, { color: titleColor }]}>
+              {title}
+            </Text>
+          </View>
+          <Text style={[styles.bodyInline, { color: bodyColor }]}>{body}</Text>
+          <TouchableOpacity
+            onPress={onPrimaryPress}
+            activeOpacity={0.7}
+            style={styles.primaryButtonInline}
+            accessibilityRole="button"
+            accessibilityLabel={primaryLabel}
+          >
+            <Text
+              style={[styles.primaryButtonLabel, { color: buttonLabelColor }]}
+            >
+              {primaryLabel}
+            </Text>
+          </TouchableOpacity>
+        </>
+      );
+    }
+
+    // "centered" layout — used by mic tooltip per mockup 06.
+    return (
+      <>
+        {icon ? <View style={styles.centeredIconWrapper}>{icon}</View> : null}
+        <Text style={[styles.titleCentered, { color: titleColor }]}>
+          {title}
+        </Text>
+        <Text style={[styles.bodyCentered, { color: bodyColor }]}>{body}</Text>
+        <TouchableOpacity
+          onPress={onPrimaryPress}
+          activeOpacity={0.7}
+          style={styles.primaryButtonCentered}
+          accessibilityRole="button"
+          accessibilityLabel={primaryLabel}
+        >
+          <Text
+            style={[styles.primaryButtonLabel, { color: buttonLabelColor }]}
+          >
+            {primaryLabel}
+          </Text>
+        </TouchableOpacity>
+      </>
+    );
+  };
 
   // Don't render the card positioned above until we know its height,
   // otherwise it would flash at y=0.
   if (isAbove && cardHeight === 0) {
-    // Render card offscreen to measure it
+    // Render card offscreen to measure it. We pass the same fixed width
+    // we'll use on-screen so the measured height is accurate (otherwise
+    // the off-screen card may use a content-driven width and produce a
+    // different wrap → wrong measured height).
     return (
       <View style={styles.overlay} pointerEvents="none">
         <View
           style={[
             isDark ? styles.cardDark : styles.cardLight,
-            { left: -9999, top: -9999 },
+            { left: -9999, top: -9999, width: effectiveCardWidth },
           ]}
           onLayout={handleCardLayout}
         >
-          {icon ? <View style={{ marginBottom: 8 }}>{icon}</View> : null}
-          <Text style={isDark ? styles.titleTextDark : styles.titleTextLight}>
-            {title}
-          </Text>
-          <Text style={isDark ? styles.bodyTextDark : styles.bodyTextLight}>
-            {body}
-          </Text>
-          <TouchableOpacity activeOpacity={0.7} style={styles.primaryButton}>
-            <Text style={styles.primaryButtonLabel}>{primaryLabel}</Text>
-          </TouchableOpacity>
+          {renderCardBody()}
         </View>
       </View>
     );
@@ -353,22 +600,13 @@ export function AnchoredTooltip({
         <View style={styles.backdrop} />
       </TouchableWithoutFeedback>
 
-      {/* Arrow -- triangle pointing at the anchor */}
-      <View
-        style={[
-          styles.arrow,
-          { left: arrowLeft, top: arrowTop },
-          isAbove
-            ? { borderTopWidth: ARROW_SIZE, borderTopColor: arrowColor }
-            : { borderBottomWidth: ARROW_SIZE, borderBottomColor: arrowColor },
-        ]}
-      />
-
-      {/* Tooltip card */}
+      {/* Tooltip card — rendered BEFORE the arrow so the arrow's small
+          1px overlap visually reads as part of the card surface. */}
       <View
         style={[
           isDark ? styles.cardDark : styles.cardLight,
-          { left: cardLeft, top: cardTop },
+          horizontalStyle,
+          { top: cardTop, width: effectiveCardWidth },
         ]}
         onLayout={isAbove ? undefined : handleCardLayout}
       >
@@ -396,30 +634,22 @@ export function AnchoredTooltip({
           </TouchableOpacity>
         )}
 
-        {/* Optional icon */}
-        {icon ? <View style={{ marginBottom: 8 }}>{icon}</View> : null}
-
-        {/* Title */}
-        <Text style={isDark ? styles.titleTextDark : styles.titleTextLight}>
-          {title}
-        </Text>
-
-        {/* Body */}
-        <Text style={isDark ? styles.bodyTextDark : styles.bodyTextLight}>
-          {body}
-        </Text>
-
-        {/* Primary button */}
-        <TouchableOpacity
-          onPress={onPrimaryPress}
-          activeOpacity={0.7}
-          style={styles.primaryButton}
-          accessibilityRole="button"
-          accessibilityLabel={primaryLabel}
-        >
-          <Text style={styles.primaryButtonLabel}>{primaryLabel}</Text>
-        </TouchableOpacity>
+        {renderCardBody()}
       </View>
+
+      {/* Tail (arrow) — small triangle pointing at the anchor. Rendered
+          AFTER the card so its colored top edge can overlap the card's
+          bottom edge by 1px and visually merge into the card surface. */}
+      <View
+        style={[
+          styles.arrow,
+          arrowHorizontalStyle,
+          { top: arrowTop },
+          isAbove
+            ? { borderTopWidth: ARROW_SIZE, borderTopColor: arrowColor }
+            : { borderBottomWidth: ARROW_SIZE, borderBottomColor: arrowColor },
+        ]}
+      />
     </View>
   );
 }
