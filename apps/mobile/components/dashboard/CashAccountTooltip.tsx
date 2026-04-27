@@ -156,6 +156,14 @@ export function CashAccountTooltip({
       if (cancelled) return;
       elapsed += POLL_INTERVAL_MS;
       if (elapsed >= MAX_POLL_DURATION_MS) {
+        // Anchor never produced a non-zero layout in the polling
+        // window. Log so a silent-broken tooltip surfaces in
+        // telemetry instead of just disappearing into the void.
+        logger.warn("cashAccountTooltip.anchorPoll.timeout", {
+          elapsedMs: elapsed,
+          maxDurationMs: MAX_POLL_DURATION_MS,
+          pollIntervalMs: POLL_INTERVAL_MS,
+        });
         if (pollInterval !== null) clearInterval(pollInterval);
         return;
       }

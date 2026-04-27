@@ -20,7 +20,8 @@ native speaker during implementation.
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
 | `pitch_slide_voice_headline`              | `Track with your voice.`                                                                                                 | `تتبع مصاريفك بصوتك.`                                                                            |
 | `pitch_slide_voice_subhead`               | `Talk naturally — like you would to a friend. Rizqi listens, parses, and saves it for you.`                              | `تكلم كأنك بتتكلم مع صاحبك. رزقي يسمع، ويحفظها لك.`                                              |
-| `pitch_slide_voice_transcript`            | `Just paid 200 pounds for coffee with Ahmed`                                                                             | `دفعت لسه ٢٠٠ جنيه قهوة مع أحمد`                                                                 |
+| `pitch_slide_voice_listening`             | `Listening…`                                                                                                             | `بيسمع صوتك...`                                                                                  |
+| `pitch_slide_voice_transcript`            | `I drank coffee for 40 pounds at Starbucks, bought clothes for 2000 pounds, and borrowed 500 pounds from Ahmed.`         | `شربت ب 40 جنيه قهوة في ستاربكس و اشتريت لبس ب 2000 جنيه واستلفت 500 جنيه من أحمد`               |
 | `pitch_slide_voice_status_saved`          | `Saved automatically`                                                                                                    | `محفوظة تلقائيًا`                                                                                |
 | `pitch_slide_voice_status_just_now`       | `Just now`                                                                                                               | `الآن`                                                                                           |
 | `pitch_slide_voice_category_food`         | `Food & Drinks`                                                                                                          | `أكل وشرب`                                                                                       |
@@ -45,17 +46,22 @@ native speaker during implementation.
 | `pitch_slide_live_market_gold_label`      | `Gold 24K`                                                                                                               | `ذهب ٢٤`                                                                                         |
 | `pitch_slide_live_market_silver_label`    | `Silver`                                                                                                                 | `فضة`                                                                                            |
 | `pitch_slide_live_market_usd_label`       | `USD / EGP`                                                                                                              | `دولار / جنيه`                                                                                   |
-| `pitch_slide_live_market_live_caption`    | `live · updated {{minutes}} min ago`                                                                                     | `مباشر · محدث من {{minutes}} دقيقة`                                                              |
+| `pitch_slide_live_market_live_caption`    | `Live · Updated {{minutes}} min ago`                                                                                     | `مباشر · محدث من {{minutes}} دقيقة`                                                              |
 
 ### Pitch chrome
 
-| Key                               | English       | Arabic (draft) |
-| --------------------------------- | ------------- | -------------- |
-| `pitch_skip`                      | `Skip`        | `تخطي`         |
-| `pitch_continue`                  | `Continue`    | `متابعة`       |
-| `pitch_get_started`               | `Get Started` | `هيا بنا`      |
-| `pitch_language_switcher_english` | `EN`          | `EN`           |
-| `pitch_language_switcher_arabic`  | `AR`          | `AR`           |
+| Key                 | English          | Arabic (draft)    |
+| ------------------- | ---------------- | ----------------- |
+| `pitch_skip`        | `Skip`           | `تخطي`            |
+| `pitch_continue`    | `Continue`       | `متابعة`          |
+| `pitch_get_started` | `Get Started`    | `هيا بنا`         |
+| `pitch_back`        | `Previous slide` | `الشريحة السابقة` |
+
+> Note: the language switcher pill is rendered as a globe icon + the raw
+> 2-letter ISO code (`EN` / `AR`) by `LanguageSwitcherPill.tsx` directly — those
+> literals are NOT translated, so no `pitch_language_switcher_*` keys exist in
+> the locale files. The earlier draft of this contract listed two such keys;
+> they were never wired up and are now removed from the contract to match.
 
 ### Currency step
 

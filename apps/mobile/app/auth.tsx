@@ -227,7 +227,11 @@ export default function AuthScreen(): React.JSX.Element {
     <View className="flex-1 bg-background dark:bg-background-dark">
       {!isDark && (
         <LinearGradient
-          colors={[palette.nileGreen[50], "#FFFFFF"]}
+          // Use the project's `slate[25]` token instead of a raw hex
+          // literal — keeps the gradient's "near-white" terminus tied
+          // to the same single source of truth used by every other
+          // light-mode background in the app.
+          colors={[palette.nileGreen[50], palette.slate[25]]}
           style={StyleSheet.absoluteFill}
         />
       )}
