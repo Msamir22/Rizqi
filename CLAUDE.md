@@ -47,8 +47,6 @@ Dependency direction: `apps/ → packages/logic → packages/db`. **Never revers
   worth, voice parser, currency utils). May import from `@rizqi/db` for types
   only. MUST NOT import from `apps/`.
 - **`apps/mobile`**: React Native Expo app. May import from any package.
-- **`apps/api`**: Express.js backend. May import from `@rizqi/logic` for shared
-  logic.
 
 ## Service-Layer Separation
 

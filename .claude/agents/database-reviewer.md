@@ -91,7 +91,6 @@ WatermelonDB (local SQLite) synced to Supabase (PostgreSQL cloud).
   call)
 - RLS policy columns (`user_id`) are indexed
 - No `GRANT ALL` to application roles
-- `service_role` key used only in `apps/api`, never in mobile app
 
 ### 5. Query Performance
 

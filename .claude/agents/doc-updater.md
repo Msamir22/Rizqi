@@ -19,7 +19,7 @@ model: haiku
 ---
 
 You are a documentation specialist for Rizqi — an Nx monorepo with
-`packages/db`, `packages/logic`, `apps/mobile`, and `apps/api`.
+`packages/db`, `packages/logic`, `apps/mobile`.
 
 ## Core Responsibilities
 

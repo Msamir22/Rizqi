@@ -141,8 +141,7 @@ The Rizqi monorepo uses npm workspaces + Nx with strict dependency direction.
   calculations, voice parser, notification parser, currency utils). May import
   from `@rizqi/db` for types only. MUST NOT import from `apps/`.
 - **`apps/mobile`**: The React Native Expo app. May import from any package.
-- **`apps/api`**: The Express.js backend. May import from `@rizqi/logic` for
-  shared logic.
+
 - Dependency direction: `apps/ → packages/logic → packages/db`. Never reverse.
 - Prefer named exports over default exports for better refactoring tooling.
 - Each package MUST have its own `tsconfig.json` extending the root config.

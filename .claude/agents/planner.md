@@ -63,7 +63,7 @@ before planning.
 
 - Analyze existing codebase structure and patterns
 - Identify which packages are affected (`packages/db`, `packages/logic`,
-  `apps/mobile`, `apps/api`)
+  `apps/mobile`)
 - Verify dependency direction: `apps/ → packages/logic → packages/db`
 - Review similar implementations in the codebase
 
@@ -108,7 +108,6 @@ Always follow this order:
 - `packages/db`: [schema changes, new models]
 - `packages/logic`: [shared calculations]
 - `apps/mobile`: [services, hooks, components]
-- `apps/api`: [endpoints, sync logic]
 
 ## Implementation Steps
 

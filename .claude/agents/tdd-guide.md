@@ -66,7 +66,6 @@ packages/db/src/__tests__/          # Model and schema tests
 packages/logic/src/__tests__/       # Shared calculation tests
 apps/mobile/__tests__/              # Component and hook tests
 apps/mobile/services/__tests__/     # Service function tests
-apps/api/__tests__/                 # API endpoint tests
 ```
 
 ## What to Test in Each Layer

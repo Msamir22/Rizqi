@@ -21,7 +21,7 @@ model: sonnet
 ---
 
 You are an expert refactoring specialist for Rizqi — an Nx monorepo with
-`packages/db`, `packages/logic`, `apps/mobile`, and `apps/api`.
+`packages/db`, `packages/logic`, `apps/mobile`.
 
 ## Core Responsibilities
 
@@ -63,8 +63,8 @@ Look for:
 - DB writes inside hooks or components → extract to a service function in
   `apps/mobile/services/`.
 - `Alert.alert()` inside a service → move to the calling component/hook.
-- Shared calculations duplicated across `apps/mobile` and `apps/api` →
-  consolidate into `packages/logic`.
+- Shared calculations duplicated across `apps/mobile` → consolidate into
+  `packages/logic`.
 - Custom header implementations → replace with `PageHeader`.
 - Custom inputs ad hoc → replace with `TextField` / `Dropdown` /
   `OptionalSection`.
@@ -151,7 +151,6 @@ For each item:
 
 When finding duplicate logic:
 
-- If shared between `apps/mobile` and `apps/api` → move to `packages/logic`
 - If shared between components → extract to a shared hook or utility
 - If duplicate DB operations → consolidate in `apps/mobile/services/`
 - Respect dependency direction: `apps/ → packages/logic → packages/db`

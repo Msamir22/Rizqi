@@ -69,7 +69,6 @@ npx eslint . --ext .ts,.tsx
 - Search for hardcoded secrets: API keys, Supabase URLs/keys, tokens
 - Review high-risk areas: auth, API endpoints, financial calculations, voice
   parser
-- Check `apps/api` for missing auth middleware and rate limiting
 - Verify `.env` files are in `.gitignore`
 
 ### 2. Fintech-Specific Checks
@@ -109,7 +108,6 @@ npx eslint . --ext .ts,.tsx
 | Pattern                          | Severity | Fix                                |
 | -------------------------------- | -------- | ---------------------------------- |
 | Hardcoded Supabase key           | CRITICAL | Use `process.env` / Expo constants |
-| `service_role` key in mobile app | CRITICAL | Move to `apps/api` only            |
 | Financial calc with `Number`     | HIGH     | Use integer cents or `Decimal.js`  |
 | Missing RLS on table             | CRITICAL | Add policy with `auth.uid()` check |
 | `console.log` with user data     | HIGH     | Remove or use structured logger    |

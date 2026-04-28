@@ -20,7 +20,7 @@ A friction-less mobile money tracker for the Egyptian market.
 
 ```
 /rizqi
-  /apps/api - Express.js API server
+  /apps/mobile - Expo App
   /packages
     /logic - Parsers and utilities (ready)
     /db - WatermelonDB schema (ready)
@@ -58,23 +58,8 @@ npm run build
 npm start
 ```
 
-## API Endpoints
-
-- `GET /api/rates` - Get cached metal & currency rates
-- `POST /api/rates/update` - Update rates from metals.dev (cron job)
-- `GET /api/mock/rates` - Mock data for development
-
-## Environment Setup
-
-1. Copy `apps/api/.env.example` to `apps/api/.env.local`
-2. Fill in:
-   - Supabase URL and keys
-   - metals.dev API key
-   - Cron secret
-
 ## Tech Stack (Current)
 
-- **API**: Express.js + TypeScript
 - **Database**: Supabase (PostgreSQL)
 - **Dev Tools**: tsx (hot reload), TypeScript 5.4
 

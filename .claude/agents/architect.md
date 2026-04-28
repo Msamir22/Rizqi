@@ -34,7 +34,6 @@ package boundaries:
 - **`packages/logic` (`@rizqi/logic`)**: Shared calculations/parsers. May import
   from `@rizqi/db` for types only. MUST NOT import from `apps/`.
 - **`apps/mobile`**: React Native Expo app. May import from any package.
-- **`apps/api`**: Express.js backend. May import from `@rizqi/logic`.
 
 Dependency direction: `apps/ → packages/logic → packages/db`. **Never reverse.**
 
@@ -113,7 +112,6 @@ unsure, say so — the planner and the developer will ask the right follow-up.
 - WatermelonDB schema changes (migrations in `packages/db/src/migrations.ts`)
 - Supabase migration files (`supabase/migrations/`)
 - Data flow: local DB → UI, sync → cloud
-- API contracts for `apps/api` endpoints
 
 ### 4. Trade-Off Analysis
 
