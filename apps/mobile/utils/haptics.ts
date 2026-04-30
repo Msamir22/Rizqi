@@ -22,7 +22,7 @@ export function safeNotificationHaptic(
 ): void {
   Haptics.notificationAsync(type).catch((err: unknown) => {
     logger.warn(`${tag}_haptics_failed`, {
-      message: err instanceof Error ? err.message : String(err),
+      error: err instanceof Error ? err.message : String(err),
     });
   });
 }
