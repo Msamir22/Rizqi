@@ -86,10 +86,7 @@ export function useAccountById(id: string): UseAccountByIdResult {
               }
             })
             .catch((err: unknown) => {
-              logger.error(
-                "useAccountById_bank_details_fetch_failed",
-                err instanceof Error ? { message: err.message } : { error: err }
-              );
+              logger.error("useAccountById_bank_details_fetch_failed", err);
               setBankDetails(null);
             });
         } else {
@@ -99,10 +96,7 @@ export function useAccountById(id: string): UseAccountByIdResult {
         setIsLoading(false);
       },
       error: (err: unknown) => {
-        logger.error(
-          "useAccountById_observation_failed",
-          err instanceof Error ? { message: err.message } : { error: err }
-        );
+        logger.error("useAccountById_observation_failed", err);
         setAccount(null);
         setBankDetails(null);
         setIsLoading(false);
