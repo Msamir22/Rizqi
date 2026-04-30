@@ -1,6 +1,6 @@
 import type { MarketRate } from "@rizqi/db";
 import { Q } from "@nozbe/watermelondb";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDatabase } from "../providers/DatabaseProvider";
 import { useMarketRatesRealtime } from "../providers/MarketRatesRealtimeProvider";
 
@@ -71,12 +71,20 @@ export function useMarketRates(): UseMarketRatesResult {
     fetchPreviousDay().catch(console.error);
   }, [database, latestRates]); // Re-fetch when latest rate changes
 
-  return {
-    latestRates,
-    previousDayRate,
-    isLoading,
-    isConnected,
-    lastUpdated: latestRates?.createdAt ?? null,
-    isStale: latestRates?.isStale() ?? false,
-  };
+  // Memoize the return object so consumers can rely on referential stability
+  // between observe emits when the underlying values are unchanged. Without
+  // this, every render of a parent that calls `useMarketRates()` would produce
+  // a fresh object identity (and a fresh `isStale()` boolean from the method
+  // call), defeating `React.memo` on downstream components like `AccountCard`.
+  return useMemo(
+    () => ({
+      latestRates,
+      previousDayRate,
+      isLoading,
+      isConnected,
+      lastUpdated: latestRates?.createdAt ?? null,
+      isStale: latestRates?.isStale() ?? false,
+    }),
+    [latestRates, previousDayRate, isLoading, isConnected]
+  );
 }
