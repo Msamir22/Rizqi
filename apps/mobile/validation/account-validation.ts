@@ -7,6 +7,7 @@ import { z } from "zod";
 export const accountFormSchema = z.object({
   name: z
     .string()
+    .trim()
     .min(1, "Account name is required")
     .max(50, "Account name must be less than 50 characters"),
   accountType: z.enum([
@@ -21,7 +22,7 @@ export const accountFormSchema = z.object({
     .string()
     .min(1, "Initial balance is required")
     .refine(
-      (val) => !isNaN(parseFloat(val)),
+      (val) => /^\d+(\.\d+)?$/.test(val),
       "Initial balance must be a valid number"
     )
     .refine(
@@ -89,12 +90,16 @@ export function validateAccountForm(data: unknown): {
 export const editAccountFormSchema = z.object({
   name: z
     .string()
+    .trim()
     .min(1, "Account name is required")
     .max(50, "Account name must be less than 50 characters"),
   balance: z
     .string()
     .min(1, "Balance is required")
-    .refine((val) => !isNaN(parseFloat(val)), "Balance must be a valid number"),
+    .refine(
+      (val) => /^-?\d+(\.\d+)?$/.test(val),
+      "Balance must be a valid number"
+    ),
   bankName: z
     .string()
     .max(50, "Bank name must be less than 50 characters")

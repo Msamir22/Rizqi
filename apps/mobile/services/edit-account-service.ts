@@ -175,7 +175,7 @@ export async function updateAccount(
 
       // Update account fields
       await existingAccount.update((acc) => {
-        acc.name = data.name.trim();
+        acc.name = data.name;
         acc.balance = data.balance;
         acc.isDefault = data.isDefault;
       });

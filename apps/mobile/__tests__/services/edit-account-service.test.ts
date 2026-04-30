@@ -343,10 +343,13 @@ describe("edit-account-service", () => {
       expect(result.error).toBe("Account not found");
     });
 
-    it("should trim the account name", async () => {
+    it("writes the name as-given (trimming is the schema's responsibility)", async () => {
+      // Per PM-A10 the Zod schema now applies `.string().trim()` so callers
+      // are expected to pass an already-trimmed name. The service no longer
+      // re-trims (avoids implicit data shaping at the persistence layer).
       const acc = seedAccount("acc-1", { name: "Old" });
       await updateAccount("acc-1", {
-        name: "  Trimmed Name  ",
+        name: "Trimmed Name",
         balance: 0,
         isDefault: false,
       });

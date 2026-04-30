@@ -55,7 +55,7 @@ export function useCreateAccount(): UseCreateAccountResult {
             .get<Account>("accounts")
             .create((acc) => {
               acc.userId = userId;
-              acc.name = data.name.trim();
+              acc.name = data.name;
               acc.type = data.accountType;
               acc.balance = parseFloat(data.balance);
               acc.currency = data.currency;
@@ -80,7 +80,7 @@ export function useCreateAccount(): UseCreateAccountResult {
         showToast({
           type: "success",
           title: "Account Created 🎉",
-          message: `${data.name.trim()} has been added successfully`,
+          message: `${data.name} has been added successfully`,
         });
 
         router.back();

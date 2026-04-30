@@ -25,6 +25,7 @@ import {
   useCreateAccount,
   useKeyboardVisibility,
 } from "@/hooks";
+import { sanitizeNonNegativeBalanceInput } from "@/utils/balance-input";
 
 export default function AddAccount(): React.ReactNode {
   const insets = useSafeAreaInsets();
@@ -48,7 +49,14 @@ export default function AddAccount(): React.ReactNode {
   }, [typeParam]);
 
   // Custom hooks for form state and business logic
-  const { formData, errors, updateField, validate } = useAccountForm({
+  const {
+    formData,
+    errors,
+    updateField,
+    validate,
+    isValid,
+    isCheckingUniqueness,
+  } = useAccountForm({
     initialAccountType,
   });
 
@@ -84,6 +92,7 @@ export default function AddAccount(): React.ReactNode {
           label: tCommon("save"),
           onPress: handleSave,
           loading: isSubmitting,
+          disabled: isCheckingUniqueness || !isValid,
         }}
       />
 
@@ -212,8 +221,7 @@ export default function AddAccount(): React.ReactNode {
             placeholder="0"
             value={formData.balance}
             onChangeText={(text) => {
-              const cleaned = text.replace(/[^0-9.]/g, "");
-              updateField("balance", cleaned);
+              updateField("balance", sanitizeNonNegativeBalanceInput(text));
             }}
             error={errors.balance}
             keyboardType="numeric"
@@ -251,6 +259,7 @@ export default function AddAccount(): React.ReactNode {
             title={isSubmitting ? t("creating") : t("add_new_account")}
             onPress={handleSave}
             isLoading={isSubmitting}
+            disabled={isCheckingUniqueness || !isValid}
             variant="primary"
             size="lg"
             className="shadow-xl shadow-nileGreen-600/20"
