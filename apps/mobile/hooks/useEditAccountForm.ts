@@ -21,6 +21,7 @@ import {
   validateEditAccountForm,
 } from "../validation/account-validation";
 import { checkAccountNameUniqueness } from "../services/edit-account-service";
+import { logger } from "../utils/logger";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -179,7 +180,7 @@ export function useEditAccountForm(
             }));
           } else if (result.error) {
             // Don't block the user on uniqueness check errors
-            console.warn("Uniqueness check failed:", result.error);
+            logger.warn("uniqueness_check_failed", { error: result.error });
           }
 
           setIsCheckingUniqueness(false);

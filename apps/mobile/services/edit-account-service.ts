@@ -24,6 +24,7 @@ import {
   type TransactionType,
 } from "@rizqi/db";
 import { Q } from "@nozbe/watermelondb";
+import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -123,7 +124,7 @@ export async function checkAccountNameUniqueness(
       error instanceof Error
         ? error.message
         : "Unknown error checking account name uniqueness";
-    console.error("checkAccountNameUniqueness failed:", message);
+    logger.error("checkAccountNameUniqueness failed", { message });
     return { isUnique: false, error: message };
   }
 }
@@ -197,7 +198,7 @@ export async function updateAccount(
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unknown error updating account";
-    console.error("updateAccount failed:", message);
+    logger.error("updateAccount failed", { message });
     return { success: false, error: message };
   }
 }
@@ -287,7 +288,7 @@ export async function deleteAccountWithCascade(
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unknown error deleting account";
-    console.error("deleteAccountWithCascade failed:", message);
+    logger.error("deleteAccountWithCascade failed", { message });
     return { success: false, error: message };
   }
 }
@@ -354,7 +355,7 @@ export async function createBalanceAdjustmentTransaction(
       error instanceof Error
         ? error.message
         : "Unknown error creating balance adjustment transaction";
-    console.error("createBalanceAdjustmentTransaction failed:", message);
+    logger.error("createBalanceAdjustmentTransaction failed", { message });
     return { success: false, error: message };
   }
 }

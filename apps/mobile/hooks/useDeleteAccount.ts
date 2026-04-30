@@ -22,6 +22,13 @@ import {
   deleteAccountWithCascade,
   type ServiceResult,
 } from "../services/edit-account-service";
+import { logger } from "../utils/logger";
+
+function logHapticsFailure(err: unknown): void {
+  logger.warn("haptics_failed", {
+    message: err instanceof Error ? err.message : String(err),
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -132,7 +139,10 @@ export function useDeleteAccount(accountId: string): UseDeleteAccountResult {
           });
         }
       } catch (err) {
-        console.error("[useDeleteAccount] Error fetching counts:", err);
+        logger.error(
+          "deleteAccount_count_fetch_failed",
+          err instanceof Error ? { message: err.message } : { error: err }
+        );
       } finally {
         if (!cancelled) {
           setIsLoadingCounts(false);
@@ -140,7 +150,12 @@ export function useDeleteAccount(accountId: string): UseDeleteAccountResult {
       }
     };
 
-    fetchCounts().catch(console.error);
+    fetchCounts().catch((err: unknown) => {
+      logger.error(
+        "deleteAccount_count_fetch_unhandled",
+        err instanceof Error ? { message: err.message } : { error: err }
+      );
+    });
 
     return () => {
       cancelled = true;
@@ -162,7 +177,7 @@ export function useDeleteAccount(accountId: string): UseDeleteAccountResult {
 
         Haptics.notificationAsync(
           Haptics.NotificationFeedbackType.Success
-        ).catch(console.error);
+        ).catch(logHapticsFailure);
 
         showToast({
           type: "success",
@@ -173,10 +188,10 @@ export function useDeleteAccount(accountId: string): UseDeleteAccountResult {
         router.back();
       } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";
-        console.error("[useDeleteAccount] Error deleting account:", message);
+        logger.error("deleteAccount_flow_failed", { message });
 
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(
-          console.error
+          logHapticsFailure
         );
 
         showToast({

@@ -14,6 +14,7 @@
 
 import { Account, BankDetails, database } from "@rizqi/db";
 import { useEffect, useState } from "react";
+import { logger } from "../utils/logger";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -85,7 +86,10 @@ export function useAccountById(id: string): UseAccountByIdResult {
               }
             })
             .catch((err: unknown) => {
-              console.error("[useAccountById] Bank details fetch error:", err);
+              logger.error(
+                "useAccountById_bank_details_fetch_failed",
+                err instanceof Error ? { message: err.message } : { error: err }
+              );
               setBankDetails(null);
             });
         } else {
@@ -94,8 +98,11 @@ export function useAccountById(id: string): UseAccountByIdResult {
 
         setIsLoading(false);
       },
-      error: (err) => {
-        console.error("[useAccountById] Observation error:", err);
+      error: (err: unknown) => {
+        logger.error(
+          "useAccountById_observation_failed",
+          err instanceof Error ? { message: err.message } : { error: err }
+        );
         setAccount(null);
         setBankDetails(null);
         setIsLoading(false);

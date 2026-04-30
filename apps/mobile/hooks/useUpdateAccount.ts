@@ -25,6 +25,13 @@ import {
   type ServiceResult,
 } from "../services/edit-account-service";
 import { getCurrentUserId } from "../services/supabase";
+import { logger } from "../utils/logger";
+
+function logHapticsFailure(err: unknown): void {
+  logger.warn("haptics_failed", {
+    message: err instanceof Error ? err.message : String(err),
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -104,17 +111,16 @@ export function useUpdateAccount(): UseUpdateAccountResult {
 
             if (!adjResult.success) {
               // Non-fatal: account was updated but tracking failed
-              console.warn(
-                "[useUpdateAccount] Balance adjustment tracking failed:",
-                adjResult.error
-              );
+              logger.warn("balance_adjustment_tracking_failed", {
+                error: adjResult.error,
+              });
             }
           }
         }
 
         Haptics.notificationAsync(
           Haptics.NotificationFeedbackType.Success
-        ).catch(console.error);
+        ).catch(logHapticsFailure);
 
         showToast({
           type: "success",
@@ -125,10 +131,10 @@ export function useUpdateAccount(): UseUpdateAccountResult {
         router.back();
       } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";
-        console.error("[useUpdateAccount] Error updating account:", message);
+        logger.error("updateAccount_flow_failed", { message });
 
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(
-          console.error
+          logHapticsFailure
         );
 
         showToast({

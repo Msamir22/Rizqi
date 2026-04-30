@@ -7,8 +7,15 @@ import { Account, BankDetails, database } from "@rizqi/db";
 import { calculateAccountsTotalBalance, convertCurrency } from "@rizqi/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
+import { logger } from "../utils/logger";
 import { useMarketRates } from "./useMarketRates";
 import { usePreferredCurrency } from "./usePreferredCurrency";
+
+function toLogContext(
+  err: unknown
+): { readonly message: string } | { readonly error: unknown } {
+  return err instanceof Error ? { message: err.message } : { error: err };
+}
 
 interface UseAccountsResult {
   readonly accounts: Account[];
@@ -79,7 +86,7 @@ export function useAccounts(): UseAccountsResult {
         setIsLoading(false);
       },
       error: (err: unknown) => {
-        console.error("Error observing accounts:", err);
+        logger.error("useAccounts_observation_failed", toLogContext(err));
         setError(err instanceof Error ? err : new Error(String(err)));
         setIsLoading(false);
       },
@@ -148,7 +155,10 @@ export function useBankAccounts(): UseBankAccountsResult {
             );
             setBankAccounts(withDetails as BankAccountWithDetails[]);
           } catch (fetchErr: unknown) {
-            console.error("Error fetching bank details:", fetchErr);
+            logger.error(
+              "useBankAccounts_details_fetch_failed",
+              toLogContext(fetchErr)
+            );
             setError(
               fetchErr instanceof Error ? fetchErr : new Error(String(fetchErr))
             );
@@ -156,10 +166,15 @@ export function useBankAccounts(): UseBankAccountsResult {
             setIsLoading(false);
           }
         };
-        fetchDetails().catch(console.error);
+        fetchDetails().catch((err: unknown) => {
+          logger.error(
+            "useBankAccounts_details_fetch_unhandled",
+            toLogContext(err)
+          );
+        });
       },
       error: (err: unknown) => {
-        console.error("Error observing bank accounts:", err);
+        logger.error("useBankAccounts_observation_failed", toLogContext(err));
         setError(err instanceof Error ? err : new Error(String(err)));
         setIsLoading(false);
       },
@@ -198,7 +213,7 @@ export function useTopAccounts(limit: number = 3): UseTopAccountsResult {
         setIsLoading(false);
       },
       error: (err: unknown) => {
-        console.error("Error observing top accounts:", err);
+        logger.error("useTopAccounts_observation_failed", toLogContext(err));
         setIsLoading(false);
       },
     });
@@ -237,7 +252,7 @@ export function useAccount(accountId: string | null): UseAccountResult {
           setIsLoading(false);
         },
         error: (err: unknown) => {
-          console.error("Error observing account:", err);
+          logger.error("useAccount_observation_failed", toLogContext(err));
           setError(err instanceof Error ? err : new Error(String(err)));
           setIsLoading(false);
         },
