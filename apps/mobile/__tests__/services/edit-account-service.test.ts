@@ -273,11 +273,15 @@ describe("edit-account-service", () => {
         balance: 100,
         isDefault: false,
       });
-      await updateAccount("acc-1", {
-        name: "New Name",
-        balance: 500,
-        isDefault: false,
-      });
+      await updateAccount(
+        "acc-1",
+        {
+          name: "New Name",
+          balance: 500,
+          isDefault: false,
+        },
+        "user-1"
+      );
       expect(acc.name).toBe("New Name");
       expect(acc.balance).toBe(500);
     });
@@ -294,11 +298,15 @@ describe("edit-account-service", () => {
         userId: "user-1",
       });
 
-      await updateAccount("acc-new", {
-        name: "New Default",
-        balance: 0,
-        isDefault: true,
-      });
+      await updateAccount(
+        "acc-new",
+        {
+          name: "New Default",
+          balance: 0,
+          isDefault: true,
+        },
+        "user-1"
+      );
 
       expect(oldDefault.isDefault).toBe(false);
     });
@@ -316,40 +324,79 @@ describe("edit-account-service", () => {
       });
       acc.bankDetails.fetch.mockResolvedValue([bankDetail]);
 
-      await updateAccount("acc-1", {
-        name: "Bank Account",
-        balance: 0,
-        isDefault: false,
-        bankName: "New Bank",
-        cardLast4: "5678",
-        smsSenderName: "NewSMS",
-      });
+      await updateAccount(
+        "acc-1",
+        {
+          name: "Bank Account",
+          balance: 0,
+          isDefault: false,
+          bankName: "New Bank",
+          cardLast4: "5678",
+          smsSenderName: "NewSMS",
+        },
+        "user-1"
+      );
 
       expect(bankDetail.bankName).toBe("New Bank");
       expect(bankDetail.cardLast4).toBe("5678");
       expect(bankDetail.smsSenderName).toBe("NewSMS");
     });
 
-    it("should return error on failure", async () => {
+    it("should return NOT_FOUND when the account does not exist", async () => {
       mockDb.get.mockImplementationOnce(() => ({
         find: jest.fn(() => Promise.reject(new Error("Account not found"))),
       }));
-      const result = await updateAccount("bad-id", {
-        name: "X",
-        balance: 0,
-        isDefault: false,
-      });
+      const result = await updateAccount(
+        "bad-id",
+        {
+          name: "X",
+          balance: 0,
+          isDefault: false,
+        },
+        "user-1"
+      );
       expect(result.success).toBe(false);
-      expect(result.error).toBe("Account not found");
+      expect(result.error).toBe("NOT_FOUND");
+    });
+
+    it("should return OWNERSHIP_FAILED and skip writes when userId does not match", async () => {
+      const acc = seedAccount("acc-1", {
+        name: "Original Name",
+        balance: 100,
+        isDefault: false,
+        userId: "owner-user",
+      });
+
+      const result = await updateAccount(
+        "acc-1",
+        {
+          name: "Hijacked",
+          balance: 999,
+          isDefault: true,
+        },
+        "attacker-user"
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("OWNERSHIP_FAILED");
+      // No mutation must have occurred
+      expect(acc.update).not.toHaveBeenCalled();
+      expect(acc.name).toBe("Original Name");
+      expect(acc.balance).toBe(100);
+      expect(acc.isDefault).toBe(false);
     });
 
     it("should trim the account name", async () => {
       const acc = seedAccount("acc-1", { name: "Old" });
-      await updateAccount("acc-1", {
-        name: "  Trimmed Name  ",
-        balance: 0,
-        isDefault: false,
-      });
+      await updateAccount(
+        "acc-1",
+        {
+          name: "  Trimmed Name  ",
+          balance: 0,
+          isDefault: false,
+        },
+        "user-1"
+      );
       expect(acc.name).toBe("Trimmed Name");
     });
   });
@@ -360,7 +407,7 @@ describe("edit-account-service", () => {
   describe("deleteAccountWithCascade", () => {
     it("should mark account as deleted", async () => {
       const acc = seedAccount("acc-1");
-      const result = await deleteAccountWithCascade("acc-1");
+      const result = await deleteAccountWithCascade("acc-1", "user-1");
       expect(result.success).toBe(true);
       expect(acc.markAsDeleted).toHaveBeenCalled();
     });
@@ -369,7 +416,7 @@ describe("edit-account-service", () => {
       const acc = seedAccount("acc-1");
       const bd = mockModel("bd-1");
       acc.bankDetails.fetch.mockResolvedValue([bd]);
-      await deleteAccountWithCascade("acc-1");
+      await deleteAccountWithCascade("acc-1", "user-1");
       expect(bd.markAsDeleted).toHaveBeenCalled();
     });
 
@@ -377,7 +424,7 @@ describe("edit-account-service", () => {
       const acc = seedAccount("acc-1");
       const tx = mockModel("tx-1");
       acc.transactions.fetch.mockResolvedValue([tx]);
-      await deleteAccountWithCascade("acc-1");
+      await deleteAccountWithCascade("acc-1", "user-1");
       expect(tx.markAsDeleted).toHaveBeenCalled();
     });
 
@@ -385,7 +432,7 @@ describe("edit-account-service", () => {
       const acc = seedAccount("acc-1");
       const tf = mockModel("tf-1");
       acc.transfers.fetch.mockResolvedValue([tf]);
-      await deleteAccountWithCascade("acc-1");
+      await deleteAccountWithCascade("acc-1", "user-1");
       expect(tf.markAsDeleted).toHaveBeenCalled();
     });
 
@@ -393,7 +440,7 @@ describe("edit-account-service", () => {
       seedAccount("acc-1");
       const toTransfer = mockModel("tf-to-1");
       mockSeed("transfers", toTransfer);
-      await deleteAccountWithCascade("acc-1");
+      await deleteAccountWithCascade("acc-1", "user-1");
       expect(toTransfer.markAsDeleted).toHaveBeenCalled();
     });
 
@@ -401,7 +448,7 @@ describe("edit-account-service", () => {
       const acc = seedAccount("acc-1");
       const debt = mockModel("debt-1");
       acc.debts.fetch.mockResolvedValue([debt]);
-      await deleteAccountWithCascade("acc-1");
+      await deleteAccountWithCascade("acc-1", "user-1");
       expect(debt.markAsDeleted).toHaveBeenCalled();
     });
 
@@ -409,7 +456,7 @@ describe("edit-account-service", () => {
       const acc = seedAccount("acc-1");
       const rp = mockModel("rp-1");
       acc.recurringPayments.fetch.mockResolvedValue([rp]);
-      await deleteAccountWithCascade("acc-1");
+      await deleteAccountWithCascade("acc-1", "user-1");
       expect(rp.markAsDeleted).toHaveBeenCalled();
     });
 
@@ -427,7 +474,7 @@ describe("edit-account-service", () => {
       acc.debts.fetch.mockResolvedValue([debt]);
       acc.recurringPayments.fetch.mockResolvedValue([rp]);
 
-      await deleteAccountWithCascade("acc-1");
+      await deleteAccountWithCascade("acc-1", "user-1");
 
       expect(bd.markAsDeleted).toHaveBeenCalled();
       expect(tx.markAsDeleted).toHaveBeenCalled();
@@ -437,13 +484,31 @@ describe("edit-account-service", () => {
       expect(acc.markAsDeleted).toHaveBeenCalled();
     });
 
-    it("should return error on failure", async () => {
+    it("should return NOT_FOUND when the account does not exist", async () => {
       mockDb.get.mockImplementationOnce(() => ({
         find: jest.fn(() => Promise.reject(new Error("Not found"))),
       }));
-      const result = await deleteAccountWithCascade("bad-id");
+      const result = await deleteAccountWithCascade("bad-id", "user-1");
       expect(result.success).toBe(false);
-      expect(result.error).toBe("Not found");
+      expect(result.error).toBe("NOT_FOUND");
+    });
+
+    it("should return OWNERSHIP_FAILED and skip writes when userId does not match", async () => {
+      const acc = seedAccount("acc-1", { userId: "owner-user" });
+      const bd = mockModel("bd-1");
+      const tx = mockModel("tx-1");
+      acc.bankDetails.fetch.mockResolvedValue([bd]);
+      acc.transactions.fetch.mockResolvedValue([tx]);
+
+      const result = await deleteAccountWithCascade("acc-1", "attacker-user");
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("OWNERSHIP_FAILED");
+      // No deletes anywhere in the cascade
+      expect(acc.markAsDeleted).not.toHaveBeenCalled();
+      expect(bd.markAsDeleted).not.toHaveBeenCalled();
+      expect(tx.markAsDeleted).not.toHaveBeenCalled();
+      expect(acc.update).not.toHaveBeenCalled();
     });
 
     it("should clear is_default flag when deleting a default account (T028)", async () => {
@@ -456,7 +521,7 @@ describe("edit-account-service", () => {
         userId: "user-1",
       });
 
-      const result = await deleteAccountWithCascade("acc-default");
+      const result = await deleteAccountWithCascade("acc-default", "user-1");
 
       expect(result.success).toBe(true);
       // The default flag should have been cleared before marking as deleted
@@ -473,7 +538,7 @@ describe("edit-account-service", () => {
         isDefault: false,
       });
 
-      await deleteAccountWithCascade("acc-non-default");
+      await deleteAccountWithCascade("acc-non-default", "user-1");
 
       // update should NOT have been called for is_default clearing
       expect(nonDefault.update).not.toHaveBeenCalled();

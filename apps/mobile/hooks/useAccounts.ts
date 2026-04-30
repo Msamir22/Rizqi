@@ -7,6 +7,7 @@ import { Account, BankDetails, database } from "@rizqi/db";
 import { calculateAccountsTotalBalance, convertCurrency } from "@rizqi/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
+import { useCurrentUserId } from "./useCurrentUserId";
 import { useMarketRates } from "./useMarketRates";
 import { usePreferredCurrency } from "./usePreferredCurrency";
 
@@ -42,14 +43,11 @@ export interface UseAccountResult {
 }
 
 /**
- * Subscribes to non-deleted accounts and exposes the current list, load/error state, a computed total balance in the preferred currency, and a refetch trigger.
- *
- * @returns An object containing:
- * - `accounts` — the current array of accounts observed from the database.
- * - `isLoading` — `true` while the subscription is initializing or refreshing, `false` otherwise.
- * - `error` — an `Error` if the subscription failed, or `null` when there is no error.
- * - `totalAccountsBalance` — the accounts' total balance converted to the user's preferred currency using latest market rates; returns `0` when rates are unavailable.
- * - `refetch` — a function that triggers the hook to re-run its subscription by incrementing an internal refresh key.
+ * Subscribes to non-deleted accounts owned by the current user and exposes
+ * the list, load/error state, total balance in the preferred currency, and a
+ * refetch trigger. While auth is still resolving, `isLoading` stays `true`;
+ * if there's no signed-in user, returns an empty list (never another user's
+ * rows).
  */
 export function useAccounts(): UseAccountsResult {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -58,21 +56,34 @@ export function useAccounts(): UseAccountsResult {
   const [refreshKey, setRefreshKey] = useState(0);
   const { latestRates } = useMarketRates();
   const { preferredCurrency } = usePreferredCurrency();
+  const { userId, isResolvingUser } = useCurrentUserId();
 
   const refetch = (): void => {
     setRefreshKey((prev) => prev + 1);
   };
 
   useEffect(() => {
+    if (isResolvingUser) {
+      setIsLoading(true);
+      return;
+    }
+
+    if (!userId) {
+      setAccounts([]);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
     const accountsCollection = database.get<Account>("accounts");
 
-    // Query non-deleted accounts sorted by created_at (newest first)
-    const query = accountsCollection.query(Q.where("deleted", false));
+    const query = accountsCollection.query(
+      Q.where("user_id", userId),
+      Q.where("deleted", false)
+    );
 
-    // Subscribe to changes
     const subscription = query.observeWithColumns(["balance"]).subscribe({
       next: (result) => {
         setAccounts(result);
@@ -86,7 +97,7 @@ export function useAccounts(): UseAccountsResult {
     });
 
     return () => subscription.unsubscribe();
-  }, [refreshKey]);
+  }, [refreshKey, userId, isResolvingUser]);
 
   const totalAccountsBalance = useMemo(() => {
     if (!latestRates) return 0;
@@ -105,13 +116,8 @@ export function useAccounts(): UseAccountsResult {
 }
 
 /**
- * Subscribes to non-deleted BANK accounts and eagerly fetches each
- * account's first `BankDetails` child record.
- *
- * @returns An object containing:
- * - `bankAccounts` — bank accounts with their bank details eagerly loaded.
- * - `isLoading` — `true` while the subscription is initializing.
- * - `error` — an `Error` if the subscription failed.
+ * Subscribes to non-deleted BANK accounts owned by the current user and
+ * eagerly fetches each account's first `BankDetails` child record.
  */
 export function useBankAccounts(): UseBankAccountsResult {
   const [bankAccounts, setBankAccounts] = useState<BankAccountWithDetails[]>(
@@ -119,14 +125,27 @@ export function useBankAccounts(): UseBankAccountsResult {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const { userId, isResolvingUser } = useCurrentUserId();
 
   useEffect(() => {
+    if (isResolvingUser) {
+      setIsLoading(true);
+      return;
+    }
+
+    if (!userId) {
+      setBankAccounts([]);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
     const accountsCollection = database.get<Account>("accounts");
 
     const query = accountsCollection.query(
+      Q.where("user_id", userId),
       Q.where("deleted", false),
       Q.where("type", "BANK")
     );
@@ -166,26 +185,38 @@ export function useBankAccounts(): UseBankAccountsResult {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [userId, isResolvingUser]);
 
   return { bankAccounts, isLoading, error };
 }
 
 /**
- * Hook to get top N accounts ordered by creation date (newest first).
- * Used for dashboard display.
+ * Hook to get top N accounts owned by the current user, ordered by creation
+ * date (newest first). Used for dashboard display.
  */
 export function useTopAccounts(limit: number = 3): UseTopAccountsResult {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { userId, isResolvingUser } = useCurrentUserId();
 
   useEffect(() => {
+    if (isResolvingUser) {
+      setIsLoading(true);
+      return;
+    }
+
+    if (!userId) {
+      setAccounts([]);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
 
     const accountsCollection = database.get<Account>("accounts");
 
-    // Query non-deleted accounts, ordered by creation date (newest first), limited
     const query = accountsCollection.query(
+      Q.where("user_id", userId),
       Q.where("deleted", false),
       Q.sortBy("created_at", Q.desc),
       Q.take(limit)
@@ -204,21 +235,35 @@ export function useTopAccounts(limit: number = 3): UseTopAccountsResult {
     });
 
     return () => subscription.unsubscribe();
-  }, [limit]);
+  }, [limit, userId, isResolvingUser]);
 
   return { accounts, isLoading };
 }
 
 /**
- * Hook to get a single account by ID
+ * Hook to get a single account by ID. Validates that the observed record
+ * belongs to the current user; treats foreign records as not-found to
+ * defend against bad sync state or stale local rows.
  */
 export function useAccount(accountId: string | null): UseAccountResult {
   const [account, setAccount] = useState<Account | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const { userId, isResolvingUser } = useCurrentUserId();
 
   useEffect(() => {
     if (!accountId) {
+      setAccount(null);
+      setIsLoading(false);
+      return;
+    }
+
+    if (isResolvingUser) {
+      setIsLoading(true);
+      return;
+    }
+
+    if (!userId) {
       setAccount(null);
       setIsLoading(false);
       return;
@@ -233,7 +278,12 @@ export function useAccount(accountId: string | null): UseAccountResult {
       .findAndObserve(accountId)
       .subscribe({
         next: (result) => {
-          setAccount(result);
+          if (result.userId !== userId) {
+            // Foreign record — treat as not found.
+            setAccount(null);
+          } else {
+            setAccount(result);
+          }
           setIsLoading(false);
         },
         error: (err: unknown) => {
@@ -244,7 +294,7 @@ export function useAccount(accountId: string | null): UseAccountResult {
       });
 
     return () => subscription.unsubscribe();
-  }, [accountId]);
+  }, [accountId, userId, isResolvingUser]);
 
   return { account, isLoading, error };
 }

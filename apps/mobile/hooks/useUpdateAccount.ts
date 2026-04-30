@@ -79,11 +79,25 @@ export function useUpdateAccount(): UseUpdateAccountResult {
     ): Promise<void> => {
       if (isSubmitting) return;
 
+      const userId = await getCurrentUserId();
+      if (!userId) {
+        showToast({
+          type: "error",
+          title: "Session Error",
+          message: "You must be signed in to update an account",
+        });
+        return;
+      }
+
       setIsSubmitting(true);
 
       try {
         // 1. Update the account
-        const result: ServiceResult = await updateAccount(accountId, data);
+        const result: ServiceResult = await updateAccount(
+          accountId,
+          data,
+          userId
+        );
 
         if (!result.success) {
           throw new Error(result.error ?? "Unknown error updating account");
@@ -91,24 +105,20 @@ export function useUpdateAccount(): UseUpdateAccountResult {
 
         // 2. Optionally create balance adjustment transaction
         if (balanceAdjustment?.trackAsTransaction) {
-          const userId = await getCurrentUserId();
+          const adjResult = await createBalanceAdjustmentTransaction(
+            accountId,
+            userId,
+            balanceAdjustment.currency,
+            balanceAdjustment.previousBalance,
+            data.balance
+          );
 
-          if (userId) {
-            const adjResult = await createBalanceAdjustmentTransaction(
-              accountId,
-              userId,
-              balanceAdjustment.currency,
-              balanceAdjustment.previousBalance,
-              data.balance
+          if (!adjResult.success) {
+            // Non-fatal: account was updated but tracking failed
+            console.warn(
+              "[useUpdateAccount] Balance adjustment tracking failed:",
+              adjResult.error
             );
-
-            if (!adjResult.success) {
-              // Non-fatal: account was updated but tracking failed
-              console.warn(
-                "[useUpdateAccount] Balance adjustment tracking failed:",
-                adjResult.error
-              );
-            }
           }
         }
 

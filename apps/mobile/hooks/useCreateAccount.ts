@@ -25,6 +25,8 @@ export function useCreateAccount(): UseCreateAccountResult {
    */
   const createAccount = useCallback(
     async (data: AccountFormData) => {
+      if (isSubmitting) return;
+
       const userId = await getCurrentUserId();
 
       if (!userId) {
@@ -97,7 +99,7 @@ export function useCreateAccount(): UseCreateAccountResult {
         setIsSubmitting(false);
       }
     },
-    [showToast, router]
+    [isSubmitting, showToast, router]
   );
 
   return {

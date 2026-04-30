@@ -41,6 +41,23 @@ const BALANCE_ADJUSTMENT_EXPENSE_CATEGORY_ID =
 /** Tolerance for floating-point balance comparison. */
 const BALANCE_EPSILON = 0.001;
 
+/**
+ * Typed error codes returned via {@link ServiceResult}.error.
+ *
+ * `OWNERSHIP_FAILED` — the requested account exists locally but its
+ * `user_id` does not match the caller. Defense-in-depth on top of
+ * Supabase RLS: we never write to another user's row even if a
+ * foreign id reaches the service via deep-link or stale local SQLite.
+ *
+ * `NOT_FOUND` — the account id has no corresponding row.
+ */
+export const EDIT_ACCOUNT_ERROR_CODES = {
+  OWNERSHIP_FAILED: "OWNERSHIP_FAILED",
+  NOT_FOUND: "NOT_FOUND",
+} as const;
+export type EditAccountErrorCode =
+  (typeof EDIT_ACCOUNT_ERROR_CODES)[keyof typeof EDIT_ACCOUNT_ERROR_CODES];
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -141,18 +158,39 @@ export async function checkAccountNameUniqueness(
  *
  * For bank-type accounts, also updates the associated bank_details record.
  *
+ * Performs an ownership check before writing — if the account's `userId`
+ * does not match `currentUserId`, returns `OWNERSHIP_FAILED` and performs
+ * no writes.
+ *
  * @param accountId - The ID of the account to update
  * @param data - The new account data
- * @returns ServiceResult with success and optional error
+ * @param currentUserId - The authenticated user's id (for the ownership check)
+ * @returns ServiceResult with success and optional error code
  */
 export async function updateAccount(
   accountId: string,
-  data: UpdateAccountData
+  data: UpdateAccountData,
+  currentUserId: string
 ): Promise<ServiceResult> {
   try {
+    let ownershipFailed = false;
+    let notFound = false;
+
     await database.write(async () => {
       const accountsCollection = database.get<Account>("accounts");
-      const existingAccount = await accountsCollection.find(accountId);
+
+      let existingAccount: Account;
+      try {
+        existingAccount = await accountsCollection.find(accountId);
+      } catch {
+        notFound = true;
+        return;
+      }
+
+      if (existingAccount.userId !== currentUserId) {
+        ownershipFailed = true;
+        return;
+      }
 
       // If setting as default, unset any current default for this user
       if (data.isDefault && !existingAccount.isDefault) {
@@ -193,6 +231,16 @@ export async function updateAccount(
       }
     });
 
+    if (notFound) {
+      return { success: false, error: EDIT_ACCOUNT_ERROR_CODES.NOT_FOUND };
+    }
+    if (ownershipFailed) {
+      return {
+        success: false,
+        error: EDIT_ACCOUNT_ERROR_CODES.OWNERSHIP_FAILED,
+      };
+    }
+
     return { success: true };
   } catch (error) {
     const message =
@@ -219,17 +267,38 @@ export async function updateAccount(
  *
  * Uses markAsDeleted() for sync-safe soft deletes.
  *
+ * Performs an ownership check before any cascade — if the account's
+ * `userId` does not match `currentUserId`, returns `OWNERSHIP_FAILED`
+ * and performs no writes.
+ *
  * @param accountId - The ID of the account to delete
- * @returns ServiceResult with success and optional error
+ * @param currentUserId - The authenticated user's id (for the ownership check)
+ * @returns ServiceResult with success and optional error code
  */
 export async function deleteAccountWithCascade(
-  accountId: string
+  accountId: string,
+  currentUserId: string
 ): Promise<ServiceResult> {
   try {
+    let ownershipFailed = false;
+    let notFound = false;
+
     await database.write(async () => {
       const accountsCollection = database.get<Account>("accounts");
       const transfersCollection = database.get<Transfer>("transfers");
-      const account = await accountsCollection.find(accountId);
+
+      let account: Account;
+      try {
+        account = await accountsCollection.find(accountId);
+      } catch {
+        notFound = true;
+        return;
+      }
+
+      if (account.userId !== currentUserId) {
+        ownershipFailed = true;
+        return;
+      }
 
       // 1. Mark bank_details as deleted
       const bankDetailRecords = await account.bankDetails.fetch();
@@ -282,6 +351,16 @@ export async function deleteAccountWithCascade(
       // 7. Mark the account itself as deleted
       await account.markAsDeleted();
     });
+
+    if (notFound) {
+      return { success: false, error: EDIT_ACCOUNT_ERROR_CODES.NOT_FOUND };
+    }
+    if (ownershipFailed) {
+      return {
+        success: false,
+        error: EDIT_ACCOUNT_ERROR_CODES.OWNERSHIP_FAILED,
+      };
+    }
 
     return { success: true };
   } catch (error) {

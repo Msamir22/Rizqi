@@ -22,6 +22,7 @@ import {
   deleteAccountWithCascade,
   type ServiceResult,
 } from "../services/edit-account-service";
+import { getCurrentUserId } from "../services/supabase";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -151,10 +152,23 @@ export function useDeleteAccount(accountId: string): UseDeleteAccountResult {
     async (id: string): Promise<void> => {
       if (isDeleting) return;
 
+      const userId = await getCurrentUserId();
+      if (!userId) {
+        showToast({
+          type: "error",
+          title: "Session Error",
+          message: "You must be signed in to delete an account",
+        });
+        return;
+      }
+
       setIsDeleting(true);
 
       try {
-        const result: ServiceResult = await deleteAccountWithCascade(id);
+        const result: ServiceResult = await deleteAccountWithCascade(
+          id,
+          userId
+        );
 
         if (!result.success) {
           throw new Error(result.error ?? "Unknown error deleting account");
