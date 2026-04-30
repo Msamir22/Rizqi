@@ -133,6 +133,66 @@ export async function checkAccountNameUniqueness(
 // ---------------------------------------------------------------------------
 
 /**
+ * Update an account inside an already-open `database.write` block.
+ *
+ * Mirrors the `createCashAccountWithinWriter` pattern in `account-service.ts`:
+ * this helper performs all the work of `updateAccount` minus the
+ * `database.write` wrapper, so callers can compose it with other writes
+ * (e.g., a balance-adjustment transaction) atomically.
+ *
+ * Throws on failure — callers rely on WatermelonDB's rollback semantics so
+ * any throw inside the writer aborts the whole batch.
+ *
+ * @param accountId - The ID of the account to update
+ * @param data - The new account data
+ */
+export async function updateAccountWithinWriter(
+  accountId: string,
+  data: UpdateAccountData
+): Promise<void> {
+  const accountsCollection = database.get<Account>("accounts");
+  const existingAccount = await accountsCollection.find(accountId);
+
+  // If setting as default, unset any current default for this user
+  if (data.isDefault && !existingAccount.isDefault) {
+    const currentDefaults = await accountsCollection
+      .query(
+        Q.where("user_id", existingAccount.userId),
+        Q.where("is_default", true),
+        Q.where("deleted", Q.notEq(true)),
+        Q.where("id", Q.notEq(accountId))
+      )
+      .fetch();
+
+    for (const defaultAccount of currentDefaults) {
+      await defaultAccount.update((acc) => {
+        acc.isDefault = false;
+      });
+    }
+  }
+
+  // Update account fields
+  await existingAccount.update((acc) => {
+    acc.name = data.name.trim();
+    acc.balance = data.balance;
+    acc.isDefault = data.isDefault;
+  });
+
+  // Update bank details if this is a bank account
+  if (existingAccount.isBank) {
+    const bankDetailRecords = await existingAccount.bankDetails.fetch();
+    if (bankDetailRecords.length > 0) {
+      const bankDetail = bankDetailRecords[0] as BankDetails;
+      await bankDetail.update((bd) => {
+        bd.bankName = data.bankName ?? "";
+        bd.cardLast4 = data.cardLast4 ?? "";
+        bd.smsSenderName = data.smsSenderName ?? "";
+      });
+    }
+  }
+}
+
+/**
  * Update an account with new data.
  *
  * Handles the single-default-account constraint: when setting isDefault to true,
@@ -140,6 +200,10 @@ export async function checkAccountNameUniqueness(
  * write block for atomicity.
  *
  * For bank-type accounts, also updates the associated bank_details record.
+ *
+ * Use `updateAccountWithBalanceAdjustment` instead when the update is paired
+ * with a balance-adjustment transaction — both writes need to commit or roll
+ * back together.
  *
  * @param accountId - The ID of the account to update
  * @param data - The new account data
@@ -150,49 +214,7 @@ export async function updateAccount(
   data: UpdateAccountData
 ): Promise<ServiceResult> {
   try {
-    await database.write(async () => {
-      const accountsCollection = database.get<Account>("accounts");
-      const existingAccount = await accountsCollection.find(accountId);
-
-      // If setting as default, unset any current default for this user
-      if (data.isDefault && !existingAccount.isDefault) {
-        const currentDefaults = await accountsCollection
-          .query(
-            Q.where("user_id", existingAccount.userId),
-            Q.where("is_default", true),
-            Q.where("deleted", Q.notEq(true)),
-            Q.where("id", Q.notEq(accountId))
-          )
-          .fetch();
-
-        for (const defaultAccount of currentDefaults) {
-          await defaultAccount.update((acc) => {
-            acc.isDefault = false;
-          });
-        }
-      }
-
-      // Update account fields
-      await existingAccount.update((acc) => {
-        acc.name = data.name.trim();
-        acc.balance = data.balance;
-        acc.isDefault = data.isDefault;
-      });
-
-      // Update bank details if this is a bank account
-      if (existingAccount.isBank) {
-        const bankDetailRecords = await existingAccount.bankDetails.fetch();
-        if (bankDetailRecords.length > 0) {
-          const bankDetail = bankDetailRecords[0] as BankDetails;
-          await bankDetail.update((bd) => {
-            bd.bankName = data.bankName ?? "";
-            bd.cardLast4 = data.cardLast4 ?? "";
-            bd.smsSenderName = data.smsSenderName ?? "";
-          });
-        }
-      }
-    });
-
+    await database.write(() => updateAccountWithinWriter(accountId, data));
     return { success: true };
   } catch (error) {
     const message =
@@ -297,12 +319,64 @@ export async function deleteAccountWithCascade(
 // ---------------------------------------------------------------------------
 
 /**
+ * Create a balance-adjustment transaction inside an already-open
+ * `database.write` block.
+ *
+ * Skips creation entirely when the balance change is below
+ * `BALANCE_EPSILON` (no-op for floating-point noise).
+ *
+ * Throws on failure so the surrounding writer rolls back.
+ *
+ * @returns `true` if a transaction was actually created, `false` if skipped
+ *          due to a sub-epsilon balance delta.
+ */
+export async function createBalanceAdjustmentTransactionWithinWriter(
+  accountId: string,
+  userId: string,
+  currency: CurrencyType,
+  previousBalance: number,
+  newBalance: number
+): Promise<boolean> {
+  const difference = newBalance - previousBalance;
+  if (Math.abs(difference) < BALANCE_EPSILON) {
+    return false;
+  }
+
+  const isIncome = difference > 0;
+  const categoryId = isIncome
+    ? BALANCE_ADJUSTMENT_INCOME_CATEGORY_ID
+    : BALANCE_ADJUSTMENT_EXPENSE_CATEGORY_ID;
+  const transactionType: TransactionType = isIncome ? "INCOME" : "EXPENSE";
+
+  const transactionsCollection = database.get<Transaction>("transactions");
+
+  await transactionsCollection.create((tx) => {
+    tx.userId = userId;
+    tx.accountId = accountId;
+    tx.amount = Math.abs(difference);
+    tx.currency = currency;
+    tx.type = transactionType;
+    tx.categoryId = categoryId;
+    tx.date = new Date();
+    tx.source = "MANUAL";
+    tx.isDraft = false;
+    tx.deleted = false;
+    tx.note = `Balance adjustment: ${previousBalance} \u2192 ${newBalance}`;
+  });
+
+  return true;
+}
+
+/**
  * Create a transaction to track a balance adjustment.
  *
  * When a user edits an account balance and chooses "Track as Transaction",
  * this function creates a MANUAL transaction using the appropriate
  * balance adjustment category (income or expense) based on whether the
  * balance increased or decreased.
+ *
+ * Prefer `updateAccountWithBalanceAdjustment` when the adjustment is paired
+ * with an account update \u2014 that variant commits both rows atomically.
  *
  * @param accountId - The account whose balance was adjusted
  * @param userId - The authenticated user's ID
@@ -324,29 +398,15 @@ export async function createBalanceAdjustmentTransaction(
       return { success: true };
     }
 
-    const isIncome = difference > 0;
-    const categoryId = isIncome
-      ? BALANCE_ADJUSTMENT_INCOME_CATEGORY_ID
-      : BALANCE_ADJUSTMENT_EXPENSE_CATEGORY_ID;
-    const transactionType: TransactionType = isIncome ? "INCOME" : "EXPENSE";
-
-    await database.write(async () => {
-      const transactionsCollection = database.get<Transaction>("transactions");
-
-      await transactionsCollection.create((tx) => {
-        tx.userId = userId;
-        tx.accountId = accountId;
-        tx.amount = Math.abs(difference);
-        tx.currency = currency;
-        tx.type = transactionType;
-        tx.categoryId = categoryId;
-        tx.date = new Date();
-        tx.source = "MANUAL";
-        tx.isDraft = false;
-        tx.deleted = false;
-        tx.note = `Balance adjustment: ${previousBalance} \u2192 ${newBalance}`;
-      });
-    });
+    await database.write(() =>
+      createBalanceAdjustmentTransactionWithinWriter(
+        accountId,
+        userId,
+        currency,
+        previousBalance,
+        newBalance
+      )
+    );
 
     return { success: true };
   } catch (error) {
@@ -355,6 +415,62 @@ export async function createBalanceAdjustmentTransaction(
         ? error.message
         : "Unknown error creating balance adjustment transaction";
     console.error("createBalanceAdjustmentTransaction failed:", message);
+    return { success: false, error: message };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Atomic update + balance-adjustment
+// ---------------------------------------------------------------------------
+
+/** Optional balance-adjustment payload paired with an account update. */
+export interface BalanceAdjustmentPayload {
+  readonly userId: string;
+  readonly currency: CurrencyType;
+  readonly previousBalance: number;
+}
+
+/**
+ * Update an account and (optionally) record the balance change as a
+ * transaction in a single `database.write` block.
+ *
+ * Either both rows commit or neither does \u2014 if the transaction insert fails,
+ * the account row update is rolled back so the ledger never diverges from the
+ * stored balance.
+ *
+ * @param accountId - The ID of the account to update
+ * @param data - The new account data
+ * @param adjustment - When non-null, also creates a balance-adjustment
+ *   transaction within the same writer batch. The new balance is taken from
+ *   `data.balance`.
+ * @returns ServiceResult with success and optional error
+ */
+export async function updateAccountWithBalanceAdjustment(
+  accountId: string,
+  data: UpdateAccountData,
+  adjustment: BalanceAdjustmentPayload | null
+): Promise<ServiceResult> {
+  try {
+    await database.write(async () => {
+      await updateAccountWithinWriter(accountId, data);
+      if (adjustment !== null) {
+        await createBalanceAdjustmentTransactionWithinWriter(
+          accountId,
+          adjustment.userId,
+          adjustment.currency,
+          adjustment.previousBalance,
+          data.balance
+        );
+      }
+    });
+
+    return { success: true };
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Unknown error updating account with balance adjustment";
+    console.error("updateAccountWithBalanceAdjustment failed:", message);
     return { success: false, error: message };
   }
 }

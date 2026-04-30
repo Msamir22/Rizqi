@@ -19,8 +19,8 @@ import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { useToast } from "../components/ui/Toast";
 import {
-  createBalanceAdjustmentTransaction,
-  updateAccount,
+  updateAccountWithBalanceAdjustment,
+  type BalanceAdjustmentPayload,
   type UpdateAccountData,
   type ServiceResult,
 } from "../services/edit-account-service";
@@ -82,34 +82,34 @@ export function useUpdateAccount(): UseUpdateAccountResult {
       setIsSubmitting(true);
 
       try {
-        // 1. Update the account
-        const result: ServiceResult = await updateAccount(accountId, data);
+        // Resolve the balance-adjustment payload (if requested) BEFORE the
+        // write so a missing userId fails the whole update — never silently
+        // skip the ledger entry while still mutating the account.
+        let adjustmentPayload: BalanceAdjustmentPayload | null = null;
+        if (balanceAdjustment?.trackAsTransaction) {
+          const userId = await getCurrentUserId();
+          if (!userId) {
+            throw new Error(
+              "Cannot record balance adjustment: user is not signed in"
+            );
+          }
+          adjustmentPayload = {
+            userId,
+            currency: balanceAdjustment.currency,
+            previousBalance: balanceAdjustment.previousBalance,
+          };
+        }
+
+        // Single atomic write: account row + (optional) ledger entry commit
+        // or roll back together.
+        const result: ServiceResult = await updateAccountWithBalanceAdjustment(
+          accountId,
+          data,
+          adjustmentPayload
+        );
 
         if (!result.success) {
           throw new Error(result.error ?? "Unknown error updating account");
-        }
-
-        // 2. Optionally create balance adjustment transaction
-        if (balanceAdjustment?.trackAsTransaction) {
-          const userId = await getCurrentUserId();
-
-          if (userId) {
-            const adjResult = await createBalanceAdjustmentTransaction(
-              accountId,
-              userId,
-              balanceAdjustment.currency,
-              balanceAdjustment.previousBalance,
-              data.balance
-            );
-
-            if (!adjResult.success) {
-              // Non-fatal: account was updated but tracking failed
-              console.warn(
-                "[useUpdateAccount] Balance adjustment tracking failed:",
-                adjResult.error
-              );
-            }
-          }
         }
 
         Haptics.notificationAsync(

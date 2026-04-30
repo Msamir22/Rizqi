@@ -145,6 +145,7 @@ jest.mock("@rizqi/db", () => {
 import {
   checkAccountNameUniqueness,
   updateAccount,
+  updateAccountWithBalanceAdjustment,
   deleteAccountWithCascade,
   createBalanceAdjustmentTransaction,
 } from "@/services/edit-account-service";
@@ -591,6 +592,152 @@ describe("edit-account-service", () => {
       );
       expect(result.success).toBe(false);
       expect(result.error).toBe("Write failed");
+    });
+  });
+
+  // =========================================================================
+  // updateAccountWithBalanceAdjustment — atomic combined write
+  // =========================================================================
+  describe("updateAccountWithBalanceAdjustment", () => {
+    it("opens exactly one database.write block when adjustment is provided", async () => {
+      seedAccount("acc-1", { name: "Old", balance: 100, userId: "user-1" });
+
+      const result = await updateAccountWithBalanceAdjustment(
+        "acc-1",
+        { name: "New", balance: 250, isDefault: false },
+        { userId: "user-1", currency: "EGP", previousBalance: 100 }
+      );
+
+      expect(result.success).toBe(true);
+      expect(mockDb.write).toHaveBeenCalledTimes(1);
+    });
+
+    it("opens exactly one database.write block when adjustment is null", async () => {
+      seedAccount("acc-1", { name: "Old", balance: 100 });
+
+      const result = await updateAccountWithBalanceAdjustment(
+        "acc-1",
+        { name: "New", balance: 100, isDefault: false },
+        null
+      );
+
+      expect(result.success).toBe(true);
+      expect(mockDb.write).toHaveBeenCalledTimes(1);
+    });
+
+    it("updates the account row AND creates a transaction in one batch", async () => {
+      const acc = seedAccount("acc-1", {
+        name: "Old",
+        balance: 100,
+        userId: "user-1",
+      });
+
+      let createdTx: Record<string, unknown> | undefined;
+      const accountsCollectionMock = {
+        find: jest.fn(() => Promise.resolve(acc)),
+        query: jest.fn(() => ({ fetch: jest.fn(() => Promise.resolve([])) })),
+      };
+      mockDb.get.mockImplementation((tableName: string) => {
+        if (tableName === "accounts") return accountsCollectionMock;
+        if (tableName === "transactions") {
+          return {
+            create: jest.fn((builder: (r: Record<string, unknown>) => void) => {
+              createdTx = { id: `new-tx-${Date.now()}` };
+              builder(createdTx);
+              return Promise.resolve(createdTx);
+            }),
+          };
+        }
+        return { find: jest.fn(), query: jest.fn(), create: jest.fn() };
+      });
+
+      await updateAccountWithBalanceAdjustment(
+        "acc-1",
+        { name: "Renamed", balance: 350, isDefault: false },
+        { userId: "user-1", currency: "EGP", previousBalance: 100 }
+      );
+
+      expect(acc.name).toBe("Renamed");
+      expect(acc.balance).toBe(350);
+      expect(createdTx).toBeDefined();
+      expect(createdTx?.amount).toBe(250);
+      expect(createdTx?.type).toBe("INCOME");
+    });
+
+    it("rolls back the account update when the adjustment write throws", async () => {
+      const acc = seedAccount("acc-1", {
+        name: "Original",
+        balance: 100,
+        userId: "user-1",
+      });
+
+      const accountsCollectionMock = {
+        find: jest.fn(() => Promise.resolve(acc)),
+        query: jest.fn(() => ({ fetch: jest.fn(() => Promise.resolve([])) })),
+      };
+      mockDb.get.mockImplementation((tableName: string) => {
+        if (tableName === "accounts") return accountsCollectionMock;
+        if (tableName === "transactions") {
+          return {
+            create: jest.fn(() =>
+              Promise.reject(new Error("Transaction insert failed"))
+            ),
+          };
+        }
+        return { find: jest.fn(), query: jest.fn(), create: jest.fn() };
+      });
+      // Real WatermelonDB rolls back the writer batch when the callback
+      // throws. Our mock just propagates the error — assert that the
+      // service surfaces the failure as success: false so the caller knows
+      // the whole operation failed.
+      mockDb.write.mockImplementation(async (cb: () => Promise<unknown>) => {
+        await cb();
+      });
+
+      const result = await updateAccountWithBalanceAdjustment(
+        "acc-1",
+        { name: "Renamed", balance: 350, isDefault: false },
+        { userId: "user-1", currency: "EGP", previousBalance: 100 }
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Transaction insert failed");
+    });
+
+    it("skips the transaction insert when the balance change is below epsilon", async () => {
+      const acc = seedAccount("acc-1", {
+        name: "Old",
+        balance: 100,
+        userId: "user-1",
+      });
+
+      let txCreateCalls = 0;
+      const accountsCollectionMock = {
+        find: jest.fn(() => Promise.resolve(acc)),
+        query: jest.fn(() => ({ fetch: jest.fn(() => Promise.resolve([])) })),
+      };
+      mockDb.get.mockImplementation((tableName: string) => {
+        if (tableName === "accounts") return accountsCollectionMock;
+        if (tableName === "transactions") {
+          return {
+            create: jest.fn(() => {
+              txCreateCalls += 1;
+              return Promise.resolve({});
+            }),
+          };
+        }
+        return { find: jest.fn(), query: jest.fn(), create: jest.fn() };
+      });
+
+      const result = await updateAccountWithBalanceAdjustment(
+        "acc-1",
+        { name: "Renamed", balance: 100.0001, isDefault: false },
+        { userId: "user-1", currency: "EGP", previousBalance: 100 }
+      );
+
+      expect(result.success).toBe(true);
+      expect(txCreateCalls).toBe(0);
+      expect(acc.name).toBe("Renamed");
     });
   });
 });
