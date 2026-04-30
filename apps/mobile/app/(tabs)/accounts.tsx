@@ -3,6 +3,7 @@ import {
   AccountTypeTabs,
   FilterType,
 } from "@/components/accounts";
+import { AccountListSkeleton } from "@/components/accounts/skeletons/AccountListSkeleton";
 import { buildAccountDisplayNames } from "@/utils/account-display";
 import { PageHeader } from "@/components/navigation/PageHeader";
 import { Button, ButtonVariant } from "@/components/ui/Button";
@@ -88,9 +89,10 @@ export default function Accounts(): ReactElement {
   const { latestRates } = useMarketRates();
 
   const [selectedFilter, setSelectedFilter] = useState<FilterType>("ALL");
-  const { totalAccountsBalance, accounts } = useAccounts();
+  const { totalAccountsBalance, accounts, isLoading } = useAccounts();
   const { preferredCurrency } = usePreferredCurrency();
   const isEmpty = accounts.length === 0;
+  const isHydrating = isLoading && isEmpty;
 
   const filteredAccounts = useMemo(() => {
     if (selectedFilter === "ALL") return accounts;
@@ -172,36 +174,42 @@ export default function Accounts(): ReactElement {
         }}
       />
 
-      {/* Total Balance Card */}
-      {!isEmpty && (
-        <View className="px-5 pb-6">
-          <TotalBalanceCard
-            balance={totalAccountsBalance}
-            currencyCode={preferredCurrency}
+      {isHydrating ? (
+        <AccountListSkeleton />
+      ) : (
+        <>
+          {/* Total Balance Card */}
+          {!isEmpty && (
+            <View className="px-5 pb-6">
+              <TotalBalanceCard
+                balance={totalAccountsBalance}
+                currencyCode={preferredCurrency}
+              />
+            </View>
+          )}
+
+          {/* Only show filter tabs if user has accounts */}
+          {!isEmpty && (
+            <AccountTypeTabs
+              selectedFilter={selectedFilter}
+              onSelectFilter={setSelectedFilter}
+            />
+          )}
+
+          <FlatList
+            data={filteredAccounts}
+            keyExtractor={keyExtractor}
+            renderItem={renderItem}
+            ListFooterComponent={renderFooter}
+            ListEmptyComponent={renderEmpty}
+            showsVerticalScrollIndicator={false}
+            contentContainerClassName="flex-grow"
+            removeClippedSubviews
+            maxToRenderPerBatch={10}
+            windowSize={5}
           />
-        </View>
+        </>
       )}
-
-      {/* Only show filter tabs if user has accounts */}
-      {!isEmpty && (
-        <AccountTypeTabs
-          selectedFilter={selectedFilter}
-          onSelectFilter={setSelectedFilter}
-        />
-      )}
-
-      <FlatList
-        data={filteredAccounts}
-        keyExtractor={keyExtractor}
-        renderItem={renderItem}
-        ListFooterComponent={renderFooter}
-        ListEmptyComponent={renderEmpty}
-        showsVerticalScrollIndicator={false}
-        contentContainerClassName="flex-grow"
-        removeClippedSubviews
-        maxToRenderPerBatch={10}
-        windowSize={5}
-      />
     </View>
   );
 }

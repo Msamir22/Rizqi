@@ -20,7 +20,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -33,6 +32,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BankDetailsSection } from "@/components/add-account/BankDetailsSection";
 import { BalanceChangedSheet } from "@/components/edit-account/BalanceChangedSheet";
 import { DeleteAccountSheet } from "@/components/edit-account/DeleteAccountSheet";
+import { EditAccountSkeleton } from "@/components/edit-account/EditAccountSkeleton";
 import { ReadOnlyDropdown } from "@/components/edit-account/ReadOnlyDropdown";
 import { PageHeader } from "@/components/navigation/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -70,11 +70,7 @@ export default function EditAccount(): React.ReactNode {
   // Loading State
   // ---------------------------------------------------------------------------
   if (isLoading) {
-    return (
-      <View className="flex-1 items-center justify-center bg-background dark:bg-background-dark">
-        <ActivityIndicator size="large" color={palette.nileGreen[500]} />
-      </View>
-    );
+    return <EditAccountSkeleton />;
   }
 
   // ---------------------------------------------------------------------------
