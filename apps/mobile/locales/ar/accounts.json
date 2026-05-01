@@ -32,6 +32,7 @@
   "creating": "جاري الإنشاء...",
   "currency": "العملة",
   "account_not_found": "لم يتم العثور على الحساب",
+  "cannot_update_deleted_account": "لا يمكن تحديث حساب محذوف",
   "save_changes": "حفظ التغييرات",
   "saving": "جاري الحفظ...",
   "danger_zone": "منطقة الخطر",

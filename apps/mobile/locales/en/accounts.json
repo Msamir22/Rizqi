@@ -28,6 +28,7 @@
   "creating": "Creating...",
   "currency": "Currency",
   "account_not_found": "Account not found",
+  "cannot_update_deleted_account": "Cannot update a deleted account",
   "save_changes": "Save Changes",
   "saving": "Saving...",
   "danger_zone": "Danger Zone",
