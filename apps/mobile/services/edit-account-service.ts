@@ -24,6 +24,7 @@ import {
   type TransactionType,
 } from "@rizqi/db";
 import { Q } from "@nozbe/watermelondb";
+import { t } from "i18next";
 import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------
@@ -137,7 +138,7 @@ export async function checkAccountNameUniqueness(
       error instanceof Error
         ? error.message
         : "Unknown error checking account name uniqueness";
-    console.error("checkAccountNameUniqueness failed:", message);
+    logger.error("checkAccountNameUniqueness_failed", error);
     return { isUnique: false, error: message };
   }
 }
@@ -174,7 +175,7 @@ export async function updateAccountWithinWriter(
 
   if (existingAccount.deleted) {
     logger.error(`Attempted to update deleted account (ID: ${accountId})`);
-    throw new Error("Cannot update a deleted account");
+    throw new Error(t("accounts:cannot_update_deleted_account"));
   }
 
   // Snapshot BEFORE mutating — this is the source of truth for any paired
@@ -320,7 +321,7 @@ export async function deleteAccountWithCascade(
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unknown error deleting account";
-    console.error("deleteAccountWithCascade failed:", message);
+    logger.error("deleteAccountWithCascade_failed", error);
     return { success: false, error: message };
   }
 }
@@ -441,8 +442,8 @@ export async function updateAccountWithBalanceAdjustment(
     const message =
       error instanceof Error
         ? error.message
-        : "Unknown error updating account with balance adjustment";
-    console.error("updateAccountWithBalanceAdjustment failed:", message);
+        : "Unknown error creating balance adjustment transaction";
+    logger.error("createBalanceAdjustmentTransaction_failed", error);
     return { success: false, error: message };
   }
 }

@@ -21,6 +21,8 @@ import {
   validateEditAccountForm,
 } from "../validation/account-validation";
 import { checkAccountNameUniqueness } from "../services/edit-account-service";
+import { logger } from "../utils/logger";
+import { UseAccountByIdResult } from "./useAccountById";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -91,11 +93,7 @@ interface UseEditAccountFormResult {
  */
 export function useEditAccountForm(
   account: Account,
-  bankDetails?: {
-    readonly bankName: string;
-    readonly cardLast4: string;
-    readonly smsSenderName: string;
-  }
+  bankDetails: UseAccountByIdResult["bankDetails"]
 ): UseEditAccountFormResult {
   // Snapshot the original data for dirty tracking.
   // useRef to avoid re-creating on each render.
@@ -179,7 +177,7 @@ export function useEditAccountForm(
             }));
           } else if (result.error) {
             // Don't block the user on uniqueness check errors
-            console.warn("Uniqueness check failed:", result.error);
+            logger.warn("uniqueness_check_failed", { error: result.error });
           }
 
           setIsCheckingUniqueness(false);

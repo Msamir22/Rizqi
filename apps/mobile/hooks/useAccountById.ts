@@ -14,6 +14,7 @@
 
 import { Account, BankDetails, database } from "@rizqi/db";
 import { useEffect, useRef, useState } from "react";
+import { logger } from "../utils/logger";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -24,7 +25,7 @@ type BankDetailsData = Pick<
   "bankName" | "cardLast4" | "smsSenderName"
 >;
 
-interface UseAccountByIdResult {
+export interface UseAccountByIdResult {
   /** The observed Account model or null when not found / loading */
   readonly account: Account | null;
   /** Pre-fetched bank details (null for non-bank accounts) */
@@ -89,7 +90,7 @@ export function useAccountById(id: string): UseAccountByIdResult {
         }
       } catch (err: unknown) {
         if (!isActive || requestId !== bankDetailsRequestIdRef.current) return;
-        console.error("[useAccountById] Bank details fetch error:", err);
+        logger.error("useAccountById_bank_details_fetch_failed", err);
         setBankDetails(null);
       } finally {
         if (isActive && requestId === bankDetailsRequestIdRef.current) {
@@ -104,8 +105,8 @@ export function useAccountById(id: string): UseAccountByIdResult {
         setAccount(record);
         void loadBankDetails(record);
       },
-      error: (err) => {
-        console.error("[useAccountById] Observation error:", err);
+      error: (err: unknown) => {
+        logger.error("useAccountById_observation_failed", err);
         setAccount(null);
         setBankDetails(null);
         setIsLoading(false);

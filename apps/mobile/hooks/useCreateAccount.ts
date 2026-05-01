@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { useToast } from "../components/ui/Toast";
 import { getCurrentUserId } from "../services/supabase";
+import { logger } from "../utils/logger";
 import { AccountFormData } from "../validation/account-validation";
 
 interface UseCreateAccountResult {
@@ -85,7 +86,7 @@ export function useCreateAccount(): UseCreateAccountResult {
         router.back();
       } catch (err) {
         const error = err instanceof Error ? err : new Error("Unknown error");
-        console.error("[useCreateAccount] Error creating account:", error);
+        logger.error("createAccount_flow_failed", error);
         setError(error);
 
         showToast({
