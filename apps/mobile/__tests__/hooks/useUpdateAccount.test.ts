@@ -85,7 +85,6 @@ interface HookResult {
     },
     balanceAdjustment?: {
       readonly trackAsTransaction: boolean;
-      readonly previousBalance: number;
       readonly currency: "EGP";
     }
   ) => Promise<void>;
@@ -161,14 +160,14 @@ describe("useUpdateAccount", () => {
       await result.current.performUpdate(
         "acc-1",
         { name: "Test", balance: 250, isDefault: false },
-        { trackAsTransaction: true, previousBalance: 100, currency: "EGP" }
+        { trackAsTransaction: true, currency: "EGP" }
       );
     });
 
     expect(mockUpdateAccountWithBalanceAdjustment).toHaveBeenCalledWith(
       "acc-1",
       expect.objectContaining({ name: "Test", balance: 250 }),
-      { userId: "user-1", currency: "EGP", previousBalance: 100 }
+      { userId: "user-1", currency: "EGP" }
     );
     expect(mockRouterBack).toHaveBeenCalledTimes(1);
   });
@@ -182,7 +181,7 @@ describe("useUpdateAccount", () => {
       await result.current.performUpdate(
         "acc-1",
         { name: "Test", balance: 250, isDefault: false },
-        { trackAsTransaction: true, previousBalance: 100, currency: "EGP" }
+        { trackAsTransaction: true, currency: "EGP" }
       );
     });
 
@@ -193,5 +192,40 @@ describe("useUpdateAccount", () => {
       expect.objectContaining({ type: "error", title: "Update Failed" })
     );
     expect(mockRouterBack).not.toHaveBeenCalled();
+  });
+
+  it("calls the service with null adjustment when no balanceAdjustment is provided (rename-only path)", async () => {
+    // The most common path through the hook: user just renames the account
+    // or flips the default flag without changing the balance.
+    mockUpdateAccountWithBalanceAdjustment.mockResolvedValueOnce({
+      success: true,
+    });
+
+    const { result } = renderHook();
+
+    await RTR.act(async () => {
+      await result.current.performUpdate("acc-1", {
+        name: "Renamed",
+        balance: 100,
+        isDefault: true,
+      });
+    });
+
+    // userId resolution must be skipped entirely — no auth call when
+    // tracking is off.
+    expect(mockGetCurrentUserId).not.toHaveBeenCalled();
+    expect(mockUpdateAccountWithBalanceAdjustment).toHaveBeenCalledWith(
+      "acc-1",
+      expect.objectContaining({
+        name: "Renamed",
+        balance: 100,
+        isDefault: true,
+      }),
+      null
+    );
+    expect(mockShowToast).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "success", title: "Account Updated ✅" })
+    );
+    expect(mockRouterBack).toHaveBeenCalledTimes(1);
   });
 });

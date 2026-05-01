@@ -257,7 +257,6 @@ function EditAccountForm({
         option === "tracked"
           ? {
               trackAsTransaction: true as const,
-              previousBalance: originalBalance,
               currency,
             }
           : undefined;
@@ -266,7 +265,7 @@ function EditAccountForm({
         console.error("[EditAccount] Save failed:", err)
       );
     },
-    [buildUpdateData, originalBalance, currency, account.id, performUpdate]
+    [buildUpdateData, currency, account.id, performUpdate]
   );
 
   return (

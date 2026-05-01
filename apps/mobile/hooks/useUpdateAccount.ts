@@ -34,8 +34,6 @@ import { getCurrentUserId } from "../services/supabase";
 interface BalanceAdjustmentOptions {
   /** Whether to track the balance change as a transaction */
   readonly trackAsTransaction: boolean;
-  /** The balance before the edit (needed for transaction tracking) */
-  readonly previousBalance: number;
   /** The account's currency (needed for transaction tracking) */
   readonly currency: CurrencyType;
 }
@@ -62,7 +60,10 @@ interface UseUpdateAccountResult {
  * On failure: shows error toast with error haptic feedback.
  *
  * When `balanceAdjustment.trackAsTransaction` is true, also creates a
- * balance adjustment transaction after the account update.
+ * balance adjustment transaction in the same atomic write as the account
+ * update. The balance delta is computed inside the writer from the live
+ * pre-update balance, not from any caller-supplied value — see
+ * `updateAccountWithBalanceAdjustment` for the contract.
  *
  * @returns The update function and submitting state
  */
@@ -96,7 +97,6 @@ export function useUpdateAccount(): UseUpdateAccountResult {
           adjustmentPayload = {
             userId,
             currency: balanceAdjustment.currency,
-            previousBalance: balanceAdjustment.previousBalance,
           };
         }
 

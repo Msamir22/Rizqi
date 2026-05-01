@@ -30,8 +30,21 @@ import { Q } from "@nozbe/watermelondb";
 // ---------------------------------------------------------------------------
 
 /**
- * Well-known UUIDs for balance adjustment categories.
- * These are seeded in migration 032_seed_balance_adjustment_categories.sql.
+ * Well-known UUIDs for balance-adjustment categories.
+ *
+ * These are seeded by `supabase/migrations/032_seed_balance_adjustment_categories.sql`
+ * and form a stable contract between the migration and this service. They are
+ * intentionally hardcoded rather than looked up by name because:
+ *
+ * 1. Determinism — the IDs are fixed by the migration, not generated at
+ *    runtime. There is no environment in which they differ.
+ * 2. Performance — every balance-adjustment write would otherwise need an
+ *    extra `categories` query (or a startup cache layer) to resolve them.
+ * 3. Fail-fast — if the seed is ever missing, the foreign-key on
+ *    `transactions.category_id` rejects the insert immediately, surfacing
+ *    the breakage at write time rather than allowing a silent fallback.
+ *
+ * If the migration ever changes the UUIDs, both files must move in lockstep.
  */
 const BALANCE_ADJUSTMENT_INCOME_CATEGORY_ID =
   "00000000-0000-0000-0001-000000000200";
@@ -136,22 +149,31 @@ export async function checkAccountNameUniqueness(
  * Update an account inside an already-open `database.write` block.
  *
  * Mirrors the `createCashAccountWithinWriter` pattern in `account-service.ts`:
- * this helper performs all the work of `updateAccount` minus the
- * `database.write` wrapper, so callers can compose it with other writes
- * (e.g., a balance-adjustment transaction) atomically.
+ * this helper performs all the work of an update minus the `database.write`
+ * wrapper, so callers can compose it with other writes (e.g., a
+ * balance-adjustment transaction) atomically.
  *
  * Throws on failure — callers rely on WatermelonDB's rollback semantics so
  * any throw inside the writer aborts the whole batch.
  *
  * @param accountId - The ID of the account to update
  * @param data - The new account data
+ * @returns The account's balance as it stood **before** this update applied.
+ *   Callers that pair this with a balance-adjustment transaction MUST use
+ *   this returned value as the previous balance — never form-state values,
+ *   which can be stale if another flow (e.g., sync) moved the balance while
+ *   the form was open.
  */
 export async function updateAccountWithinWriter(
   accountId: string,
   data: UpdateAccountData
-): Promise<void> {
+): Promise<{ readonly previousBalance: number }> {
   const accountsCollection = database.get<Account>("accounts");
   const existingAccount = await accountsCollection.find(accountId);
+
+  // Snapshot BEFORE mutating — this is the source of truth for any paired
+  // balance-adjustment transaction (defends against stale form state).
+  const previousBalance = existingAccount.balance;
 
   // If setting as default, unset any current default for this user
   if (data.isDefault && !existingAccount.isDefault) {
@@ -190,38 +212,8 @@ export async function updateAccountWithinWriter(
       });
     }
   }
-}
 
-/**
- * Update an account with new data.
- *
- * Handles the single-default-account constraint: when setting isDefault to true,
- * any previously default account for the same user is unset within the same
- * write block for atomicity.
- *
- * For bank-type accounts, also updates the associated bank_details record.
- *
- * Use `updateAccountWithBalanceAdjustment` instead when the update is paired
- * with a balance-adjustment transaction — both writes need to commit or roll
- * back together.
- *
- * @param accountId - The ID of the account to update
- * @param data - The new account data
- * @returns ServiceResult with success and optional error
- */
-export async function updateAccount(
-  accountId: string,
-  data: UpdateAccountData
-): Promise<ServiceResult> {
-  try {
-    await database.write(() => updateAccountWithinWriter(accountId, data));
-    return { success: true };
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unknown error updating account";
-    console.error("updateAccount failed:", message);
-    return { success: false, error: message };
-  }
+  return { previousBalance };
 }
 
 // ---------------------------------------------------------------------------
@@ -330,7 +322,7 @@ export async function deleteAccountWithCascade(
  * @returns `true` if a transaction was actually created, `false` if skipped
  *          due to a sub-epsilon balance delta.
  */
-export async function createBalanceAdjustmentTransactionWithinWriter(
+async function createBalanceAdjustmentTransactionWithinWriter(
   accountId: string,
   userId: string,
   currency: CurrencyType,
@@ -367,67 +359,21 @@ export async function createBalanceAdjustmentTransactionWithinWriter(
   return true;
 }
 
-/**
- * Create a transaction to track a balance adjustment.
- *
- * When a user edits an account balance and chooses "Track as Transaction",
- * this function creates a MANUAL transaction using the appropriate
- * balance adjustment category (income or expense) based on whether the
- * balance increased or decreased.
- *
- * Prefer `updateAccountWithBalanceAdjustment` when the adjustment is paired
- * with an account update \u2014 that variant commits both rows atomically.
- *
- * @param accountId - The account whose balance was adjusted
- * @param userId - The authenticated user's ID
- * @param currency - The account's currency
- * @param previousBalance - The balance before the adjustment
- * @param newBalance - The balance after the adjustment
- * @returns ServiceResult with success and optional error
- */
-export async function createBalanceAdjustmentTransaction(
-  accountId: string,
-  userId: string,
-  currency: CurrencyType,
-  previousBalance: number,
-  newBalance: number
-): Promise<ServiceResult> {
-  try {
-    const difference = newBalance - previousBalance;
-    if (Math.abs(difference) < BALANCE_EPSILON) {
-      return { success: true };
-    }
-
-    await database.write(() =>
-      createBalanceAdjustmentTransactionWithinWriter(
-        accountId,
-        userId,
-        currency,
-        previousBalance,
-        newBalance
-      )
-    );
-
-    return { success: true };
-  } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Unknown error creating balance adjustment transaction";
-    console.error("createBalanceAdjustmentTransaction failed:", message);
-    return { success: false, error: message };
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Atomic update + balance-adjustment
 // ---------------------------------------------------------------------------
 
-/** Optional balance-adjustment payload paired with an account update. */
+/**
+ * Optional balance-adjustment payload paired with an account update.
+ *
+ * Note: there is no `previousBalance` field. The previous balance is taken
+ * from the live account row inside the writer batch \u2014 passing a form-state
+ * value would risk silent corruption when another flow (e.g., sync) moved
+ * the balance while the form was open.
+ */
 export interface BalanceAdjustmentPayload {
   readonly userId: string;
   readonly currency: CurrencyType;
-  readonly previousBalance: number;
 }
 
 /**
@@ -438,11 +384,15 @@ export interface BalanceAdjustmentPayload {
  * the account row update is rolled back so the ledger never diverges from the
  * stored balance.
  *
+ * The balance-adjustment delta is computed from the **live** pre-update
+ * balance (captured inside the writer) and `data.balance`. Callers do not
+ * pass a `previousBalance` \u2014 this defends against stale form state if the
+ * balance was moved by another flow (e.g., sync) while the form was open.
+ *
  * @param accountId - The ID of the account to update
- * @param data - The new account data
+ * @param data - The new account data (the new balance is `data.balance`)
  * @param adjustment - When non-null, also creates a balance-adjustment
- *   transaction within the same writer batch. The new balance is taken from
- *   `data.balance`.
+ *   transaction within the same writer batch.
  * @returns ServiceResult with success and optional error
  */
 export async function updateAccountWithBalanceAdjustment(
@@ -452,13 +402,16 @@ export async function updateAccountWithBalanceAdjustment(
 ): Promise<ServiceResult> {
   try {
     await database.write(async () => {
-      await updateAccountWithinWriter(accountId, data);
+      const { previousBalance } = await updateAccountWithinWriter(
+        accountId,
+        data
+      );
       if (adjustment !== null) {
         await createBalanceAdjustmentTransactionWithinWriter(
           accountId,
           adjustment.userId,
           adjustment.currency,
-          adjustment.previousBalance,
+          previousBalance,
           data.balance
         );
       }
