@@ -13,20 +13,19 @@
  */
 
 import { Account, BankDetails, database } from "@rizqi/db";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { logger } from "../utils/logger";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-interface BankDetailsData {
-  readonly bankName: string;
-  readonly cardLast4: string;
-  readonly smsSenderName: string;
-}
+type BankDetailsData = Pick<
+  BankDetails,
+  "bankName" | "cardLast4" | "smsSenderName"
+>;
 
-interface UseAccountByIdResult {
+export interface UseAccountByIdResult {
   /** The observed Account model or null when not found / loading */
   readonly account: Account | null;
   /** Pre-fetched bank details (null for non-bank accounts) */
@@ -52,48 +51,59 @@ export function useAccountById(id: string): UseAccountByIdResult {
   const [account, setAccount] = useState<Account | null>(null);
   const [bankDetails, setBankDetails] = useState<BankDetailsData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const bankDetailsRequestIdRef = useRef(0);
 
   useEffect(() => {
+    let isActive = true;
+
     if (!id) {
       setAccount(null);
       setBankDetails(null);
       setIsLoading(false);
-      return;
+      return undefined;
     }
 
     setIsLoading(true);
+
+    const loadBankDetails = async (record: Account): Promise<void> => {
+      const requestId = ++bankDetailsRequestIdRef.current;
+      if (!record.isBank) {
+        if (!isActive || requestId !== bankDetailsRequestIdRef.current) return;
+        setBankDetails(null);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const details = (await record.bankDetails.fetch()) as BankDetails[];
+        if (!isActive || requestId !== bankDetailsRequestIdRef.current) return;
+
+        if (details.length > 0) {
+          const bd = details[0];
+          setBankDetails({
+            bankName: bd.bankName,
+            cardLast4: bd.cardLast4,
+            smsSenderName: bd.smsSenderName,
+          });
+        } else {
+          setBankDetails(null);
+        }
+      } catch (err: unknown) {
+        if (!isActive || requestId !== bankDetailsRequestIdRef.current) return;
+        logger.error("useAccountById_bank_details_fetch_failed", err);
+        setBankDetails(null);
+      } finally {
+        if (isActive && requestId === bankDetailsRequestIdRef.current) {
+          setIsLoading(false);
+        }
+      }
+    };
 
     const collection = database.get<Account>("accounts");
     const subscription = collection.findAndObserve(id).subscribe({
       next: (record) => {
         setAccount(record);
-
-        // Fetch bank details if this is a bank account
-        if (record.isBank) {
-          record.bankDetails
-            .fetch()
-            .then((details) => {
-              const typedDetails = details as unknown as BankDetails[];
-              if (typedDetails.length > 0) {
-                const bd = typedDetails[0];
-                setBankDetails({
-                  bankName: bd.bankName ?? "",
-                  cardLast4: bd.cardLast4 ?? "",
-                  smsSenderName: bd.smsSenderName ?? "",
-                });
-              } else {
-                setBankDetails(null);
-              }
-            })
-            .catch((err: unknown) => {
-              logger.error("useAccountById_bank_details_fetch_failed", err);
-              setBankDetails(null);
-            });
-        } else {
-          setBankDetails(null);
-        }
-
-        setIsLoading(false);
+        void loadBankDetails(record);
       },
       error: (err: unknown) => {
         logger.error("useAccountById_observation_failed", err);
@@ -104,6 +114,7 @@ export function useAccountById(id: string): UseAccountByIdResult {
     });
 
     return (): void => {
+      isActive = false;
       subscription.unsubscribe();
     };
   }, [id]);
