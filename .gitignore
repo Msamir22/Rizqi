@@ -70,3 +70,12 @@ temp/
 .claude/settings.local.json
 .claude/worktrees/
 .claude/scheduled_tasks.lock
+.claude/skills
+
+.codex
+
+.agents
+
+AGENTS.md
+
+skills-lock.json

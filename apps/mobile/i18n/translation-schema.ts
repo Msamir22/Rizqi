@@ -276,6 +276,7 @@ interface AccountsTranslations {
   readonly creating: string;
   readonly currency: string;
   readonly account_not_found: string;
+  readonly cannot_update_deleted_account: string;
   readonly save_changes: string;
   readonly saving: string;
   readonly danger_zone: string;
