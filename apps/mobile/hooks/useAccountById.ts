@@ -25,7 +25,7 @@ type BankDetailsData = Pick<
   "bankName" | "cardLast4" | "smsSenderName"
 >;
 
-interface UseAccountByIdResult {
+export interface UseAccountByIdResult {
   /** The observed Account model or null when not found / loading */
   readonly account: Account | null;
   /** Pre-fetched bank details (null for non-bank accounts) */

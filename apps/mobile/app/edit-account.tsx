@@ -14,8 +14,25 @@
  * Phase 4 (US1): Full edit form, save flow, and validation
  */
 
-import type { Account } from "@rizqi/db";
+import { BankDetailsSection } from "@/components/add-account/BankDetailsSection";
+import { BalanceChangedSheet } from "@/components/edit-account/BalanceChangedSheet";
+import { DeleteAccountSheet } from "@/components/edit-account/DeleteAccountSheet";
+import { ReadOnlyDropdown } from "@/components/edit-account/ReadOnlyDropdown";
+import { PageHeader } from "@/components/navigation/PageHeader";
+import { Button } from "@/components/ui/Button";
+import { TextField } from "@/components/ui/TextField";
+import { ACCOUNT_TYPES, CURRENCIES } from "@/constants/accounts";
+import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
+import { useKeyboardVisibility } from "@/hooks";
+import { useAccountById, UseAccountByIdResult } from "@/hooks/useAccountById";
+import { useAccountDisplayName } from "@/hooks/useAccountDisplayNames";
+import { useDeleteAccount } from "@/hooks/useDeleteAccount";
+import { useEditAccountForm } from "@/hooks/useEditAccountForm";
+import { useUpdateAccount } from "@/hooks/useUpdateAccount";
+import type { UpdateAccountData } from "@/services/edit-account-service";
 import { Ionicons } from "@expo/vector-icons";
+import type { Account } from "@rizqi/db";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -30,23 +47,6 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { BankDetailsSection } from "@/components/add-account/BankDetailsSection";
-import { BalanceChangedSheet } from "@/components/edit-account/BalanceChangedSheet";
-import { DeleteAccountSheet } from "@/components/edit-account/DeleteAccountSheet";
-import { ReadOnlyDropdown } from "@/components/edit-account/ReadOnlyDropdown";
-import { PageHeader } from "@/components/navigation/PageHeader";
-import { Button } from "@/components/ui/Button";
-import { TextField } from "@/components/ui/TextField";
-import { ACCOUNT_TYPES, CURRENCIES } from "@/constants/accounts";
-import { palette } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
-import { useAccountById } from "@/hooks/useAccountById";
-import { useAccountDisplayName } from "@/hooks/useAccountDisplayNames";
-import { useDeleteAccount } from "@/hooks/useDeleteAccount";
-import { useEditAccountForm } from "@/hooks/useEditAccountForm";
-import { useUpdateAccount } from "@/hooks/useUpdateAccount";
-import { useKeyboardVisibility } from "@/hooks";
-import type { UpdateAccountData } from "@/services/edit-account-service";
 
 // =============================================================================
 // Component
@@ -121,11 +121,7 @@ export default function EditAccount(): React.ReactNode {
 
 interface EditAccountFormProps {
   readonly account: Account;
-  readonly bankDetails: {
-    readonly bankName: string;
-    readonly cardLast4: string;
-    readonly smsSenderName: string;
-  } | null;
+  readonly bankDetails: UseAccountByIdResult["bankDetails"];
   readonly isDark: boolean;
   readonly isKeyboardVisible: boolean;
   readonly bottomInset: number;
@@ -157,7 +153,7 @@ function EditAccountForm({
     updateField,
     toggleDefault,
     validate,
-  } = useEditAccountForm(account, bankDetails ?? undefined);
+  } = useEditAccountForm(account, bankDetails);
 
   const [isBankDetailsExpanded, setIsBankDetailsExpanded] = useState(
     Boolean(bankDetails)
