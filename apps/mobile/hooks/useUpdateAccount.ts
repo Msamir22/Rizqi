@@ -25,13 +25,8 @@ import {
   type ServiceResult,
 } from "../services/edit-account-service";
 import { getCurrentUserId } from "../services/supabase";
+import { safeNotificationHaptic } from "../utils/haptics";
 import { logger } from "../utils/logger";
-
-function logHapticsFailure(err: unknown): void {
-  logger.warn("haptics_failed", {
-    message: err instanceof Error ? err.message : String(err),
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -119,9 +114,10 @@ export function useUpdateAccount(): UseUpdateAccountResult {
           throw new Error(result.error ?? "Unknown error updating account");
         }
 
-        Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Success
-        ).catch(logHapticsFailure);
+        safeNotificationHaptic(
+          Haptics.NotificationFeedbackType.Success,
+          "updateAccount_success"
+        );
 
         showToast({
           type: "success",
@@ -131,11 +127,11 @@ export function useUpdateAccount(): UseUpdateAccountResult {
 
         router.back();
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Unknown error";
-        logger.error("updateAccount_flow_failed", { message });
+        logger.error("updateAccount_flow_failed", err);
 
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(
-          logHapticsFailure
+        safeNotificationHaptic(
+          Haptics.NotificationFeedbackType.Error,
+          "updateAccount_error"
         );
 
         showToast({

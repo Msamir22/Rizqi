@@ -11,12 +11,6 @@ import { logger } from "../utils/logger";
 import { useMarketRates } from "./useMarketRates";
 import { usePreferredCurrency } from "./usePreferredCurrency";
 
-function toLogContext(
-  err: unknown
-): { readonly message: string } | { readonly error: unknown } {
-  return err instanceof Error ? { message: err.message } : { error: err };
-}
-
 interface UseAccountsResult {
   readonly accounts: Account[];
   readonly isLoading: boolean;
@@ -94,7 +88,7 @@ export function useAccounts(): UseAccountsResult {
         setIsLoading(false);
       },
       error: (err: unknown) => {
-        logger.error("useAccounts_observation_failed", toLogContext(err));
+        logger.error("useAccounts_observation_failed", err);
         setError(err instanceof Error ? err : new Error(String(err)));
         setIsLoading(false);
       },
@@ -153,7 +147,7 @@ export function useBankAccounts(): UseBankAccountsResult {
           setIsLoadingAccounts(false);
         },
         error: (err: unknown) => {
-          logger.error("useBankAccounts_observation_failed", toLogContext(err));
+          logger.error("useBankAccounts_observation_failed", err);
           setAccountsError(err instanceof Error ? err : new Error(String(err)));
           setIsLoadingAccounts(false);
         },
@@ -177,10 +171,7 @@ export function useBankAccounts(): UseBankAccountsResult {
           setIsLoadingDetails(false);
         },
         error: (err: unknown) => {
-          logger.error(
-            "useBankAccounts_details_fetch_failed",
-            toLogContext(err)
-          );
+          logger.error("useBankAccounts_details_fetch_failed", err);
           setDetailsError(err instanceof Error ? err : new Error(String(err)));
           setIsLoadingDetails(false);
         },
@@ -238,7 +229,7 @@ export function useTopAccounts(limit: number = 3): UseTopAccountsResult {
         setIsLoading(false);
       },
       error: (err: unknown) => {
-        logger.error("useTopAccounts_observation_failed", toLogContext(err));
+        logger.error("useTopAccounts_observation_failed", err);
         setIsLoading(false);
       },
     });
@@ -277,7 +268,7 @@ export function useAccount(accountId: string | null): UseAccountResult {
           setIsLoading(false);
         },
         error: (err: unknown) => {
-          logger.error("useAccount_observation_failed", toLogContext(err));
+          logger.error("useAccount_observation_failed", err);
           setError(err instanceof Error ? err : new Error(String(err)));
           setIsLoading(false);
         },

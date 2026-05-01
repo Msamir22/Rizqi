@@ -138,7 +138,7 @@ export async function checkAccountNameUniqueness(
       error instanceof Error
         ? error.message
         : "Unknown error checking account name uniqueness";
-    logger.error("checkAccountNameUniqueness failed", { message });
+    logger.error("checkAccountNameUniqueness_failed", error);
     return { isUnique: false, error: message };
   }
 }
@@ -321,7 +321,7 @@ export async function deleteAccountWithCascade(
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unknown error deleting account";
-    logger.error("deleteAccountWithCascade failed", { message });
+    logger.error("deleteAccountWithCascade_failed", error);
     return { success: false, error: message };
   }
 }
@@ -443,7 +443,7 @@ export async function updateAccountWithBalanceAdjustment(
       error instanceof Error
         ? error.message
         : "Unknown error creating balance adjustment transaction";
-    logger.error("createBalanceAdjustmentTransaction failed", { message });
+    logger.error("createBalanceAdjustmentTransaction_failed", error);
     return { success: false, error: message };
   }
 }

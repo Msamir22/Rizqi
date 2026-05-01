@@ -86,7 +86,7 @@ export function useCreateAccount(): UseCreateAccountResult {
         router.back();
       } catch (err) {
         const error = err instanceof Error ? err : new Error("Unknown error");
-        logger.error("createAccount failed", { message: error.message });
+        logger.error("createAccount_flow_failed", error);
         setError(error);
 
         showToast({

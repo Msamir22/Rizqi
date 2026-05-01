@@ -22,13 +22,8 @@ import {
   deleteAccountWithCascade,
   type ServiceResult,
 } from "../services/edit-account-service";
+import { safeNotificationHaptic } from "../utils/haptics";
 import { logger } from "../utils/logger";
-
-function logHapticsFailure(err: unknown): void {
-  logger.warn("haptics_failed", {
-    message: err instanceof Error ? err.message : String(err),
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -139,10 +134,7 @@ export function useDeleteAccount(accountId: string): UseDeleteAccountResult {
           });
         }
       } catch (err) {
-        logger.error(
-          "deleteAccount_count_fetch_failed",
-          err instanceof Error ? { message: err.message } : { error: err }
-        );
+        logger.error("deleteAccount_count_fetch_failed", err);
       } finally {
         if (!cancelled) {
           setIsLoadingCounts(false);
@@ -151,10 +143,7 @@ export function useDeleteAccount(accountId: string): UseDeleteAccountResult {
     };
 
     fetchCounts().catch((err: unknown) => {
-      logger.error(
-        "deleteAccount_count_fetch_unhandled",
-        err instanceof Error ? { message: err.message } : { error: err }
-      );
+      logger.error("deleteAccount_count_fetch_unhandled", err);
     });
 
     return () => {
@@ -175,9 +164,10 @@ export function useDeleteAccount(accountId: string): UseDeleteAccountResult {
           throw new Error(result.error ?? "Unknown error deleting account");
         }
 
-        Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Success
-        ).catch(logHapticsFailure);
+        safeNotificationHaptic(
+          Haptics.NotificationFeedbackType.Success,
+          "deleteAccount_success"
+        );
 
         showToast({
           type: "success",
@@ -187,11 +177,11 @@ export function useDeleteAccount(accountId: string): UseDeleteAccountResult {
 
         router.back();
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Unknown error";
-        logger.error("deleteAccount_flow_failed", { message });
+        logger.error("deleteAccount_flow_failed", err);
 
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(
-          logHapticsFailure
+        safeNotificationHaptic(
+          Haptics.NotificationFeedbackType.Error,
+          "deleteAccount_error"
         );
 
         showToast({

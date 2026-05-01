@@ -90,10 +90,7 @@ export function useAccountById(id: string): UseAccountByIdResult {
         }
       } catch (err: unknown) {
         if (!isActive || requestId !== bankDetailsRequestIdRef.current) return;
-        logger.error(
-          "useAccountById_bank_details_fetch_failed",
-          err instanceof Error ? { message: err.message } : { error: err }
-        );
+        logger.error("useAccountById_bank_details_fetch_failed", err);
         setBankDetails(null);
       } finally {
         if (isActive && requestId === bankDetailsRequestIdRef.current) {
@@ -109,10 +106,7 @@ export function useAccountById(id: string): UseAccountByIdResult {
         void loadBankDetails(record);
       },
       error: (err: unknown) => {
-        logger.error(
-          "useAccountById_observation_failed",
-          err instanceof Error ? { message: err.message } : { error: err }
-        );
+        logger.error("useAccountById_observation_failed", err);
         setAccount(null);
         setBankDetails(null);
         setIsLoading(false);
