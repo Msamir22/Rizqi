@@ -163,7 +163,9 @@ const CURRENCY_SYMBOLS: Partial<Record<CurrencyType, string>> = {
 
 /**
  * Default decimal precision per currency.
- * Most currencies use 2 decimal places (ISO 4217 standard).
+ * Most currencies allow up to 2 decimal places (ISO 4217 standard).
+ * Whole amounts hide their fractional part unless the caller overrides
+ * `minimumFractionDigits`.
  * BHD/KWD/OMR = 3 (ISO 4217 three-decimal currencies).
  * BTC = 8 (satoshi precision).
  * Override per call via `minimumFractionDigits`/`maximumFractionDigits`.
@@ -179,7 +181,17 @@ const CURRENCY_PRECISION: Partial<Record<CurrencyType, number>> = {
 };
 
 /** Default precision for currencies not listed in CURRENCY_PRECISION (ISO 4217 standard) */
-const DEFAULT_PRECISION = 0;
+const DEFAULT_PRECISION = 2;
+
+function hasNonZeroFractionAtPrecision(
+  amount: number,
+  precision: number
+): boolean {
+  if (precision <= 0) return false;
+  const factor = 10 ** precision;
+  const roundedMinorUnits = Math.round(Math.abs(amount) * factor);
+  return roundedMinorUnits % factor !== 0;
+}
 
 export const formatCurrency = ({
   amount,
@@ -196,10 +208,14 @@ export const formatCurrency = ({
 }): string => {
   // Use currency-specific precision when caller doesn't override
   const precision = CURRENCY_PRECISION[currency] ?? DEFAULT_PRECISION;
-  const minDigits = minimumFractionDigits ?? precision;
-  const maxDigits = maximumFractionDigits ?? precision;
   // Normalize -0 to 0 (IEEE 754 artifact from floating-point arithmetic)
   const normalizedAmount = amount || 0;
+  const hasFraction = hasNonZeroFractionAtPrecision(
+    normalizedAmount,
+    precision
+  );
+  const minDigits = minimumFractionDigits ?? (hasFraction ? precision : 0);
+  const maxDigits = maximumFractionDigits ?? precision;
 
   const formattedNumber = new Intl.NumberFormat("en-US", {
     style: "decimal",
