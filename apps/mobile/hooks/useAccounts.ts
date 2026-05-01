@@ -128,11 +128,12 @@ export function useBankAccounts(): UseBankAccountsResult {
   const [bankDetails, setBankDetails] = useState<readonly BankDetails[]>([]);
   const [isLoadingAccounts, setIsLoadingAccounts] = useState(true);
   const [isLoadingDetails, setIsLoadingDetails] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [accountsError, setAccountsError] = useState<Error | null>(null);
+  const [detailsError, setDetailsError] = useState<Error | null>(null);
 
   useEffect(() => {
     setIsLoadingAccounts(true);
-    setError(null);
+    setAccountsError(null);
 
     const accountsCollection = database.get<Account>("accounts");
     const subscription = accountsCollection
@@ -141,12 +142,12 @@ export function useBankAccounts(): UseBankAccountsResult {
       .subscribe({
         next: (result) => {
           setAccounts(result);
-          setError(null);
+          setAccountsError(null);
           setIsLoadingAccounts(false);
         },
         error: (err: unknown) => {
           console.error("Error observing bank accounts:", err);
-          setError(err instanceof Error ? err : new Error(String(err)));
+          setAccountsError(err instanceof Error ? err : new Error(String(err)));
           setIsLoadingAccounts(false);
         },
       });
@@ -156,7 +157,7 @@ export function useBankAccounts(): UseBankAccountsResult {
 
   useEffect(() => {
     setIsLoadingDetails(true);
-    setError(null);
+    setDetailsError(null);
 
     const bankDetailsCollection = database.get<BankDetails>("bank_details");
     const subscription = bankDetailsCollection
@@ -165,12 +166,12 @@ export function useBankAccounts(): UseBankAccountsResult {
       .subscribe({
         next: (result) => {
           setBankDetails(result);
-          setError(null);
+          setDetailsError(null);
           setIsLoadingDetails(false);
         },
         error: (err: unknown) => {
           console.error("Error observing bank details:", err);
-          setError(err instanceof Error ? err : new Error(String(err)));
+          setDetailsError(err instanceof Error ? err : new Error(String(err)));
           setIsLoadingDetails(false);
         },
       });
@@ -196,7 +197,7 @@ export function useBankAccounts(): UseBankAccountsResult {
   return {
     bankAccounts,
     isLoading: isLoadingAccounts || isLoadingDetails,
-    error,
+    error: accountsError ?? detailsError,
   };
 }
 

@@ -24,6 +24,7 @@ import {
   type TransactionType,
 } from "@rizqi/db";
 import { Q } from "@nozbe/watermelondb";
+import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -171,6 +172,11 @@ export async function updateAccountWithinWriter(
   const accountsCollection = database.get<Account>("accounts");
   const existingAccount = await accountsCollection.find(accountId);
 
+  if (existingAccount.deleted) {
+    logger.error(`Attempted to update deleted account (ID: ${accountId})`);
+    throw new Error("Cannot update a deleted account");
+  }
+
   // Snapshot BEFORE mutating — this is the source of truth for any paired
   // balance-adjustment transaction (defends against stale form state).
   const previousBalance = existingAccount.balance;
@@ -202,10 +208,15 @@ export async function updateAccountWithinWriter(
 
   // Update bank details if this is a bank account
   if (existingAccount.isBank) {
-    const bankDetailRecords = await existingAccount.bankDetails.fetch();
-    if (bankDetailRecords.length > 0) {
-      const bankDetail = bankDetailRecords[0] as BankDetails;
-      await bankDetail.update((bd) => {
+    const bankDetailRecords =
+      (await existingAccount.bankDetails.fetch()) as BankDetails[];
+
+    const activeBankDetail = bankDetailRecords.find(
+      (record) => record.deleted !== true
+    );
+
+    if (activeBankDetail) {
+      await activeBankDetail.update((bd) => {
         bd.bankName = data.bankName;
         bd.cardLast4 = data.cardLast4;
         bd.smsSenderName = data.smsSenderName;
