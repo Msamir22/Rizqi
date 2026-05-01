@@ -206,9 +206,17 @@ export async function updateAccountWithinWriter(
     if (bankDetailRecords.length > 0) {
       const bankDetail = bankDetailRecords[0] as BankDetails;
       await bankDetail.update((bd) => {
-        bd.bankName = data.bankName ?? "";
-        bd.cardLast4 = data.cardLast4 ?? "";
-        bd.smsSenderName = data.smsSenderName ?? "";
+        bd.bankName = data.bankName;
+        bd.cardLast4 = data.cardLast4;
+        bd.smsSenderName = data.smsSenderName;
+      });
+    } else {
+      await database.get<BankDetails>("bank_details").create((bd) => {
+        bd.accountId = accountId;
+        bd.bankName = data.bankName;
+        bd.cardLast4 = data.cardLast4;
+        bd.smsSenderName = data.smsSenderName;
+        bd.deleted = false;
       });
     }
   }

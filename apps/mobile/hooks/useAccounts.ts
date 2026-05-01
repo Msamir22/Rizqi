@@ -137,10 +137,11 @@ export function useBankAccounts(): UseBankAccountsResult {
     const accountsCollection = database.get<Account>("accounts");
     const subscription = accountsCollection
       .query(Q.where("deleted", false), Q.where("type", "BANK"))
-      .observe()
+      .observeWithColumns(["balance"])
       .subscribe({
         next: (result) => {
           setAccounts(result);
+          setError(null);
           setIsLoadingAccounts(false);
         },
         error: (err: unknown) => {
@@ -155,6 +156,7 @@ export function useBankAccounts(): UseBankAccountsResult {
 
   useEffect(() => {
     setIsLoadingDetails(true);
+    setError(null);
 
     const bankDetailsCollection = database.get<BankDetails>("bank_details");
     const subscription = bankDetailsCollection
@@ -163,6 +165,7 @@ export function useBankAccounts(): UseBankAccountsResult {
       .subscribe({
         next: (result) => {
           setBankDetails(result);
+          setError(null);
           setIsLoadingDetails(false);
         },
         error: (err: unknown) => {

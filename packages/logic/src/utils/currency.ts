@@ -179,7 +179,7 @@ const CURRENCY_PRECISION: Partial<Record<CurrencyType, number>> = {
 };
 
 /** Default precision for currencies not listed in CURRENCY_PRECISION (ISO 4217 standard) */
-const DEFAULT_PRECISION = 2;
+const DEFAULT_PRECISION = 0;
 
 export const formatCurrency = ({
   amount,

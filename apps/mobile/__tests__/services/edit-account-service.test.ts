@@ -159,6 +159,7 @@ const {
   __seed: mockSeed,
   __clearStores: mockClearStores,
   __rewireMocks: mockRewire,
+  __getStore: mockGetStore,
 } = jest.requireMock<MockDbApi>("@rizqi/db");
 
 // ---------------------------------------------------------------------------
@@ -718,6 +719,38 @@ describe("edit-account-service", () => {
       expect(bankDetail.bankName).toBe("New Bank");
       expect(bankDetail.cardLast4).toBe("5678");
       expect(bankDetail.smsSenderName).toBe("NewSMS");
+    });
+
+    it("creates missing bank details when editing a bank account with no detail row", async () => {
+      const acc = seedAccount("acc-1", {
+        name: "Bank Account",
+        type: "BANK",
+        isBank: true,
+      });
+      acc.bankDetails.fetch.mockResolvedValue([]);
+
+      await updateAccountWithBalanceAdjustment(
+        "acc-1",
+        {
+          name: "Bank Account",
+          balance: 0,
+          isDefault: false,
+          bankName: "CIB",
+          cardLast4: "1234",
+          smsSenderName: "CIBSMS",
+        },
+        null
+      );
+
+      const createdDetails = Array.from(mockGetStore("bank_details").values());
+      expect(createdDetails).toHaveLength(1);
+      expect(createdDetails[0]).toMatchObject({
+        accountId: "acc-1",
+        bankName: "CIB",
+        cardLast4: "1234",
+        smsSenderName: "CIBSMS",
+        deleted: false,
+      });
     });
 
     it("returns success: false when the account is not found", async () => {
