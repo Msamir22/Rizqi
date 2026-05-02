@@ -139,6 +139,10 @@ jest.mock("@rizqi/db", () => {
   };
 });
 
+jest.mock("@/services/supabase", () => ({
+  getCurrentUserId: (): Promise<string> => Promise.resolve("user-1"),
+}));
+
 // ---------------------------------------------------------------------------
 // Import module under test
 // ---------------------------------------------------------------------------

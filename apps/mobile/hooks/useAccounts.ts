@@ -7,6 +7,7 @@ import { Account, BankDetails, database } from "@rizqi/db";
 import { calculateAccountsTotalBalance, convertCurrency } from "@rizqi/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
+import { observeOwnedById, queryOwned } from "@/services/user-data-access";
 import { useCurrentUserId } from "./useCurrentUserId";
 import { logger } from "../utils/logger";
 import { useMarketRates } from "./useMarketRates";
@@ -89,8 +90,9 @@ export function useAccounts(): UseAccountsResult {
 
     const accountsCollection = database.get<Account>("accounts");
 
-    const query = accountsCollection.query(
-      Q.where("user_id", userId),
+    const query = queryOwned(
+      accountsCollection,
+      userId,
       Q.where("deleted", false)
     );
 
@@ -162,12 +164,12 @@ export function useBankAccounts(): UseBankAccountsResult {
     setAccountsError(null);
 
     const accountsCollection = database.get<Account>("accounts");
-    const subscription = accountsCollection
-      .query(
-        Q.where("user_id", userId),
-        Q.where("deleted", false),
-        Q.where("type", "BANK")
-      )
+    const subscription = queryOwned(
+      accountsCollection,
+      userId,
+      Q.where("deleted", false),
+      Q.where("type", "BANK")
+    )
       .observeWithColumns(["balance"])
       .subscribe({
         next: (result) => {
@@ -185,13 +187,41 @@ export function useBankAccounts(): UseBankAccountsResult {
     return () => subscription.unsubscribe();
   }, [userId, isResolvingUser]);
 
+  const accountIds = useMemo(
+    () => accounts.map((account) => account.id),
+    [accounts]
+  );
+  const accountIdsKey = useMemo(() => accountIds.join("|"), [accountIds]);
+
   useEffect(() => {
+    if (isResolvingUser) {
+      setBankDetails([]);
+      setIsLoadingDetails(true);
+      return;
+    }
+
+    if (!userId) {
+      setBankDetails([]);
+      setIsLoadingDetails(false);
+      return;
+    }
+
+    if (accountIds.length === 0) {
+      setBankDetails([]);
+      setIsLoadingDetails(false);
+      setDetailsError(null);
+      return;
+    }
+
     setIsLoadingDetails(true);
     setDetailsError(null);
 
     const bankDetailsCollection = database.get<BankDetails>("bank_details");
     const subscription = bankDetailsCollection
-      .query(Q.where("deleted", false))
+      .query(
+        Q.where("account_id", Q.oneOf(accountIds)),
+        Q.where("deleted", false)
+      )
       .observe()
       .subscribe({
         next: (result) => {
@@ -207,7 +237,7 @@ export function useBankAccounts(): UseBankAccountsResult {
       });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [accountIds, accountIdsKey, userId, isResolvingUser]);
 
   const bankAccounts = useMemo<readonly BankAccountWithDetails[]>(() => {
     const detailsByAccountId = new Map<string, BankDetails>();
@@ -256,8 +286,9 @@ export function useTopAccounts(limit: number = 3): UseTopAccountsResult {
 
     const accountsCollection = database.get<Account>("accounts");
 
-    const query = accountsCollection.query(
-      Q.where("user_id", userId),
+    const query = queryOwned(
+      accountsCollection,
+      userId,
       Q.where("deleted", false),
       Q.sortBy("created_at", Q.desc),
       Q.take(limit)
@@ -315,24 +346,21 @@ export function useAccount(accountId: string | null): UseAccountResult {
 
     const accountsCollection = database.get<Account>("accounts");
 
-    const subscription = accountsCollection
-      .findAndObserve(accountId)
-      .subscribe({
-        next: (result) => {
-          if (result.userId !== userId) {
-            // Foreign record — treat as not found.
-            setAccount(null);
-          } else {
-            setAccount(result);
-          }
-          setIsLoading(false);
-        },
-        error: (err: unknown) => {
-          logger.error("useAccount_observation_failed", err);
-          setError(err instanceof Error ? err : new Error(String(err)));
-          setIsLoading(false);
-        },
-      });
+    const subscription = observeOwnedById<Account>(
+      accountsCollection,
+      accountId,
+      userId
+    ).subscribe({
+      next: (result) => {
+        setAccount(result);
+        setIsLoading(false);
+      },
+      error: (err: unknown) => {
+        logger.error("useAccount_observation_failed", err);
+        setError(err instanceof Error ? err : new Error(String(err)));
+        setIsLoading(false);
+      },
+    });
 
     return () => subscription.unsubscribe();
   }, [accountId, userId, isResolvingUser]);

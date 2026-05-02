@@ -129,6 +129,7 @@ jest.mock("@nozbe/watermelondb", () => ({
     where: (...args: readonly unknown[]) => ({ kind: "where", args }),
     sortBy: (...args: readonly unknown[]) => ({ kind: "sortBy", args }),
     take: (...args: readonly unknown[]) => ({ kind: "take", args }),
+    oneOf: (...args: readonly unknown[]) => ({ kind: "oneOf", args }),
     desc: "desc",
   },
 }));
@@ -141,6 +142,17 @@ jest.mock("../../hooks/usePreferredCurrency", () => ({
   usePreferredCurrency: (): { preferredCurrency: "USD" } => ({
     preferredCurrency: "USD",
   }),
+}));
+
+jest.mock("../../hooks/useCurrentUserId", () => ({
+  useCurrentUserId: (): { userId: string; isResolvingUser: boolean } => ({
+    userId: "user-1",
+    isResolvingUser: false,
+  }),
+}));
+
+jest.mock("../../services/supabase", () => ({
+  getCurrentUserId: (): Promise<string> => Promise.resolve("user-1"),
 }));
 
 // Import AFTER mocks
@@ -221,6 +233,10 @@ describe("useBankAccounts", () => {
     const { result } = renderHook();
 
     RTR.act(() => {
+      mockAccountObservers[0].next([{ id: "acc-1", name: "Bank" }]);
+    });
+
+    RTR.act(() => {
       mockBankDetailsObservers[0].error(new Error("details observer failed"));
     });
     expect(result.current.error?.message).toBe("details observer failed");
@@ -232,5 +248,42 @@ describe("useBankAccounts", () => {
     });
 
     expect(result.current.error).toBeNull();
+  });
+
+  it("queries bank_details only for the owned bank account ids", () => {
+    renderHook();
+
+    RTR.act(() => {
+      mockAccountObservers[0].next([{ id: "acc-1", name: "Bank" }]);
+    });
+
+    expect(mockBankDetailsCollection.query).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "where",
+        args: [
+          "account_id",
+          expect.objectContaining({ kind: "oneOf", args: [["acc-1"]] }),
+        ],
+      }),
+      expect.objectContaining({ kind: "where", args: ["deleted", false] })
+    );
+  });
+
+  it("does not join a foreign bank-detail emission into owned accounts", () => {
+    const { result } = renderHook();
+
+    RTR.act(() => {
+      mockAccountObservers[0].next([{ id: "acc-1", name: "Bank" }]);
+    });
+
+    RTR.act(() => {
+      mockBankDetailsObservers[0].next([
+        { accountId: "foreign-acc", bankName: "Other Bank" },
+      ]);
+    });
+
+    expect(result.current.bankAccounts).toEqual([
+      { account: { id: "acc-1", name: "Bank" }, bankDetails: undefined },
+    ]);
   });
 });

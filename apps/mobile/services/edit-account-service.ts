@@ -26,6 +26,11 @@ import {
 import { Q } from "@nozbe/watermelondb";
 import { t } from "i18next";
 import { logger } from "@/utils/logger";
+import {
+  USER_DATA_ACCESS_ERROR_CODES,
+  findOwnedById,
+  queryOwned,
+} from "./user-data-access";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -130,7 +135,6 @@ export async function checkAccountNameUniqueness(
     const accountsCollection = database.get<Account>("accounts");
 
     const conditions = [
-      Q.where("user_id", userId),
       Q.where("currency", currency),
       Q.where("deleted", Q.notEq(true)),
     ];
@@ -139,9 +143,11 @@ export async function checkAccountNameUniqueness(
       conditions.push(Q.where("id", Q.notEq(excludeAccountId)));
     }
 
-    const existingAccounts = await accountsCollection
-      .query(...conditions)
-      .fetch();
+    const existingAccounts = await queryOwned(
+      accountsCollection,
+      userId,
+      ...conditions
+    ).fetch();
 
     // Case-insensitive name comparison — WatermelonDB doesn't support
     // case-insensitive queries, so we filter in JS.
@@ -197,17 +203,28 @@ export async function updateAccountWithinWriter(
 
   let existingAccount: Account;
   try {
-    existingAccount = await accountsCollection.find(accountId);
-  } catch {
-    logger.error(`Account not found (ID: ${accountId})`);
-    throw new Error(t("account_not_found"));
-  }
-
-  if (existingAccount.userId !== currentUserId) {
-    logger.error(
-      `Attempted to update account with mismatched userId (ID: ${accountId})`
+    existingAccount = await findOwnedById(
+      accountsCollection,
+      accountId,
+      currentUserId
     );
-    throw new Error(EDIT_ACCOUNT_ERROR_CODES.OWNERSHIP_FAILED);
+  } catch (error: unknown) {
+    if (
+      error instanceof Error &&
+      error.message === USER_DATA_ACCESS_ERROR_CODES.OWNERSHIP_FAILED
+    ) {
+      logger.error(
+        `Attempted to update account with mismatched userId (ID: ${accountId})`
+      );
+      throw new Error(EDIT_ACCOUNT_ERROR_CODES.OWNERSHIP_FAILED);
+    }
+
+    const message =
+      error instanceof Error && error.message
+        ? error.message
+        : t("account_not_found");
+    logger.error(`Account not found (ID: ${accountId})`);
+    throw new Error(message);
   }
 
   if (existingAccount.deleted) {
@@ -312,14 +329,20 @@ export async function deleteAccountWithCascade(
 
       let account: Account;
       try {
-        account = await accountsCollection.find(accountId);
-      } catch {
-        notFound = true;
-        return;
-      }
-
-      if (account.userId !== currentUserId) {
-        ownershipFailed = true;
+        account = await findOwnedById(
+          accountsCollection,
+          accountId,
+          currentUserId
+        );
+      } catch (error: unknown) {
+        if (
+          error instanceof Error &&
+          error.message === USER_DATA_ACCESS_ERROR_CODES.OWNERSHIP_FAILED
+        ) {
+          ownershipFailed = true;
+        } else {
+          notFound = true;
+        }
         return;
       }
 
@@ -499,7 +522,7 @@ export async function updateAccountWithBalanceAdjustment(
       if (adjustment !== null) {
         await createBalanceAdjustmentTransactionWithinWriter(
           accountId,
-          adjustment.userId,
+          userId,
           adjustment.currency,
           previousBalance,
           data.balance
