@@ -75,15 +75,15 @@ function AccountCardImpl({
 
     switch (account.type) {
       case "BANK":
-        return "Bank Account";
+        return t("account_type_bank");
       case "DIGITAL_WALLET":
-        return "Digital Wallet";
+        return t("account_type_digital_wallet");
       case "CASH":
-        return "Physical money";
+        return t("account_type_cash");
       default:
         return "";
     }
-  }, [account.currency, account.balance, account.type, latestRates]);
+  }, [account.currency, account.balance, account.type, latestRates, t]);
 
   return (
     <TouchableOpacity

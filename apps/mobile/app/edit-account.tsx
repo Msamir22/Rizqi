@@ -227,7 +227,7 @@ function EditAccountForm({
       );
       showToast({
         type: "error",
-        title: t("validation_balance_invalid"),
+        title: t("validation_balance_invalid_title"),
         message: t("validation_balance_invalid"),
       });
       return;

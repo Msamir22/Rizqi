@@ -71,20 +71,19 @@ export function useMarketRates(): UseMarketRatesResult {
     fetchPreviousDay().catch(console.error);
   }, [database, latestRates]); // Re-fetch when latest rate changes
 
-  // Memoize the return object so consumers can rely on referential stability
-  // between observe emits when the underlying values are unchanged. Without
-  // this, every render of a parent that calls `useMarketRates()` would produce
-  // a fresh object identity (and a fresh `isStale()` boolean from the method
-  // call), defeating `React.memo` on downstream components like `AccountCard`.
-  return useMemo(
+  const memoized = useMemo(
     () => ({
       latestRates,
       previousDayRate,
       isLoading,
       isConnected,
       lastUpdated: latestRates?.createdAt ?? null,
-      isStale: latestRates?.isStale() ?? false,
     }),
     [latestRates, previousDayRate, isLoading, isConnected]
   );
+
+  return {
+    ...memoized,
+    isStale: latestRates?.isStale() ?? false,
+  };
 }

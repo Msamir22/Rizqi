@@ -66,6 +66,9 @@ export function AccountListSkeleton(): React.JSX.Element {
       <AccountCardSkeleton />
       <AccountCardSkeleton />
       <AccountCardSkeleton />
+      <AccountCardSkeleton />
+      <AccountCardSkeleton />
+      <AccountCardSkeleton />
     </View>
   );
 }
