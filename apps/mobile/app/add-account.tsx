@@ -62,6 +62,8 @@ export default function AddAccount(): React.ReactNode {
    * Handles the save action by validating the form and calling the creation hook.
    */
   const handleSave = async (): Promise<void> => {
+    if (isSubmitting) return;
+
     if (validate()) {
       await createAccount(formData);
     }
@@ -81,8 +83,11 @@ export default function AddAccount(): React.ReactNode {
         showBackButton={true}
         backIcon="arrow"
         rightAction={{
-          label: tCommon("save"),
-          onPress: handleSave,
+          label: isSubmitting ? t("saving") : tCommon("save"),
+          onPress: () => {
+            void handleSave();
+          },
+          disabled: isSubmitting,
           loading: isSubmitting,
         }}
       />
@@ -248,8 +253,11 @@ export default function AddAccount(): React.ReactNode {
           style={{ paddingBottom: insets.bottom + 16 }}
         >
           <Button
-            title={isSubmitting ? t("creating") : t("add_new_account")}
-            onPress={handleSave}
+            title={isSubmitting ? t("saving") : t("add_new_account")}
+            onPress={() => {
+              void handleSave();
+            }}
+            disabled={isSubmitting}
             isLoading={isSubmitting}
             variant="primary"
             size="lg"

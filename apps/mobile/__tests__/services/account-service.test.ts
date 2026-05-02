@@ -27,7 +27,11 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/require-await */
 
-import { createCashAccountWithinWriter } from "@/services/account-service";
+import {
+  CREATE_ACCOUNT_ERROR_CODES,
+  createAccountForUser,
+  createCashAccountWithinWriter,
+} from "@/services/account-service";
 
 // =============================================================================
 // Mocks
@@ -37,8 +41,15 @@ import { createCashAccountWithinWriter } from "@/services/account-service";
 // `database` here — `createCashAccountWithinWriter` accepts the collection as
 // a parameter and never touches `database.write`. Mocking the module shape
 // satisfies the `import` chain without bringing the runtime in.
+const mockDatabaseGet = jest.fn();
+const mockDatabaseWrite = jest.fn();
+
 jest.mock("@rizqi/db", () => ({
-  database: { get: jest.fn() },
+  database: {
+    get: (collectionName: string): unknown => mockDatabaseGet(collectionName),
+    write: (writer: () => Promise<void>): Promise<void> =>
+      mockDatabaseWrite(writer) as Promise<void>,
+  },
 }));
 
 jest.mock("@nozbe/watermelondb", () => ({
@@ -56,6 +67,10 @@ jest.mock("@/utils/currency-detection", () => ({
 
 jest.mock("@/utils/logger", () => ({
   logger: { error: jest.fn(), warn: jest.fn(), info: jest.fn() },
+}));
+
+jest.mock("@/services/supabase", () => ({
+  getCurrentUserId: jest.fn(),
 }));
 
 // =============================================================================
@@ -290,5 +305,169 @@ describe("createCashAccountWithinWriter — cash-account idempotency", () => {
 
     expect(createCalls).toHaveLength(1);
     expect(createCalls[0].name).toBe("Pocket Money");
+  });
+});
+
+describe("createAccountForUser", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockDatabaseWrite.mockImplementation((writer: () => Promise<void>) =>
+      writer()
+    );
+  });
+
+  it("creates one account with optional bank details", async () => {
+    const accountCreateCalls: Array<Record<string, unknown>> = [];
+    const bankDetailsCreateCalls: Array<Record<string, unknown>> = [];
+    const accountsCollection = {
+      query: jest.fn().mockReturnValue({
+        fetch: jest.fn().mockResolvedValue([]),
+      }),
+      create: jest.fn(
+        async (writer: (acc: Record<string, unknown>) => void) => {
+          const acc: Record<string, unknown> = {};
+          writer(acc);
+          accountCreateCalls.push({ ...acc });
+          return { id: "account-1", ...acc };
+        }
+      ),
+    };
+    const bankDetailsCollection = {
+      create: jest.fn(
+        async (writer: (details: Record<string, unknown>) => void) => {
+          const details: Record<string, unknown> = {};
+          writer(details);
+          bankDetailsCreateCalls.push({ ...details });
+          return { id: "bank-details-1", ...details };
+        }
+      ),
+    };
+    mockDatabaseGet.mockImplementation((collectionName: string) => {
+      if (collectionName === "accounts") return accountsCollection;
+      if (collectionName === "bank_details") return bankDetailsCollection;
+      throw new Error(`Unexpected collection: ${collectionName}`);
+    });
+
+    const result = await createAccountForUser("user-1", {
+      name: " CIB ",
+      accountType: "BANK",
+      currency: "EGP",
+      balance: "100",
+      bankName: " CIB ",
+      cardLast4: "1234",
+      smsSenderName: " CIBSMS ",
+    });
+
+    expect(result).toEqual({
+      success: true,
+      accountId: "account-1",
+      created: true,
+    });
+    expect(accountCreateCalls).toEqual([
+      expect.objectContaining({
+        userId: "user-1",
+        name: "CIB",
+        type: "BANK",
+        balance: 100,
+        currency: "EGP",
+        deleted: false,
+      }),
+    ]);
+    expect(bankDetailsCreateCalls).toEqual([
+      expect.objectContaining({
+        accountId: "account-1",
+        bankName: "CIB",
+        cardLast4: "1234",
+        smsSenderName: "CIBSMS",
+        deleted: false,
+      }),
+    ]);
+  });
+
+  it("fails closed without creating when an active account with the same name and currency already exists", async () => {
+    const accountsCollection = {
+      query: jest.fn().mockReturnValue({
+        fetch: jest.fn().mockResolvedValue([
+          {
+            id: "existing-account",
+            name: "Cash",
+            userId: "user-1",
+            currency: "EGP",
+            deleted: false,
+          },
+        ]),
+      }),
+      create: jest.fn(),
+    };
+    mockDatabaseGet.mockImplementation((collectionName: string) => {
+      if (collectionName === "accounts") return accountsCollection;
+      throw new Error(`Unexpected collection: ${collectionName}`);
+    });
+
+    const result = await createAccountForUser("user-1", {
+      name: " cash ",
+      accountType: "CASH",
+      currency: "EGP",
+      balance: "0",
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: CREATE_ACCOUNT_ERROR_CODES.DUPLICATE_ACCOUNT,
+    });
+    expect(accountsCollection.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects concurrent duplicate create requests before the second write starts", async () => {
+    let releaseWriter: () => void = () => undefined;
+    const writerGate = new Promise<void>((resolve) => {
+      releaseWriter = resolve;
+    });
+    const accountsCollection = {
+      query: jest.fn().mockReturnValue({
+        fetch: jest.fn().mockResolvedValue([]),
+      }),
+      create: jest.fn(
+        async (writer: (acc: Record<string, unknown>) => void) => {
+          const acc: Record<string, unknown> = {};
+          writer(acc);
+          return { id: "account-1", ...acc };
+        }
+      ),
+    };
+    mockDatabaseGet.mockImplementation((collectionName: string) => {
+      if (collectionName === "accounts") return accountsCollection;
+      throw new Error(`Unexpected collection: ${collectionName}`);
+    });
+    mockDatabaseWrite.mockImplementationOnce(
+      async (writer: () => Promise<void>) => {
+        await writerGate;
+        await writer();
+      }
+    );
+
+    const data = {
+      name: "Cash",
+      accountType: "CASH" as const,
+      currency: "EGP" as const,
+      balance: "0",
+    };
+
+    const firstCreate = createAccountForUser("user-1", data);
+    const secondCreate = await createAccountForUser("user-1", data);
+
+    expect(secondCreate).toEqual({
+      success: false,
+      error: CREATE_ACCOUNT_ERROR_CODES.DUPLICATE_IN_FLIGHT,
+    });
+    expect(mockDatabaseWrite).toHaveBeenCalledTimes(1);
+
+    releaseWriter();
+    await expect(firstCreate).resolves.toEqual({
+      success: true,
+      accountId: "account-1",
+      created: true,
+    });
+    expect(accountsCollection.create).toHaveBeenCalledTimes(1);
   });
 });

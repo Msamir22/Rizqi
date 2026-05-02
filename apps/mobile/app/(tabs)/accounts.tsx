@@ -8,6 +8,7 @@ import { buildAccountDisplayNames } from "@/utils/account-display";
 import { PageHeader } from "@/components/navigation/PageHeader";
 import { Button, ButtonVariant } from "@/components/ui/Button";
 import { palette } from "@/constants/colors";
+import { TAB_BAR_HEIGHT } from "@/constants/ui";
 import { useAccounts } from "@/hooks";
 import { useMarketRates } from "@/hooks/useMarketRates";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
@@ -18,6 +19,7 @@ import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { ReactElement, useCallback, useMemo, useState } from "react";
 import { FlatList, type ListRenderItem, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 /**
  * Renders a button for creating a new account.
@@ -84,6 +86,7 @@ function TotalBalanceCard({
  */
 export default function Accounts(): ReactElement {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation("accounts");
   const { t: tCommon } = useTranslation("common");
   const { latestRates } = useMarketRates();
@@ -93,6 +96,7 @@ export default function Accounts(): ReactElement {
   const { preferredCurrency } = usePreferredCurrency();
   const isEmpty = accounts.length === 0;
   const isHydrating = isLoading && isEmpty;
+  const listBottomPadding = TAB_BAR_HEIGHT + insets.bottom + 24;
 
   const filteredAccounts = useMemo(() => {
     if (selectedFilter === "ALL") return accounts;
@@ -130,14 +134,6 @@ export default function Accounts(): ReactElement {
   const keyExtractor = useCallback(
     (item: (typeof filteredAccounts)[number]) => item.id,
     []
-  );
-
-  const renderFooter = (): ReactElement => (
-    <View>
-      {filteredAccounts.length > 0 && (
-        <AddAccountButton onPress={handleAddAccount} />
-      )}
-    </View>
   );
 
   const renderEmpty = (): ReactElement => (
@@ -200,10 +196,12 @@ export default function Accounts(): ReactElement {
             data={filteredAccounts}
             keyExtractor={keyExtractor}
             renderItem={renderItem}
-            ListFooterComponent={renderFooter}
             ListEmptyComponent={renderEmpty}
             showsVerticalScrollIndicator={false}
-            contentContainerClassName="flex-grow"
+            contentContainerStyle={{
+              flexGrow: 1,
+              paddingBottom: listBottomPadding,
+            }}
             removeClippedSubviews
             maxToRenderPerBatch={10}
             windowSize={5}

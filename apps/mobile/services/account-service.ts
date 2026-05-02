@@ -15,8 +15,10 @@
 
 import { detectCurrencyFromTimezone } from "@/utils/currency-detection";
 import { logger } from "@/utils/logger";
-import { Account, type CurrencyType, database } from "@rizqi/db";
+import type { AccountFormData } from "@/validation/account-validation";
+import { Account, BankDetails, type CurrencyType, database } from "@rizqi/db";
 import { Q } from "@nozbe/watermelondb";
+import { queryOwned } from "./user-data-access";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -32,6 +34,14 @@ export interface EnsureCashAccountResult {
   readonly error?: string;
 }
 
+/** Result of the create-account operation. */
+export interface CreateAccountResult {
+  readonly success: boolean;
+  readonly accountId?: string;
+  readonly created?: boolean;
+  readonly error?: string;
+}
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -41,6 +51,17 @@ const CASH_ACCOUNT_TYPE = "CASH";
 
 /** Sentinel error code returned when currency cannot be determined. */
 export const CURRENCY_UNKNOWN_ERROR = "CURRENCY_UNKNOWN";
+
+export const CREATE_ACCOUNT_ERROR_CODES = {
+  USER_ID_REQUIRED: "USER_ID_REQUIRED",
+  DUPLICATE_ACCOUNT: "DUPLICATE_ACCOUNT",
+  DUPLICATE_IN_FLIGHT: "DUPLICATE_IN_FLIGHT",
+} as const;
+
+export type CreateAccountErrorCode =
+  (typeof CREATE_ACCOUNT_ERROR_CODES)[keyof typeof CREATE_ACCOUNT_ERROR_CODES];
+
+const pendingCreateKeys = new Set<string>();
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -86,6 +107,114 @@ export async function createCashAccountWithinWriter(
     acc.deleted = false;
   });
   return { accountId: record.id, created: true };
+}
+
+function buildCreateAccountKey(userId: string, data: AccountFormData): string {
+  return [
+    userId.trim(),
+    data.name.trim().toLowerCase(),
+    data.currency,
+    data.accountType,
+  ].join("|");
+}
+
+/**
+ * Create a user-owned account and optional bank details with duplicate-submit
+ * protection.
+ *
+ * The UI disables submit while this runs, but this service is the defensive
+ * boundary: concurrent creates for the same user/name/currency/type are
+ * rejected before they can enqueue another write, and the writer checks
+ * existing active accounts again before insert.
+ */
+export async function createAccountForUser(
+  userId: string,
+  data: AccountFormData
+): Promise<CreateAccountResult> {
+  const normalizedUserId = userId.trim();
+  if (!normalizedUserId) {
+    return {
+      success: false,
+      error: CREATE_ACCOUNT_ERROR_CODES.USER_ID_REQUIRED,
+    };
+  }
+
+  const createKey = buildCreateAccountKey(normalizedUserId, data);
+  if (pendingCreateKeys.has(createKey)) {
+    return {
+      success: false,
+      error: CREATE_ACCOUNT_ERROR_CODES.DUPLICATE_IN_FLIGHT,
+    };
+  }
+
+  pendingCreateKeys.add(createKey);
+
+  try {
+    let accountId: string | undefined;
+
+    await database.write(async () => {
+      const accountsCollection = database.get<Account>("accounts");
+      const trimmedName = data.name.trim();
+      const existingAccounts = await queryOwned(
+        accountsCollection,
+        normalizedUserId,
+        Q.where("currency", data.currency),
+        Q.where("deleted", Q.notEq(true))
+      ).fetch();
+
+      const duplicateAccount = existingAccounts.some(
+        (account) =>
+          account.name.trim().toLowerCase() === trimmedName.toLowerCase()
+      );
+
+      if (duplicateAccount) {
+        throw new Error(CREATE_ACCOUNT_ERROR_CODES.DUPLICATE_ACCOUNT);
+      }
+
+      const activeAccounts = await queryOwned(
+        accountsCollection,
+        normalizedUserId,
+        Q.where("deleted", Q.notEq(true))
+      ).fetch();
+      const isFirstAccount = activeAccounts.length === 0;
+
+      const account = await accountsCollection.create((acc) => {
+        acc.userId = normalizedUserId;
+        acc.name = trimmedName;
+        acc.type = data.accountType;
+        acc.balance = parseFloat(data.balance);
+        acc.currency = data.currency;
+        acc.deleted = false;
+        acc.isDefault = isFirstAccount;
+      });
+      accountId = account.id;
+
+      if (data.accountType === "BANK") {
+        await database.get<BankDetails>("bank_details").create((details) => {
+          details.accountId = account.id;
+          details.bankName = data.bankName?.trim();
+          details.cardLast4 = data.cardLast4?.trim();
+          details.smsSenderName = data.smsSenderName?.trim();
+          details.deleted = false;
+        });
+      }
+    });
+
+    return { success: true, accountId, created: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message === CREATE_ACCOUNT_ERROR_CODES.DUPLICATE_ACCOUNT) {
+      return {
+        success: false,
+        error: CREATE_ACCOUNT_ERROR_CODES.DUPLICATE_ACCOUNT,
+      };
+    }
+
+    logger.error("createAccountForUser_failed", error);
+    return { success: false, error: message };
+  } finally {
+    pendingCreateKeys.delete(createKey);
+  }
 }
 
 /**
