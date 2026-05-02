@@ -13,6 +13,7 @@
 import { Skeleton } from "@/components/ui/Skeleton";
 import React from "react";
 import { ScrollView, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 /** A label + field row placeholder. */
 function FormRowSkeleton(): React.JSX.Element {
@@ -30,8 +31,13 @@ function FormRowSkeleton(): React.JSX.Element {
  * Form-shaped skeleton for the Edit Account screen.
  */
 export function EditAccountSkeleton(): React.JSX.Element {
+  const insets = useSafeAreaInsets();
+
   return (
-    <View className="flex-1 bg-background dark:bg-background-dark">
+    <View
+      className="flex-1 bg-background dark:bg-background-dark"
+      style={{ paddingTop: insets.top }}
+    >
       {/* Header strip placeholder */}
       <View className="flex-row items-center justify-between px-5 py-4">
         <Skeleton width={32} height={32} borderRadius={16} />
@@ -41,7 +47,7 @@ export function EditAccountSkeleton(): React.JSX.Element {
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
         showsVerticalScrollIndicator={false}
       >
         {/* Hero card */}
