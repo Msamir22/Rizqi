@@ -32,7 +32,6 @@ import { useDeleteAccount } from "@/hooks/useDeleteAccount";
 import { useEditAccountForm } from "@/hooks/useEditAccountForm";
 import { useUpdateAccount } from "@/hooks/useUpdateAccount";
 import type { UpdateAccountData } from "@/services/edit-account-service";
-import { sanitizeBalanceInput } from "@/utils/balance-input";
 import { safeNotificationHaptic } from "@/utils/haptics";
 import { Ionicons } from "@expo/vector-icons";
 import type { Account } from "@rizqi/db";
@@ -371,8 +370,7 @@ function EditAccountForm({
             placeholder="0"
             value={formData.balance}
             onChangeText={(text) => {
-              // Allow negative values (overdrafts) for editing
-              updateField("balance", sanitizeBalanceInput(text));
+              updateField("balance", text);
             }}
             error={errors.balance}
             keyboardType="numeric"

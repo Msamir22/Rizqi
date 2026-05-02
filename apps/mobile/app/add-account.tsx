@@ -25,7 +25,6 @@ import {
   useCreateAccount,
   useKeyboardVisibility,
 } from "@/hooks";
-import { sanitizeNonNegativeBalanceInput } from "@/utils/balance-input";
 
 export default function AddAccount(): React.ReactNode {
   const insets = useSafeAreaInsets();
@@ -225,7 +224,7 @@ export default function AddAccount(): React.ReactNode {
             placeholder="0"
             value={formData.balance}
             onChangeText={(text) => {
-              updateField("balance", sanitizeNonNegativeBalanceInput(text));
+              updateField("balance", text);
             }}
             error={errors.balance}
             keyboardType="numeric"

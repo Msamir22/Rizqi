@@ -35,6 +35,21 @@ describe("accountFormSchema (create)", () => {
     expect(result.errors.balance).toBeDefined();
   });
 
+  it("rejects integer balances with leading zeroes", () => {
+    const result = validateAccountForm({
+      ...baseCreate,
+      balance: "00056465",
+    });
+    expect(result.isValid).toBe(false);
+    expect(result.errors.balance).toBeDefined();
+  });
+
+  it("rejects decimal balances with leading zeroes before a non-zero integer part", () => {
+    const result = validateAccountForm({ ...baseCreate, balance: "01.25" });
+    expect(result.isValid).toBe(false);
+    expect(result.errors.balance).toBeDefined();
+  });
+
   it("rejects negative balance on create", () => {
     const result = validateAccountForm({ ...baseCreate, balance: "-5" });
     expect(result.isValid).toBe(false);
@@ -62,6 +77,15 @@ describe("accountFormSchema (create)", () => {
     const result = validateAccountForm({ ...baseCreate, balance: "100.50" });
     expect(result.isValid).toBe(true);
   });
+
+  it("accepts zero and zero-prefixed decimals", () => {
+    expect(validateAccountForm({ ...baseCreate, balance: "0" }).isValid).toBe(
+      true
+    );
+    expect(
+      validateAccountForm({ ...baseCreate, balance: "0.50" }).isValid
+    ).toBe(true);
+  });
 });
 
 describe("editAccountFormSchema", () => {
@@ -85,6 +109,21 @@ describe("editAccountFormSchema", () => {
     expect(result.errors.balance).toBeDefined();
   });
 
+  it("rejects balances with leading zeroes", () => {
+    const result = validateEditAccountForm({
+      ...baseEdit,
+      balance: "00056465",
+    });
+    expect(result.isValid).toBe(false);
+    expect(result.errors.balance).toBeDefined();
+  });
+
+  it("rejects negative balances with leading zeroes", () => {
+    const result = validateEditAccountForm({ ...baseEdit, balance: "-01.25" });
+    expect(result.isValid).toBe(false);
+    expect(result.errors.balance).toBeDefined();
+  });
+
   it("accepts a valid negative balance (overdraft)", () => {
     const result = validateEditAccountForm({ ...baseEdit, balance: "-5" });
     expect(result.isValid).toBe(true);
@@ -93,6 +132,15 @@ describe("editAccountFormSchema", () => {
   it("accepts a valid negative decimal balance", () => {
     const result = validateEditAccountForm({ ...baseEdit, balance: "-12.50" });
     expect(result.isValid).toBe(true);
+  });
+
+  it("accepts zero-prefixed decimals, including overdrafts smaller than one", () => {
+    expect(
+      validateEditAccountForm({ ...baseEdit, balance: "0.50" }).isValid
+    ).toBe(true);
+    expect(
+      validateEditAccountForm({ ...baseEdit, balance: "-0.50" }).isValid
+    ).toBe(true);
   });
 
   it("rejects a leading minus with no digits", () => {
