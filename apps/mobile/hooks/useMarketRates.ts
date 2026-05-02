@@ -1,6 +1,6 @@
 import type { MarketRate } from "@rizqi/db";
 import { Q } from "@nozbe/watermelondb";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDatabase } from "../providers/DatabaseProvider";
 import { useMarketRatesRealtime } from "../providers/MarketRatesRealtimeProvider";
 
@@ -71,12 +71,19 @@ export function useMarketRates(): UseMarketRatesResult {
     fetchPreviousDay().catch(console.error);
   }, [database, latestRates]); // Re-fetch when latest rate changes
 
+  const memoized = useMemo(
+    () => ({
+      latestRates,
+      previousDayRate,
+      isLoading,
+      isConnected,
+      lastUpdated: latestRates?.createdAt ?? null,
+    }),
+    [latestRates, previousDayRate, isLoading, isConnected]
+  );
+
   return {
-    latestRates,
-    previousDayRate,
-    isLoading,
-    isConnected,
-    lastUpdated: latestRates?.createdAt ?? null,
+    ...memoized,
     isStale: latestRates?.isStale() ?? false,
   };
 }

@@ -68,7 +68,7 @@ export function useCreateAccount(): UseCreateAccountResult {
         showToast({
           type: "success",
           title: "Account Created 🎉",
-          message: `${data.name.trim()} has been added successfully`,
+          message: `${data.name} has been added successfully`,
         });
 
         if (router.canGoBack()) {

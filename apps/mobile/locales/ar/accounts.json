@@ -104,5 +104,11 @@
   "track_as_transaction_description": "إنشاء سجل تعديل رصيد لتاريخك",
   "deletion_warning_linked_data": "سيتم أيضاً حذف التالي:",
   "no_linked_records_description": "لا توجد سجلات مرتبطة بهذا الحساب.",
-  "delete_account_action": "حذف"
+  "delete_account_action": "حذف",
+  "validation_account_name_taken": "يوجد حساب بهذا الاسم بالفعل",
+  "validation_balance_invalid": "أدخل رقماً صالحاً",
+  "validation_balance_invalid_title": "رصيد غير صالح",
+  "account_type_bank": "حساب بنكي",
+  "account_type_digital_wallet": "محفظة إلكترونية",
+  "account_type_cash": "كاش"
 }

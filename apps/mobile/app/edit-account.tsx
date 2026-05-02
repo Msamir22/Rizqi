@@ -21,6 +21,7 @@ import { ReadOnlyDropdown } from "@/components/edit-account/ReadOnlyDropdown";
 import { PageHeader } from "@/components/navigation/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
+import { useToast } from "@/components/ui/Toast";
 import { ACCOUNT_TYPES, CURRENCIES } from "@/constants/accounts";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
@@ -31,8 +32,10 @@ import { useDeleteAccount } from "@/hooks/useDeleteAccount";
 import { useEditAccountForm } from "@/hooks/useEditAccountForm";
 import { useUpdateAccount } from "@/hooks/useUpdateAccount";
 import type { UpdateAccountData } from "@/services/edit-account-service";
+import { safeNotificationHaptic } from "@/utils/haptics";
 import { Ionicons } from "@expo/vector-icons";
 import type { Account } from "@rizqi/db";
+import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -132,6 +135,7 @@ function EditAccountForm({
 }: EditAccountFormProps): React.JSX.Element {
   const { t } = useTranslation("accounts");
   const { t: tCommon } = useTranslation("common");
+  const { showToast } = useToast();
   // Resolve a display name (with currency suffix on duplicate names) so the
   // header + delete sheet show e.g. "Cash (EGP)" instead of an ambiguous
   // "Cash" — per spec 026-followup.
@@ -211,7 +215,22 @@ function EditAccountForm({
     if (!validate()) return;
 
     const data = buildUpdateData();
-    if (!data) return;
+    if (!data) {
+      // Defense-in-depth: validate() already rejects malformed balances via
+      // the regex refine, but if anything slips through (e.g. parseFloat
+      // overflow on extremely long input) surface the failure to the user
+      // instead of bailing silently.
+      safeNotificationHaptic(
+        Haptics.NotificationFeedbackType.Error,
+        "editAccount_invalid_balance"
+      );
+      showToast({
+        type: "error",
+        title: t("validation_balance_invalid_title"),
+        message: t("validation_balance_invalid"),
+      });
+      return;
+    }
 
     // Check if balance has actually changed
     const balanceChanged = data.balance !== originalBalance;
@@ -233,6 +252,8 @@ function EditAccountForm({
     originalBalance,
     account.id,
     performUpdate,
+    showToast,
+    t,
   ]);
 
   /**
@@ -349,9 +370,7 @@ function EditAccountForm({
             placeholder="0"
             value={formData.balance}
             onChangeText={(text) => {
-              // Allow negative values (overdrafts) for editing
-              const cleaned = text.replace(/[^0-9.-]/g, "");
-              updateField("balance", cleaned);
+              updateField("balance", text);
             }}
             error={errors.balance}
             keyboardType="numeric"

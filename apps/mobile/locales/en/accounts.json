@@ -84,5 +84,11 @@
   "track_as_transaction_description": "Create a Balance Adjustment record for your history",
   "deletion_warning_linked_data": "The following will also be deleted:",
   "no_linked_records_description": "This account has no linked records.",
-  "delete_account_action": "Delete"
+  "delete_account_action": "Delete",
+  "validation_account_name_taken": "An account with this name already exists",
+  "validation_balance_invalid": "Enter a valid number",
+  "validation_balance_invalid_title": "Invalid Balance",
+  "account_type_bank": "Bank Account",
+  "account_type_digital_wallet": "Digital Wallet",
+  "account_type_cash": "Cash"
 }

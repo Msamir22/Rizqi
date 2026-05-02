@@ -15,7 +15,10 @@
 
 import { detectCurrencyFromTimezone } from "@/utils/currency-detection";
 import { logger } from "@/utils/logger";
-import type { AccountFormData } from "@/validation/account-validation";
+import {
+  accountFormSchema,
+  type AccountFormData,
+} from "@/validation/account-validation";
 import { Account, BankDetails, type CurrencyType, database } from "@rizqi/db";
 import { Q } from "@nozbe/watermelondb";
 import { queryOwned } from "./user-data-access";
@@ -54,6 +57,7 @@ export const CURRENCY_UNKNOWN_ERROR = "CURRENCY_UNKNOWN";
 
 export const CREATE_ACCOUNT_ERROR_CODES = {
   USER_ID_REQUIRED: "USER_ID_REQUIRED",
+  VALIDATION_FAILED: "VALIDATION_FAILED",
   DUPLICATE_ACCOUNT: "DUPLICATE_ACCOUNT",
   DUPLICATE_IN_FLIGHT: "DUPLICATE_IN_FLIGHT",
 } as const;
@@ -139,7 +143,16 @@ export async function createAccountForUser(
     };
   }
 
-  const createKey = buildCreateAccountKey(normalizedUserId, data);
+  const validation = accountFormSchema.safeParse(data);
+  if (!validation.success) {
+    return {
+      success: false,
+      error: CREATE_ACCOUNT_ERROR_CODES.VALIDATION_FAILED,
+    };
+  }
+  const validatedData = validation.data;
+
+  const createKey = buildCreateAccountKey(normalizedUserId, validatedData);
   if (pendingCreateKeys.has(createKey)) {
     return {
       success: false,
@@ -154,11 +167,11 @@ export async function createAccountForUser(
 
     await database.write(async () => {
       const accountsCollection = database.get<Account>("accounts");
-      const trimmedName = data.name.trim();
+      const trimmedName = validatedData.name.trim();
       const existingAccounts = await queryOwned(
         accountsCollection,
         normalizedUserId,
-        Q.where("currency", data.currency),
+        Q.where("currency", validatedData.currency),
         Q.where("deleted", Q.notEq(true))
       ).fetch();
 
@@ -181,20 +194,20 @@ export async function createAccountForUser(
       const account = await accountsCollection.create((acc) => {
         acc.userId = normalizedUserId;
         acc.name = trimmedName;
-        acc.type = data.accountType;
-        acc.balance = parseFloat(data.balance);
-        acc.currency = data.currency;
+        acc.type = validatedData.accountType;
+        acc.balance = parseFloat(validatedData.balance);
+        acc.currency = validatedData.currency;
         acc.deleted = false;
         acc.isDefault = isFirstAccount;
       });
       accountId = account.id;
 
-      if (data.accountType === "BANK") {
+      if (validatedData.accountType === "BANK") {
         await database.get<BankDetails>("bank_details").create((details) => {
           details.accountId = account.id;
-          details.bankName = data.bankName?.trim();
-          details.cardLast4 = data.cardLast4?.trim();
-          details.smsSenderName = data.smsSenderName?.trim();
+          details.bankName = validatedData.bankName?.trim();
+          details.cardLast4 = validatedData.cardLast4?.trim();
+          details.smsSenderName = validatedData.smsSenderName?.trim();
           details.deleted = false;
         });
       }

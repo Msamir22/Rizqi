@@ -50,6 +50,42 @@ function AddAccountButton({
 }
 
 /**
+ * Empty-state slot for the accounts FlatList. Module-level → stable identity.
+ */
+function AccountsListEmpty({
+  selectedFilter,
+  onAdd,
+}: {
+  selectedFilter: FilterType;
+  onAdd: () => void;
+}): ReactElement {
+  const { t } = useTranslation("accounts");
+  return (
+    <View className="flex-1 items-center justify-center py-20 px-10">
+      <View className="w-20 h-20 rounded-full items-center justify-center mb-6 bg-slate-100 dark:bg-slate-800">
+        <Ionicons name="wallet-outline" size={40} color={palette.slate[400]} />
+      </View>
+      <Text className="text-lg font-bold text-center mb-2 text-slate-800 dark:text-white">
+        {selectedFilter === "ALL"
+          ? t("no_accounts_title")
+          : t("no_accounts_type_title", { type: selectedFilter.toLowerCase() })}
+      </Text>
+      <Text className="text-sm text-slate-400 text-center mb-10">
+        {selectedFilter === "ALL"
+          ? t("no_accounts_message")
+          : t("no_accounts_type_message", {
+              type: selectedFilter.toLowerCase(),
+            })}
+      </Text>
+
+      {selectedFilter === "ALL" && (
+        <AddAccountButton onPress={onAdd} variant="primary" />
+      )}
+    </View>
+  );
+}
+
+/**
  * Render a styled card displaying the total account balance alongside its currency code.
  *
  * @param balance - The numeric amount to display as the total balance.
@@ -87,7 +123,6 @@ function TotalBalanceCard({
 export default function Accounts(): ReactElement {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { t } = useTranslation("accounts");
   const { t: tCommon } = useTranslation("common");
   const { latestRates } = useMarketRates();
 
@@ -116,6 +151,13 @@ export default function Accounts(): ReactElement {
     router.push("/add-account");
   }, [router]);
 
+  const handleCardPress = useCallback(
+    (id: string) => {
+      router.push(`/edit-account?id=${id}`);
+    },
+    [router]
+  );
+
   const renderItem: ListRenderItem<(typeof filteredAccounts)[number]> =
     useCallback(
       ({ item }) => (
@@ -123,12 +165,10 @@ export default function Accounts(): ReactElement {
           account={item}
           latestRates={latestRates}
           displayName={displayNames.get(item.id) ?? item.name}
-          onPress={() => {
-            router.push(`/edit-account?id=${item.id}`);
-          }}
+          onPress={handleCardPress}
         />
       ),
-      [latestRates, router, displayNames]
+      [latestRates, displayNames, handleCardPress]
     );
 
   const keyExtractor = useCallback(
@@ -136,28 +176,14 @@ export default function Accounts(): ReactElement {
     []
   );
 
-  const renderEmpty = (): ReactElement => (
-    <View className="flex-1 items-center justify-center py-20 px-10">
-      <View className="w-20 h-20 rounded-full items-center justify-center mb-6 bg-slate-100 dark:bg-slate-800">
-        <Ionicons name="wallet-outline" size={40} color={palette.slate[400]} />
-      </View>
-      <Text className="text-lg font-bold text-center mb-2 text-slate-800 dark:text-white">
-        {selectedFilter === "ALL"
-          ? t("no_accounts_title")
-          : t("no_accounts_type_title", { type: selectedFilter.toLowerCase() })}
-      </Text>
-      <Text className="text-sm text-slate-400 text-center mb-10">
-        {selectedFilter === "ALL"
-          ? t("no_accounts_message")
-          : t("no_accounts_type_message", {
-              type: selectedFilter.toLowerCase(),
-            })}
-      </Text>
-
-      {selectedFilter === "ALL" && (
-        <AddAccountButton onPress={handleAddAccount} variant="primary" />
-      )}
-    </View>
+  const renderEmpty = useCallback(
+    (): ReactElement => (
+      <AccountsListEmpty
+        selectedFilter={selectedFilter}
+        onAdd={handleAddAccount}
+      />
+    ),
+    [selectedFilter, handleAddAccount]
   );
 
   return (

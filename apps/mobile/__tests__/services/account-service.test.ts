@@ -418,6 +418,46 @@ describe("createAccountForUser", () => {
     expect(accountsCollection.create).not.toHaveBeenCalled();
   });
 
+  it("fails closed without writing when the balance format is invalid", async () => {
+    const accountsCollection = {
+      query: jest.fn(),
+      create: jest.fn(),
+    };
+    mockDatabaseGet.mockImplementation((collectionName: string) => {
+      if (collectionName === "accounts") return accountsCollection;
+      throw new Error(`Unexpected collection: ${collectionName}`);
+    });
+
+    const result = await createAccountForUser("user-1", {
+      name: "Cash",
+      accountType: "CASH",
+      currency: "EGP",
+      balance: "00056465",
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: CREATE_ACCOUNT_ERROR_CODES.VALIDATION_FAILED,
+    });
+    expect(mockDatabaseWrite).not.toHaveBeenCalled();
+    expect(accountsCollection.create).not.toHaveBeenCalled();
+  });
+
+  it("fails closed without writing when a create balance has multiple decimal points", async () => {
+    const result = await createAccountForUser("user-1", {
+      name: "Cash",
+      accountType: "CASH",
+      currency: "EGP",
+      balance: "1654.65.",
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: CREATE_ACCOUNT_ERROR_CODES.VALIDATION_FAILED,
+    });
+    expect(mockDatabaseWrite).not.toHaveBeenCalled();
+  });
+
   it("rejects concurrent duplicate create requests before the second write starts", async () => {
     let releaseWriter: () => void = () => undefined;
     const writerGate = new Promise<void>((resolve) => {

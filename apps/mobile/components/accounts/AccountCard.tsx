@@ -2,14 +2,18 @@ import { palette } from "@/constants/colors";
 import { Account, MarketRate } from "@rizqi/db";
 import { convertCurrency, formatCurrency } from "@rizqi/logic";
 import { Ionicons } from "@expo/vector-icons";
-import { useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import { memo, useCallback, useMemo } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 interface AccountCardProps {
   account: Account;
   latestRates: MarketRate | null;
-  onPress?: () => void;
+  /**
+   * Press handler. Receives the account id so list parents can pass a single
+   * stable `useCallback` reference instead of creating a new closure per item.
+   */
+  onPress?: (id: string) => void;
   /**
    * Resolved display name (per `account-display.ts`). Parents that render
    * a list SHOULD compute the map once via `buildAccountDisplayNames` /
@@ -30,13 +34,16 @@ interface AccountCardProps {
  * @param onPress - Optional press handler invoked when the card is tapped.
  * @returns A JSX element representing the account card.
  */
-export function AccountCard({
+function AccountCardImpl({
   account,
   latestRates,
   onPress,
   displayName,
 }: AccountCardProps): React.JSX.Element {
   const { t } = useTranslation("accounts");
+  const handlePress = useCallback(() => {
+    onPress?.(account.id);
+  }, [onPress, account.id]);
 
   const config: { icon: keyof typeof Ionicons.glyphMap; color: string } =
     useMemo(() => {
@@ -68,19 +75,19 @@ export function AccountCard({
 
     switch (account.type) {
       case "BANK":
-        return "Bank Account";
+        return t("account_type_bank");
       case "DIGITAL_WALLET":
-        return "Digital Wallet";
+        return t("account_type_digital_wallet");
       case "CASH":
-        return "Physical money";
+        return t("account_type_cash");
       default:
         return "";
     }
-  }, [account.currency, account.balance, account.type, latestRates]);
+  }, [account.currency, account.balance, account.type, latestRates, t]);
 
   return (
     <TouchableOpacity
-      onPress={onPress}
+      onPress={handlePress}
       activeOpacity={0.7}
       className="mb-3 mx-5 rounded-2xl overflow-hidden bg-white dark:bg-slate-800 border-l-[4px] border-slate-100 dark:border-slate-700"
       // shadow-* classes moved to inline style to avoid NativeWind v4
@@ -134,3 +141,14 @@ export function AccountCard({
     </TouchableOpacity>
   );
 }
+
+/**
+ * Memoized export — props are shallow-equal-friendly:
+ * - `account` is a WatermelonDB Model ref (stable across observe emits unless
+ *   the row itself changed)
+ * - `latestRates` is value-stable when `useMarketRates` returns a memoized
+ *   shape (see `useMarketRates`)
+ * - `displayName` is a string
+ * - `onPress` is expected to be a stable `useCallback` from the parent
+ */
+export const AccountCard = memo(AccountCardImpl);

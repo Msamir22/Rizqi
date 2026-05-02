@@ -1,12 +1,31 @@
 import { AccountType, CurrencyType } from "@rizqi/db";
 import { z } from "zod";
 
+const NON_NEGATIVE_BALANCE_PATTERN = /^(?:0|[1-9]\d*)(?:\.\d+)?$/;
+const SIGNED_BALANCE_PATTERN = /^-?(?:0|[1-9]\d*)(?:\.\d+)?$/;
+
+const BALANCE_VALIDATION_MESSAGES = {
+  createInvalid: "Initial balance must be a valid number",
+  editInvalid: "Balance must be a valid number",
+} as const;
+
+export function isValidAccountBalance(
+  value: string,
+  options: { readonly allowNegative: boolean }
+): boolean {
+  const pattern = options.allowNegative
+    ? SIGNED_BALANCE_PATTERN
+    : NON_NEGATIVE_BALANCE_PATTERN;
+  return pattern.test(value);
+}
+
 /**
  * Zod schema for account form validation.
  */
 export const accountFormSchema = z.object({
   name: z
     .string()
+    .trim()
     .min(1, "Account name is required")
     .max(50, "Account name must be less than 50 characters"),
   accountType: z.enum([
@@ -21,8 +40,8 @@ export const accountFormSchema = z.object({
     .string()
     .min(1, "Initial balance is required")
     .refine(
-      (val) => !isNaN(parseFloat(val)),
-      "Initial balance must be a valid number"
+      (val) => isValidAccountBalance(val, { allowNegative: false }),
+      BALANCE_VALIDATION_MESSAGES.createInvalid
     )
     .refine(
       (val) => parseFloat(val) >= 0,
@@ -89,12 +108,16 @@ export function validateAccountForm(data: unknown): {
 export const editAccountFormSchema = z.object({
   name: z
     .string()
+    .trim()
     .min(1, "Account name is required")
     .max(50, "Account name must be less than 50 characters"),
   balance: z
     .string()
     .min(1, "Balance is required")
-    .refine((val) => !isNaN(parseFloat(val)), "Balance must be a valid number"),
+    .refine(
+      (val) => isValidAccountBalance(val, { allowNegative: true }),
+      BALANCE_VALIDATION_MESSAGES.editInvalid
+    ),
   bankName: z
     .string()
     .max(50, "Bank name must be less than 50 characters")

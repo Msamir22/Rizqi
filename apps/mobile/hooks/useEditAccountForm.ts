@@ -14,6 +14,7 @@
  */
 
 import type { Account, AccountType, CurrencyType } from "@rizqi/db";
+import { t } from "i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   type EditAccountFormData,
@@ -173,7 +174,7 @@ export function useEditAccountForm(
           } else if (!result.isUnique && !result.error) {
             setErrors((prev) => ({
               ...prev,
-              name: "An account with this name already exists",
+              name: t("accounts:validation_account_name_taken"),
             }));
           } else if (result.error) {
             // Don't block the user on uniqueness check errors
