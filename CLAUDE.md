@@ -103,6 +103,37 @@ Dependency direction: `apps/ → packages/logic → packages/db`. **Never revers
   non-component files, use the named import `import { t } from "i18next"` —
   never `i18next.t()`.
 
+# Strict Null Semantics for Entity IDs
+
+When managing entity IDs (such as `accountId`, `categoryId`, etc.) across the
+UI, state hooks, and validation layers in Rizqi, you must adhere strictly to the
+true domain model.
+
+## Core Directives
+
+1. **Never use `""` (empty string) as a fallback for missing IDs.**
+   - An empty string is not a valid identifier.
+   - If an ID is functionally missing, unselected, or pending, its type MUST be
+     `string | null` in the state and the validation payload.
+2. **Embrace `null` at the validation boundary.**
+   - Do not alter or hack validation signatures to accept generic strings just
+     so you can pass `id ?? ""` from the client to trigger a `.min(1)` failure.
+   - If an ID can technically be unselected in a form, write your validation
+     logic/schema to accept `string | null` natively.
+3. **Respect strict domain constraints.**
+   - If an upstream domain entity (like a voice parsed transaction) guarantees
+     that a field (e.g. `categoryId`) is _always_ present, do NOT type your
+     React state as `string | null`.
+   - Trust the domain constraint. Initialize state strictly (e.g.,
+     `useState<string>(transaction.categoryId)`) instead of unnecessarily
+     widening types.
+
+# Skeleton Loading States
+
+- All loading states in the app MUST use the `<Skeleton>` component from
+  `components/ui/Skeleton.tsx`. **Never use `ActivityIndicator`** for content
+  loading.
+
 ## Styling Rules
 
 - **NativeWind classes only**: Use `className` for ALL styling. Do NOT use

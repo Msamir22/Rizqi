@@ -4,6 +4,7 @@ import { convertCurrency, formatCurrency } from "@rizqi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { memo, useCallback, useMemo } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 interface AccountCardProps {
   account: Account;
@@ -39,6 +40,7 @@ function AccountCardImpl({
   onPress,
   displayName,
 }: AccountCardProps): React.JSX.Element {
+  const { t } = useTranslation("accounts");
   const handlePress = useCallback(() => {
     onPress?.(account.id);
   }, [onPress, account.id]);
@@ -110,9 +112,20 @@ function AccountCardImpl({
 
         {/* Content */}
         <View className="flex-1">
-          <Text className="text-base font-bold text-slate-800 dark:text-white">
-            {displayName ?? account.name}
-          </Text>
+          <View className="flex-row items-center">
+            {account.isDefault && (
+              <Ionicons
+                name="star"
+                size={14}
+                color={palette.nileGreen[500]}
+                accessibilityLabel={t("default_account_badge")}
+                style={{ marginEnd: 6 }}
+              />
+            )}
+            <Text className="flex-shrink text-base font-bold text-slate-800 dark:text-white">
+              {displayName ?? account.name}
+            </Text>
+          </View>
           <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 mt-0.5 uppercase tracking-wide">
             {subtitle}
           </Text>

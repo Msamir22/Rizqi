@@ -51,7 +51,7 @@ export default function BudgetDetailScreen(): React.JSX.Element {
     subcategoryBreakdown,
     recentTransactions,
     isLoading,
-  } = useBudgetDetail(id ?? "");
+  } = useBudgetDetail(id);
 
   const { t } = useTranslation("budgets");
   const { t: tCommon } = useTranslation("common");

@@ -2,8 +2,8 @@
  * useAccounts hook tests
  *
  * Focuses on the bank-account observer contract from PR #548 review:
- * balance edits on existing bank accounts must emit, and successful emissions
- * from either subscription must clear a stale observer error.
+ * balance/default/name edits on existing bank accounts must emit, and
+ * successful emissions from either subscription must clear a stale observer error.
  */
 
 import React from "react";
@@ -69,6 +69,14 @@ interface UseBankAccountsResult {
   readonly error: Error | null;
 }
 
+interface UseAccountsResult {
+  readonly accounts: readonly MockAccount[];
+  readonly isLoading: boolean;
+  readonly error: Error | null;
+  readonly totalAccountsBalance: number;
+  readonly refetch: () => void;
+}
+
 const mockAccountObservers: Array<MockObserver<MockAccount>> = [];
 const mockBankDetailsObservers: Array<MockObserver<MockBankDetails>> = [];
 const mockAccountsObserve = jest.fn<MockObservable<MockAccount>, []>();
@@ -129,6 +137,7 @@ jest.mock("@nozbe/watermelondb", () => ({
     where: (...args: readonly unknown[]) => ({ kind: "where", args }),
     sortBy: (...args: readonly unknown[]) => ({ kind: "sortBy", args }),
     take: (...args: readonly unknown[]) => ({ kind: "take", args }),
+    oneOf: (...args: readonly unknown[]) => ({ kind: "oneOf", args }),
     desc: "desc",
   },
 }));
@@ -143,9 +152,46 @@ jest.mock("../../hooks/usePreferredCurrency", () => ({
   }),
 }));
 
+jest.mock("../../hooks/useCurrentUserId", () => ({
+  useCurrentUserId: (): { userId: string; isResolvingUser: boolean } => ({
+    userId: "user-1",
+    isResolvingUser: false,
+  }),
+}));
+
+jest.mock("../../services/supabase", () => ({
+  getCurrentUserId: (): Promise<string> => Promise.resolve("user-1"),
+}));
+
 // Import AFTER mocks
 // eslint-disable-next-line import/first
-import { useBankAccounts } from "../../hooks/useAccounts";
+import { useAccounts, useBankAccounts } from "../../hooks/useAccounts";
+
+function renderUseAccountsHook(): {
+  readonly result: { current: UseAccountsResult };
+  readonly unmount: () => void;
+} {
+  const ref: { current: UseAccountsResult } = {
+    current: {
+      accounts: [],
+      isLoading: true,
+      error: null,
+      totalAccountsBalance: 0,
+      refetch: () => undefined,
+    },
+  };
+
+  const HookWrapper = (): React.JSX.Element | null => {
+    ref.current = useAccounts() as unknown as UseAccountsResult;
+    return null;
+  };
+
+  let renderer: ReactTestRendererInstance = { unmount: () => undefined };
+  RTR.act(() => {
+    renderer = RTR.create(React.createElement(HookWrapper));
+  });
+  return { result: ref, unmount: () => renderer.unmount() };
+}
 
 function renderHook(): {
   readonly result: { current: UseBankAccountsResult };
@@ -192,11 +238,30 @@ afterEach(() => {
   consoleErrorSpy.mockRestore();
 });
 
+describe("useAccounts", () => {
+  it("observes balance and default-flag changes on existing accounts", () => {
+    const { unmount } = renderUseAccountsHook();
+
+    expect(mockAccountsObserveWithColumns).toHaveBeenCalledWith([
+      "balance",
+      "is_default",
+      "name",
+    ]);
+    expect(mockAccountsObserve).not.toHaveBeenCalled();
+
+    unmount();
+  });
+});
+
 describe("useBankAccounts", () => {
-  it("observes balance changes on existing bank accounts", () => {
+  it("observes balance and default-flag changes on existing bank accounts", () => {
     const { unmount } = renderHook();
 
-    expect(mockAccountsObserveWithColumns).toHaveBeenCalledWith(["balance"]);
+    expect(mockAccountsObserveWithColumns).toHaveBeenCalledWith([
+      "balance",
+      "is_default",
+      "name",
+    ]);
     expect(mockAccountsObserve).not.toHaveBeenCalled();
 
     unmount();
@@ -221,6 +286,10 @@ describe("useBankAccounts", () => {
     const { result } = renderHook();
 
     RTR.act(() => {
+      mockAccountObservers[0].next([{ id: "acc-1", name: "Bank" }]);
+    });
+
+    RTR.act(() => {
       mockBankDetailsObservers[0].error(new Error("details observer failed"));
     });
     expect(result.current.error?.message).toBe("details observer failed");
@@ -232,5 +301,42 @@ describe("useBankAccounts", () => {
     });
 
     expect(result.current.error).toBeNull();
+  });
+
+  it("queries bank_details only for the owned bank account ids", () => {
+    renderHook();
+
+    RTR.act(() => {
+      mockAccountObservers[0].next([{ id: "acc-1", name: "Bank" }]);
+    });
+
+    expect(mockBankDetailsCollection.query).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "where",
+        args: [
+          "account_id",
+          expect.objectContaining({ kind: "oneOf", args: [["acc-1"]] }),
+        ],
+      }),
+      expect.objectContaining({ kind: "where", args: ["deleted", false] })
+    );
+  });
+
+  it("does not join a foreign bank-detail emission into owned accounts", () => {
+    const { result } = renderHook();
+
+    RTR.act(() => {
+      mockAccountObservers[0].next([{ id: "acc-1", name: "Bank" }]);
+    });
+
+    RTR.act(() => {
+      mockBankDetailsObservers[0].next([
+        { accountId: "foreign-acc", bankName: "Other Bank" },
+      ]);
+    });
+
+    expect(result.current.bankAccounts).toEqual([
+      { account: { id: "acc-1", name: "Bank" }, bankDetails: undefined },
+    ]);
   });
 });

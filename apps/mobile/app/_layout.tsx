@@ -44,6 +44,7 @@ import { FirstRunTooltipProvider } from "../context/FirstRunTooltipContext";
 import { DatabaseProvider } from "../providers/DatabaseProvider";
 import { QueryProvider } from "../providers/QueryProvider";
 import { MarketRatesRealtimeProvider } from "../providers/MarketRatesRealtimeProvider";
+import { PrivateDataBoundary } from "../providers/PrivateDataBoundary";
 import { SyncProvider } from "../providers/SyncProvider";
 import { initializeNotifications } from "../services/notification-service";
 import { logger } from "../utils/logger";
@@ -185,31 +186,33 @@ function RootLayout(): React.ReactNode {
           <QueryProvider>
             <DatabaseProvider>
               <AuthProvider>
-                <SyncProvider>
-                  <MarketRatesRealtimeProvider>
-                    <CategoriesProvider>
-                      <SmsScanProvider>
-                        <LocaleProvider>
-                          <ThemeProvider>
-                            <SafeAreaProvider
-                              initialMetrics={initialWindowMetrics}
-                            >
-                              <ToastProvider>
-                                <FirstRunTooltipProvider>
-                                  <AuthGuard>
-                                    <RootLayoutNav />
-                                    <InitialSyncOverlay />
-                                    <AppReadyGate />
-                                  </AuthGuard>
-                                </FirstRunTooltipProvider>
-                              </ToastProvider>
-                            </SafeAreaProvider>
-                          </ThemeProvider>
-                        </LocaleProvider>
-                      </SmsScanProvider>
-                    </CategoriesProvider>
-                  </MarketRatesRealtimeProvider>
-                </SyncProvider>
+                <PrivateDataBoundary>
+                  <SyncProvider>
+                    <MarketRatesRealtimeProvider>
+                      <CategoriesProvider>
+                        <SmsScanProvider>
+                          <LocaleProvider>
+                            <ThemeProvider>
+                              <SafeAreaProvider
+                                initialMetrics={initialWindowMetrics}
+                              >
+                                <ToastProvider>
+                                  <FirstRunTooltipProvider>
+                                    <AuthGuard>
+                                      <RootLayoutNav />
+                                      <InitialSyncOverlay />
+                                      <AppReadyGate />
+                                    </AuthGuard>
+                                  </FirstRunTooltipProvider>
+                                </ToastProvider>
+                              </SafeAreaProvider>
+                            </ThemeProvider>
+                          </LocaleProvider>
+                        </SmsScanProvider>
+                      </CategoriesProvider>
+                    </MarketRatesRealtimeProvider>
+                  </SyncProvider>
+                </PrivateDataBoundary>
               </AuthProvider>
             </DatabaseProvider>
           </QueryProvider>

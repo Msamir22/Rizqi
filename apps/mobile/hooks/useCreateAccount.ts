@@ -1,7 +1,10 @@
-import { Account, BankDetails, database } from "@rizqi/db";
 import { useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useToast } from "../components/ui/Toast";
+import {
+  CREATE_ACCOUNT_ERROR_CODES,
+  createAccountForUser,
+} from "../services/account-service";
 import { getCurrentUserId } from "../services/supabase";
 import { logger } from "../utils/logger";
 import { AccountFormData } from "../validation/account-validation";
@@ -17,6 +20,7 @@ interface UseCreateAccountResult {
  */
 export function useCreateAccount(): UseCreateAccountResult {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
   const [error, setError] = useState<Error | null>(null);
   const { showToast } = useToast();
   const router = useRouter();
@@ -25,57 +29,41 @@ export function useCreateAccount(): UseCreateAccountResult {
    * Performs the database write operation to create an account and optional bank details.
    */
   const createAccount = useCallback(
-    async (data: AccountFormData) => {
-      const userId = await getCurrentUserId();
-
-      if (!userId) {
-        showToast({
-          type: "error",
-          title: "Session Error",
-          message: "You must be signed in to create an account",
-        });
-        return;
-      }
-
+    async (data: AccountFormData): Promise<void> => {
+      if (isSubmittingRef.current) return;
+      isSubmittingRef.current = true;
       setIsSubmitting(true);
       setError(null);
 
       try {
-        await database.write(async () => {
-          // Check if user already has accounts (for auto-default logic)
-          const existingAccounts = await database
-            .get<Account>("accounts")
-            .query()
-            .fetch();
-          const isFirstAccount =
-            existingAccounts.filter((a) => a.userId === userId && !a.deleted)
-              .length === 0;
+        const userId = await getCurrentUserId();
 
-          const account = await database
-            .get<Account>("accounts")
-            .create((acc) => {
-              acc.userId = userId;
-              acc.name = data.name;
-              acc.type = data.accountType;
-              acc.balance = parseFloat(data.balance);
-              acc.currency = data.currency;
-              acc.deleted = false;
-              acc.isDefault = isFirstAccount;
+        if (!userId) {
+          showToast({
+            type: "error",
+            title: "Session Error",
+            message: "You must be signed in to create an account",
+          });
+          return;
+        }
+
+        const result = await createAccountForUser(userId, data);
+
+        if (!result.success) {
+          if (
+            result.error === CREATE_ACCOUNT_ERROR_CODES.DUPLICATE_ACCOUNT ||
+            result.error === CREATE_ACCOUNT_ERROR_CODES.DUPLICATE_IN_FLIGHT
+          ) {
+            showToast({
+              type: "warning",
+              title: "Account Already Exists",
+              message: "This account was already created.",
             });
-
-          // Create BankDetails if account type is BANK
-          if (data.accountType === "BANK") {
-            await database
-              .get<BankDetails>("bank_details")
-              .create((details) => {
-                details.accountId = account.id;
-                details.bankName = data.bankName?.trim() || undefined;
-                details.cardLast4 = data.cardLast4?.trim() || undefined;
-                details.smsSenderName = data.smsSenderName?.trim() || undefined;
-                details.deleted = false;
-              });
+            return;
           }
-        });
+
+          throw new Error(result.error ?? "Unknown error creating account");
+        }
 
         showToast({
           type: "success",
@@ -83,7 +71,12 @@ export function useCreateAccount(): UseCreateAccountResult {
           message: `${data.name} has been added successfully`,
         });
 
-        router.back();
+        if (router.canGoBack()) {
+          router.back();
+          return;
+        }
+
+        router.replace("/(tabs)/accounts");
       } catch (err) {
         const error = err instanceof Error ? err : new Error("Unknown error");
         logger.error("createAccount_flow_failed", error);
@@ -95,6 +88,7 @@ export function useCreateAccount(): UseCreateAccountResult {
           message: "Something went wrong. Please try again.",
         });
       } finally {
+        isSubmittingRef.current = false;
         setIsSubmitting(false);
       }
     },

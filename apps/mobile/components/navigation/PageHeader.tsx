@@ -142,7 +142,7 @@ function RightAction({
       onPress={rightAction.onPress}
       activeOpacity={0.7}
       disabled={rightAction.disabled || rightAction.loading}
-      className={`rounded-full items-center justify-center ${
+      className={`flex-row rounded-full items-center justify-center ${
         rightAction.icon
           ? rightAction.transparent
             ? "w-10 h-10 bg-transparent"
@@ -151,7 +151,18 @@ function RightAction({
       } ${rightAction.disabled ? "opacity-50" : ""}`}
     >
       {rightAction.loading ? (
-        <ActivityIndicator size="small" color={palette.nileGreen[500]} />
+        <>
+          <ActivityIndicator
+            size="small"
+            color={palette.nileGreen[500]}
+            style={rightAction.label ? { marginEnd: 6 } : undefined}
+          />
+          {rightAction.label ? (
+            <Text className="text-base font-bold text-nileGreen-600 dark:text-nileGreen-400">
+              {rightAction.label}
+            </Text>
+          ) : null}
+        </>
       ) : rightAction.icon ? (
         <Ionicons
           name={rightAction.icon}

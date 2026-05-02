@@ -33,6 +33,7 @@ interface MockBankDetails {
 
 interface MockAccount {
   readonly id: string;
+  readonly userId: string;
   readonly isBank: boolean;
   readonly bankDetails: {
     readonly fetch: jest.Mock<Promise<MockBankDetails[]>, []>;
@@ -69,6 +70,17 @@ jest.mock("@rizqi/db", () => ({
       findAndObserve: mockFindAndObserve,
     })),
   },
+}));
+
+jest.mock("../../hooks/useCurrentUserId", () => ({
+  useCurrentUserId: (): { userId: string; isResolvingUser: boolean } => ({
+    userId: "user-1",
+    isResolvingUser: false,
+  }),
+}));
+
+jest.mock("../../services/supabase", () => ({
+  getCurrentUserId: (): Promise<string> => Promise.resolve("user-1"),
 }));
 
 // Import AFTER mocks
@@ -116,6 +128,7 @@ describe("useAccountById", () => {
     const deferredDetails = createDeferred<MockBankDetails[]>();
     const account: MockAccount = {
       id: "acc-1",
+      userId: "user-1",
       isBank: true,
       bankDetails: {
         fetch: jest.fn(() => deferredDetails.promise),
@@ -148,5 +161,25 @@ describe("useAccountById", () => {
       cardLast4: "1234",
       smsSenderName: "CIBSMS",
     });
+  });
+
+  it("treats a foreign account id as not found", () => {
+    const account: MockAccount = {
+      id: "acc-foreign",
+      userId: "other-user",
+      isBank: false,
+      bankDetails: {
+        fetch: jest.fn(() => Promise.resolve([])),
+      },
+    };
+    const { result } = renderHook("acc-foreign");
+
+    RTR.act(() => {
+      activeObserver?.next(account);
+    });
+
+    expect(result.current.account).toBeNull();
+    expect(result.current.bankDetails).toBeNull();
+    expect(result.current.isLoading).toBe(false);
   });
 });

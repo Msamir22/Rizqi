@@ -3,10 +3,12 @@ import {
   AccountTypeTabs,
   FilterType,
 } from "@/components/accounts";
+import { AccountListSkeleton } from "@/components/accounts/skeletons/AccountListSkeleton";
 import { buildAccountDisplayNames } from "@/utils/account-display";
 import { PageHeader } from "@/components/navigation/PageHeader";
 import { Button, ButtonVariant } from "@/components/ui/Button";
 import { palette } from "@/constants/colors";
+import { TAB_BAR_HEIGHT } from "@/constants/ui";
 import { useAccounts } from "@/hooks";
 import { useMarketRates } from "@/hooks/useMarketRates";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
@@ -17,6 +19,7 @@ import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { ReactElement, useCallback, useMemo, useState } from "react";
 import { FlatList, type ListRenderItem, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 /**
  * Renders a button for creating a new account.
@@ -44,20 +47,6 @@ function AddAccountButton({
       />
     </View>
   );
-}
-
-/**
- * Footer slot for the accounts FlatList. Module-level → stable identity, so
- * FlatList doesn't unmount/remount the footer on every parent render.
- */
-function AccountsListFooter({
-  showButton,
-  onAdd,
-}: {
-  showButton: boolean;
-  onAdd: () => void;
-}): ReactElement {
-  return <View>{showButton && <AddAccountButton onPress={onAdd} />}</View>;
 }
 
 /**
@@ -133,13 +122,16 @@ function TotalBalanceCard({
  */
 export default function Accounts(): ReactElement {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { t: tCommon } = useTranslation("common");
   const { latestRates } = useMarketRates();
 
   const [selectedFilter, setSelectedFilter] = useState<FilterType>("ALL");
-  const { totalAccountsBalance, accounts } = useAccounts();
+  const { totalAccountsBalance, accounts, isLoading } = useAccounts();
   const { preferredCurrency } = usePreferredCurrency();
   const isEmpty = accounts.length === 0;
+  const isHydrating = isLoading && isEmpty;
+  const listBottomPadding = TAB_BAR_HEIGHT + insets.bottom + 24;
 
   const filteredAccounts = useMemo(() => {
     if (selectedFilter === "ALL") return accounts;
@@ -184,17 +176,6 @@ export default function Accounts(): ReactElement {
     []
   );
 
-  const hasAccountsAfterFilter = filteredAccounts.length > 0;
-  const renderFooter = useCallback(
-    (): ReactElement => (
-      <AccountsListFooter
-        showButton={hasAccountsAfterFilter}
-        onAdd={handleAddAccount}
-      />
-    ),
-    [hasAccountsAfterFilter, handleAddAccount]
-  );
-
   const renderEmpty = useCallback(
     (): ReactElement => (
       <AccountsListEmpty
@@ -215,36 +196,44 @@ export default function Accounts(): ReactElement {
         }}
       />
 
-      {/* Total Balance Card */}
-      {!isEmpty && (
-        <View className="px-5 pb-6">
-          <TotalBalanceCard
-            balance={totalAccountsBalance}
-            currencyCode={preferredCurrency}
+      {isHydrating ? (
+        <AccountListSkeleton />
+      ) : (
+        <>
+          {/* Total Balance Card */}
+          {!isEmpty && (
+            <View className="px-5 pb-6">
+              <TotalBalanceCard
+                balance={totalAccountsBalance}
+                currencyCode={preferredCurrency}
+              />
+            </View>
+          )}
+
+          {/* Only show filter tabs if user has accounts */}
+          {!isEmpty && (
+            <AccountTypeTabs
+              selectedFilter={selectedFilter}
+              onSelectFilter={setSelectedFilter}
+            />
+          )}
+
+          <FlatList
+            data={filteredAccounts}
+            keyExtractor={keyExtractor}
+            renderItem={renderItem}
+            ListEmptyComponent={renderEmpty}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{
+              flexGrow: 1,
+              paddingBottom: listBottomPadding,
+            }}
+            removeClippedSubviews
+            maxToRenderPerBatch={10}
+            windowSize={5}
           />
-        </View>
+        </>
       )}
-
-      {/* Only show filter tabs if user has accounts */}
-      {!isEmpty && (
-        <AccountTypeTabs
-          selectedFilter={selectedFilter}
-          onSelectFilter={setSelectedFilter}
-        />
-      )}
-
-      <FlatList
-        data={filteredAccounts}
-        keyExtractor={keyExtractor}
-        renderItem={renderItem}
-        ListFooterComponent={renderFooter}
-        ListEmptyComponent={renderEmpty}
-        showsVerticalScrollIndicator={false}
-        contentContainerClassName="flex-grow"
-        removeClippedSubviews
-        maxToRenderPerBatch={10}
-        windowSize={5}
-      />
     </View>
   );
 }

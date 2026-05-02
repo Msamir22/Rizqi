@@ -93,16 +93,26 @@ export function Button({
       {...props}
     >
       {isLoading ? (
-        <ActivityIndicator
-          size="small"
-          color={
-            variant === "primary" || variant === "danger"
-              ? "#FFFFFF"
-              : isDark
-                ? palette.slate[400]
-                : palette.slate[500]
-          }
-        />
+        <>
+          <ActivityIndicator
+            size="small"
+            color={
+              variant === "primary" || variant === "danger"
+                ? "#FFFFFF"
+                : isDark
+                  ? palette.slate[400]
+                  : palette.slate[500]
+            }
+            style={title ? { marginEnd: 8 } : undefined}
+          />
+          {title ? (
+            <Text
+              className={`${textColors[variant]} ${fontSizes[size]} font-bold ${textClassName}`}
+            >
+              {title}
+            </Text>
+          ) : null}
+        </>
       ) : (
         <>
           {icon && iconPosition === "left" && (
