@@ -147,6 +147,7 @@ import {
   checkAccountNameUniqueness,
   updateAccountWithBalanceAdjustment,
   deleteAccountWithCascade,
+  EDIT_ACCOUNT_ERROR_CODES,
 } from "@/services/edit-account-service";
 
 // ---------------------------------------------------------------------------
@@ -353,7 +354,7 @@ describe("edit-account-service", () => {
       }));
       const result = await deleteAccountWithCascade("bad-id", "user-1");
       expect(result.success).toBe(false);
-      expect(result.error).toBe("NOT_FOUND");
+      expect(result.error).toBe(EDIT_ACCOUNT_ERROR_CODES.NOT_FOUND);
     });
 
     it("should return OWNERSHIP_FAILED and skip writes when userId does not match", async () => {
@@ -366,7 +367,7 @@ describe("edit-account-service", () => {
       const result = await deleteAccountWithCascade("acc-1", "attacker-user");
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe("OWNERSHIP_FAILED");
+      expect(result.error).toBe(EDIT_ACCOUNT_ERROR_CODES.OWNERSHIP_FAILED);
       // No deletes anywhere in the cascade
       expect(acc.markAsDeleted).not.toHaveBeenCalled();
       expect(bd.markAsDeleted).not.toHaveBeenCalled();
@@ -468,6 +469,7 @@ describe("edit-account-service", () => {
 
       const result = await updateAccountWithBalanceAdjustment(
         "acc-1",
+        "user-1",
         { name: "New", balance: 250, isDefault: false },
         { userId: "user-1", currency: "EGP" }
       );
@@ -481,6 +483,7 @@ describe("edit-account-service", () => {
 
       const result = await updateAccountWithBalanceAdjustment(
         "acc-1",
+        "user-1",
         { name: "New", balance: 100, isDefault: false },
         null
       );
@@ -500,6 +503,7 @@ describe("edit-account-service", () => {
 
       await updateAccountWithBalanceAdjustment(
         "acc-1",
+        "user-1",
         { name: "Renamed", balance: 350, isDefault: false },
         { userId: "user-1", currency: "EGP" }
       );
@@ -548,6 +552,7 @@ describe("edit-account-service", () => {
 
       const result = await updateAccountWithBalanceAdjustment(
         "acc-1",
+        "user-1",
         { name: "Renamed", balance: 350, isDefault: false },
         { userId: "user-1", currency: "EGP" }
       );
@@ -576,6 +581,7 @@ describe("edit-account-service", () => {
 
       await updateAccountWithBalanceAdjustment(
         "acc-1",
+        "user-1",
         { name: "Original", balance: 400, isDefault: false },
         { userId: "user-1", currency: "EGP" }
       );
@@ -595,6 +601,7 @@ describe("edit-account-service", () => {
 
       await updateAccountWithBalanceAdjustment(
         "acc-1",
+        "user-1",
         { name: "Test", balance: 1500, isDefault: false },
         { userId: "user-1", currency: "EGP" }
       );
@@ -612,6 +619,7 @@ describe("edit-account-service", () => {
 
       await updateAccountWithBalanceAdjustment(
         "acc-1",
+        "user-1",
         { name: "Test", balance: 1000, isDefault: false },
         { userId: "user-1", currency: "EGP" }
       );
@@ -629,6 +637,7 @@ describe("edit-account-service", () => {
 
       await updateAccountWithBalanceAdjustment(
         "acc-1",
+        "user-1",
         { name: "Test", balance: 700, isDefault: false },
         { userId: "user-1", currency: "EGP" }
       );
@@ -647,6 +656,7 @@ describe("edit-account-service", () => {
 
       const result = await updateAccountWithBalanceAdjustment(
         "acc-1",
+        "user-1",
         { name: "Renamed", balance: 100.0001, isDefault: false },
         { userId: "user-1", currency: "EGP" }
       );
@@ -667,6 +677,7 @@ describe("edit-account-service", () => {
 
       await updateAccountWithBalanceAdjustment(
         "acc-1",
+        "user-1",
         { name: "New Name", balance: 500, isDefault: false },
         null
       );
@@ -680,6 +691,7 @@ describe("edit-account-service", () => {
 
       await updateAccountWithBalanceAdjustment(
         "acc-1",
+        "user-1",
         { name: "  Trimmed Name  ", balance: 0, isDefault: false },
         null
       );
@@ -701,6 +713,7 @@ describe("edit-account-service", () => {
 
       await updateAccountWithBalanceAdjustment(
         "acc-new",
+        "user-1",
         { name: "New Default", balance: 0, isDefault: true },
         null
       );
@@ -723,6 +736,7 @@ describe("edit-account-service", () => {
 
       await updateAccountWithBalanceAdjustment(
         "acc-1",
+        "user-1",
         {
           name: "Bank Account",
           balance: 0,
@@ -749,6 +763,7 @@ describe("edit-account-service", () => {
 
       await updateAccountWithBalanceAdjustment(
         "acc-1",
+        "user-1",
         {
           name: "Bank Account",
           balance: 0,
@@ -778,6 +793,7 @@ describe("edit-account-service", () => {
 
       const result = await updateAccountWithBalanceAdjustment(
         "bad-id",
+        "user-1",
         { name: "X", balance: 0, isDefault: false },
         null
       );

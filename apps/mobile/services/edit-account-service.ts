@@ -181,6 +181,7 @@ export async function checkAccountNameUniqueness(
  *
  * @param accountId - The ID of the account to update
  * @param data - The new account data
+ * @param currentUserId - The authenticated user's id (for the ownership check)
  * @returns The account's balance as it stood **before** this update applied.
  *   Callers that pair this with a balance-adjustment transaction MUST use
  *   this returned value as the previous balance — never form-state values,
@@ -189,7 +190,8 @@ export async function checkAccountNameUniqueness(
  */
 export async function updateAccountWithinWriter(
   accountId: string,
-  data: UpdateAccountData
+  data: UpdateAccountData,
+  currentUserId: string
 ): Promise<{ readonly previousBalance: number }> {
   const accountsCollection = database.get<Account>("accounts");
 
@@ -199,6 +201,13 @@ export async function updateAccountWithinWriter(
   } catch {
     logger.error(`Account not found (ID: ${accountId})`);
     throw new Error(t("account_not_found"));
+  }
+
+  if (existingAccount.userId !== currentUserId) {
+    logger.error(
+      `Attempted to update account with mismatched userId (ID: ${accountId})`
+    );
+    throw new Error(EDIT_ACCOUNT_ERROR_CODES.OWNERSHIP_FAILED);
   }
 
   if (existingAccount.deleted) {
@@ -476,6 +485,7 @@ export interface BalanceAdjustmentPayload {
  */
 export async function updateAccountWithBalanceAdjustment(
   accountId: string,
+  userId: string,
   data: UpdateAccountData,
   adjustment: BalanceAdjustmentPayload | null
 ): Promise<ServiceResult> {
@@ -483,7 +493,8 @@ export async function updateAccountWithBalanceAdjustment(
     await database.write(async () => {
       const { previousBalance } = await updateAccountWithinWriter(
         accountId,
-        data
+        data,
+        userId
       );
       if (adjustment !== null) {
         await createBalanceAdjustmentTransactionWithinWriter(

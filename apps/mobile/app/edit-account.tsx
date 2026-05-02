@@ -64,7 +64,7 @@ export default function EditAccount(): React.ReactNode {
   // ---------------------------------------------------------------------------
   // Data Hooks
   // ---------------------------------------------------------------------------
-  const { account, bankDetails, isLoading } = useAccountById(id ?? "");
+  const { account, bankDetails, isLoading } = useAccountById(id);
 
   // ---------------------------------------------------------------------------
   // Loading State

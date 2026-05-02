@@ -73,6 +73,7 @@ export function useAccounts(): UseAccountsResult {
 
   useEffect(() => {
     if (isResolvingUser) {
+      setAccounts([]);
       setIsLoading(true);
       return;
     }
@@ -138,7 +139,6 @@ export function useAccounts(): UseAccountsResult {
 export function useBankAccounts(): UseBankAccountsResult {
   const [accounts, setAccounts] = useState<readonly Account[]>([]);
   const [bankDetails, setBankDetails] = useState<readonly BankDetails[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isLoadingAccounts, setIsLoadingAccounts] = useState(true);
   const [isLoadingDetails, setIsLoadingDetails] = useState(true);
   const [accountsError, setAccountsError] = useState<Error | null>(null);
@@ -147,13 +147,14 @@ export function useBankAccounts(): UseBankAccountsResult {
 
   useEffect(() => {
     if (isResolvingUser) {
-      setIsLoading(true);
+      setAccounts([]);
+      setIsLoadingAccounts(true);
       return;
     }
 
     if (!userId) {
       setAccounts([]);
-      setIsLoading(false);
+      setIsLoadingAccounts(false);
       return;
     }
 
@@ -225,7 +226,7 @@ export function useBankAccounts(): UseBankAccountsResult {
 
   return {
     bankAccounts,
-    isLoading: isLoadingAccounts || isLoadingDetails || isLoading,
+    isLoading: isLoadingAccounts || isLoadingDetails || isResolvingUser,
     error: accountsError ?? detailsError,
   };
 }
