@@ -8,6 +8,7 @@ import { calculateAccountsTotalBalance, convertCurrency } from "@rizqi/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
 import { useCurrentUserId } from "./useCurrentUserId";
+import { logger } from "../utils/logger";
 import { useMarketRates } from "./useMarketRates";
 import { usePreferredCurrency } from "./usePreferredCurrency";
 
@@ -19,11 +20,19 @@ interface UseAccountsResult {
   readonly refetch: () => void;
 }
 
-/** A bank account paired with its eagerly-fetched bank details. */
-// TODO: make this type more stornger by excluding any getters & setters and methods
-export type BankAccountWithDetails = Account & {
+/**
+ * A bank account paired with its first non-deleted `BankDetails` row.
+ *
+ * Note: `account` is the live WatermelonDB `Model` instance — keep it as
+ * a Model so getters (`formattedBalance`, `isBank`, etc.) and instance
+ * methods (`update`, `markAsDeleted`, `observe`) keep working. The prior
+ * spread shape (`{ ...account, bankDetails }`) silently stripped the
+ * prototype.
+ */
+export interface BankAccountWithDetails {
+  readonly account: Account;
   readonly bankDetails: BankDetails | undefined;
-};
+}
 
 interface UseBankAccountsResult {
   readonly bankAccounts: readonly BankAccountWithDetails[];
@@ -90,7 +99,7 @@ export function useAccounts(): UseAccountsResult {
         setIsLoading(false);
       },
       error: (err: unknown) => {
-        console.error("Error observing accounts:", err);
+        logger.error("useAccounts_observation_failed", err);
         setError(err instanceof Error ? err : new Error(String(err)));
         setIsLoading(false);
       },
@@ -116,15 +125,24 @@ export function useAccounts(): UseAccountsResult {
 }
 
 /**
- * Subscribes to non-deleted BANK accounts owned by the current user and
- * eagerly fetches each account's first `BankDetails` child record.
+ * Subscribes to non-deleted BANK accounts and to the `bank_details` owned by the current user
+ * collection, then joins them in memory by `account_id`.
+ *
+ * The previous implementation re-ran `account.bankDetails.fetch()` for every
+ * account on every observe emit (N round-trips per balance change) AND
+ * spread the WatermelonDB `Model` instance into a plain object, stripping
+ * its prototype. This version observes both collections once and merges
+ * with a `useMemo` keyed on the latest snapshots — O(1) `bank_details`
+ * lookup per account, prototype preserved.
  */
 export function useBankAccounts(): UseBankAccountsResult {
-  const [bankAccounts, setBankAccounts] = useState<BankAccountWithDetails[]>(
-    []
-  );
+  const [accounts, setAccounts] = useState<readonly Account[]>([]);
+  const [bankDetails, setBankDetails] = useState<readonly BankDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [isLoadingAccounts, setIsLoadingAccounts] = useState(true);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(true);
+  const [accountsError, setAccountsError] = useState<Error | null>(null);
+  const [detailsError, setDetailsError] = useState<Error | null>(null);
   const { userId, isResolvingUser } = useCurrentUserId();
 
   useEffect(() => {
@@ -134,60 +152,82 @@ export function useBankAccounts(): UseBankAccountsResult {
     }
 
     if (!userId) {
-      setBankAccounts([]);
+      setAccounts([]);
       setIsLoading(false);
       return;
     }
 
-    setIsLoading(true);
-    setError(null);
+    setIsLoadingAccounts(true);
+    setAccountsError(null);
 
     const accountsCollection = database.get<Account>("accounts");
-
-    const query = accountsCollection.query(
-      Q.where("user_id", userId),
-      Q.where("deleted", false),
-      Q.where("type", "BANK")
-    );
-
-    const subscription = query.observe().subscribe({
-      next: (accounts) => {
-        const fetchDetails = async (): Promise<void> => {
-          try {
-            const withDetails = await Promise.all(
-              accounts.map(async (account) => {
-                const details = await account.bankDetails.fetch();
-                const firstDetail =
-                  details.length > 0 ? (details[0] as BankDetails) : undefined;
-                return {
-                  ...account,
-                  bankDetails: firstDetail,
-                };
-              })
-            );
-            setBankAccounts(withDetails as BankAccountWithDetails[]);
-          } catch (fetchErr: unknown) {
-            console.error("Error fetching bank details:", fetchErr);
-            setError(
-              fetchErr instanceof Error ? fetchErr : new Error(String(fetchErr))
-            );
-          } finally {
-            setIsLoading(false);
-          }
-        };
-        fetchDetails().catch(console.error);
-      },
-      error: (err: unknown) => {
-        console.error("Error observing bank accounts:", err);
-        setError(err instanceof Error ? err : new Error(String(err)));
-        setIsLoading(false);
-      },
-    });
+    const subscription = accountsCollection
+      .query(
+        Q.where("user_id", userId),
+        Q.where("deleted", false),
+        Q.where("type", "BANK")
+      )
+      .observeWithColumns(["balance"])
+      .subscribe({
+        next: (result) => {
+          setAccounts(result);
+          setAccountsError(null);
+          setIsLoadingAccounts(false);
+        },
+        error: (err: unknown) => {
+          logger.error("useBankAccounts_observation_failed", err);
+          setAccountsError(err instanceof Error ? err : new Error(String(err)));
+          setIsLoadingAccounts(false);
+        },
+      });
 
     return () => subscription.unsubscribe();
   }, [userId, isResolvingUser]);
 
-  return { bankAccounts, isLoading, error };
+  useEffect(() => {
+    setIsLoadingDetails(true);
+    setDetailsError(null);
+
+    const bankDetailsCollection = database.get<BankDetails>("bank_details");
+    const subscription = bankDetailsCollection
+      .query(Q.where("deleted", false))
+      .observe()
+      .subscribe({
+        next: (result) => {
+          setBankDetails(result);
+          setDetailsError(null);
+          setIsLoadingDetails(false);
+        },
+        error: (err: unknown) => {
+          logger.error("useBankAccounts_details_fetch_failed", err);
+          setDetailsError(err instanceof Error ? err : new Error(String(err)));
+          setIsLoadingDetails(false);
+        },
+      });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const bankAccounts = useMemo<readonly BankAccountWithDetails[]>(() => {
+    const detailsByAccountId = new Map<string, BankDetails>();
+    for (const detail of bankDetails) {
+      // First detail per account wins — matches the prior single-detail
+      // semantics of `account.bankDetails.fetch()` taking `[0]`.
+      if (!detailsByAccountId.has(detail.accountId)) {
+        detailsByAccountId.set(detail.accountId, detail);
+      }
+    }
+    return accounts.map((account) => ({
+      account,
+      bankDetails: detailsByAccountId.get(account.id),
+    }));
+  }, [accounts, bankDetails]);
+
+  return {
+    bankAccounts,
+    isLoading: isLoadingAccounts || isLoadingDetails || isLoading,
+    error: accountsError ?? detailsError,
+  };
 }
 
 /**
@@ -229,7 +269,7 @@ export function useTopAccounts(limit: number = 3): UseTopAccountsResult {
         setIsLoading(false);
       },
       error: (err: unknown) => {
-        console.error("Error observing top accounts:", err);
+        logger.error("useTopAccounts_observation_failed", err);
         setIsLoading(false);
       },
     });
@@ -287,7 +327,7 @@ export function useAccount(accountId: string | null): UseAccountResult {
           setIsLoading(false);
         },
         error: (err: unknown) => {
-          console.error("Error observing account:", err);
+          logger.error("useAccount_observation_failed", err);
           setError(err instanceof Error ? err : new Error(String(err)));
           setIsLoading(false);
         },

@@ -23,6 +23,8 @@ import {
   type ServiceResult,
 } from "../services/edit-account-service";
 import { getCurrentUserId } from "../services/supabase";
+import { safeNotificationHaptic } from "../utils/haptics";
+import { logger } from "../utils/logger";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -133,7 +135,7 @@ export function useDeleteAccount(accountId: string): UseDeleteAccountResult {
           });
         }
       } catch (err) {
-        console.error("[useDeleteAccount] Error fetching counts:", err);
+        logger.error("deleteAccount_count_fetch_failed", err);
       } finally {
         if (!cancelled) {
           setIsLoadingCounts(false);
@@ -141,7 +143,9 @@ export function useDeleteAccount(accountId: string): UseDeleteAccountResult {
       }
     };
 
-    fetchCounts().catch(console.error);
+    fetchCounts().catch((err: unknown) => {
+      logger.error("deleteAccount_count_fetch_unhandled", err);
+    });
 
     return () => {
       cancelled = true;
@@ -174,9 +178,10 @@ export function useDeleteAccount(accountId: string): UseDeleteAccountResult {
           throw new Error(result.error ?? "Unknown error deleting account");
         }
 
-        Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Success
-        ).catch(console.error);
+        safeNotificationHaptic(
+          Haptics.NotificationFeedbackType.Success,
+          "deleteAccount_success"
+        );
 
         showToast({
           type: "success",
@@ -186,11 +191,11 @@ export function useDeleteAccount(accountId: string): UseDeleteAccountResult {
 
         router.back();
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Unknown error";
-        console.error("[useDeleteAccount] Error deleting account:", message);
+        logger.error("deleteAccount_flow_failed", err);
 
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(
-          console.error
+        safeNotificationHaptic(
+          Haptics.NotificationFeedbackType.Error,
+          "deleteAccount_error"
         );
 
         showToast({

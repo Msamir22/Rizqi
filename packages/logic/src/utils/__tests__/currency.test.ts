@@ -139,9 +139,13 @@ describe("formatCurrency", () => {
       );
     });
 
-    it("formats GBP with 2 decimal places by default", () => {
-      expect(formatCurrency({ amount: 50, currency: "GBP" })).toBe(
-        "\u00A350.00"
+    it("hides decimal places when the rounded fraction is zero", () => {
+      expect(formatCurrency({ amount: 50, currency: "GBP" })).toBe("\u00A350");
+    });
+
+    it("keeps currency precision when the rounded fraction is non-zero", () => {
+      expect(formatCurrency({ amount: 50.5, currency: "GBP" })).toBe(
+        "\u00A350.50"
       );
     });
 
@@ -192,29 +196,29 @@ describe("formatCurrency", () => {
   describe("negative zero normalization", () => {
     it("normalizes -0 to 0 for EGP", () => {
       const result = formatCurrency({ amount: -0, currency: "EGP" });
-      expect(result).toBe("0.00 EGP");
+      expect(result).toBe("0 EGP");
     });
 
     it("normalizes -0 to 0 for USD", () => {
       const result = formatCurrency({ amount: -0, currency: "USD" });
-      expect(result).toBe("$0.00");
+      expect(result).toBe("$0");
     });
   });
 
   describe("zero values", () => {
     it("formats zero EGP correctly", () => {
-      expect(formatCurrency({ amount: 0, currency: "EGP" })).toBe("0.00 EGP");
+      expect(formatCurrency({ amount: 0, currency: "EGP" })).toBe("0 EGP");
     });
 
     it("formats zero USD correctly", () => {
-      expect(formatCurrency({ amount: 0, currency: "USD" })).toBe("$0.00");
+      expect(formatCurrency({ amount: 0, currency: "USD" })).toBe("$0");
     });
   });
 
   describe("negative values", () => {
     it("formats negative EGP as suffix currency", () => {
       expect(formatCurrency({ amount: -500, currency: "EGP" })).toBe(
-        "-500.00 EGP"
+        "-500 EGP"
       );
     });
 
@@ -277,14 +281,14 @@ describe("formatCurrency", () => {
         signDisplay: "never",
       });
       expect(result).not.toContain("-");
-      expect(result).toBe("50.00 EGP");
+      expect(result).toBe("50 EGP");
     });
   });
 
   describe("large numbers", () => {
     it("adds thousands separators", () => {
       expect(formatCurrency({ amount: 1234567, currency: "EGP" })).toBe(
-        "1,234,567.00 EGP"
+        "1,234,567 EGP"
       );
     });
 

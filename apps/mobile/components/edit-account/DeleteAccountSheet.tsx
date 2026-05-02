@@ -16,6 +16,7 @@
 import type { CurrencyType } from "@rizqi/db";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
+import { formatCurrency } from "@rizqi/logic";
 import React from "react";
 import {
   ActivityIndicator,
@@ -95,6 +96,8 @@ export function DeleteAccountSheet({
   onConfirm,
   onCancel,
   accountName,
+  accountBalance,
+  currencyCode,
   linkedRecords,
   isDeleting = false,
 }: DeleteAccountSheetProps): React.JSX.Element {
@@ -154,7 +157,13 @@ export function DeleteAccountSheet({
                     {accountName}
                   </Text>
                   <Text className="text-sm text-slate-500 dark:text-slate-400">
-                    {t("balance_label")}
+                    {t("balance_label")}{" "}
+                    <Text className="font-semibold text-slate-700 dark:text-slate-200">
+                      {formatCurrency({
+                        amount: accountBalance,
+                        currency: currencyCode,
+                      })}
+                    </Text>
                   </Text>
                 </View>
 
@@ -193,7 +202,7 @@ export function DeleteAccountSheet({
                     disabled={isDeleting}
                   >
                     <Text className="text-base font-semibold text-slate-600 dark:text-slate-300">
-                      {tCommon("cancel")}{" "}
+                      {tCommon("cancel")}
                     </Text>
                   </TouchableOpacity>
 

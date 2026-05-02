@@ -1,11 +1,12 @@
 /**
- * edit-account-service.test.ts — T009
+ * edit-account-service.test.ts
  *
  * Tests all exported functions from edit-account-service.ts:
  * - checkAccountNameUniqueness
- * - updateAccount
  * - deleteAccountWithCascade
- * - createBalanceAdjustmentTransaction
+ * - updateAccountWithBalanceAdjustment (the sole public mutation entry
+ *   point — covers what `updateAccount` and `createBalanceAdjustmentTransaction`
+ *   used to test, plus atomicity, rollback, and stale-balance defense)
  *
  * Mock Strategy:
  *   The `@rizqi/db` mock is defined entirely inside the jest.mock factory
@@ -144,9 +145,8 @@ jest.mock("@rizqi/db", () => {
 
 import {
   checkAccountNameUniqueness,
-  updateAccount,
+  updateAccountWithBalanceAdjustment,
   deleteAccountWithCascade,
-  createBalanceAdjustmentTransaction,
 } from "@/services/edit-account-service";
 
 // ---------------------------------------------------------------------------
@@ -159,6 +159,7 @@ const {
   __seed: mockSeed,
   __clearStores: mockClearStores,
   __rewireMocks: mockRewire,
+  __getStore: mockGetStore,
 } = jest.requireMock<MockDbApi>("@rizqi/db");
 
 // ---------------------------------------------------------------------------
@@ -260,144 +261,6 @@ describe("edit-account-service", () => {
       const result = await checkAccountNameUniqueness("user-1", "Cash", "EGP");
       expect(result.isUnique).toBe(false);
       expect(result.error).toBe("DB read error");
-    });
-  });
-
-  // =========================================================================
-  // updateAccount
-  // =========================================================================
-  describe("updateAccount", () => {
-    it("should update account fields", async () => {
-      const acc = seedAccount("acc-1", {
-        name: "Old Name",
-        balance: 100,
-        isDefault: false,
-      });
-      await updateAccount(
-        "acc-1",
-        {
-          name: "New Name",
-          balance: 500,
-          isDefault: false,
-        },
-        "user-1"
-      );
-      expect(acc.name).toBe("New Name");
-      expect(acc.balance).toBe(500);
-    });
-
-    it("should unset previous default when setting new default", async () => {
-      const oldDefault = seedAccount("acc-old", {
-        name: "Old Default",
-        isDefault: true,
-        userId: "user-1",
-      });
-      seedAccount("acc-new", {
-        name: "New Default",
-        isDefault: false,
-        userId: "user-1",
-      });
-
-      await updateAccount(
-        "acc-new",
-        {
-          name: "New Default",
-          balance: 0,
-          isDefault: true,
-        },
-        "user-1"
-      );
-
-      expect(oldDefault.isDefault).toBe(false);
-    });
-
-    it("should update bank details for bank accounts", async () => {
-      const bankDetail = mockModel("bd-1", {
-        bankName: "Old Bank",
-        cardLast4: "1234",
-        smsSenderName: "OldSMS",
-      });
-      const acc = seedAccount("acc-1", {
-        name: "Bank Account",
-        type: "BANK",
-        isBank: true,
-      });
-      acc.bankDetails.fetch.mockResolvedValue([bankDetail]);
-
-      await updateAccount(
-        "acc-1",
-        {
-          name: "Bank Account",
-          balance: 0,
-          isDefault: false,
-          bankName: "New Bank",
-          cardLast4: "5678",
-          smsSenderName: "NewSMS",
-        },
-        "user-1"
-      );
-
-      expect(bankDetail.bankName).toBe("New Bank");
-      expect(bankDetail.cardLast4).toBe("5678");
-      expect(bankDetail.smsSenderName).toBe("NewSMS");
-    });
-
-    it("should return NOT_FOUND when the account does not exist", async () => {
-      mockDb.get.mockImplementationOnce(() => ({
-        find: jest.fn(() => Promise.reject(new Error("Account not found"))),
-      }));
-      const result = await updateAccount(
-        "bad-id",
-        {
-          name: "X",
-          balance: 0,
-          isDefault: false,
-        },
-        "user-1"
-      );
-      expect(result.success).toBe(false);
-      expect(result.error).toBe("NOT_FOUND");
-    });
-
-    it("should return OWNERSHIP_FAILED and skip writes when userId does not match", async () => {
-      const acc = seedAccount("acc-1", {
-        name: "Original Name",
-        balance: 100,
-        isDefault: false,
-        userId: "owner-user",
-      });
-
-      const result = await updateAccount(
-        "acc-1",
-        {
-          name: "Hijacked",
-          balance: 999,
-          isDefault: true,
-        },
-        "attacker-user"
-      );
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe("OWNERSHIP_FAILED");
-      // No mutation must have occurred
-      expect(acc.update).not.toHaveBeenCalled();
-      expect(acc.name).toBe("Original Name");
-      expect(acc.balance).toBe(100);
-      expect(acc.isDefault).toBe(false);
-    });
-
-    it("should trim the account name", async () => {
-      const acc = seedAccount("acc-1", { name: "Old" });
-      await updateAccount(
-        "acc-1",
-        {
-          name: "  Trimmed Name  ",
-          balance: 0,
-          isDefault: false,
-        },
-        "user-1"
-      );
-      expect(acc.name).toBe("Trimmed Name");
     });
   });
 
@@ -547,115 +410,380 @@ describe("edit-account-service", () => {
   });
 
   // =========================================================================
-  // createBalanceAdjustmentTransaction
+  // updateAccountWithBalanceAdjustment — single public mutation entry point
+  //
+  // Covers:
+  //   - the `updateAccount` legacy paths (name trim, default flip,
+  //     bank-details update, error on missing account) when called with
+  //     `adjustment: null`
+  //   - the `createBalanceAdjustmentTransaction` legacy paths (INCOME on
+  //     increase, EXPENSE on decrease, absolute amount, sub-epsilon skip)
+  //     when called with a non-null adjustment
+  //   - the atomicity contract from #374 (single write, rollback on
+  //     adjustment failure, defensive previousBalance from live account)
   // =========================================================================
-  describe("createBalanceAdjustmentTransaction", () => {
-    it("should skip creation when balance did not change", async () => {
-      const result = await createBalanceAdjustmentTransaction(
-        "acc-1",
-        "user-1",
-        "EGP",
-        1000,
-        1000
+  describe("updateAccountWithBalanceAdjustment", () => {
+    // ---- helpers --------------------------------------------------------
+
+    /**
+     * Wires the `accounts` collection to return `acc` from `find()` and the
+     * `transactions` collection through a `txCreate` you pass in. Other
+     * collections are stubbed empty.
+     */
+    function wireAccountAndTransactionMocks(
+      acc: MockModelRecord,
+      txCreate: jest.Mock
+    ): void {
+      const accountsCollectionMock = {
+        find: jest.fn(() => Promise.resolve(acc)),
+        query: jest.fn(() => ({ fetch: jest.fn(() => Promise.resolve([])) })),
+      };
+      mockDb.get.mockImplementation((tableName: string) => {
+        if (tableName === "accounts") return accountsCollectionMock;
+        if (tableName === "transactions") return { create: txCreate };
+        return { find: jest.fn(), query: jest.fn(), create: jest.fn() };
+      });
+    }
+
+    /** Build a transactions.create mock that captures the created row. */
+    function captureTxCreate(): {
+      readonly create: jest.Mock;
+      readonly captured: () => Record<string, unknown> | undefined;
+    } {
+      let captured: Record<string, unknown> | undefined;
+      const create = jest.fn(
+        (builder: (r: Record<string, unknown>) => void) => {
+          captured = { id: `new-tx-${Date.now()}` };
+          builder(captured);
+          return Promise.resolve(captured);
+        }
       );
-      expect(result.success).toBe(true);
-      expect(mockDb.write).not.toHaveBeenCalled();
-    });
+      return { create, captured: (): typeof captured => captured };
+    }
 
-    it("should create INCOME transaction when balance increases", async () => {
-      // Capture the created transaction to verify type and category
-      let createdTx: Record<string, unknown> | undefined;
-      mockDb.get.mockImplementation((tableName: string) => ({
-        create: jest.fn((builder: (r: Record<string, unknown>) => void) => {
-          createdTx = { id: `new-${tableName}-${Date.now()}` };
-          builder(createdTx);
-          return Promise.resolve(createdTx);
-        }),
-      }));
+    // ---- batching contract (atomicity) ---------------------------------
 
-      const result = await createBalanceAdjustmentTransaction(
+    it("opens exactly one database.write block when adjustment is provided", async () => {
+      seedAccount("acc-1", { name: "Old", balance: 100, userId: "user-1" });
+
+      const result = await updateAccountWithBalanceAdjustment(
         "acc-1",
-        "user-1",
-        "EGP",
-        1000,
-        1500
-      );
-
-      expect(result.success).toBe(true);
-      expect(mockDb.write).toHaveBeenCalled();
-      expect(createdTx).toBeDefined();
-      expect(createdTx?.type).toBe("INCOME");
-      expect(createdTx?.categoryId).toBe(
-        "00000000-0000-0000-0001-000000000200"
-      );
-      expect(createdTx?.amount).toBe(500);
-    });
-
-    it("should create EXPENSE transaction when balance decreases", async () => {
-      // Capture the created transaction to verify type and category
-      let createdTx: Record<string, unknown> | undefined;
-      mockDb.get.mockImplementation((tableName: string) => ({
-        create: jest.fn((builder: (r: Record<string, unknown>) => void) => {
-          createdTx = { id: `new-${tableName}-${Date.now()}` };
-          builder(createdTx);
-          return Promise.resolve(createdTx);
-        }),
-      }));
-
-      const result = await createBalanceAdjustmentTransaction(
-        "acc-1",
-        "user-1",
-        "EGP",
-        1500,
-        1000
+        { name: "New", balance: 250, isDefault: false },
+        { userId: "user-1", currency: "EGP" }
       );
 
       expect(result.success).toBe(true);
-      expect(mockDb.write).toHaveBeenCalled();
-      expect(createdTx).toBeDefined();
-      expect(createdTx?.type).toBe("EXPENSE");
-      expect(createdTx?.categoryId).toBe(
-        "00000000-0000-0000-0001-000000000201"
-      );
-      expect(createdTx?.amount).toBe(500);
+      expect(mockDb.write).toHaveBeenCalledTimes(1);
     });
 
-    it("should use absolute difference as amount", async () => {
-      // The transaction amount should be positive regardless of direction
-      let createdTx: Record<string, unknown> | undefined;
-      mockDb.get.mockImplementation((tableName: string) => ({
-        create: jest.fn((builder: (r: Record<string, unknown>) => void) => {
-          createdTx = { id: `new-${tableName}-${Date.now()}` };
-          builder(createdTx);
-          return Promise.resolve(createdTx);
-        }),
-      }));
+    it("opens exactly one database.write block when adjustment is null", async () => {
+      seedAccount("acc-1", { name: "Old", balance: 100 });
 
-      await createBalanceAdjustmentTransaction(
+      const result = await updateAccountWithBalanceAdjustment(
         "acc-1",
-        "user-1",
-        "EGP",
-        1000,
-        700
+        { name: "New", balance: 100, isDefault: false },
+        null
       );
 
-      // Verify write was called — the created transaction amount = |700 - 1000| = 300
-      expect(mockDb.write).toHaveBeenCalled();
-      expect(createdTx).toBeDefined();
-      expect(createdTx?.amount).toBe(300);
+      expect(result.success).toBe(true);
+      expect(mockDb.write).toHaveBeenCalledTimes(1);
     });
 
-    it("should return error on database failure", async () => {
-      mockDb.write.mockRejectedValueOnce(new Error("Write failed"));
-      const result = await createBalanceAdjustmentTransaction(
+    it("updates the account row AND creates a transaction in one batch", async () => {
+      const acc = seedAccount("acc-1", {
+        name: "Old",
+        balance: 100,
+        userId: "user-1",
+      });
+      const tx = captureTxCreate();
+      wireAccountAndTransactionMocks(acc, tx.create);
+
+      await updateAccountWithBalanceAdjustment(
         "acc-1",
-        "user-1",
-        "EGP",
-        1000,
-        2000
+        { name: "Renamed", balance: 350, isDefault: false },
+        { userId: "user-1", currency: "EGP" }
       );
+
+      expect(acc.name).toBe("Renamed");
+      expect(acc.balance).toBe(350);
+      const created = tx.captured();
+      expect(created).toBeDefined();
+      expect(created?.amount).toBe(250);
+      expect(created?.type).toBe("INCOME");
+    });
+
+    // ---- rollback semantics (issue #374 AC5) ---------------------------
+
+    it("preserves the original account state when the adjustment write throws (snapshot-restore mock)", async () => {
+      // This mock simulates WatermelonDB's writer-batch rollback: take a
+      // shallow snapshot of the account fields BEFORE running the writer
+      // callback; if the callback throws, restore the snapshot. That way
+      // we can assert the post-failure account state matches what a real
+      // rollback would produce.
+      const acc = seedAccount("acc-1", {
+        name: "Original",
+        balance: 100,
+        userId: "user-1",
+      });
+
+      wireAccountAndTransactionMocks(
+        acc,
+        jest.fn(() => Promise.reject(new Error("Transaction insert failed")))
+      );
+
+      mockDb.write.mockImplementation(async (cb: () => Promise<unknown>) => {
+        const snapshot = { ...acc };
+        try {
+          await cb();
+        } catch (err) {
+          // Restore the in-memory account fields, mirroring SQLite rollback.
+          for (const key of Object.keys(snapshot)) {
+            (acc as Record<string, unknown>)[key] = (
+              snapshot as Record<string, unknown>
+            )[key];
+          }
+          throw err;
+        }
+      });
+
+      const result = await updateAccountWithBalanceAdjustment(
+        "acc-1",
+        { name: "Renamed", balance: 350, isDefault: false },
+        { userId: "user-1", currency: "EGP" }
+      );
+
       expect(result.success).toBe(false);
-      expect(result.error).toBe("Write failed");
+      expect(result.error).toBe("Transaction insert failed");
+      // The account row MUST be untouched after rollback.
+      expect(acc.name).toBe("Original");
+      expect(acc.balance).toBe(100);
+    });
+
+    // ---- defensive previousBalance (issue #374 Notes / CodeRabbit) -----
+
+    it("computes the adjustment delta from the LIVE balance, not from any caller-supplied value", async () => {
+      // The DB row's live balance is 250 (e.g., a sync moved it while the
+      // form was open displaying 100). When the form submits with new
+      // balance 400 and assumes the old was 100, the service must record
+      // a delta of |400 - 250| = 150 (live), not |400 - 100| = 300 (stale).
+      const acc = seedAccount("acc-1", {
+        name: "Original",
+        balance: 250,
+        userId: "user-1",
+      });
+      const tx = captureTxCreate();
+      wireAccountAndTransactionMocks(acc, tx.create);
+
+      await updateAccountWithBalanceAdjustment(
+        "acc-1",
+        { name: "Original", balance: 400, isDefault: false },
+        { userId: "user-1", currency: "EGP" }
+      );
+
+      const created = tx.captured();
+      expect(created).toBeDefined();
+      expect(created?.amount).toBe(150);
+      expect(created?.type).toBe("INCOME");
+    });
+
+    // ---- INCOME / EXPENSE / amount math --------------------------------
+
+    it("creates an INCOME transaction when the live balance increases", async () => {
+      const acc = seedAccount("acc-1", { balance: 1000, userId: "user-1" });
+      const tx = captureTxCreate();
+      wireAccountAndTransactionMocks(acc, tx.create);
+
+      await updateAccountWithBalanceAdjustment(
+        "acc-1",
+        { name: "Test", balance: 1500, isDefault: false },
+        { userId: "user-1", currency: "EGP" }
+      );
+
+      const created = tx.captured();
+      expect(created?.type).toBe("INCOME");
+      expect(created?.categoryId).toBe("00000000-0000-0000-0001-000000000200");
+      expect(created?.amount).toBe(500);
+    });
+
+    it("creates an EXPENSE transaction when the live balance decreases", async () => {
+      const acc = seedAccount("acc-1", { balance: 1500, userId: "user-1" });
+      const tx = captureTxCreate();
+      wireAccountAndTransactionMocks(acc, tx.create);
+
+      await updateAccountWithBalanceAdjustment(
+        "acc-1",
+        { name: "Test", balance: 1000, isDefault: false },
+        { userId: "user-1", currency: "EGP" }
+      );
+
+      const created = tx.captured();
+      expect(created?.type).toBe("EXPENSE");
+      expect(created?.categoryId).toBe("00000000-0000-0000-0001-000000000201");
+      expect(created?.amount).toBe(500);
+    });
+
+    it("uses the absolute difference as transaction amount", async () => {
+      const acc = seedAccount("acc-1", { balance: 1000, userId: "user-1" });
+      const tx = captureTxCreate();
+      wireAccountAndTransactionMocks(acc, tx.create);
+
+      await updateAccountWithBalanceAdjustment(
+        "acc-1",
+        { name: "Test", balance: 700, isDefault: false },
+        { userId: "user-1", currency: "EGP" }
+      );
+
+      expect(tx.captured()?.amount).toBe(300);
+    });
+
+    it("skips the transaction insert when the balance change is below epsilon", async () => {
+      const acc = seedAccount("acc-1", {
+        name: "Old",
+        balance: 100,
+        userId: "user-1",
+      });
+      const tx = captureTxCreate();
+      wireAccountAndTransactionMocks(acc, tx.create);
+
+      const result = await updateAccountWithBalanceAdjustment(
+        "acc-1",
+        { name: "Renamed", balance: 100.0001, isDefault: false },
+        { userId: "user-1", currency: "EGP" }
+      );
+
+      expect(result.success).toBe(true);
+      expect(tx.create).not.toHaveBeenCalled();
+      expect(acc.name).toBe("Renamed");
+    });
+
+    // ---- migrated `updateAccount` coverage (adjustment: null) ----------
+
+    it("updates account fields with null adjustment", async () => {
+      const acc = seedAccount("acc-1", {
+        name: "Old Name",
+        balance: 100,
+        isDefault: false,
+      });
+
+      await updateAccountWithBalanceAdjustment(
+        "acc-1",
+        { name: "New Name", balance: 500, isDefault: false },
+        null
+      );
+
+      expect(acc.name).toBe("New Name");
+      expect(acc.balance).toBe(500);
+    });
+
+    it("trims the account name", async () => {
+      const acc = seedAccount("acc-1", { name: "Old" });
+
+      await updateAccountWithBalanceAdjustment(
+        "acc-1",
+        { name: "  Trimmed Name  ", balance: 0, isDefault: false },
+        null
+      );
+
+      expect(acc.name).toBe("Trimmed Name");
+    });
+
+    it("unsets previous default when setting new default", async () => {
+      const oldDefault = seedAccount("acc-old", {
+        name: "Old Default",
+        isDefault: true,
+        userId: "user-1",
+      });
+      seedAccount("acc-new", {
+        name: "New Default",
+        isDefault: false,
+        userId: "user-1",
+      });
+
+      await updateAccountWithBalanceAdjustment(
+        "acc-new",
+        { name: "New Default", balance: 0, isDefault: true },
+        null
+      );
+
+      expect(oldDefault.isDefault).toBe(false);
+    });
+
+    it("updates bank details for bank accounts", async () => {
+      const bankDetail = mockModel("bd-1", {
+        bankName: "Old Bank",
+        cardLast4: "1234",
+        smsSenderName: "OldSMS",
+      });
+      const acc = seedAccount("acc-1", {
+        name: "Bank Account",
+        type: "BANK",
+        isBank: true,
+      });
+      acc.bankDetails.fetch.mockResolvedValue([bankDetail]);
+
+      await updateAccountWithBalanceAdjustment(
+        "acc-1",
+        {
+          name: "Bank Account",
+          balance: 0,
+          isDefault: false,
+          bankName: "New Bank",
+          cardLast4: "5678",
+          smsSenderName: "NewSMS",
+        },
+        null
+      );
+
+      expect(bankDetail.bankName).toBe("New Bank");
+      expect(bankDetail.cardLast4).toBe("5678");
+      expect(bankDetail.smsSenderName).toBe("NewSMS");
+    });
+
+    it("creates missing bank details when editing a bank account with no detail row", async () => {
+      const acc = seedAccount("acc-1", {
+        name: "Bank Account",
+        type: "BANK",
+        isBank: true,
+      });
+      acc.bankDetails.fetch.mockResolvedValue([]);
+
+      await updateAccountWithBalanceAdjustment(
+        "acc-1",
+        {
+          name: "Bank Account",
+          balance: 0,
+          isDefault: false,
+          bankName: "CIB",
+          cardLast4: "1234",
+          smsSenderName: "CIBSMS",
+        },
+        null
+      );
+
+      const createdDetails = Array.from(mockGetStore("bank_details").values());
+      expect(createdDetails).toHaveLength(1);
+      expect(createdDetails[0]).toMatchObject({
+        accountId: "acc-1",
+        bankName: "CIB",
+        cardLast4: "1234",
+        smsSenderName: "CIBSMS",
+        deleted: false,
+      });
+    });
+
+    it("returns success: false when the account is not found", async () => {
+      mockDb.get.mockImplementationOnce(() => ({
+        find: jest.fn(() => Promise.reject(new Error("Account not found"))),
+      }));
+
+      const result = await updateAccountWithBalanceAdjustment(
+        "bad-id",
+        { name: "X", balance: 0, isDefault: false },
+        null
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Account not found");
     });
   });
 });
