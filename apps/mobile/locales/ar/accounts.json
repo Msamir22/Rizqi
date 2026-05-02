@@ -37,6 +37,7 @@
   "saving": "جاري الحفظ...",
   "danger_zone": "منطقة الخطر",
   "default_account": "الحساب الافتراضي",
+  "default_account_badge": "الحساب الافتراضي",
   "default_account_description": "سيتم اختيار هذا الحساب افتراضياً للمعاملات الجديدة.",
   "delete_account": "حذف الحساب",
   "delete_account_warning": "سيؤدي هذا إلى حذف هذا الحساب وجميع معاملاته نهائياً.",

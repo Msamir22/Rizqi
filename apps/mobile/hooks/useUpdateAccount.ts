@@ -16,7 +16,7 @@
 import type { CurrencyType } from "@rizqi/db";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useToast } from "../components/ui/Toast";
 import {
   updateAccountWithBalanceAdjustment,
@@ -71,6 +71,7 @@ interface UseUpdateAccountResult {
  */
 export function useUpdateAccount(): UseUpdateAccountResult {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
   const { showToast } = useToast();
   const router = useRouter();
 
@@ -80,22 +81,25 @@ export function useUpdateAccount(): UseUpdateAccountResult {
       data: UpdateAccountData,
       balanceAdjustment?: BalanceAdjustmentOptions
     ): Promise<void> => {
-      if (isSubmitting) return;
-
+      if (isSubmittingRef.current) return;
+      isSubmittingRef.current = true;
       setIsSubmitting(true);
 
       try {
-        // Resolve the balance-adjustment payload (if requested) BEFORE the
-        // write so a missing userId fails the whole update — never silently
-        // skip the ledger entry while still mutating the account.
+        const userId = await getCurrentUserId();
+        if (!userId) {
+          showToast({
+            type: "error",
+            title: "Session Error",
+            message: "You must be signed in to update an account",
+          });
+          return;
+        }
+
+        // Resolve the balance-adjustment payload (if requested) BEFORE the write
+        // to ensure we have the correct pre-update balance for transaction tracking.
         let adjustmentPayload: BalanceAdjustmentPayload | null = null;
         if (balanceAdjustment?.trackAsTransaction) {
-          const userId = await getCurrentUserId();
-          if (!userId) {
-            throw new Error(
-              "Cannot record balance adjustment: user is not signed in"
-            );
-          }
           adjustmentPayload = {
             userId,
             currency: balanceAdjustment.currency,
@@ -106,6 +110,7 @@ export function useUpdateAccount(): UseUpdateAccountResult {
         // or roll back together.
         const result: ServiceResult = await updateAccountWithBalanceAdjustment(
           accountId,
+          userId,
           data,
           adjustmentPayload
         );
@@ -140,6 +145,7 @@ export function useUpdateAccount(): UseUpdateAccountResult {
           message: "Something went wrong. Please try again.",
         });
       } finally {
+        isSubmittingRef.current = false;
         setIsSubmitting(false);
       }
     },

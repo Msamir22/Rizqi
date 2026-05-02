@@ -93,7 +93,7 @@ export default function EditTransfer(): React.ReactNode {
   // ---------------------------------------------------------------------------
   // Data Hooks
   // ---------------------------------------------------------------------------
-  const { transfer, isLoading: isLoadingTransfer } = useTransferById(id ?? "");
+  const { transfer, isLoading: isLoadingTransfer } = useTransferById(id);
   const { accounts } = useAccounts();
   const { expenseCategories, incomeCategories } = useCategories();
   const categoryMap = useCategoryLookup();

@@ -14,6 +14,8 @@
 
 import { Account, BankDetails, database } from "@rizqi/db";
 import { useEffect, useRef, useState } from "react";
+import { observeOwnedById } from "@/services/user-data-access";
+import { useCurrentUserId } from "./useCurrentUserId";
 import { logger } from "../utils/logger";
 
 // ---------------------------------------------------------------------------
@@ -47,16 +49,29 @@ export interface UseAccountByIdResult {
  * @param id - The WatermelonDB record ID of the account
  * @returns The observed account, its bank details, and loading state
  */
-export function useAccountById(id: string): UseAccountByIdResult {
+export function useAccountById(id: string | null): UseAccountByIdResult {
   const [account, setAccount] = useState<Account | null>(null);
   const [bankDetails, setBankDetails] = useState<BankDetailsData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const bankDetailsRequestIdRef = useRef(0);
+  const { userId, isResolvingUser } = useCurrentUserId();
 
   useEffect(() => {
     let isActive = true;
 
     if (!id) {
+      setAccount(null);
+      setBankDetails(null);
+      setIsLoading(false);
+      return undefined;
+    }
+
+    if (isResolvingUser) {
+      setIsLoading(true);
+      return undefined;
+    }
+
+    if (!userId) {
       setAccount(null);
       setBankDetails(null);
       setIsLoading(false);
@@ -100,8 +115,18 @@ export function useAccountById(id: string): UseAccountByIdResult {
     };
 
     const collection = database.get<Account>("accounts");
-    const subscription = collection.findAndObserve(id).subscribe({
+    const subscription = observeOwnedById<Account>(
+      collection,
+      id,
+      userId
+    ).subscribe({
       next: (record) => {
+        if (record === null) {
+          setAccount(null);
+          setBankDetails(null);
+          setIsLoading(false);
+          return;
+        }
         setAccount(record);
         void loadBankDetails(record);
       },
@@ -117,7 +142,7 @@ export function useAccountById(id: string): UseAccountByIdResult {
       isActive = false;
       subscription.unsubscribe();
     };
-  }, [id]);
+  }, [id, userId, isResolvingUser]);
 
   return { account, bankDetails, isLoading };
 }

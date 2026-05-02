@@ -117,6 +117,7 @@ function renderHook(): {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockGetCurrentUserId.mockResolvedValue("user-1");
 });
 
 describe("useUpdateAccount", () => {
@@ -166,6 +167,7 @@ describe("useUpdateAccount", () => {
 
     expect(mockUpdateAccountWithBalanceAdjustment).toHaveBeenCalledWith(
       "acc-1",
+      "user-1",
       expect.objectContaining({ name: "Test", balance: 250 }),
       { userId: "user-1", currency: "EGP" }
     );
@@ -189,7 +191,7 @@ describe("useUpdateAccount", () => {
     // ledger entry while still mutating the account.
     expect(mockUpdateAccountWithBalanceAdjustment).not.toHaveBeenCalled();
     expect(mockShowToast).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "error", title: "Update Failed" })
+      expect.objectContaining({ type: "error", title: "Session Error" })
     );
     expect(mockRouterBack).not.toHaveBeenCalled();
   });
@@ -212,10 +214,10 @@ describe("useUpdateAccount", () => {
     });
 
     // userId resolution must be skipped entirely — no auth call when
-    // tracking is off.
-    expect(mockGetCurrentUserId).not.toHaveBeenCalled();
+    expect(mockGetCurrentUserId).toHaveBeenCalledTimes(1);
     expect(mockUpdateAccountWithBalanceAdjustment).toHaveBeenCalledWith(
       "acc-1",
+      "user-1",
       expect.objectContaining({
         name: "Renamed",
         balance: 100,

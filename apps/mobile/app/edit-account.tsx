@@ -37,7 +37,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -47,6 +46,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { EditAccountSkeleton } from "@/components/edit-account/EditAccountSkeleton";
 
 // =============================================================================
 // Component
@@ -64,17 +64,13 @@ export default function EditAccount(): React.ReactNode {
   // ---------------------------------------------------------------------------
   // Data Hooks
   // ---------------------------------------------------------------------------
-  const { account, bankDetails, isLoading } = useAccountById(id ?? "");
+  const { account, bankDetails, isLoading } = useAccountById(id);
 
   // ---------------------------------------------------------------------------
   // Loading State
   // ---------------------------------------------------------------------------
   if (isLoading) {
-    return (
-      <View className="flex-1 items-center justify-center bg-background dark:bg-background-dark">
-        <ActivityIndicator size="large" color={palette.nileGreen[500]} />
-      </View>
-    );
+    return <EditAccountSkeleton />;
   }
 
   // ---------------------------------------------------------------------------

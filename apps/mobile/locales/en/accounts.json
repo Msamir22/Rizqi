@@ -33,6 +33,7 @@
   "saving": "Saving...",
   "danger_zone": "Danger Zone",
   "default_account": "Default Account",
+  "default_account_badge": "Default account",
   "default_account_description": "This account will be selected by default for new transactions.",
   "delete_account": "Delete Account",
   "delete_account_warning": "This will permanently delete this account and all its transactions.",
