@@ -52,6 +52,8 @@ export interface UseAccountResult {
   error: Error | null;
 }
 
+const ACCOUNT_LIST_OBSERVED_COLUMNS = ["balance", "is_default", "name"];
+
 /**
  * Subscribes to non-deleted accounts owned by the current user and exposes
  * the list, load/error state, total balance in the preferred currency, and a
@@ -96,17 +98,19 @@ export function useAccounts(): UseAccountsResult {
       Q.where("deleted", false)
     );
 
-    const subscription = query.observeWithColumns(["balance"]).subscribe({
-      next: (result) => {
-        setAccounts(result);
-        setIsLoading(false);
-      },
-      error: (err: unknown) => {
-        logger.error("useAccounts_observation_failed", err);
-        setError(err instanceof Error ? err : new Error(String(err)));
-        setIsLoading(false);
-      },
-    });
+    const subscription = query
+      .observeWithColumns(ACCOUNT_LIST_OBSERVED_COLUMNS)
+      .subscribe({
+        next: (result) => {
+          setAccounts(result);
+          setIsLoading(false);
+        },
+        error: (err: unknown) => {
+          logger.error("useAccounts_observation_failed", err);
+          setError(err instanceof Error ? err : new Error(String(err)));
+          setIsLoading(false);
+        },
+      });
 
     return () => subscription.unsubscribe();
   }, [refreshKey, userId, isResolvingUser]);
@@ -170,7 +174,7 @@ export function useBankAccounts(): UseBankAccountsResult {
       Q.where("deleted", false),
       Q.where("type", "BANK")
     )
-      .observeWithColumns(["balance"])
+      .observeWithColumns(ACCOUNT_LIST_OBSERVED_COLUMNS)
       .subscribe({
         next: (result) => {
           setAccounts(result);
@@ -294,17 +298,19 @@ export function useTopAccounts(limit: number = 3): UseTopAccountsResult {
       Q.take(limit)
     );
 
-    // Use observeWithColumns to react to balance changes, not just add/remove
-    const subscription = query.observeWithColumns(["balance"]).subscribe({
-      next: (result) => {
-        setAccounts(result);
-        setIsLoading(false);
-      },
-      error: (err: unknown) => {
-        logger.error("useTopAccounts_observation_failed", err);
-        setIsLoading(false);
-      },
-    });
+    // Use observeWithColumns to react to balance/default changes, not just add/remove
+    const subscription = query
+      .observeWithColumns(ACCOUNT_LIST_OBSERVED_COLUMNS)
+      .subscribe({
+        next: (result) => {
+          setAccounts(result);
+          setIsLoading(false);
+        },
+        error: (err: unknown) => {
+          logger.error("useTopAccounts_observation_failed", err);
+          setIsLoading(false);
+        },
+      });
 
     return () => subscription.unsubscribe();
   }, [limit, userId, isResolvingUser]);

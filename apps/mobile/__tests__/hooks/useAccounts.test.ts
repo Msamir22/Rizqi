@@ -2,8 +2,8 @@
  * useAccounts hook tests
  *
  * Focuses on the bank-account observer contract from PR #548 review:
- * balance edits on existing bank accounts must emit, and successful emissions
- * from either subscription must clear a stale observer error.
+ * balance/default/name edits on existing bank accounts must emit, and
+ * successful emissions from either subscription must clear a stale observer error.
  */
 
 import React from "react";
@@ -67,6 +67,14 @@ interface UseBankAccountsResult {
   }>;
   readonly isLoading: boolean;
   readonly error: Error | null;
+}
+
+interface UseAccountsResult {
+  readonly accounts: readonly MockAccount[];
+  readonly isLoading: boolean;
+  readonly error: Error | null;
+  readonly totalAccountsBalance: number;
+  readonly refetch: () => void;
 }
 
 const mockAccountObservers: Array<MockObserver<MockAccount>> = [];
@@ -157,7 +165,33 @@ jest.mock("../../services/supabase", () => ({
 
 // Import AFTER mocks
 // eslint-disable-next-line import/first
-import { useBankAccounts } from "../../hooks/useAccounts";
+import { useAccounts, useBankAccounts } from "../../hooks/useAccounts";
+
+function renderUseAccountsHook(): {
+  readonly result: { current: UseAccountsResult };
+  readonly unmount: () => void;
+} {
+  const ref: { current: UseAccountsResult } = {
+    current: {
+      accounts: [],
+      isLoading: true,
+      error: null,
+      totalAccountsBalance: 0,
+      refetch: () => undefined,
+    },
+  };
+
+  const HookWrapper = (): React.JSX.Element | null => {
+    ref.current = useAccounts() as unknown as UseAccountsResult;
+    return null;
+  };
+
+  let renderer: ReactTestRendererInstance = { unmount: () => undefined };
+  RTR.act(() => {
+    renderer = RTR.create(React.createElement(HookWrapper));
+  });
+  return { result: ref, unmount: () => renderer.unmount() };
+}
 
 function renderHook(): {
   readonly result: { current: UseBankAccountsResult };
@@ -204,11 +238,30 @@ afterEach(() => {
   consoleErrorSpy.mockRestore();
 });
 
+describe("useAccounts", () => {
+  it("observes balance and default-flag changes on existing accounts", () => {
+    const { unmount } = renderUseAccountsHook();
+
+    expect(mockAccountsObserveWithColumns).toHaveBeenCalledWith([
+      "balance",
+      "is_default",
+      "name",
+    ]);
+    expect(mockAccountsObserve).not.toHaveBeenCalled();
+
+    unmount();
+  });
+});
+
 describe("useBankAccounts", () => {
-  it("observes balance changes on existing bank accounts", () => {
+  it("observes balance and default-flag changes on existing bank accounts", () => {
     const { unmount } = renderHook();
 
-    expect(mockAccountsObserveWithColumns).toHaveBeenCalledWith(["balance"]);
+    expect(mockAccountsObserveWithColumns).toHaveBeenCalledWith([
+      "balance",
+      "is_default",
+      "name",
+    ]);
     expect(mockAccountsObserve).not.toHaveBeenCalled();
 
     unmount();
