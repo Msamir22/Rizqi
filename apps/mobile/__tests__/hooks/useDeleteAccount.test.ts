@@ -3,33 +3,38 @@ import { act, renderHook, waitFor } from "@testing-library/react-native";
 const mockDeleteAccountWithCascade = jest.fn(
   (..._args: readonly unknown[]): Promise<unknown> => Promise.resolve()
 );
+const mockGetAccountLinkedRecordCounts = jest.fn(
+  (..._args: readonly unknown[]): Promise<unknown> => Promise.resolve()
+);
 const mockGetCurrentUserId = jest.fn(
   (): Promise<string | null> => Promise.resolve("user-1")
 );
 const mockShowToast = jest.fn();
 const mockRouterBack = jest.fn();
-const mockFetchCount = jest.fn((): Promise<number> => Promise.resolve(0));
-const mockQuery = jest.fn(() => ({ fetchCount: mockFetchCount }));
-const mockDatabaseGet = jest.fn((_collectionName: string) => ({
-  query: mockQuery,
-}));
 const mockSafeNotificationHaptic = jest.fn(
   (..._args: readonly unknown[]): Promise<void> => Promise.resolve()
 );
 
-jest.mock("@monyvi/db", () => ({
-  database: {
-    get: (collectionName: string): unknown => mockDatabaseGet(collectionName),
+jest.mock("../../services/edit-account-service", () => ({
+  EMPTY_LINKED_RECORDS_COUNTS: {
+    transactions: 0,
+    transfers: 0,
+    debts: 0,
+    recurringPayments: 0,
   },
+  deleteAccountWithCascade: (...args: readonly unknown[]): Promise<unknown> =>
+    mockDeleteAccountWithCascade(...args),
+  getAccountLinkedRecordCounts: (
+    ...args: readonly unknown[]
+  ): Promise<unknown> => mockGetAccountLinkedRecordCounts(...args),
 }));
 
-jest.mock("@nozbe/watermelondb", () => ({
-  Q: {
-    where: (...args: readonly unknown[]) => ({ kind: "where", args }),
-    notEq: (value: unknown) => ({ kind: "notEq", value }),
-    and: (...args: readonly unknown[]) => ({ kind: "and", args }),
-    or: (...args: readonly unknown[]) => ({ kind: "or", args }),
-  },
+jest.mock("../../services/supabase", () => ({
+  getCurrentUserId: (): Promise<string | null> => mockGetCurrentUserId(),
+}));
+
+jest.mock("../../components/ui/Toast", () => ({
+  useToast: (): { showToast: jest.Mock } => ({ showToast: mockShowToast }),
 }));
 
 jest.mock("expo-router", () => ({
@@ -38,19 +43,6 @@ jest.mock("expo-router", () => ({
 
 jest.mock("expo-haptics", () => ({
   NotificationFeedbackType: { Success: "success", Error: "error" },
-}));
-
-jest.mock("../../components/ui/Toast", () => ({
-  useToast: (): { showToast: jest.Mock } => ({ showToast: mockShowToast }),
-}));
-
-jest.mock("../../services/edit-account-service", () => ({
-  deleteAccountWithCascade: (...args: readonly unknown[]): Promise<unknown> =>
-    mockDeleteAccountWithCascade(...args),
-}));
-
-jest.mock("../../services/supabase", () => ({
-  getCurrentUserId: (): Promise<string | null> => mockGetCurrentUserId(),
 }));
 
 jest.mock("../../utils/haptics", () => ({
@@ -74,18 +66,43 @@ import { useDeleteAccount } from "../../hooks/useDeleteAccount";
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockFetchCount.mockResolvedValue(0);
+  mockGetAccountLinkedRecordCounts.mockResolvedValue({
+    transactions: 2,
+    transfers: 3,
+    debts: 5,
+    recurringPayments: 7,
+  });
   mockGetCurrentUserId.mockResolvedValue("user-1");
   mockDeleteAccountWithCascade.mockResolvedValue({ success: true });
 });
 
 describe("useDeleteAccount", () => {
-  it("uses localized success toast text without emojis", async () => {
+  it("does not fetch linked record counts until loadCounts is called", async () => {
     const { result } = renderHook(() => useDeleteAccount("acc-1"));
+
+    expect(mockGetAccountLinkedRecordCounts).not.toHaveBeenCalled();
+    expect(result.current.isLoadingCounts).toBe(false);
+
+    act(() => {
+      result.current.loadCounts();
+    });
 
     await waitFor(() => {
       expect(result.current.isLoadingCounts).toBe(false);
     });
+
+    expect(mockGetAccountLinkedRecordCounts).toHaveBeenCalledTimes(1);
+    expect(mockGetAccountLinkedRecordCounts).toHaveBeenCalledWith("acc-1");
+    expect(result.current.linkedCounts).toEqual({
+      transactions: 2,
+      transfers: 3,
+      debts: 5,
+      recurringPayments: 7,
+    });
+  });
+
+  it("uses localized delete success toast text without emojis", async () => {
+    const { result } = renderHook(() => useDeleteAccount("acc-1"));
 
     await act(async () => {
       await result.current.performDelete("acc-1");
@@ -104,10 +121,6 @@ describe("useDeleteAccount", () => {
   it("uses localized session-required toast text", async () => {
     mockGetCurrentUserId.mockResolvedValueOnce(null);
     const { result } = renderHook(() => useDeleteAccount("acc-1"));
-
-    await waitFor(() => {
-      expect(result.current.isLoadingCounts).toBe(false);
-    });
 
     await act(async () => {
       await result.current.performDelete("acc-1");
