@@ -8,8 +8,8 @@
  * Architecture & Design Rationale:
  * - Pattern: Service Layer (plain async functions, no React hooks)
  * - SOLID: SRP — handles edit/delete operations only, no UI concerns
- * - Offline-First: All operations use WatermelonDB's markAsDeleted()
- *   for sync-safe soft deletes.
+ * - Offline-First: Soft deletes use the app-level `deleted` column so local
+ *   state and Supabase sync semantics stay aligned.
  *
  * @module edit-account-service
  */
@@ -26,7 +26,7 @@ import {
   type TransactionType,
 } from "@monyvi/db";
 import { roundForCurrency } from "@monyvi/logic";
-import { Q } from "@nozbe/watermelondb";
+import { Q, type Model } from "@nozbe/watermelondb";
 import { t } from "i18next";
 import { logger } from "@/utils/logger";
 import {
@@ -105,6 +105,20 @@ export interface ServiceResult {
 export interface UniquenessCheckResult {
   readonly isUnique: boolean;
   readonly error?: string;
+}
+
+type SoftDeletableRecord = Model & {
+  deleted: boolean;
+};
+
+function prepareSoftDelete<TRecord extends SoftDeletableRecord>(
+  record: TRecord,
+  applyAdditionalChanges?: (record: TRecord) => void
+): TRecord {
+  return record.prepareUpdate((draft) => {
+    applyAdditionalChanges?.(draft);
+    draft.deleted = true;
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -308,7 +322,7 @@ export async function updateAccountWithinWriter(
  * 5. recurring_payments
  * 6. The account itself
  *
- * Uses markAsDeleted() for sync-safe soft deletes.
+ * Uses the domain `deleted` column for sync-safe soft deletes.
  *
  * Performs an ownership check before any cascade — if the account's
  * `userId` does not match `currentUserId`, returns `OWNERSHIP_FAILED`
@@ -349,9 +363,7 @@ export async function deleteAccountWithCascade(
         return;
       }
 
-      // Fetch all non-deleted children via explicit filtered queries
-      // (@children associations don't filter deleted=false, so re-marking
-      // already-deleted records would bump updated_at and waste sync bandwidth)
+      // Fetch all non-deleted children via explicit filtered queries.
       const [
         bankDetailRecords,
         transactionRecords,
@@ -388,24 +400,23 @@ export async function deleteAccountWithCascade(
           .fetch(),
       ]);
 
-      // Batch all soft-deletes into a single write for performance
-      const batchOps = [
-        ...bankDetailRecords.map((r) => r.prepareMarkAsDeleted()),
-        ...transactionRecords.map((r) => r.prepareMarkAsDeleted()),
-        ...fromTransfers.map((r) => r.prepareMarkAsDeleted()),
-        ...toTransfers.map((r) => r.prepareMarkAsDeleted()),
-        ...debtRecords.map((r) => r.prepareMarkAsDeleted()),
-        ...recurringPaymentRecords.map((r) => r.prepareMarkAsDeleted()),
+      // Batch all domain soft-deletes into a single write for performance.
+      const batchOps: SoftDeletableRecord[] = [
+        ...bankDetailRecords.map((record) => prepareSoftDelete(record)),
+        ...transactionRecords.map((record) => prepareSoftDelete(record)),
+        ...fromTransfers.map((record) => prepareSoftDelete(record)),
+        ...toTransfers.map((record) => prepareSoftDelete(record)),
+        ...debtRecords.map((record) => prepareSoftDelete(record)),
+        ...recurringPaymentRecords.map((record) => prepareSoftDelete(record)),
       ];
 
-      if (account.isDefault) {
-        batchOps.push(
-          account.prepareUpdate((acc) => {
+      batchOps.push(
+        prepareSoftDelete(account, (acc) => {
+          if (acc.isDefault) {
             acc.isDefault = false;
-          })
-        );
-      }
-      batchOps.push(account.prepareMarkAsDeleted());
+          }
+        })
+      );
 
       await database.batch(...batchOps);
     });

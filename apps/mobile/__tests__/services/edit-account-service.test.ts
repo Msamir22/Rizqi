@@ -23,6 +23,8 @@ interface MockModelRecord {
   [key: string]: unknown;
   update: jest.Mock;
   markAsDeleted: jest.Mock;
+  prepareUpdate: jest.Mock;
+  prepareMarkAsDeleted: jest.Mock;
   bankDetails: { fetch: jest.Mock };
   transactions: { fetch: jest.Mock };
   transfers: { fetch: jest.Mock };
@@ -34,6 +36,7 @@ interface MockDbApi {
   readonly __mockDb: {
     write: jest.Mock;
     get: jest.Mock;
+    batch: jest.Mock;
   };
   readonly __model: (
     id: string,
@@ -50,6 +53,56 @@ interface MockDbApi {
 // ---------------------------------------------------------------------------
 
 jest.mock("@monyvi/db", () => {
+  const COLUMN_FIELD_MAP: Record<string, string> = {
+    account_id: "accountId",
+    from_account_id: "fromAccountId",
+    is_default: "isDefault",
+    to_account_id: "toAccountId",
+    user_id: "userId",
+  };
+
+  function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null;
+  }
+
+  function recordValue(record: MockModelRecord, columnName: string): unknown {
+    const mappedField = COLUMN_FIELD_MAP[columnName] ?? columnName;
+    return record[columnName] ?? record[mappedField];
+  }
+
+  function comparisonValue(comparison: Record<string, unknown>): unknown {
+    const right = comparison.right;
+    if (isRecord(right) && "value" in right) {
+      return right.value;
+    }
+    return right;
+  }
+
+  function matchesClause(record: MockModelRecord, clause: unknown): boolean {
+    if (!isRecord(clause) || clause.type !== "where") {
+      return true;
+    }
+
+    const columnName = String(clause.left);
+    const comparison = clause.comparison;
+    if (!isRecord(comparison)) {
+      return true;
+    }
+
+    const actual = recordValue(record, columnName);
+    const expected = comparisonValue(comparison);
+
+    if (comparison.operator === "notEq") {
+      return actual !== expected;
+    }
+
+    if (comparison.operator === "oneOf" && Array.isArray(expected)) {
+      return expected.includes(actual);
+    }
+
+    return actual === expected;
+  }
+
   /** Mutable model: .update(builder) mutates fields in place */
   function createModel(
     id: string,
@@ -68,6 +121,18 @@ jest.mock("@monyvi/db", () => {
     });
 
     // Default child relation mocks — return empty arrays
+    m.prepareUpdate = jest.fn(
+      (builder: (r: Record<string, unknown>) => void) => {
+        builder(m);
+        return m;
+      }
+    );
+
+    m.prepareMarkAsDeleted = jest.fn(() => {
+      m._preparedState = "markAsDeleted";
+      return m;
+    });
+
     m.bankDetails = { fetch: jest.fn(() => Promise.resolve([])) };
     m.transactions = { fetch: jest.fn(() => Promise.resolve([])) };
     m.transfers = { fetch: jest.fn(() => Promise.resolve([])) };
@@ -98,9 +163,13 @@ jest.mock("@monyvi/db", () => {
         getStore(tableName).set(m.id, m);
         return Promise.resolve(m);
       }),
-      query: jest.fn(() => ({
+      query: jest.fn((...clauses: readonly unknown[]) => ({
         fetch: jest.fn(() =>
-          Promise.resolve(Array.from(getStore(tableName).values()))
+          Promise.resolve(
+            Array.from(getStore(tableName).values()).filter((record) =>
+              clauses.every((clause) => matchesClause(record, clause))
+            )
+          )
         ),
       })),
     };
@@ -109,6 +178,7 @@ jest.mock("@monyvi/db", () => {
   const db = {
     write: jest.fn((cb: () => Promise<unknown>) => cb()),
     get: jest.fn((t: string) => createCollection(t)),
+    batch: jest.fn(() => Promise.resolve()),
   };
 
   return {
@@ -135,6 +205,7 @@ jest.mock("@monyvi/db", () => {
     __rewireMocks: () => {
       db.write.mockImplementation((cb: () => Promise<unknown>) => cb());
       db.get.mockImplementation((t: string) => createCollection(t));
+      db.batch.mockImplementation(() => Promise.resolve());
     },
   };
 });
@@ -199,6 +270,7 @@ describe("edit-account-service", () => {
     mockClearStores();
     mockDb.write.mockClear();
     mockDb.get.mockClear();
+    mockDb.batch.mockClear();
     mockRewire();
   });
 
@@ -277,79 +349,140 @@ describe("edit-account-service", () => {
       const acc = seedAccount("acc-1");
       const result = await deleteAccountWithCascade("acc-1", "user-1");
       expect(result.success).toBe(true);
-      expect(acc.markAsDeleted).toHaveBeenCalled();
+      expect(acc.deleted).toBe(true);
+      expect(acc.prepareUpdate).toHaveBeenCalled();
+      expect(acc.prepareMarkAsDeleted).not.toHaveBeenCalled();
+      expect(acc.markAsDeleted).not.toHaveBeenCalled();
     });
 
     it("should cascade delete bank_details", async () => {
-      const acc = seedAccount("acc-1");
-      const bd = mockModel("bd-1");
-      acc.bankDetails.fetch.mockResolvedValue([bd]);
+      seedAccount("acc-1");
+      const bd = mockModel("bd-1", {
+        accountId: "acc-1",
+        deleted: false,
+      });
+      mockSeed("bank_details", bd);
       await deleteAccountWithCascade("acc-1", "user-1");
-      expect(bd.markAsDeleted).toHaveBeenCalled();
+      expect(bd.deleted).toBe(true);
+      expect(bd.prepareUpdate).toHaveBeenCalled();
+      expect(bd.prepareMarkAsDeleted).not.toHaveBeenCalled();
     });
 
     it("should cascade delete transactions", async () => {
-      const acc = seedAccount("acc-1");
-      const tx = mockModel("tx-1");
-      acc.transactions.fetch.mockResolvedValue([tx]);
+      seedAccount("acc-1");
+      const tx = mockModel("tx-1", {
+        accountId: "acc-1",
+        deleted: false,
+      });
+      mockSeed("transactions", tx);
       await deleteAccountWithCascade("acc-1", "user-1");
-      expect(tx.markAsDeleted).toHaveBeenCalled();
+      expect(tx.deleted).toBe(true);
+      expect(tx.prepareUpdate).toHaveBeenCalled();
+      expect(tx.prepareMarkAsDeleted).not.toHaveBeenCalled();
     });
 
     it("should cascade delete transfers (from_account)", async () => {
-      const acc = seedAccount("acc-1");
-      const tf = mockModel("tf-1");
-      acc.transfers.fetch.mockResolvedValue([tf]);
+      seedAccount("acc-1");
+      const tf = mockModel("tf-1", {
+        fromAccountId: "acc-1",
+        toAccountId: "other",
+        deleted: false,
+      });
+      mockSeed("transfers", tf);
       await deleteAccountWithCascade("acc-1", "user-1");
-      expect(tf.markAsDeleted).toHaveBeenCalled();
+      expect(tf.deleted).toBe(true);
+      expect(tf.prepareUpdate).toHaveBeenCalled();
+      expect(tf.prepareMarkAsDeleted).not.toHaveBeenCalled();
     });
 
     it("should cascade delete transfers (to_account)", async () => {
       seedAccount("acc-1");
-      const toTransfer = mockModel("tf-to-1");
+      const toTransfer = mockModel("tf-to-1", {
+        fromAccountId: "other",
+        toAccountId: "acc-1",
+        deleted: false,
+      });
       mockSeed("transfers", toTransfer);
       await deleteAccountWithCascade("acc-1", "user-1");
-      expect(toTransfer.markAsDeleted).toHaveBeenCalled();
+      expect(toTransfer.deleted).toBe(true);
+      expect(toTransfer.prepareUpdate).toHaveBeenCalled();
+      expect(toTransfer.prepareMarkAsDeleted).not.toHaveBeenCalled();
     });
 
     it("should cascade delete debts", async () => {
-      const acc = seedAccount("acc-1");
-      const debt = mockModel("debt-1");
-      acc.debts.fetch.mockResolvedValue([debt]);
+      seedAccount("acc-1");
+      const debt = mockModel("debt-1", {
+        accountId: "acc-1",
+        deleted: false,
+      });
+      mockSeed("debts", debt);
       await deleteAccountWithCascade("acc-1", "user-1");
-      expect(debt.markAsDeleted).toHaveBeenCalled();
+      expect(debt.deleted).toBe(true);
+      expect(debt.prepareUpdate).toHaveBeenCalled();
+      expect(debt.prepareMarkAsDeleted).not.toHaveBeenCalled();
     });
 
     it("should cascade delete recurring_payments", async () => {
-      const acc = seedAccount("acc-1");
-      const rp = mockModel("rp-1");
-      acc.recurringPayments.fetch.mockResolvedValue([rp]);
+      seedAccount("acc-1");
+      const rp = mockModel("rp-1", {
+        accountId: "acc-1",
+        deleted: false,
+      });
+      mockSeed("recurring_payments", rp);
       await deleteAccountWithCascade("acc-1", "user-1");
-      expect(rp.markAsDeleted).toHaveBeenCalled();
+      expect(rp.deleted).toBe(true);
+      expect(rp.prepareUpdate).toHaveBeenCalled();
+      expect(rp.prepareMarkAsDeleted).not.toHaveBeenCalled();
     });
 
     it("should cascade delete ALL related entities together", async () => {
       const acc = seedAccount("acc-1");
-      const bd = mockModel("bd-1");
-      const tx = mockModel("tx-1");
-      const tf = mockModel("tf-1");
-      const debt = mockModel("debt-1");
-      const rp = mockModel("rp-1");
+      const bd = mockModel("bd-1", { accountId: "acc-1", deleted: false });
+      const tx = mockModel("tx-1", { accountId: "acc-1", deleted: false });
+      const tf = mockModel("tf-1", {
+        fromAccountId: "acc-1",
+        toAccountId: "other",
+        deleted: false,
+      });
+      const debt = mockModel("debt-1", { accountId: "acc-1", deleted: false });
+      const rp = mockModel("rp-1", { accountId: "acc-1", deleted: false });
 
-      acc.bankDetails.fetch.mockResolvedValue([bd]);
-      acc.transactions.fetch.mockResolvedValue([tx]);
-      acc.transfers.fetch.mockResolvedValue([tf]);
-      acc.debts.fetch.mockResolvedValue([debt]);
-      acc.recurringPayments.fetch.mockResolvedValue([rp]);
+      mockSeed("bank_details", bd);
+      mockSeed("transactions", tx);
+      mockSeed("transfers", tf);
+      mockSeed("debts", debt);
+      mockSeed("recurring_payments", rp);
 
       await deleteAccountWithCascade("acc-1", "user-1");
 
-      expect(bd.markAsDeleted).toHaveBeenCalled();
-      expect(tx.markAsDeleted).toHaveBeenCalled();
-      expect(tf.markAsDeleted).toHaveBeenCalled();
-      expect(debt.markAsDeleted).toHaveBeenCalled();
-      expect(rp.markAsDeleted).toHaveBeenCalled();
-      expect(acc.markAsDeleted).toHaveBeenCalled();
+      expect(bd.deleted).toBe(true);
+      expect(tx.deleted).toBe(true);
+      expect(tf.deleted).toBe(true);
+      expect(debt.deleted).toBe(true);
+      expect(rp.deleted).toBe(true);
+      expect(acc.deleted).toBe(true);
+      expect(mockDb.batch).toHaveBeenCalled();
+    });
+
+    it("should leave already-soft-deleted children untouched", async () => {
+      seedAccount("acc-1");
+      const activeDetail = mockModel("bd-active", {
+        accountId: "acc-1",
+        deleted: false,
+      });
+      const deletedDetail = mockModel("bd-deleted", {
+        accountId: "acc-1",
+        deleted: true,
+      });
+      mockSeed("bank_details", activeDetail);
+      mockSeed("bank_details", deletedDetail);
+
+      await deleteAccountWithCascade("acc-1", "user-1");
+
+      expect(activeDetail.prepareUpdate).toHaveBeenCalled();
+      expect(activeDetail.deleted).toBe(true);
+      expect(deletedDetail.prepareUpdate).not.toHaveBeenCalled();
+      expect(deletedDetail.prepareMarkAsDeleted).not.toHaveBeenCalled();
     });
 
     it("should return NOT_FOUND when the account does not exist", async () => {
@@ -363,10 +496,10 @@ describe("edit-account-service", () => {
 
     it("should return OWNERSHIP_FAILED and skip writes when userId does not match", async () => {
       const acc = seedAccount("acc-1", { userId: "owner-user" });
-      const bd = mockModel("bd-1");
-      const tx = mockModel("tx-1");
-      acc.bankDetails.fetch.mockResolvedValue([bd]);
-      acc.transactions.fetch.mockResolvedValue([tx]);
+      const bd = mockModel("bd-1", { accountId: "acc-1", deleted: false });
+      const tx = mockModel("tx-1", { accountId: "acc-1", deleted: false });
+      mockSeed("bank_details", bd);
+      mockSeed("transactions", tx);
 
       const result = await deleteAccountWithCascade("acc-1", "attacker-user");
 
@@ -374,8 +507,9 @@ describe("edit-account-service", () => {
       expect(result.error).toBe(EDIT_ACCOUNT_ERROR_CODES.OWNERSHIP_FAILED);
       // No deletes anywhere in the cascade
       expect(acc.markAsDeleted).not.toHaveBeenCalled();
-      expect(bd.markAsDeleted).not.toHaveBeenCalled();
-      expect(tx.markAsDeleted).not.toHaveBeenCalled();
+      expect(acc.prepareUpdate).not.toHaveBeenCalled();
+      expect(bd.prepareUpdate).not.toHaveBeenCalled();
+      expect(tx.prepareUpdate).not.toHaveBeenCalled();
       expect(acc.update).not.toHaveBeenCalled();
     });
 
@@ -392,10 +526,11 @@ describe("edit-account-service", () => {
       const result = await deleteAccountWithCascade("acc-default", "user-1");
 
       expect(result.success).toBe(true);
-      // The default flag should have been cleared before marking as deleted
-      expect(defaultAcc.update).toHaveBeenCalled();
+      // The default flag is cleared in the same prepared update as the soft delete.
+      expect(defaultAcc.prepareUpdate).toHaveBeenCalled();
       expect(defaultAcc.isDefault).toBe(false);
-      expect(defaultAcc.markAsDeleted).toHaveBeenCalled();
+      expect(defaultAcc.deleted).toBe(true);
+      expect(defaultAcc.prepareMarkAsDeleted).not.toHaveBeenCalled();
       // Other accounts should NOT be auto-promoted
       expect(otherAcc.update).not.toHaveBeenCalled();
       expect(otherAcc.isDefault).toBe(false);
@@ -410,7 +545,9 @@ describe("edit-account-service", () => {
 
       // update should NOT have been called for is_default clearing
       expect(nonDefault.update).not.toHaveBeenCalled();
-      expect(nonDefault.markAsDeleted).toHaveBeenCalled();
+      expect(nonDefault.deleted).toBe(true);
+      expect(nonDefault.prepareUpdate).toHaveBeenCalled();
+      expect(nonDefault.prepareMarkAsDeleted).not.toHaveBeenCalled();
     });
   });
 
