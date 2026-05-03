@@ -8,8 +8,8 @@
  * Architecture & Design Rationale:
  * - Pattern: Service Layer (plain async functions, no React hooks)
  * - SOLID: SRP — handles edit/delete operations only, no UI concerns
- * - Offline-First: All operations use WatermelonDB's markAsDeleted()
- *   for sync-safe soft deletes.
+ * - Offline-First: Soft deletes use the app-level `deleted` column so local
+ *   state and Supabase sync semantics stay aligned.
  *
  * @module edit-account-service
  */
@@ -17,6 +17,8 @@
 import {
   Account,
   BankDetails,
+  Debt,
+  RecurringPayment,
   Transaction,
   Transfer,
   database,
@@ -24,7 +26,7 @@ import {
   type TransactionType,
 } from "@monyvi/db";
 import { roundForCurrency } from "@monyvi/logic";
-import { Q } from "@nozbe/watermelondb";
+import { Q, type Model } from "@nozbe/watermelondb";
 import { t } from "i18next";
 import { logger } from "@/utils/logger";
 import {
@@ -103,6 +105,20 @@ export interface ServiceResult {
 export interface UniquenessCheckResult {
   readonly isUnique: boolean;
   readonly error?: string;
+}
+
+type SoftDeletableRecord = Model & {
+  deleted: boolean;
+};
+
+function prepareSoftDelete<TRecord extends SoftDeletableRecord>(
+  record: TRecord,
+  applyAdditionalChanges?: (record: TRecord) => void
+): TRecord {
+  return record.prepareUpdate((draft) => {
+    applyAdditionalChanges?.(draft);
+    draft.deleted = true;
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -306,7 +322,7 @@ export async function updateAccountWithinWriter(
  * 5. recurring_payments
  * 6. The account itself
  *
- * Uses markAsDeleted() for sync-safe soft deletes.
+ * Uses the domain `deleted` column for sync-safe soft deletes.
  *
  * Performs an ownership check before any cascade — if the account's
  * `userId` does not match `currentUserId`, returns `OWNERSHIP_FAILED`
@@ -347,56 +363,62 @@ export async function deleteAccountWithCascade(
         return;
       }
 
-      // 1. Mark bank_details as deleted
-      const bankDetailRecords = await account.bankDetails.fetch();
-      for (const record of bankDetailRecords) {
-        await record.markAsDeleted();
-      }
+      // Fetch all non-deleted children via explicit filtered queries.
+      const [
+        bankDetailRecords,
+        transactionRecords,
+        fromTransfers,
+        toTransfers,
+        debtRecords,
+        recurringPaymentRecords,
+      ] = await Promise.all([
+        database
+          .get<BankDetails>("bank_details")
+          .query(Q.where("account_id", accountId), Q.where("deleted", false))
+          .fetch(),
+        database
+          .get<Transaction>("transactions")
+          .query(Q.where("account_id", accountId), Q.where("deleted", false))
+          .fetch(),
+        database
+          .get<Transfer>("transfers")
+          .query(
+            Q.where("from_account_id", accountId),
+            Q.where("deleted", false)
+          )
+          .fetch(),
+        transfersCollection
+          .query(Q.where("to_account_id", accountId), Q.where("deleted", false))
+          .fetch(),
+        database
+          .get<Debt>("debts")
+          .query(Q.where("account_id", accountId), Q.where("deleted", false))
+          .fetch(),
+        database
+          .get<RecurringPayment>("recurring_payments")
+          .query(Q.where("account_id", accountId), Q.where("deleted", false))
+          .fetch(),
+      ]);
 
-      // 2. Mark transactions as deleted
-      const transactionRecords = await account.transactions.fetch();
-      for (const record of transactionRecords) {
-        await record.markAsDeleted();
-      }
+      // Batch all domain soft-deletes into a single write for performance.
+      const batchOps: SoftDeletableRecord[] = [
+        ...bankDetailRecords.map((record) => prepareSoftDelete(record)),
+        ...transactionRecords.map((record) => prepareSoftDelete(record)),
+        ...fromTransfers.map((record) => prepareSoftDelete(record)),
+        ...toTransfers.map((record) => prepareSoftDelete(record)),
+        ...debtRecords.map((record) => prepareSoftDelete(record)),
+        ...recurringPaymentRecords.map((record) => prepareSoftDelete(record)),
+      ];
 
-      // 3. Mark transfers as deleted (both directions)
-      // Account.transfers only covers from_account_id via @children,
-      // so we need a separate query for to_account_id.
-      const fromTransfers = await account.transfers.fetch();
-      for (const record of fromTransfers) {
-        await record.markAsDeleted();
-      }
+      batchOps.push(
+        prepareSoftDelete(account, (acc) => {
+          if (acc.isDefault) {
+            acc.isDefault = false;
+          }
+        })
+      );
 
-      const toTransfers = await transfersCollection
-        .query(Q.where("to_account_id", accountId))
-        .fetch();
-      for (const record of toTransfers) {
-        await record.markAsDeleted();
-      }
-
-      // 4. Mark debts as deleted
-      const debtRecords = await account.debts.fetch();
-      for (const record of debtRecords) {
-        await record.markAsDeleted();
-      }
-
-      // 5. Mark recurring_payments as deleted
-      const recurringPaymentRecords = await account.recurringPayments.fetch();
-      for (const record of recurringPaymentRecords) {
-        await record.markAsDeleted();
-      }
-
-      // 6. Clear is_default flag if this was the default account.
-      // Per business decision: do NOT auto-promote another account.
-      // The user must set a new default manually.
-      if (account.isDefault) {
-        await account.update((acc) => {
-          acc.isDefault = false;
-        });
-      }
-
-      // 7. Mark the account itself as deleted
-      await account.markAsDeleted();
+      await database.batch(...batchOps);
     });
 
     if (notFound) {
