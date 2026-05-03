@@ -17,6 +17,8 @@
 import {
   Account,
   BankDetails,
+  Debt,
+  RecurringPayment,
   Transaction,
   Transfer,
   database,
@@ -346,56 +348,65 @@ export async function deleteAccountWithCascade(
         return;
       }
 
-      // 1. Mark bank_details as deleted
-      const bankDetailRecords = await account.bankDetails.fetch();
-      for (const record of bankDetailRecords) {
-        await record.markAsDeleted();
-      }
+      // Fetch all non-deleted children via explicit filtered queries
+      // (@children associations don't filter deleted=false, so re-marking
+      // already-deleted records would bump updated_at and waste sync bandwidth)
+      const [
+        bankDetailRecords,
+        transactionRecords,
+        fromTransfers,
+        toTransfers,
+        debtRecords,
+        recurringPaymentRecords,
+      ] = await Promise.all([
+        database
+          .get<BankDetails>("bank_details")
+          .query(Q.where("account_id", accountId), Q.where("deleted", false))
+          .fetch(),
+        database
+          .get<Transaction>("transactions")
+          .query(Q.where("account_id", accountId), Q.where("deleted", false))
+          .fetch(),
+        database
+          .get<Transfer>("transfers")
+          .query(
+            Q.where("from_account_id", accountId),
+            Q.where("deleted", false)
+          )
+          .fetch(),
+        transfersCollection
+          .query(Q.where("to_account_id", accountId), Q.where("deleted", false))
+          .fetch(),
+        database
+          .get<Debt>("debts")
+          .query(Q.where("account_id", accountId), Q.where("deleted", false))
+          .fetch(),
+        database
+          .get<RecurringPayment>("recurring_payments")
+          .query(Q.where("account_id", accountId), Q.where("deleted", false))
+          .fetch(),
+      ]);
 
-      // 2. Mark transactions as deleted
-      const transactionRecords = await account.transactions.fetch();
-      for (const record of transactionRecords) {
-        await record.markAsDeleted();
-      }
+      // Batch all soft-deletes into a single write for performance
+      const batchOps = [
+        ...bankDetailRecords.map((r) => r.prepareMarkAsDeleted()),
+        ...transactionRecords.map((r) => r.prepareMarkAsDeleted()),
+        ...fromTransfers.map((r) => r.prepareMarkAsDeleted()),
+        ...toTransfers.map((r) => r.prepareMarkAsDeleted()),
+        ...debtRecords.map((r) => r.prepareMarkAsDeleted()),
+        ...recurringPaymentRecords.map((r) => r.prepareMarkAsDeleted()),
+      ];
 
-      // 3. Mark transfers as deleted (both directions)
-      // Account.transfers only covers from_account_id via @children,
-      // so we need a separate query for to_account_id.
-      const fromTransfers = await account.transfers.fetch();
-      for (const record of fromTransfers) {
-        await record.markAsDeleted();
-      }
-
-      const toTransfers = await transfersCollection
-        .query(Q.where("to_account_id", accountId))
-        .fetch();
-      for (const record of toTransfers) {
-        await record.markAsDeleted();
-      }
-
-      // 4. Mark debts as deleted
-      const debtRecords = await account.debts.fetch();
-      for (const record of debtRecords) {
-        await record.markAsDeleted();
-      }
-
-      // 5. Mark recurring_payments as deleted
-      const recurringPaymentRecords = await account.recurringPayments.fetch();
-      for (const record of recurringPaymentRecords) {
-        await record.markAsDeleted();
-      }
-
-      // 6. Clear is_default flag if this was the default account.
-      // Per business decision: do NOT auto-promote another account.
-      // The user must set a new default manually.
       if (account.isDefault) {
-        await account.update((acc) => {
-          acc.isDefault = false;
-        });
+        batchOps.push(
+          account.prepareUpdate((acc) => {
+            acc.isDefault = false;
+          })
+        );
       }
+      batchOps.push(account.prepareMarkAsDeleted());
 
-      // 7. Mark the account itself as deleted
-      await account.markAsDeleted();
+      await database.batch(...batchOps);
     });
 
     if (notFound) {
