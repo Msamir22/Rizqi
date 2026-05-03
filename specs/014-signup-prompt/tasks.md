@@ -192,7 +192,7 @@ cooldowns and permanent dismiss, shows accurate stats.
       `apps/mobile/components/sign-up/SocialLoginButtons.tsx`
 - [ ] T029 Verify dark mode styling across all new components (sign-up screen,
       banner, bottom sheet) using NativeWind dark variants
-- [ ] T030 Run full test suite `npm test -w @rizqi/mobile` to ensure no
+- [ ] T030 Run full test suite `npm test -w @monyvi/mobile` to ensure no
       regressions
 - [ ] T031 Update session history in `docs/agent/session-history.md`
 

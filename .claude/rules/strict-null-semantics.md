@@ -11,8 +11,8 @@ paths:
 # Strict Null Semantics for Entity IDs
 
 When managing entity IDs (such as `accountId`, `categoryId`, etc.) across the
-UI, state hooks, and validation layers in Rizqi, you must adhere strictly to the
-true domain model.
+UI, state hooks, and validation layers in Monyvi, you must adhere strictly to
+the true domain model.
 
 ## Core Directives
 

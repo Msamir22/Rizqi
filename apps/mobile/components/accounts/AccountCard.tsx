@@ -1,6 +1,6 @@
 import { palette } from "@/constants/colors";
-import { Account, MarketRate } from "@rizqi/db";
-import { convertCurrency, formatCurrency } from "@rizqi/logic";
+import { Account, MarketRate } from "@monyvi/db";
+import { convertCurrency, formatCurrency } from "@monyvi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { memo, useCallback, useMemo } from "react";
 import { Text, TouchableOpacity, View } from "react-native";

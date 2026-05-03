@@ -8,7 +8,7 @@ import {
   AssetMetal,
   DailySnapshotNetWorth,
   database,
-} from "@rizqi/db";
+} from "@monyvi/db";
 import {
   calculateAccountsTotalBalance,
   calculateNetWorth,
@@ -16,7 +16,7 @@ import {
   convertCurrency,
   getSameDayLastMonth,
   NetWorthData,
-} from "@rizqi/logic";
+} from "@monyvi/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
 import { useMarketRates } from "./useMarketRates";

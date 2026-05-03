@@ -1,4 +1,4 @@
-import type { ReviewableTransaction } from "@rizqi/logic";
+import type { ReviewableTransaction } from "@monyvi/logic";
 
 export type BadgeColor = "amber" | "red" | "blue" | "emerald";
 

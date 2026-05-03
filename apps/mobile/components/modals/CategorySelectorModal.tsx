@@ -11,7 +11,7 @@ import {
   useCategoryNavigation,
   type NavigationDirection,
 } from "@/hooks/useCategoryNavigation";
-import type { Category, TransactionType } from "@rizqi/db";
+import type { Category, TransactionType } from "@monyvi/db";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import {

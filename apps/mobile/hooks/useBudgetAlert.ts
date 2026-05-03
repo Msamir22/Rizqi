@@ -9,7 +9,7 @@
 
 import { useState, useCallback } from "react";
 import { router } from "expo-router";
-import type { Transaction } from "@rizqi/db";
+import type { Transaction } from "@monyvi/db";
 import {
   checkBudgetAlerts,
   type BudgetAlert,

@@ -1,5 +1,5 @@
 /**
- * Core types for Rizqi application
+ * Core types for Monyvi application
  */
 
 import type {
@@ -7,7 +7,7 @@ import type {
   CurrencyType,
   Transaction,
   TransactionType,
-} from "@rizqi/db";
+} from "@monyvi/db";
 
 // ---------------------------------------------------------------------------
 // Voice Parser Error

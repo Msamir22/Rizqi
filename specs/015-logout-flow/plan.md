@@ -1,7 +1,7 @@
 # Implementation Plan: Logout Flow
 
 **Branch**: `015-logout-flow` | **Date**: 2026-03-08 | **Spec**:
-[spec.md](file:///e:/Work/My%20Projects/Rizqi/specs/015-logout-flow/spec.md)
+[spec.md](file:///e:/Work/My%20Projects/Monyvi/specs/015-logout-flow/spec.md)
 **Input**: Feature specification from `specs/015-logout-flow/spec.md`
 
 ## Summary
@@ -86,11 +86,11 @@ apps/mobile/
 >   sequence. OCP — each step is a separate function that can be modified
 >   independently.
 
-#### [NEW] [logout-service.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/services/logout-service.ts)
+#### [NEW] [logout-service.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/services/logout-service.ts)
 
 Creates a `performLogout` function that orchestrates the full logout sequence:
 
-1. Set `@rizqi/logout-in-progress` flag in AsyncStorage
+1. Set `@monyvi/logout-in-progress` flag in AsyncStorage
 2. Check network connectivity via `NetInfo.fetch()`
 3. If an active sync is already running (`activeSyncPromise`), await it first
 4. Sync local data to server via `syncDatabase(db)` — retry once on failure
@@ -101,28 +101,28 @@ Creates a `performLogout` function that orchestrates the full logout sequence:
 8. Preserve `hasOnboarded` key
 9. Call `supabase.auth.signOut()`
 10. Call `supabase.auth.signInAnonymously()` to create a fresh session
-11. Remove `@rizqi/logout-in-progress` flag
+11. Remove `@monyvi/logout-in-progress` flag
 
 Also creates a `completeInterruptedLogout` function for force-close recovery:
 
-1. Check for `@rizqi/logout-in-progress` flag
+1. Check for `@monyvi/logout-in-progress` flag
 2. If present, run steps 5–10 above (skip sync since we can't guarantee state)
 
 ---
 
 ### Component 2: Storage Keys
 
-#### [MODIFY] [storage-keys.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/constants/storage-keys.ts)
+#### [MODIFY] [storage-keys.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/constants/storage-keys.ts)
 
-- Add `LOGOUT_IN_PROGRESS_KEY = "@rizqi/logout-in-progress"`
+- Add `LOGOUT_IN_PROGRESS_KEY = "@monyvi/logout-in-progress"`
 - Add `CLEARABLE_USER_KEYS` array listing all keys that should be cleared on
-  logout (all `@rizqi/*` keys except the logout flag itself)
+  logout (all `@monyvi/*` keys except the logout flag itself)
 
 ---
 
 ### Component 3: Auth Context
 
-#### [MODIFY] [AuthContext.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/context/AuthContext.tsx)
+#### [MODIFY] [AuthContext.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/context/AuthContext.tsx)
 
 - Keep the existing `signOut` callback as-is (simple `supabase.auth.signOut()`
   wrapper) — it remains available but the full logout flow uses `performLogout`
@@ -133,7 +133,7 @@ Also creates a `completeInterruptedLogout` function for force-close recovery:
 
 ### Component 4: App Drawer
 
-#### [MODIFY] [AppDrawer.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/navigation/AppDrawer.tsx)
+#### [MODIFY] [AppDrawer.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/navigation/AppDrawer.tsx)
 
 - Import `useAuth` and read `isAnonymous`
 - Conditionally render the Logout button only when `!isAnonymous`
@@ -148,7 +148,7 @@ Also creates a `completeInterruptedLogout` function for force-close recovery:
 
 ### Component 5: Settings Screen
 
-#### [MODIFY] [settings.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/app/settings.tsx)
+#### [MODIFY] [settings.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/app/settings.tsx)
 
 - Add a "Logout" row in the General section, conditionally visible only for
   non-anonymous users
@@ -160,7 +160,7 @@ Also creates a `completeInterruptedLogout` function for force-close recovery:
 
 ### Component 6: Sign-Up Banner
 
-#### [MODIFY] [SignUpBanner.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/sign-up/SignUpBanner.tsx)
+#### [MODIFY] [SignUpBanner.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/sign-up/SignUpBanner.tsx)
 
 - Change title from "Secure Your Account" to "Connect Your Account"
 - Change subtitle from "Sign up to back up your data and access it from
@@ -171,7 +171,7 @@ Also creates a `completeInterruptedLogout` function for force-close recovery:
 
 ### Component 7: Force-Close Recovery
 
-#### [MODIFY] [\_layout.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/app/_layout.tsx)
+#### [MODIFY] [\_layout.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/app/_layout.tsx)
 
 - Import `completeInterruptedLogout` from logout service
 - Call it during app initialization (after database is ready) to handle
@@ -182,7 +182,7 @@ Also creates a `completeInterruptedLogout` function for force-close recovery:
 
 ### Component 8: Dependencies
 
-#### [MODIFY] [package.json](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/package.json)
+#### [MODIFY] [package.json](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/package.json)
 
 - Add `@react-native-community/netinfo` dependency for network connectivity
   check

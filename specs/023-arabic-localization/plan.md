@@ -6,7 +6,7 @@
 
 ## Summary
 
-Add full Arabic (MSA) localization and RTL support to Rizqi. This includes:
+Add full Arabic (MSA) localization and RTL support to Monyvi. This includes:
 installing `i18next` + `react-i18next` as the i18n framework, creating
 namespace-organized Arabic/English translation files for all 27 screens,
 enabling RTL layout via `I18nManager`, replacing directional NativeWind
@@ -120,7 +120,7 @@ or `packages/logic` — these packages have no user-facing strings.
 5. Create `apps/mobile/locales/ar/common.json` — Arabic shared translations
 6. Create `apps/mobile/utils/rtl.ts` — RTL toggle utility using
    `I18nManager.forceRTL()` + `Updates.reloadAsync()`
-7. Add `LANGUAGE_KEY = '@rizqi/language'` to `storage-keys.ts`
+7. Add `LANGUAGE_KEY = '@monyvi/language'` to `storage-keys.ts`
 8. Add `LANGUAGE_KEY` to `CLEARABLE_USER_KEYS` array
 9. Update `app.json` / `app.config.ts` with `supportsRTL: true`
 10. Add i18n initialization to `_layout.tsx` provider stack (before

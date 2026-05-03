@@ -3,7 +3,7 @@
 **Purpose**: Validate specification completeness and quality before proceeding
 to planning  
 **Created**: 2026-02-25  
-**Feature**: [spec-sms-scan-ux.md](file:///e:/Work/My%20Projects/Rizqi/specs/007-sms-transaction-sync/spec-sms-scan-ux.md)
+**Feature**: [spec-sms-scan-ux.md](file:///e:/Work/My%20Projects/Monyvi/specs/007-sms-transaction-sync/spec-sms-scan-ux.md)
 
 ## Content Quality
 

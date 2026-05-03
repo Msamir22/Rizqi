@@ -13,7 +13,7 @@ import { Modal, Pressable, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { palette } from "@/constants/colors";
 import type { BudgetAlert } from "@/services/budget-alert-service";
-import { formatCurrency } from "@rizqi/logic";
+import { formatCurrency } from "@monyvi/logic";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import { useTranslation } from "react-i18next";
 

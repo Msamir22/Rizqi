@@ -30,7 +30,7 @@ idempotent service function.
 `usePreferredCurrency.ts` into `packages/logic/src/utils/currency-detection.ts`.
 
 **Rationale**: The function is pure (uses only `expo-localization` and the
-`SUPPORTED_CURRENCIES` constant). Moving it to `@rizqi/logic` respects monorepo
+`SUPPORTED_CURRENCIES` constant). Moving it to `@monyvi/logic` respects monorepo
 boundaries and allows `account-service.ts` (a service, not a hook) to use it
 directly.
 

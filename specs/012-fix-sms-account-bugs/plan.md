@@ -1,7 +1,7 @@
 # Implementation Plan: Fix SMS Transaction & Default Cash Account Bugs
 
 **Branch**: `012-fix-sms-account-bugs` | **Date**: 2026-03-02 | **Spec**:
-[spec.md](file:///e:/Work/My%20Projects/Rizqi/specs/012-fix-sms-account-bugs/spec.md)
+[spec.md](file:///e:/Work/My%20Projects/Monyvi/specs/012-fix-sms-account-bugs/spec.md)
 **Input**: Feature specification from `/specs/012-fix-sms-account-bugs/spec.md`
 
 ## Summary
@@ -39,7 +39,7 @@ _GATE: All 7 principles checked. No violations._
 | III. Type Safety              | ✅ PASS | All new code will use strict types, explicit return types, Zod validation.        |
 | IV. Service-Layer Separation  | ✅ PASS | `account-service.ts` handles DB logic; new onboarding screens are presentational. |
 | V. Premium UI                 | ✅ PASS | Stitch mockups approved. NativeWind + Reanimated for animations.                  |
-| VI. Monorepo Boundaries       | ✅ PASS | Only `apps/mobile/` modified. `@rizqi/logic` currency-data.ts read-only.          |
+| VI. Monorepo Boundaries       | ✅ PASS | Only `apps/mobile/` modified. `@monyvi/logic` currency-data.ts read-only.         |
 | VII. Local-First Migrations   | ✅ PASS | No schema changes required — only code-level fixes.                               |
 
 ## Project Structure
@@ -93,7 +93,7 @@ directory structure. No new packages, no backend changes, no schema migrations.
 
 ---
 
-#### [MODIFY] [currency-detection.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/utils/currency-detection.ts)
+#### [MODIFY] [currency-detection.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/utils/currency-detection.ts)
 
 **Current**: Returns `"USD"` as fallback when device locale currency is
 unsupported or missing. **Change**: Return `null` when detection fails. The
@@ -119,7 +119,7 @@ caller decides what to do (show picker vs. use default).
 
 ---
 
-#### [MODIFY] [account-service.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/services/account-service.ts)
+#### [MODIFY] [account-service.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/services/account-service.ts)
 
 **Changes**:
 
@@ -156,7 +156,7 @@ caller decides what to do (show picker vs. use default).
 
 ---
 
-#### [MODIFY] [storage-keys.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/constants/storage-keys.ts)
+#### [MODIFY] [storage-keys.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/constants/storage-keys.ts)
 
 **Change**: Remove `SHOW_CASH_TOAST_KEY` constant entirely.
 
@@ -166,7 +166,7 @@ caller decides what to do (show picker vs. use default).
 
 ---
 
-#### [NEW] [CurrencyPickerStep.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/onboarding/CurrencyPickerStep.tsx)
+#### [NEW] [CurrencyPickerStep.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/onboarding/CurrencyPickerStep.tsx)
 
 **Purpose**: Full-screen currency selection step shown when
 `detectCurrencyFromDevice()` returns `null`.
@@ -196,7 +196,7 @@ interface CurrencyPickerStepProps {
 
 ---
 
-#### [NEW] [WalletCreationStep.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/onboarding/WalletCreationStep.tsx)
+#### [NEW] [WalletCreationStep.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/onboarding/WalletCreationStep.tsx)
 
 **Purpose**: Final onboarding step that shows wallet creation progress and
 success.
@@ -231,7 +231,7 @@ interface WalletCreationStepProps {
 
 ---
 
-#### [MODIFY] [onboarding.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/app/onboarding.tsx)
+#### [MODIFY] [onboarding.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/app/onboarding.tsx)
 
 **Changes**:
 
@@ -262,7 +262,7 @@ type OnboardingPhase = "carousel" | "currency-picker" | "wallet-creation";
 
 ---
 
-#### [MODIFY] [index.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/app/index.tsx)
+#### [MODIFY] [index.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/app/index.tsx)
 
 **Changes**:
 
@@ -274,7 +274,7 @@ type OnboardingPhase = "carousel" | "currency-picker" | "wallet-creation";
 
 ---
 
-#### [MODIFY] [(tabs)/index.tsx](<file:///e:/Work/My%20Projects/Rizqi/apps/mobile/app/(tabs)/index.tsx>)
+#### [MODIFY] [(tabs)/index.tsx](<file:///e:/Work/My%20Projects/Monyvi/apps/mobile/app/(tabs)/index.tsx>)
 
 **Changes**:
 
@@ -290,7 +290,7 @@ type OnboardingPhase = "carousel" | "currency-picker" | "wallet-creation";
 
 ---
 
-#### [MODIFY] [SmsTransactionItem.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/sms-sync/SmsTransactionItem.tsx)
+#### [MODIFY] [SmsTransactionItem.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/sms-sync/SmsTransactionItem.tsx)
 
 **Current behavior**: Entire card `Pressable` has `onPress={onPress}` (opens
 edit) and `onLongPress={handleToggleExpand}` (expands SMS). Chevron icon is
@@ -332,7 +332,7 @@ purely decorative.
 
 ---
 
-#### [MODIFY] [SmsTransactionReview.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/sms-sync/SmsTransactionReview.tsx)
+#### [MODIFY] [SmsTransactionReview.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/sms-sync/SmsTransactionReview.tsx)
 
 **Changes**:
 
@@ -350,7 +350,7 @@ purely decorative.
 
 ---
 
-#### [NEW] [account-service.test.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/__tests__/services/account-service.test.ts)
+#### [NEW] [account-service.test.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/__tests__/services/account-service.test.ts)
 
 Test cases for the updated `ensureCashAccount`:
 
@@ -363,7 +363,7 @@ Test cases for the updated `ensureCashAccount`:
    (allows USD Cash + EGP Cash)
 6. Handles database write failure gracefully (returns error, no throw)
 
-#### [EXISTING] [transaction-validation.test.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/__tests__/validation/transaction-validation.test.ts)
+#### [EXISTING] [transaction-validation.test.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/__tests__/validation/transaction-validation.test.ts)
 
 Verify existing tests cover:
 

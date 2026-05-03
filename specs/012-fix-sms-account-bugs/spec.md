@@ -86,9 +86,9 @@ duplicate was created.
    user's local currency already exists (whether auto-created or user-created),
    **Then** no new account is created.
 
-**Related Issues**: [#42](https://github.com/Msamir22/Rizqi/issues/42),
-[#43](https://github.com/Msamir22/Rizqi/issues/43),
-[#44](https://github.com/Msamir22/Rizqi/issues/44)
+**Related Issues**: [#42](https://github.com/Msamir22/Monyvi/issues/42),
+[#43](https://github.com/Msamir22/Monyvi/issues/43),
+[#44](https://github.com/Msamir22/Monyvi/issues/44)
 
 ---
 
@@ -119,7 +119,7 @@ card body to verify the edit modal opens.
 4. **Given** a transaction card, **When** the user taps the checkbox area,
    **Then** only the selection state toggles (no expand or edit).
 
-**Related Issues**: [#55](https://github.com/Msamir22/Rizqi/issues/55)
+**Related Issues**: [#55](https://github.com/Msamir22/Monyvi/issues/55)
 
 ---
 
@@ -155,7 +155,7 @@ save is blocked.
 `baseTransactionSchema` (Zod) validating `amount`, `accountId`, and
 `categoryId`. This should be reused for the SMS edit modal validation.
 
-**Related Issues**: [#61](https://github.com/Msamir22/Rizqi/issues/61)
+**Related Issues**: [#61](https://github.com/Msamir22/Monyvi/issues/61)
 
 ---
 

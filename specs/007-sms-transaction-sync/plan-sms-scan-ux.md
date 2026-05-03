@@ -1,7 +1,7 @@
 # Implementation Plan: SMS Scan UX & Reliability Improvements
 
 **Branch**: `007-sms-transaction-sync` | **Date**: 2026-02-25  
-**Spec**: [spec-sms-scan-ux.md](file:///e:/Work/My%20Projects/Rizqi/specs/007-sms-transaction-sync/spec-sms-scan-ux.md)
+**Spec**: [spec-sms-scan-ux.md](file:///e:/Work/My%20Projects/Monyvi/specs/007-sms-transaction-sync/spec-sms-scan-ux.md)
 
 ## Summary
 
@@ -45,7 +45,7 @@ latency variable
 
 ### Component 1: AI SMS Parser Service (Chunking & Retry)
 
-#### [MODIFY] [ai-sms-parser-service.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/services/ai-sms-parser-service.ts)
+#### [MODIFY] [ai-sms-parser-service.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/services/ai-sms-parser-service.ts)
 
 **Changes:**
 
@@ -85,7 +85,7 @@ This keeps `invokeParseChunk` as a single-responsibility function.
 
 ### Component 2: SMS Sync Service (Progress Data Enhancement)
 
-#### [MODIFY] [sms-sync-service.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/services/sms-sync-service.ts)
+#### [MODIFY] [sms-sync-service.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/services/sms-sync-service.ts)
 
 **Changes:**
 
@@ -129,7 +129,7 @@ presentational component logic-free per Constitution IV.
 
 ### Component 3: SMS Scan Progress UI
 
-#### [MODIFY] [SmsScanProgress.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/sms-sync/SmsScanProgress.tsx)
+#### [MODIFY] [SmsScanProgress.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/sms-sync/SmsScanProgress.tsx)
 
 **Changes:**
 
@@ -177,7 +177,7 @@ presentational component logic-free per Constitution IV.
 
 ### Component 4: useSmsScan Hook (Minor)
 
-#### [MODIFY] [useSmsScan.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/hooks/useSmsScan.ts)
+#### [MODIFY] [useSmsScan.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/hooks/useSmsScan.ts)
 
 **Changes:** No logic changes needed. The hook already passes `SmsScanProgress`
 to state and the new fields will flow through automatically since the hook uses

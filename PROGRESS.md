@@ -1,4 +1,4 @@
-# Rizqi Project - Current Status & Next Steps
+# Monyvi Project - Current Status & Next Steps
 
 ## 🎉 What We've Built So Far
 
@@ -19,11 +19,11 @@
 
 ### Shared Packages
 
-- `@rizqi/logic` - Voice parser, notification parser, category detection,
+- `@monyvi/logic` - Voice parser, notification parser, category detection,
   currency utilities
-- `@rizqi/db` - WatermelonDB models (Account, Transaction)
-- `@rizqi/ui` - Egyptian color palette (#065F46 Nile Green, #10B981 Rizqi Mint,
-  etc.)
+- `@monyvi/db` - WatermelonDB models (Account, Transaction)
+- `@monyvi/ui` - Egyptian color palette (#065F46 Nile Green, #10B981 Monyvi
+  Mint, etc.)
 
 ### Developer Tools
 
@@ -65,7 +65,7 @@ the mock API while Supabase is being set up.
 **Benefits:**
 
 - Start building value immediately
-- Test shared packages (@rizqi/logic, @rizqi/ui)
+- Test shared packages (@monyvi/logic, @monyvi/ui)
 - Mock API lets us develop offline
 - More exciting/visible progress
 

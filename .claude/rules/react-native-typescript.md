@@ -1,6 +1,6 @@
 ---
 description:
-  React Native and TypeScript patterns specific to the Rizqi codebase. Covers
+  React Native and TypeScript patterns specific to the Monyvi codebase. Covers
   hooks, async patterns, WatermelonDB usage, and common pitfalls.
 globs: ["**/*.ts", "**/*.tsx"]
 ---
@@ -42,4 +42,4 @@ globs: ["**/*.ts", "**/*.tsx"]
 
 - Use `import type` for type-only imports
 - Named imports over default imports (tree-shaking)
-- Import from package index (`@rizqi/db`) not deep paths unless necessary
+- Import from package index (`@monyvi/db`) not deep paths unless necessary

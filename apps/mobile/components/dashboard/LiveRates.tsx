@@ -1,5 +1,5 @@
-import type { CurrencyType, MarketRate } from "@rizqi/db";
-import { CURRENCY_INFO_MAP, getMetalPrice } from "@rizqi/logic";
+import type { CurrencyType, MarketRate } from "@monyvi/db";
+import { CURRENCY_INFO_MAP, getMetalPrice } from "@monyvi/logic";
 import { FontAwesome5, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useCallback, useMemo } from "react";

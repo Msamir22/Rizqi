@@ -2,4 +2,4 @@
 npx lint-staged
 
 # i18n coverage check — block commits with hardcoded English or missing translations
-npm run i18n:check -w @rizqi/mobile
+npm run i18n:check -w @monyvi/mobile

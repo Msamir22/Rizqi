@@ -16,7 +16,7 @@ import {
   registerVoiceEntry,
   unregisterVoiceEntry,
 } from "@/services/voice-entry-service";
-import { buildCategoryTree } from "@rizqi/logic";
+import { buildCategoryTree } from "@monyvi/logic";
 import { Tabs, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo } from "react";
 import { View } from "react-native";

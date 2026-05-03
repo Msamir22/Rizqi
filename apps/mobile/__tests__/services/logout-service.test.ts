@@ -112,8 +112,8 @@ function getSupabaseMocks(): SupabaseMocks {
 // =============================================================================
 
 jest.mock("@/constants/storage-keys", () => ({
-  LOGOUT_IN_PROGRESS_KEY: "@rizqi/logout-in-progress",
-  CLEARABLE_USER_KEYS: ["@rizqi/first-use-date"],
+  LOGOUT_IN_PROGRESS_KEY: "@monyvi/logout-in-progress",
+  CLEARABLE_USER_KEYS: ["@monyvi/first-use-date"],
 }));
 
 // =============================================================================
@@ -209,7 +209,7 @@ describe("logout-service", () => {
       "signOut",
     ]);
     expect(asyncMocks.removeItem).toHaveBeenCalledWith(
-      "@rizqi/logout-in-progress"
+      "@monyvi/logout-in-progress"
     );
   });
 
@@ -295,7 +295,7 @@ describe("logout-service", () => {
 
     expect(result).toEqual({ success: true });
     expect(asyncMocks.multiRemove).toHaveBeenCalledWith([
-      "@rizqi/first-use-date",
+      "@monyvi/first-use-date",
     ]);
     const clearedKeys = (
       asyncMocks.multiRemove.mock.calls as string[][][]
@@ -320,7 +320,7 @@ describe("logout-service", () => {
       expect(asyncMocks.multiRemove).toHaveBeenCalledTimes(1);
       expect(supaMocks.signOut).toHaveBeenCalledTimes(1);
       expect(asyncMocks.removeItem).toHaveBeenCalledWith(
-        "@rizqi/logout-in-progress"
+        "@monyvi/logout-in-progress"
       );
     });
 

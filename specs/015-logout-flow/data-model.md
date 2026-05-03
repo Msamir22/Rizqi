@@ -9,18 +9,18 @@ operates on existing entities and AsyncStorage keys.
 
 ### AsyncStorage Keys (New)
 
-| Key                         | Type              | Lifecycle                                          | Purpose                   |
-| --------------------------- | ----------------- | -------------------------------------------------- | ------------------------- |
-| `@rizqi/logout-in-progress` | `"true"` / absent | Set before logout starts, removed after completion | Force-close recovery flag |
+| Key                          | Type              | Lifecycle                                          | Purpose                   |
+| ---------------------------- | ----------------- | -------------------------------------------------- | ------------------------- |
+| `@monyvi/logout-in-progress` | `"true"` / absent | Set before logout starts, removed after completion | Force-close recovery flag |
 
 ### AsyncStorage Keys (Existing — Cleared on Logout)
 
-| Key                                       | Constant                               | Purpose                |
-| ----------------------------------------- | -------------------------------------- | ---------------------- |
-| `@rizqi/first-use-date`                   | `FIRST_USE_DATE_KEY`                   | Sign-up prompt trigger |
-| `@rizqi/signup-prompt-dismissed-at`       | `SIGNUP_PROMPT_DISMISSED_AT_KEY`       | Prompt cooldown        |
-| `@rizqi/signup-prompt-dismissed-tx-count` | `SIGNUP_PROMPT_DISMISSED_TX_COUNT_KEY` | Prompt cooldown        |
-| `@rizqi/signup-prompt-never-show`         | `SIGNUP_PROMPT_NEVER_SHOW_KEY`         | "Never show" flag      |
+| Key                                        | Constant                               | Purpose                |
+| ------------------------------------------ | -------------------------------------- | ---------------------- |
+| `@monyvi/first-use-date`                   | `FIRST_USE_DATE_KEY`                   | Sign-up prompt trigger |
+| `@monyvi/signup-prompt-dismissed-at`       | `SIGNUP_PROMPT_DISMISSED_AT_KEY`       | Prompt cooldown        |
+| `@monyvi/signup-prompt-dismissed-tx-count` | `SIGNUP_PROMPT_DISMISSED_TX_COUNT_KEY` | Prompt cooldown        |
+| `@monyvi/signup-prompt-never-show`         | `SIGNUP_PROMPT_NEVER_SHOW_KEY`         | "Never show" flag      |
 
 ### AsyncStorage Keys (Existing — Preserved on Logout)
 

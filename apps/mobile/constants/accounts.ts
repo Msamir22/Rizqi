@@ -1,5 +1,5 @@
-import { AccountType } from "@rizqi/db";
-import { SUPPORTED_CURRENCIES } from "@rizqi/logic";
+import { AccountType } from "@monyvi/db";
+import { SUPPORTED_CURRENCIES } from "@monyvi/logic";
 import { Ionicons } from "@expo/vector-icons";
 
 export const ACCOUNT_TYPES = [

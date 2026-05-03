@@ -8,7 +8,7 @@
 
 ## Summary
 
-Implemented a comprehensive database schema overhaul for the Rizqi app. This
+Implemented a comprehensive database schema overhaul for the Monyvi app. This
 included creating a new `currency_type` enum with 37 currencies from the
 metals.dev API, expanding the `metal_type` enum to include all metals
 (PALLADIUM, COPPER, ALUMINUM, LEAD, NICKEL, ZINC), migrating currency columns

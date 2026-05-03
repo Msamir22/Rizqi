@@ -16,8 +16,8 @@
 
 import type { AccountWithBankDetails } from "@/services/sms-account-matcher";
 import type { PendingAccount } from "@/services/pending-account-service";
-import type { ParsedSmsTransaction } from "@rizqi/logic";
-import type { TransactionType } from "@rizqi/db";
+import type { ParsedSmsTransaction } from "@monyvi/logic";
+import type { TransactionType } from "@monyvi/db";
 
 // ---------------------------------------------------------------------------
 // Types

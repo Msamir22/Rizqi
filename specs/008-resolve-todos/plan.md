@@ -1,9 +1,9 @@
 # Implementation Plan: 008 – Resolve Codebase TODOs
 
 **Branch**: `008-resolve-todos` | **Date**: 2026-02-25  
-**Spec**: [spec.md](file:///e:/Work/My%20Projects/Rizqi/specs/008-resolve-todos/spec.md)  
+**Spec**: [spec.md](file:///e:/Work/My%20Projects/Monyvi/specs/008-resolve-todos/spec.md)  
 **Research**:
-[research.md](file:///e:/Work/My%20Projects/Rizqi/specs/008-resolve-todos/research.md)
+[research.md](file:///e:/Work/My%20Projects/Monyvi/specs/008-resolve-todos/research.md)
 
 ---
 
@@ -44,13 +44,13 @@ E2E
 
 ## Constitution Check
 
-| Gate                              | Status  | Notes                                                                                                                        |
-| --------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Offline-First Data Architecture   | ✅ PASS | No new remote-only dependencies. Client sends local data to edge function.                                                   |
-| Type Safety (NON-NEGOTIABLE)      | ✅ PASS | All new interfaces/types are strictly typed. No `any`.                                                                       |
-| Monorepo Package Boundaries       | ✅ PASS | Edge functions stay in `supabase/functions/`, client code in `apps/mobile/`, shared types in `@rizqi/db` and `@rizqi/logic`. |
-| Database Migrations (local-first) | ✅ PASS | No schema changes needed — only edge function + client code changes.                                                         |
-| Tailwind > StyleSheet             | ✅ N/A  | No UI style changes in this feature.                                                                                         |
+| Gate                              | Status  | Notes                                                                                                                          |
+| --------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Offline-First Data Architecture   | ✅ PASS | No new remote-only dependencies. Client sends local data to edge function.                                                     |
+| Type Safety (NON-NEGOTIABLE)      | ✅ PASS | All new interfaces/types are strictly typed. No `any`.                                                                         |
+| Monorepo Package Boundaries       | ✅ PASS | Edge functions stay in `supabase/functions/`, client code in `apps/mobile/`, shared types in `@monyvi/db` and `@monyvi/logic`. |
+| Database Migrations (local-first) | ✅ PASS | No schema changes needed — only edge function + client code changes.                                                           |
+| Tailwind > StyleSheet             | ✅ N/A  | No UI style changes in this feature.                                                                                           |
 
 ---
 
@@ -103,7 +103,7 @@ first, then client service, then UI consumers).
 
 ### Component 1: Edge Function — `parse-sms`
 
-#### [MODIFY] [index.ts](file:///e:/Work/My%20Projects/Rizqi/supabase/functions/parse-sms/index.ts)
+#### [MODIFY] [index.ts](file:///e:/Work/My%20Projects/Monyvi/supabase/functions/parse-sms/index.ts)
 
 **1. Extend `ParseSmsRequest` interface (L222-224)**
 
@@ -222,7 +222,7 @@ Delete the resolved TODO blocks.
 
 ### Component 2: Edge Function — `parse-voice`
 
-#### [MODIFY] [index.ts](file:///e:/Work/My%20Projects/Rizqi/supabase/functions/parse-voice/index.ts)
+#### [MODIFY] [index.ts](file:///e:/Work/My%20Projects/Monyvi/supabase/functions/parse-voice/index.ts)
 
 **1. Expand currency enum from 7 to all 36 (L72-75)**
 
@@ -236,12 +236,12 @@ Same rename in schema, required array, prompt, and `VoiceTransaction` interface.
 
 ### Component 3: Client Service — `ai-sms-parser-service.ts`
 
-#### [MODIFY] [ai-sms-parser-service.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/services/ai-sms-parser-service.ts)
+#### [MODIFY] [ai-sms-parser-service.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/services/ai-sms-parser-service.ts)
 
 **1. Derive `VALID_CURRENCIES` from `CurrencyType` (L53-62)**
 
 ```typescript
-import type { CurrencyType } from "@rizqi/db";
+import type { CurrencyType } from "@monyvi/db";
 
 // All supported currencies derived from the CurrencyType union
 const SUPPORTED_CURRENCIES: readonly CurrencyType[] = [
@@ -330,7 +330,7 @@ transactions.
 
 ### Component 4: SMS Scan Screen
 
-#### [MODIFY] [sms-scan.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/app/sms-scan.tsx)
+#### [MODIFY] [sms-scan.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/app/sms-scan.tsx)
 
 **1. Extract `initiateScan()` (L50-78 + L84-101)**
 
@@ -360,7 +360,7 @@ Move the `useMemo` body (L103-118) to a standalone function.
 
 ### Component 5: SMS Review Screen
 
-#### [MODIFY] [sms-review.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/app/sms-review.tsx)
+#### [MODIFY] [sms-review.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/app/sms-review.tsx)
 
 **1. Replace `buildInitialState` with AI-provided suggestions**
 
@@ -377,20 +377,20 @@ sender×currency and matches against existing accounts client-side. Post-change:
 
 ### Component 6: Stats Components
 
-#### [MODIFY] [types.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/stats/drilldown/types.ts)
+#### [MODIFY] [types.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/stats/drilldown/types.ts)
 
 Remove `DEFAULT_DISPLAY_CURRENCY` constant (L12-19).
 
-#### [MODIFY] [QuickStats.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/stats/QuickStats.tsx)
+#### [MODIFY] [QuickStats.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/stats/QuickStats.tsx)
 
 Replace `DEFAULT_DISPLAY_CURRENCY` import + usage with `usePreferredCurrency()`
 hook.
 
-#### [MODIFY] [MonthlyExpenseChart.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/stats/MonthlyExpenseChart.tsx)
+#### [MODIFY] [MonthlyExpenseChart.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/stats/MonthlyExpenseChart.tsx)
 
 Same replacement — `usePreferredCurrency()` for all `formatCurrency` calls.
 
-#### [MODIFY] [CategoryDrilldownCard.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/stats/CategoryDrilldownCard.tsx)
+#### [MODIFY] [CategoryDrilldownCard.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/stats/CategoryDrilldownCard.tsx)
 
 Same replacement — `usePreferredCurrency()`.
 

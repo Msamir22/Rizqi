@@ -21,13 +21,13 @@
 // --- Supporting types -------------------------------------------------------
 
 /**
- * Postgres-enum-backed types come from `@rizqi/db` (generated into
+ * Postgres-enum-backed types come from `@monyvi/db` (generated into
  * `packages/db/src/types.ts` by `npm run db:migrate`). The real
  * implementation imports them directly; this contract references them by
  * name only.
  *
  * Expected type after migration 040 lands:
- *   import type { PreferredLanguageCode, CurrencyType } from "@rizqi/db";
+ *   import type { PreferredLanguageCode, CurrencyType } from "@monyvi/db";
  *
  * - `PreferredLanguageCode` — generated from the new Postgres enum
  *   `preferred_language_code` (`'en' | 'ar'`). Lowercase to match existing i18n.
@@ -35,10 +35,10 @@
  *   (`"EGP" | "SAR" | ... | "BTC"`).
  *
  * Do NOT redefine these types in `profile-service.ts`; always import from
- * `@rizqi/db`. If a future caller needs a narrower shape, derive it with
+ * `@monyvi/db`. If a future caller needs a narrower shape, derive it with
  * `Extract<PreferredLanguageCode, "en">` rather than rebuilding the union.
  */
-import type { PreferredLanguageCode, CurrencyType } from "@rizqi/db";
+import type { PreferredLanguageCode, CurrencyType } from "@monyvi/db";
 export type { PreferredLanguageCode, CurrencyType };
 
 /** The sync state owned by `SyncProvider`, read by the gate. */

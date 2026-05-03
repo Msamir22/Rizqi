@@ -1,9 +1,9 @@
 # Implementation Plan: Finalize Transactions Module (v2)
 
 **Branch**: `004-finalize-transactions` | **Date**: 2026-02-15 | **Spec**:
-[spec.md](file:///E:/Work/My%20Projects/Rizqi/specs/004-finalize-transactions/spec.md)  
+[spec.md](file:///E:/Work/My%20Projects/Monyvi/specs/004-finalize-transactions/spec.md)  
 **Research**:
-[research.md](file:///E:/Work/My%20Projects/Rizqi/specs/004-finalize-transactions/research.md)
+[research.md](file:///E:/Work/My%20Projects/Monyvi/specs/004-finalize-transactions/research.md)
 
 ## Summary
 
@@ -47,7 +47,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 > management stays entirely in the application layer.
 
 See
-[research.md](file:///E:/Work/My%20Projects/Rizqi/specs/004-finalize-transactions/research.md)
+[research.md](file:///E:/Work/My%20Projects/Monyvi/specs/004-finalize-transactions/research.md)
 for the full conflict analysis (double-counting during sync).
 
 - **App (local)**: Delta-based updates remain the sole balance mechanism
@@ -261,7 +261,7 @@ function useTransactionById(id: string): UseTransactionByIdResult;
 
 ### Phase F: E2E Testing
 
-1. **Set up Maestro** — install, configure for Rizqi dev build
+1. **Set up Maestro** — install, configure for Monyvi dev build
 2. **Write 8 test flows** — create, edit, quick-edit (category/amount), swap
    account, change type, delete, search/filter
 

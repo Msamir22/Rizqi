@@ -3,7 +3,7 @@
 **Purpose**: Validate specification completeness and quality before proceeding
 to planning  
 **Created**: 2026-02-15  
-**Feature**: [spec.md](file:///E:/Work/My%20Projects/Rizqi/specs/001-refactor-stats-page/spec.md)
+**Feature**: [spec.md](file:///E:/Work/My%20Projects/Monyvi/specs/001-refactor-stats-page/spec.md)
 
 ## Content Quality
 

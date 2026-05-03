@@ -16,7 +16,7 @@ import { darkTheme, lightTheme, ThemeColors } from "../constants/colors";
  */
 export type ThemeMode = "light" | "dark" | "system";
 
-const STORAGE_THEME_KEY = "rizqi_theme_mode";
+const STORAGE_THEME_KEY = "monyvi_theme_mode";
 
 interface ThemeContextType {
   mode: ThemeMode;

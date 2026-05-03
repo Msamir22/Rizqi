@@ -8,8 +8,8 @@
  */
 
 import { palette } from "@/constants/colors";
-import type { CurrencyType } from "@rizqi/db";
-import { type SpendingMetrics, formatCurrency } from "@rizqi/logic";
+import type { CurrencyType } from "@monyvi/db";
+import { type SpendingMetrics, formatCurrency } from "@monyvi/logic";
 import React from "react";
 import { Text, View } from "react-native";
 import { useTranslation } from "react-i18next";

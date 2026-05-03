@@ -1,8 +1,8 @@
-# Rizqi - Project Instructions
+# Monyvi - Project Instructions
 
 ## Project Context
 
-Rizqi is a personal financial app — a frictionless financial companion that
+Monyvi is a personal financial app — a frictionless financial companion that
 tracks cash, digital payments, and savings (Gold/USD) for the modern Egyptian
 user. It solves the "boring manual entry" problem using voice and automation.
 
@@ -41,10 +41,10 @@ with Angular equivalents in chat (never in code comments).
 
 Dependency direction: `apps/ → packages/logic → packages/db`. **Never reverse.**
 
-- **`packages/db` (`@rizqi/db`)**: WatermelonDB models, schema, types, sync
+- **`packages/db` (`@monyvi/db`)**: WatermelonDB models, schema, types, sync
   config. MUST NOT import from `apps/` or other packages.
-- **`packages/logic` (`@rizqi/logic`)**: Shared calculations and parsers (net
-  worth, voice parser, currency utils). May import from `@rizqi/db` for types
+- **`packages/logic` (`@monyvi/logic`)**: Shared calculations and parsers (net
+  worth, voice parser, currency utils). May import from `@monyvi/db` for types
   only. MUST NOT import from `apps/`.
 - **`apps/mobile`**: React Native Expo app. May import from any package.
 
@@ -106,8 +106,8 @@ Dependency direction: `apps/ → packages/logic → packages/db`. **Never revers
 # Strict Null Semantics for Entity IDs
 
 When managing entity IDs (such as `accountId`, `categoryId`, etc.) across the
-UI, state hooks, and validation layers in Rizqi, you must adhere strictly to the
-true domain model.
+UI, state hooks, and validation layers in Monyvi, you must adhere strictly to
+the true domain model.
 
 ## Core Directives
 
@@ -233,7 +233,7 @@ mapping logic from component to model, suggest a rule update with location.
   `TouchableOpacity`/`Pressable`
 - `i18next.t()` — use `{ t } from "i18next"` or `useTranslation` hook instead
 
-# Rizqi Guidelines
+# Monyvi Guidelines
 
 ## 1. Think Before Coding
 

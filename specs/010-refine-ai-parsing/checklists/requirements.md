@@ -3,7 +3,7 @@
 **Purpose**: Validate specification completeness and quality before proceeding
 to planning  
 **Created**: 2026-02-27  
-**Feature**: [spec.md](file:///e:/Work/My%20Projects/Rizqi/specs/010-refine-ai-parsing/spec.md)
+**Feature**: [spec.md](file:///e:/Work/My%20Projects/Monyvi/specs/010-refine-ai-parsing/spec.md)
 
 ## Content Quality
 

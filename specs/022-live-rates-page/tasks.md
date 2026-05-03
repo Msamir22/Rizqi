@@ -82,7 +82,7 @@ prices and trends
       `apps/mobile/hooks/useLiveRatesScreen.ts` — call `getMetalPrice` for
       Gold/Silver/Platinum, derive 21K and 18K via new `getGoldPurityPrice`
       function in `packages/logic/src/utils/metal.ts` (keeps purity calculation
-      in @rizqi/logic per Constitution §IV), compute trend percentages using
+      in @monyvi/logic per Constitution §IV), compute trend percentages using
       `calculateTrendPercent`, format values using `formatRate`, implement
       `onRefresh` callback triggering manual sync
 - [ ] T012 [US1] Integrate `GoldHeroCard` and 2× `MetalCard` (Silver + Platinum)

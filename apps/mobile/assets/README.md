@@ -1,43 +1,23 @@
-# Placeholder App Assets
+# Monyvi App Assets
 
-Due to file size, you'll need to create these manually or use generated
-placeholders:
+These launch assets are generated from the approved Monyvi wordmark system.
 
-## Required Assets:
+## Files
 
-1. **Icon** - `apps/mobile/assets/icon.png`
-   - Size: 1024x1024 px
-   - Background: #065F46 (Nile Green)
-   - Add "A" letter or Rizqi logo
+- `icon.png` - 1024x1024 static app icon.
+- `adaptive-icon.png` - 1024x1024 transparent Android adaptive foreground.
+- `splash.png` - 1024x1024 transparent splash wordmark.
+- `favicon.png` - 48x48 web favicon.
+- `brand/monyvi-wordmark.svg` - traced SVG reference for the approved wordmark.
 
-2. **Splash Screen** - `apps/mobile/assets/splash.png`
-   - Size: 1284x2778 px
-   - Background: #065F46
-   - Center: "Rizqi" text
+## Palette
 
-3. **Adaptive Icon** - `apps/mobile/assets/adaptive-icon.png`
-   - Size: 1024x1024 px
-   - Same as icon.png
+Use only colors from `apps/mobile/constants/colors.ts`:
 
-4. **Favicon** - `apps/mobile/assets/favicon.png`
-   - Size: 48x48 px
-   - Simplified icon
+- Background: `palette.slate[900]`
+- Main logo fill: `palette.nileGreen[50]`
+- Accent fill: `palette.nileGreen[500]`
 
-## Quick Placeholders:
-
-You can skip assets for now - Expo will show warnings but still work:
-
-```bash
-# Run without assets (they're optional for development)
-npm run mobile
-```
-
-Or create simple colored PNG files using online tools like:
-
-- https://placeholder.com/
-- Canva (free)
-- Figma (free)
-
-## Once you have assets:
-
-Place them in `/apps/mobile/assets/` directory.
+The square app icon intentionally uses the `M` extraction from the approved
+wordmark so the icon stays legible at small sizes while staying anchored to the
+brand name.

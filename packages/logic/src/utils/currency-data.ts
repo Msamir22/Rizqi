@@ -3,7 +3,7 @@
  * Used by the currency picker component for display.
  */
 
-import type { CurrencyType } from "@rizqi/db";
+import type { CurrencyType } from "@monyvi/db";
 
 export interface CurrencyInfo {
   readonly code: CurrencyType;

@@ -1,6 +1,6 @@
-# Rizqi Styling & UI Guidelines
+# Monyvi Styling & UI Guidelines
 
-This document outlines the project-specific styling and UI rules for Rizqi's
+This document outlines the project-specific styling and UI rules for Monyvi's
 mobile application.
 
 ## 🎨 Styling Rules

@@ -12,9 +12,9 @@ rewritten**: 2026-04-18 (reflects simplified data model — per-step progress
 moved to AsyncStorage, `slides_viewed` column removed, `preferred_language` enum
 column added)
 
-**Tests**: Included per Rizqi Constitution + project TDD mandate in `CLAUDE.md`.
-All test tasks below are REQUIRED — write them first, ensure they FAIL, then
-implement (RED → GREEN → REFACTOR).
+**Tests**: Included per Monyvi Constitution + project TDD mandate in
+`CLAUDE.md`. All test tasks below are REQUIRED — write them first, ensure they
+FAIL, then implement (RED → GREEN → REFACTOR).
 
 **Organization**: Tasks are grouped by user story to enable independent
 implementation and testing. Shared foundational pieces (migration, services,
@@ -30,7 +30,7 @@ phase only contains its own incremental delta.
 
 ## Path Conventions
 
-Rizqi mobile monorepo:
+Monyvi mobile monorepo:
 
 - Mobile app code: `apps/mobile/`
 - Shared WatermelonDB package: `packages/db/`
@@ -547,5 +547,5 @@ onboarding on next launch. Ship **Phases 1 + 2 + 3 + 4** together as the MVP.
   T037-blocking sub-task — do not invent a new logout path.
 - Sign-out inside the happy-path onboarding steps and back/forward navigation
   between steps are out of scope — tracked as
-  [#242](https://github.com/Msamir22/Rizqi/issues/242) and
-  [#243](https://github.com/Msamir22/Rizqi/issues/243).
+  [#242](https://github.com/Msamir22/Monyvi/issues/242) and
+  [#243](https://github.com/Msamir22/Monyvi/issues/243).

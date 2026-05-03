@@ -1,4 +1,4 @@
-import { AccountType, CurrencyType } from "@rizqi/db";
+import { AccountType, CurrencyType } from "@monyvi/db";
 import { z } from "zod";
 
 const NON_NEGATIVE_BALANCE_PATTERN = /^(?:0|[1-9]\d*)(?:\.\d+)?$/;

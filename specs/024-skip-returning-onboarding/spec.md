@@ -56,9 +56,9 @@ issue #226 for full context)
 - Q: Are sign-out during onboarding and back/forward navigation between steps in
   scope for this feature? → A: **No, both are out of scope**. Tracked separately
   as
-  [#242 — Add sign-out affordance during onboarding](https://github.com/Msamir22/Rizqi/issues/242)
+  [#242 — Add sign-out affordance during onboarding](https://github.com/Msamir22/Monyvi/issues/242)
   and
-  [#243 — Add back/forward navigation between onboarding steps](https://github.com/Msamir22/Rizqi/issues/243).
+  [#243 — Add back/forward navigation between onboarding steps](https://github.com/Msamir22/Monyvi/issues/243).
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -402,8 +402,8 @@ restored loads the dashboard. Tapping Sign out returns to the `/auth` screen.
   as the column. Adding new languages in the future requires an
   `ALTER TYPE ... ADD VALUE` migration.
 - Sign-out during onboarding and back/forward step navigation are out of scope —
-  tracked as [#242](https://github.com/Msamir22/Rizqi/issues/242) and
-  [#243](https://github.com/Msamir22/Rizqi/issues/243). The retry screen's Sign
+  tracked as [#242](https://github.com/Msamir22/Monyvi/issues/242) and
+  [#243](https://github.com/Msamir22/Monyvi/issues/243). The retry screen's Sign
   out action (FR-006) does not fulfill #242 because it is only reachable on sync
   failure, not from inside the happy-path onboarding steps.
 

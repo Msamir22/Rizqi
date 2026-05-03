@@ -42,10 +42,10 @@ jobs:
         run: npm run i18n:check
 
       - name: Test Logic Package
-        run: npm test -w @rizqi/logic
+        run: npm test -w @monyvi/logic
 
       - name: Test Mobile App
-        run: npm test -w @rizqi/mobile
+        run: npm test -w @monyvi/mobile
 
   android-build:
     name: Android Build Verification
@@ -85,6 +85,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: rizqi-android-debug
+          name: monyvi-android-debug
           path: apps/mobile/android/app/build/outputs/apk/debug/*.apk
           retention-days: 7

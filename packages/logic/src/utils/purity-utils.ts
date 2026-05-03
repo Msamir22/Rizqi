@@ -7,7 +7,7 @@
  * - Internal: Fraction (0.0-1.0)
  */
 
-import type { MetalType } from "@rizqi/db";
+import type { MetalType } from "@monyvi/db";
 
 // =============================================================================
 // TYPES

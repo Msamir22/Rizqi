@@ -1,4 +1,4 @@
--- Rizqi Supabase Schema
+-- Monyvi Supabase Schema
 -- Market Rates Table for caching metals.dev API responses
 -- Create market_rates table
 CREATE TABLE IF NOT EXISTS public.market_rates (

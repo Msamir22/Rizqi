@@ -17,7 +17,7 @@ import {
   type SmsScanProgress,
   type SmsScanResult,
 } from "@/services/sms-sync-service";
-import type { ParsedSmsTransaction } from "@rizqi/logic";
+import type { ParsedSmsTransaction } from "@monyvi/logic";
 import { useCallback, useRef, useState } from "react";
 
 // ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 # Maestro E2E Tests
 
-End-to-end tests for the Rizqi mobile app using
+End-to-end tests for the Monyvi mobile app using
 [Maestro](https://maestro.mobile.dev/).
 
 ## Quick Start

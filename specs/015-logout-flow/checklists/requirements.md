@@ -2,7 +2,7 @@
 
 **Purpose**: Validate specification completeness and quality before proceeding
 to planning **Created**: 2026-03-07 **Feature**:
-[spec.md](file:///e:/Work/My%20Projects/Rizqi/specs/015-logout-flow/spec.md)
+[spec.md](file:///e:/Work/My%20Projects/Monyvi/specs/015-logout-flow/spec.md)
 
 ## Content Quality
 

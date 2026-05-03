@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Profile, database, type OnboardingFlags } from "@rizqi/db";
+import { Profile, database, type OnboardingFlags } from "@monyvi/db";
 import { Q } from "@nozbe/watermelondb";
 
 export function useOnboardingFlags(): OnboardingFlags {

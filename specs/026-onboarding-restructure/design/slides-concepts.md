@@ -87,7 +87,7 @@ All contrast pairs verified WCAG AA (4.5:1 body, 3:1 large). Notable checks:
 | Pagination count | `text-xs font-medium tabular-nums text-slate-500`                    |
 
 Fonts already in the project: `Inter_*` for Latin, `ReadexPro_*` for Arabic. The
-wordmark uses both (see `RizqiLogo.tsx`).
+wordmark uses both (see `MonyviLogo.tsx`).
 
 ### Shared spacing rhythm (4px scale)
 
@@ -162,7 +162,7 @@ Press state: `active:text-slate-700 dark:active:text-slate-200`. Hidden on the
 **Voice**: Quiet confidence. Whitespace speaks first; words come second;
 illustration is a supporting whisper, never a shout.
 
-**Why it fits Rizqi**: This is the closest expression of our brand principle
+**Why it fits Monyvi**: This is the closest expression of our brand principle
 _"calm over loud."_ The generous air around each element mirrors the feeling of
 a well-kept ledger — nothing shouting, nothing missing. It's the direction that
 most separates us from neon-gradient fintech apps and signals "we're serious
@@ -186,7 +186,7 @@ near-trivial. Only the language switcher / Skip pair flips corners.
 │                                                         │
 │                                                         │
 │                                                         │
-│                  ── RIZQI wordmark ──                   │  ← 120×30, nileGreen-800
+│                  ── Monyvi wordmark ──                   │  ← 120×30, nileGreen-800
 │                                                         │
 │                                                         │
 │                                                         │
@@ -214,7 +214,7 @@ near-trivial. Only the language switcher / Skip pair flips corners.
 
 **Design notes:**
 
-- Wordmark uses `RizqiLogo` component — width 120, height 30.
+- Wordmark uses `MonyviLogo` component — width 120, height 30.
 - Waveform is a single-path SVG with 5 smooth crests, `stroke-width` 2, rounded
   linecaps. Idle: subtle breathing animation (amplitude oscillates ±2px) at
   **3000ms ease-in-out infinite**. This is the one intentional motion — it hints
@@ -233,7 +233,7 @@ near-trivial. Only the language switcher / Skip pair flips corners.
 │                                                         │
 │              Speak it. Or don't.                        │  ← 30/1.15, slate-900
 │                                                         │
-│       Say "200 for coffee" or let Rizqi read            │  ← 16/1.6, slate-600
+│       Say "200 for coffee" or let Monyvi read            │  ← 16/1.6, slate-600
 │       your bank SMS. Either way, it's logged.           │
 │                                                         │
 │                                                         │
@@ -333,7 +333,7 @@ near-trivial. Only the language switcher / Skip pair flips corners.
 │                                                         │
 │                                                         │
 │                                                         │
-│                  ── RIZQI wordmark ──                   │
+│                  ── Monyvi wordmark ──                   │
 │                                                         │
 │                                                         │
 │            Start quietly.                               │  ← 36/1.1 semibold, slate-900
@@ -373,7 +373,7 @@ Never tourist-cliché, never orientalist. Imagine the visual language of
 contemporary Egyptian design studios (Baianat, Ahmed Mater adjacent) — modern
 lines that happen to be rooted here.
 
-**Why it fits Rizqi**: Most Egyptian fintech feels Westernized by default. This
+**Why it fits Monyvi**: Most Egyptian fintech feels Westernized by default. This
 concept leans into authenticity without nostalgia — a clear differentiator, and
 a warmer emotional register that matches "financial companion" over "financial
 dashboard."
@@ -460,7 +460,7 @@ continuity)
 │         Every receipt. Every ping.                      │  ← 30/1.15, slate-900
 │         Remembered.                                     │
 │                                                         │
-│      Rizqi reads your bank and wallet SMS,              │  ← 16/1.6, slate-600
+│      Monyvi reads your bank and wallet SMS,              │  ← 16/1.6, slate-600
 │      so you never type the same thing twice.            │
 │                                                         │
 │                                                         │
@@ -538,7 +538,7 @@ continuity)
 │                                                         │
 │   ╭─────────────────────────────────────────╮           │
 │   │                                         │           │
-│   │           ── RIZQI wordmark ──          │           │   ← wordmark centered in
+│   │           ── Monyvi wordmark ──          │           │   ← wordmark centered in
 │   │                                         │           │     illustration area, on
 │   │         ~~~~~~~~~~~~~~~                 │           │     the single water crest
 │   │                                         │           │     we used on B1 — visual
@@ -578,7 +578,7 @@ fragments rendered as hero imagery. Still calm (muted surface, no neon, no
 gradients), but data-rich. Users exit this concept with a clear mental model of
 "what I'll see inside."
 
-**Why it fits Rizqi**: Some users need to see the product to trust it. This is
+**Why it fits Monyvi**: Some users need to see the product to trust it. This is
 the pitch equivalent of a tasting menu — we pair each value prop with an
 _actual_ micro-screenshot of the future app (rendered mock, not screenshot).
 It's the concept most aligned with "show, don't tell," and it gives the
@@ -605,7 +605,7 @@ Easiest approach: render the mock as a real React component tree gated by
 │                                                         │
 │         Track with your voice.                          │  ← 30/1.15, slate-900
 │                                                         │
-│      Just say the amount. Rizqi categorizes,            │  ← 16/1.6, slate-600
+│      Just say the amount. Monyvi categorizes,            │  ← 16/1.6, slate-600
 │      saves, and moves on.                               │
 │                                                         │
 │   ╭───────── device frame ───────────╮                  │
@@ -662,7 +662,7 @@ Easiest approach: render the mock as a real React component tree gated by
 │                                                         │
 │         SMS becomes transactions.                       │  ← 30/1.15, slate-900
 │                                                         │
-│      Rizqi reads bank and wallet SMS in the             │  ← 16/1.6, slate-600
+│      Monyvi reads bank and wallet SMS in the             │  ← 16/1.6, slate-600
 │      background. You confirm — or don't.                │
 │                                                         │
 │   ╭───────── device frame ───────────╮                  │
@@ -757,7 +757,7 @@ pulse" pairing)
 │                                                         │
 │                                                         │
 │                                                         │
-│                  ── RIZQI wordmark ──                   │
+│                  ── Monyvi wordmark ──                   │
 │                                                         │
 │                                                         │
 │                                                         │
@@ -810,7 +810,7 @@ pulse" pairing)
 **Ship Concept A ("Stillwater") for v1, with one borrowed element from Concept
 C.**
 
-Here's the thinking. Rizqi's strongest differentiator isn't visual flourish —
+Here's the thinking. Monyvi's strongest differentiator isn't visual flourish —
 it's the _absence_ of financial anxiety. Concept A makes whitespace and
 restraint into the product promise. It's also the only concept where "dark mode
 is first-class" stays trivially true: when illustration is near-absent, theming
@@ -868,7 +868,7 @@ it's real" moment without shipping an entire product-mock concept.
 onboarding.slides.a1.headline = "Finance, without the friction."
 onboarding.slides.a1.subhead  = "Your money, tracked by listening — not by typing."
 onboarding.slides.a2.headline = "Speak it. Or don't."
-onboarding.slides.a2.subhead  = "Say \"200 for coffee\" or let Rizqi read your bank SMS. Either way, it's logged."
+onboarding.slides.a2.subhead  = "Say \"200 for coffee\" or let Monyvi read your bank SMS. Either way, it's logged."
 onboarding.slides.a3.headline = "The market, live."
 onboarding.slides.a3.subhead  = "USD, EUR, gold, silver — priced this minute, not yesterday."
 onboarding.slides.a4.headline = "Start quietly. Track clearly."
@@ -891,9 +891,9 @@ design input needed.
 
 ## Stitch mockups
 
-**Stitch project ID**: `7737349693874632909` — _Rizqi — Onboarding Slides (Issue
-#246)_ **Design system asset**: `assets/7415977770700987387` — _Rizqi Brand
-System_
+**Stitch project ID**: `7737349693874632909` — _Monyvi — Onboarding Slides
+(Issue #246)_ **Design system asset**: `assets/7415977770700987387` — _Monyvi
+Brand System_
 
 ### Hero slides (Slide 1 of each concept) — generated 2026-04-22
 
@@ -909,7 +909,7 @@ System_
 I confirm?" friction); updated transcript to natural free-form speech ("Just
 paid 200 pounds for coffee with Ahmed"); rewrote subhead to convey
 natural-conversation parsing ("Talk naturally — like you would to a friend.
-Rizqi listens, parses, and saves it for you.").
+Monyvi listens, parses, and saves it for you.").
 
 ### Concept C — final set
 
@@ -922,18 +922,18 @@ the final slide.
 
 #### Light mode
 
-| #   | Screen                                               | Headline                                              | URL                                                                                                         | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| --- | ---------------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Slide 1 — Voice                                      | Track with your voice.                                | [open](https://stitch.withgoogle.com/projects/7737349693874632909/screens/f7b27a492fee404c8a0fb168c723ff6b) | subhead wrap fixed (2026-04-23)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| 2   | Slide 2 — SMS (Android only)                         | Your bank texts. We listen.                           | [open](https://stitch.withgoogle.com/projects/7737349693874632909/screens/b485c0d266a942088cfe43b92a8c9341) | Shown only on Android. Replaced by Offline slide on iOS.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| 2   | **Slide 2 — Offline (iOS only, v2 — content-dense)** | **Record now. Sync later.**                           | [open](https://stitch.withgoogle.com/projects/7737349693874632909/screens/17e56eb8bd754b2197eedada5f1069ee) | iOS-only replacement for SMS slide. Value props: offline-first reliability + speed (instant saves). Mock UI shows 3 recently-saved offline transactions (with category emojis + timestamps) + an "⚡ Instant" pill + pending-sync footer. Subhead emphasizes speed: "Every tap is instant — on a plane, in a tunnel, anywhere. Rizqi runs on your device and syncs when you're back online." (Regenerated 2026-04-23 to add content density + speed messaging.) v1 (sparse): [562ada4840e94f05a32da635f9311a1c](https://stitch.withgoogle.com/projects/7737349693874632909/screens/562ada4840e94f05a32da635f9311a1c). |
-| 3   | Slide 3 — Live Market                                | Live rates. Real gold.                                | [open](https://stitch.withgoogle.com/projects/7737349693874632909/screens/63a1b5af14e44361bac3acb7e9ac194b) |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| 4   | Auth (merged closer)                                 | Welcome to Rizqi · Everything tracked. Nothing typed. | [open](https://stitch.withgoogle.com/projects/7737349693874632909/screens/b253bc436f5748c1b656acc836a83a93) | first-version with trust-microbar footer separated by top border, refined 2026-04-23                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| #   | Screen                                               | Headline                                               | URL                                                                                                         | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| --- | ---------------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Slide 1 — Voice                                      | Track with your voice.                                 | [open](https://stitch.withgoogle.com/projects/7737349693874632909/screens/f7b27a492fee404c8a0fb168c723ff6b) | subhead wrap fixed (2026-04-23)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 2   | Slide 2 — SMS (Android only)                         | Your bank texts. We listen.                            | [open](https://stitch.withgoogle.com/projects/7737349693874632909/screens/b485c0d266a942088cfe43b92a8c9341) | Shown only on Android. Replaced by Offline slide on iOS.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| 2   | **Slide 2 — Offline (iOS only, v2 — content-dense)** | **Record now. Sync later.**                            | [open](https://stitch.withgoogle.com/projects/7737349693874632909/screens/17e56eb8bd754b2197eedada5f1069ee) | iOS-only replacement for SMS slide. Value props: offline-first reliability + speed (instant saves). Mock UI shows 3 recently-saved offline transactions (with category emojis + timestamps) + an "⚡ Instant" pill + pending-sync footer. Subhead emphasizes speed: "Every tap is instant — on a plane, in a tunnel, anywhere. Monyvi runs on your device and syncs when you're back online." (Regenerated 2026-04-23 to add content density + speed messaging.) v1 (sparse): [562ada4840e94f05a32da635f9311a1c](https://stitch.withgoogle.com/projects/7737349693874632909/screens/562ada4840e94f05a32da635f9311a1c). |
+| 3   | Slide 3 — Live Market                                | Live rates. Real gold.                                 | [open](https://stitch.withgoogle.com/projects/7737349693874632909/screens/63a1b5af14e44361bac3acb7e9ac194b) |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 4   | Auth (merged closer)                                 | Welcome to Monyvi · Everything tracked. Nothing typed. | [open](https://stitch.withgoogle.com/projects/7737349693874632909/screens/b253bc436f5748c1b656acc836a83a93) | first-version with trust-microbar footer separated by top border, refined 2026-04-23                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 #### Dark mode — deferred to implementation
 
 **Decision (2026-04-23)**: Dark-mode mockups were attempted but Stitch's model
-either drifted away from the Rizqi Brand System (applying a "Rizqi Nocturne"
+either drifted away from the Monyvi Brand System (applying a "Monyvi Nocturne"
 variant with gradients and glassmorphism) or timed out repeatedly on slides 3
 and auth. Rather than continue iterating, **dark mode will be implemented
 directly in code** using NativeWind `dark:` variants during the frontend build
@@ -945,8 +945,8 @@ canonical:
 
 - `3250cf8909194857ade9198631ab5814` (Slide 1 dark v1)
 - `73fb171b3f214ea5af361527a13d18c5` (Slide 2 dark v1)
-- `f7d51338778d4d73bc411b079aefa05a` (Slide 1 dark with "Rizqi Nocturne")
-- `3599cb78d59c4c949bb99c20b37b166d` (Slide 2 dark with "Rizqi Nocturne")
+- `f7d51338778d4d73bc411b079aefa05a` (Slide 1 dark with "Monyvi Nocturne")
+- `3599cb78d59c4c949bb99c20b37b166d` (Slide 2 dark with "Monyvi Nocturne")
 
 ### Additional mockups (generated 2026-04-23)
 

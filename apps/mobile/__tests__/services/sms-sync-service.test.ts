@@ -6,14 +6,14 @@
  *
  * Mock Strategy:
  *   - `sms-reader-service` is mocked to return controlled SMS messages
- *   - `@rizqi/logic` is partially mocked (isKnownFinancialSender + computeSmsHash)
+ *   - `@monyvi/logic` is partially mocked (isKnownFinancialSender + computeSmsHash)
  *   - `ai-sms-parser-service` is mocked to return controlled AI parse results
  *   - `@react-native-async-storage/async-storage` is mocked for scan guard
  *   - `InteractionManager` is mocked via react-native
- *   - `@rizqi/db` is mocked to provide loadExistingSmsHashes support
+ *   - `@monyvi/db` is mocked to provide loadExistingSmsHashes support
  */
 
-import type { ParsedSmsTransaction, SmsMessage } from "@rizqi/logic";
+import type { ParsedSmsTransaction, SmsMessage } from "@monyvi/logic";
 import type {
   AiParseResult,
   ParseSmsContext,
@@ -87,7 +87,7 @@ jest.mock("@/services/sms-reader-service", () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Mock: @rizqi/logic (isKnownFinancialSender + computeSmsHash)
+// Mock: @monyvi/logic (isKnownFinancialSender + computeSmsHash)
 // ---------------------------------------------------------------------------
 
 const mockIsKnownFinancialSender = jest.fn<boolean, [string]>(() => true);
@@ -95,7 +95,7 @@ const mockComputeSmsHash = jest.fn<Promise<string>, [string]>((body: string) =>
   Promise.resolve(`hash-${body.slice(0, 10)}`)
 );
 
-jest.mock("@rizqi/logic", () => ({
+jest.mock("@monyvi/logic", () => ({
   isKnownFinancialSender: (...args: unknown[]) =>
     mockIsKnownFinancialSender(...(args as [string])),
   computeSmsHash: (...args: unknown[]) =>
@@ -129,10 +129,10 @@ jest.mock("@/services/ai-sms-parser-service", () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Mock: @rizqi/db (database)
+// Mock: @monyvi/db (database)
 // ---------------------------------------------------------------------------
 
-jest.mock("@rizqi/db", () => ({
+jest.mock("@monyvi/db", () => ({
   database: {
     get: jest.fn().mockReturnValue({
       query: jest.fn().mockReturnValue({
@@ -426,7 +426,7 @@ describe("sms-sync-service", () => {
 
       const { setItem } = getAsyncStorageMocks();
       expect(setItem).toHaveBeenCalledWith(
-        "@rizqi/sms_scan_in_progress",
+        "@monyvi/sms_scan_in_progress",
         "true"
       );
     });
@@ -437,7 +437,7 @@ describe("sms-sync-service", () => {
       await scanAndParseSms(defaultOptions());
 
       const { removeItem } = getAsyncStorageMocks();
-      expect(removeItem).toHaveBeenCalledWith("@rizqi/sms_scan_in_progress");
+      expect(removeItem).toHaveBeenCalledWith("@monyvi/sms_scan_in_progress");
     });
 
     it("should clear scan-in-progress flag even if scan throws", async () => {
@@ -448,7 +448,7 @@ describe("sms-sync-service", () => {
       );
 
       const { removeItem } = getAsyncStorageMocks();
-      expect(removeItem).toHaveBeenCalledWith("@rizqi/sms_scan_in_progress");
+      expect(removeItem).toHaveBeenCalledWith("@monyvi/sms_scan_in_progress");
     });
   });
 
@@ -463,7 +463,7 @@ describe("sms-sync-service", () => {
       const wasStale = await cleanupStaleScanState();
 
       expect(wasStale).toBe(true);
-      expect(removeItem).toHaveBeenCalledWith("@rizqi/sms_scan_in_progress");
+      expect(removeItem).toHaveBeenCalledWith("@monyvi/sms_scan_in_progress");
     });
 
     it("should return false when no stale state", async () => {

@@ -1,22 +1,22 @@
 {
   "expo": {
-    "name": "Rizqi",
-    "slug": "rizqi",
+    "name": "Monyvi",
+    "slug": "monyvi",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "scheme": "rizqi",
+    "scheme": "monyvi",
     "assetBundlePatterns": ["**/*"],
     "extra": {
       "supportsRTL": true
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.rizqi.app",
+      "bundleIdentifier": "com.monyvi.app",
       "infoPlist": {
-        "NSSpeechRecognitionUsageDescription": "Rizqi needs speech recognition to convert your voice to transactions",
-        "NSMicrophoneUsageDescription": "Rizqi needs microphone access for voice input"
+        "NSSpeechRecognitionUsageDescription": "Monyvi needs speech recognition to convert your voice to transactions",
+        "NSMicrophoneUsageDescription": "Monyvi needs microphone access for voice input"
       }
     },
     "android": {
@@ -24,7 +24,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0F172A"
       },
-      "package": "com.rizqi.app",
+      "package": "com.monyvi.app",
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.READ_SMS",

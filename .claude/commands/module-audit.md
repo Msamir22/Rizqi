@@ -1,6 +1,6 @@
 # Module Audit
 
-Perform a comprehensive deep audit of a module/feature in the Rizqi app. This
+Perform a comprehensive deep audit of a module/feature in the Monyvi app. This
 analysis framework is standardized across all modules to ensure consistent
 quality before release.
 
@@ -16,7 +16,7 @@ Example: `/module-audit accounts`, `/module-audit transactions`,
 ## Instructions
 
 You are performing a comprehensive audit of the **$ARGUMENTS** module in the
-Rizqi app. Follow each section below systematically.
+Monyvi app. Follow each section below systematically.
 
 ### 1. Identify Scope
 

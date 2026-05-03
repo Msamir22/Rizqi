@@ -47,7 +47,7 @@ import enCommon from "../locales/en/common.json";
 import arCommon from "../locales/ar/common.json";
 // ... (all namespaces)
 
-const LANGUAGE_KEY = "@rizqi/language";
+const LANGUAGE_KEY = "@monyvi/language";
 
 async function getStoredLanguage(): Promise<string> {
   const stored = await AsyncStorage.getItem(LANGUAGE_KEY);

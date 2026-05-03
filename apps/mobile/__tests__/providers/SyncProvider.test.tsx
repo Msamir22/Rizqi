@@ -57,7 +57,7 @@ jest.mock("@/services/logout-service", () => ({
     mockCompleteInterruptedLogout(...args) as Promise<void>,
 }));
 
-jest.mock("@rizqi/db", () => ({
+jest.mock("@monyvi/db", () => ({
   database: {
     get: jest.fn(() => ({
       query: () => ({ fetchCount: jest.fn().mockResolvedValue(0) }),

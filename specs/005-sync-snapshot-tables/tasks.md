@@ -144,4 +144,4 @@ quickstart.md ✅
 - Custom sync uses `created_at` instead of `updated_at` (tables lack
   `updated_at`)
 - 90-day data retention locally (matching market_rates pattern)
-- `NetWorthComparison` interface in `@rizqi/logic` is reused
+- `NetWorthComparison` interface in `@monyvi/logic` is reused

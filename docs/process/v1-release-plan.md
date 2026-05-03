@@ -97,15 +97,15 @@ planned + 3 unplanned), 1 sprint planning/retro at sprint boundary.
 
 ## Mid-flight Checkpoints
 
-| When                          | Check                                                                                                                                                     | Trigger                                                          |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| End of Sprint 0 (2026-05-07)  | Rebrand done, repo renamed, app boots, GitHub Project live                                                                                                | If no, Sprint 1 starts late and the date slips.                  |
-| End of Sprint 5 (2026-07-17)  | ≥ 80 issues closed in v1.0                                                                                                                                | If < 60, re-forecast in writing; if 60–79, consider scope cut.   |
-| End of Sprint 6 (2026-07-31)  | Beta cohort onboarded ([#537](https://github.com/Msamir22/Rizqi/issues/537)); store accounts ready ([#538](https://github.com/Msamir22/Rizqi/issues/538)) | If no, Sprint 11 release window shrinks and date is at risk.     |
-| End of Sprint 9 (2026-09-11)  | Zero open `priority: critical` in v1.0                                                                                                                    | If no, hardening sprint is at risk; defer non-criticals to v1.1. |
-| End of Sprint 10 (2026-09-25) | Code-complete; ≤ 5 open `priority: high`; build in TestFlight + Play Internal                                                                             | If no, ship date slips.                                          |
-| End of Sprint 11 (2026-10-09) | Public availability submitted in both stores                                                                                                              | If no, contingency window absorbed.                              |
-| 2026-10-20                    | Public availability live OR ≤ 72 hr from store approval                                                                                                   | Hard deadline.                                                   |
+| When                          | Check                                                                                                                                                       | Trigger                                                          |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| End of Sprint 0 (2026-05-07)  | Rebrand done, repo renamed, app boots, GitHub Project live                                                                                                  | If no, Sprint 1 starts late and the date slips.                  |
+| End of Sprint 5 (2026-07-17)  | ≥ 80 issues closed in v1.0                                                                                                                                  | If < 60, re-forecast in writing; if 60–79, consider scope cut.   |
+| End of Sprint 6 (2026-07-31)  | Beta cohort onboarded ([#537](https://github.com/Msamir22/Monyvi/issues/537)); store accounts ready ([#538](https://github.com/Msamir22/Monyvi/issues/538)) | If no, Sprint 11 release window shrinks and date is at risk.     |
+| End of Sprint 9 (2026-09-11)  | Zero open `priority: critical` in v1.0                                                                                                                      | If no, hardening sprint is at risk; defer non-criticals to v1.1. |
+| End of Sprint 10 (2026-09-25) | Code-complete; ≤ 5 open `priority: high`; build in TestFlight + Play Internal                                                                               | If no, ship date slips.                                          |
+| End of Sprint 11 (2026-10-09) | Public availability submitted in both stores                                                                                                                | If no, contingency window absorbed.                              |
+| 2026-10-20                    | Public availability live OR ≤ 72 hr from store approval                                                                                                     | Hard deadline.                                                   |
 
 ---
 
@@ -121,28 +121,28 @@ planned + 3 unplanned), 1 sprint planning/retro at sprint boundary.
 3. **No swing sprint** (sacrificed for the rebrand). Mid-flight checkpoint at
    Sprint 5 must be honoured strictly.
 4. **Beta cohort & store accounts must be ready by end of Sprint 6** — tracked
-   via [#537](https://github.com/Msamir22/Rizqi/issues/537) and
-   [#538](https://github.com/Msamir22/Rizqi/issues/538).
+   via [#537](https://github.com/Msamir22/Monyvi/issues/537) and
+   [#538](https://github.com/Msamir22/Monyvi/issues/538).
 
 ---
 
 ## Tracking Issues
 
-- [#93](https://github.com/Msamir22/Rizqi/issues/93) — Sprint-0 rebrand
+- [#93](https://github.com/Msamir22/Monyvi/issues/93) — Sprint-0 rebrand
   (rename + logo + brand pack)
-- [#537](https://github.com/Msamir22/Rizqi/issues/537) — Beta cohort recruitment
-  & onboarding (Sprint-6 gate)
-- [#538](https://github.com/Msamir22/Rizqi/issues/538) — Store accounts &
+- [#537](https://github.com/Msamir22/Monyvi/issues/537) — Beta cohort
+  recruitment & onboarding (Sprint-6 gate)
+- [#538](https://github.com/Msamir22/Monyvi/issues/538) — Store accounts &
   submission readiness (Sprint-6 gate)
-- [#257](https://github.com/Msamir22/Rizqi/issues/257) — Dashboard v2
+- [#257](https://github.com/Msamir22/Monyvi/issues/257) — Dashboard v2
   release-readiness epic (will be split into 7 sub-area tracking issues during
   Sprint 0)
-- [#268](https://github.com/Msamir22/Rizqi/issues/268),
-  [#371](https://github.com/Msamir22/Rizqi/issues/371),
-  [#408](https://github.com/Msamir22/Rizqi/issues/408),
-  [#411](https://github.com/Msamir22/Rizqi/issues/411),
-  [#467](https://github.com/Msamir22/Rizqi/issues/467),
-  [#491](https://github.com/Msamir22/Rizqi/issues/491) — module audit epics
+- [#268](https://github.com/Msamir22/Monyvi/issues/268),
+  [#371](https://github.com/Msamir22/Monyvi/issues/371),
+  [#408](https://github.com/Msamir22/Monyvi/issues/408),
+  [#411](https://github.com/Msamir22/Monyvi/issues/411),
+  [#467](https://github.com/Msamir22/Monyvi/issues/467),
+  [#491](https://github.com/Msamir22/Monyvi/issues/491) — module audit epics
   (Transactions, Accounts, Budgets, Recurring, Metals, Stats)
 
 ---

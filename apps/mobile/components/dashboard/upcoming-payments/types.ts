@@ -1,10 +1,10 @@
 /**
  * Shared types for the upcoming-payments sub-components.
  *
- * Uses RecurringPayment from @rizqi/db as the canonical payment type.
+ * Uses RecurringPayment from @monyvi/db as the canonical payment type.
  */
 
-import type { CurrencyType, RecurringPayment } from "@rizqi/db";
+import type { CurrencyType, RecurringPayment } from "@monyvi/db";
 
 export interface PayNowModalProps {
   readonly payment: RecurringPayment | null;

@@ -3,8 +3,8 @@ import {
   DEFAULT_CURRENCY,
   detectCurrencyFromTimezone,
 } from "@/utils/currency-detection";
-import { database, Profile, type CurrencyType } from "@rizqi/db";
-import { SUPPORTED_CURRENCIES } from "@rizqi/logic";
+import { database, Profile, type CurrencyType } from "@monyvi/db";
+import { SUPPORTED_CURRENCIES } from "@monyvi/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
 
@@ -55,7 +55,7 @@ export function usePreferredCurrency(): UsePreferredCurrencyResult {
         (c) => c.code === profile.preferredCurrency
       );
       if (isSupported) {
-        return profile.preferredCurrency as CurrencyType;
+        return profile.preferredCurrency;
       }
     }
     // No profile or unsupported currency — detect from device timezone.

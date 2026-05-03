@@ -1,6 +1,6 @@
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
-import { Account } from "@rizqi/db";
+import { Account } from "@monyvi/db";
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";

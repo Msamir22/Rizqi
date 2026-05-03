@@ -6,13 +6,13 @@ import {
   type CalculatorKey,
   CalculatorKeypad,
 } from "@/components/add-transaction/CalculatorKeypad";
-import { formatAmountInput } from "@rizqi/logic";
+import { formatAmountInput } from "@monyvi/logic";
 import { CategoryPicker } from "@/components/add-transaction/CategoryPicker";
 import { CategorySelectorModal } from "@/components/modals/CategorySelectorModal";
 import { palette } from "@/constants/colors";
 import { useCategoryLookup } from "@/context/CategoriesContext";
 import { useCategories } from "@/hooks/useCategories";
-import type { TransactionType } from "@rizqi/db";
+import type { TransactionType } from "@monyvi/db";
 import { useTranslation } from "react-i18next";
 
 interface QuickEditModalProps {

@@ -48,7 +48,7 @@ jest.mock("@/services/supabase", () => ({
 }));
 
 jest.mock("@/constants/auth-constants", () => ({
-  AUTH_REDIRECT_URL: "rizqi://auth-callback",
+  AUTH_REDIRECT_URL: "monyvi://auth-callback",
 }));
 
 const mockOpenAuthSession = jest.fn<
@@ -120,7 +120,7 @@ describe("auth-service - signInWithOAuth", () => {
       });
       mockOpenAuthSession.mockResolvedValue({
         type: "success",
-        url: "rizqi://auth-callback#access_token=test-token&refresh_token=test-refresh&token_type=bearer",
+        url: "monyvi://auth-callback#access_token=test-token&refresh_token=test-refresh&token_type=bearer",
       });
       mockSetSession.mockResolvedValue({ data: { session: {} }, error: null });
 
@@ -129,7 +129,7 @@ describe("auth-service - signInWithOAuth", () => {
       expect(mockSignInWithOAuthProvider).toHaveBeenCalledWith("google");
       expect(mockOpenAuthSession).toHaveBeenCalledWith(
         "https://accounts.google.com/o/oauth2/auth?...",
-        "rizqi://auth-callback"
+        "monyvi://auth-callback"
       );
       expect(result).toEqual({ success: true });
     });
@@ -140,7 +140,7 @@ describe("auth-service - signInWithOAuth", () => {
       });
       mockOpenAuthSession.mockResolvedValue({
         type: "success",
-        url: "rizqi://auth-callback?code=pkce-auth-code",
+        url: "monyvi://auth-callback?code=pkce-auth-code",
       });
       mockExchangeCodeForSession.mockResolvedValue({
         data: { session: {} },
@@ -160,7 +160,7 @@ describe("auth-service - signInWithOAuth", () => {
       });
       mockOpenAuthSession.mockResolvedValue({
         type: "success",
-        url: "rizqi://auth-callback",
+        url: "monyvi://auth-callback",
       });
 
       const result = await signInWithOAuth("google");
@@ -178,7 +178,7 @@ describe("auth-service - signInWithOAuth", () => {
       });
       mockOpenAuthSession.mockResolvedValue({
         type: "success",
-        url: "rizqi://auth-callback#access_token=test-token&refresh_token=test-refresh",
+        url: "monyvi://auth-callback#access_token=test-token&refresh_token=test-refresh",
       });
       mockSetSession.mockResolvedValue({
         data: { session: null },

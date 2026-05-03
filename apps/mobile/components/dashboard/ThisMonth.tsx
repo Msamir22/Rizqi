@@ -6,7 +6,7 @@
  * Features: Filter chips for different time periods, dynamic title
  */
 
-import { formatCurrency } from "@rizqi/logic";
+import { formatCurrency } from "@monyvi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useCallback, useState } from "react";

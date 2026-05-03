@@ -1,4 +1,4 @@
-import type { Category } from "@rizqi/db";
+import type { Category } from "@monyvi/db";
 import { useCallback, useRef, useState } from "react";
 
 /**

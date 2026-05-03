@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
-import { RizqiLogo } from "../ui/RizqiLogo";
+import { MonyviLogo } from "../ui/MonyviLogo";
 
 interface TopNavProps {
   onMenuPress?: () => void;
@@ -22,7 +22,7 @@ interface TopNavProps {
  * The greeting has been moved to a separate row below TopNav in the dashboard
  * to prevent crowding on narrow screens (<375px).
  *
- * Layout: [☰ Menu] [Rizqi Logo] ─── flex spacer ─── [🇪🇬 EGP ▾] [⚙] [🔔]
+ * Layout: [☰ Menu] [Monyvi Logo] ─── flex spacer ─── [🇪🇬 EGP ▾] [⚙] [🔔]
  */
 function TopNavComponent({
   onMenuPress,
@@ -59,7 +59,7 @@ function TopNavComponent({
         )}
 
         {/* Logo */}
-        <RizqiLogo width={100} height={25} />
+        <MonyviLogo width={100} height={31} />
 
         {/* Spacer */}
         <View className="flex-1" />

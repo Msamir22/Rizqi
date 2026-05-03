@@ -17,9 +17,9 @@ import {
   type OnboardingFlags,
   type PreferredLanguageCode,
   database,
-} from "@rizqi/db";
+} from "@monyvi/db";
 import { Q } from "@nozbe/watermelondb";
-import { SUPPORTED_CURRENCIES } from "@rizqi/logic";
+import { SUPPORTED_CURRENCIES } from "@monyvi/logic";
 import {
   changeLanguage,
   getCurrentLanguage,
@@ -211,7 +211,7 @@ export async function setOnboardingFlag<K extends keyof OnboardingFlags>(
  * (e.g., to trigger first-run tooltip state). The onboarding cursor is cleared
  * defensively — failure is logged but not re-thrown.
  *
- * Does NOT clear `@rizqi/intro-locale-override` (FR-030).
+ * Does NOT clear `@monyvi/intro-locale-override` (FR-030).
  *
  * Resolves FR-009, FR-010, FR-011, FR-013, FR-031.
  */

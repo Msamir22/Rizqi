@@ -12,8 +12,8 @@ slides → currency → cash-account confirmation) into:
 - **Pre-auth** (device-scoped): 3 pitch slides (Voice → SMS/Offline → Live
   Market) with auto-detected language, globe-icon language switcher, Skip
   affordance, and platform-divergent Slide 2 (SMS on Android, Offline on iOS).
-  Persistence via AsyncStorage (`@rizqi/intro-seen`,
-  `@rizqi/intro-locale-override`).
+  Persistence via AsyncStorage (`@monyvi/intro-seen`,
+  `@monyvi/intro-locale-override`).
 - **Auth screen**: redesigned to absorb the old "slide 4 closer" — welcome +
   tagline + value-prop pills + existing Google OAuth + email/password form +
   trust microbar footer with top-border separator.
@@ -139,13 +139,13 @@ apps/mobile/
 │       └── AnchoredTooltip.tsx             # NEW (or reuse existing if present) — generic tooltip primitive with arrow, dim backdrop, anchor layout
 ├── hooks/
 │   ├── useOnboardingGuide.ts               # MODIFIED — drop cash_account step; voice completion checks source='VOICE'; "sms" step relabeled "Auto-track bank SMS"
-│   ├── useIntroSeen.ts                     # NEW — observe + set `@rizqi/intro-seen`
-│   ├── useIntroLocaleOverride.ts           # NEW — observe + set `@rizqi/intro-locale-override`
+│   ├── useIntroSeen.ts                     # NEW — observe + set `@monyvi/intro-seen`
+│   ├── useIntroLocaleOverride.ts           # NEW — observe + set `@monyvi/intro-locale-override`
 │   ├── useOnboardingFlags.ts               # NEW — observe profile.onboardingFlags JSONB
 │   └── useFirstRunTooltip.ts               # NEW — consumer hook for FirstRunTooltipContext (isFirstRunPending + markFirstRunPending/Consumed)
 ├── services/
 │   ├── profile-service.ts                  # MODIFIED — atomic confirmCurrencyAndOnboard(); setOnboardingFlag(key)
-│   ├── intro-flag-service.ts               # NEW — AsyncStorage IO for `@rizqi/intro-seen` + `@rizqi/intro-locale-override`
+│   ├── intro-flag-service.ts               # NEW — AsyncStorage IO for `@monyvi/intro-seen` + `@monyvi/intro-locale-override`
 │   ├── onboarding-cursor-service.ts        # DEPRECATED — stop reading; schedule deletion once all callers migrated
 │   └── account-service.ts                  # Potentially MODIFIED — see research.md §3.4 (nested-write mitigation)
 ├── utils/
@@ -236,9 +236,9 @@ mobile-DB feature.
      state.
 
 3. **AsyncStorage flag discipline**:
-   - Keys follow the existing `@rizqi/` device-scoped prefix convention:
-     `@rizqi/intro-seen` (boolean), `@rizqi/intro-locale-override` (string: "en"
-     | "ar" | null).
+   - Keys follow the existing `@monyvi/` device-scoped prefix convention:
+     `@monyvi/intro-seen` (boolean), `@monyvi/intro-locale-override` (string:
+     "en" | "ar" | null).
    - Both are device-scoped (not cleared on logout or sign-up — intentional,
      spec FR-029/FR-030).
    - `intro-locale-override` is written by the shared `LanguageSwitcherPill`

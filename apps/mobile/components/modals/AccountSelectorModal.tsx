@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
-import type { Account, AccountType } from "@rizqi/db";
+import type { Account, AccountType } from "@monyvi/db";
 import { useTranslation } from "react-i18next";
 import { buildAccountDisplayNames } from "@/utils/account-display";
 

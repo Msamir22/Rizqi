@@ -39,7 +39,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 | III | Type Safety               | ✅ PASS | All new interfaces (`PendingAccount`, `TransactionEdits`) use strict types. No `any`.                          |
 | IV  | Service-Layer Separation  | ✅ PASS | Resolution logic stays in services (`sms-account-resolver.ts`). Hooks handle lifecycle only. Modal is pure UI. |
 | V   | Premium UI                | ✅ PASS | Mockups approved. Uses NativeWind classes, color palette from `colors.ts`, no `isDark` ternaries.              |
-| VI  | Monorepo Boundaries       | ✅ PASS | Changes are in `apps/mobile` only. No new package dependencies needed. `@rizqi/logic` types used via imports.  |
+| VI  | Monorepo Boundaries       | ✅ PASS | Changes are in `apps/mobile` only. No new package dependencies needed. `@monyvi/logic` types used via imports. |
 | VII | Local-First Migrations    | ✅ N/A  | No schema changes needed. `accounts` and `bank_details` tables already exist.                                  |
 
 ---

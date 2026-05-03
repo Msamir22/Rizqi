@@ -6,7 +6,7 @@
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import { palette } from "@/constants/colors";
 import { useMonthlySummaries } from "@/hooks/useAnalytics";
-import { formatCurrency } from "@rizqi/logic";
+import { formatCurrency } from "@monyvi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { ActivityIndicator, Text, View } from "react-native";

@@ -1,4 +1,4 @@
-import { Account, AccountType } from "@rizqi/db";
+import { Account, AccountType } from "@monyvi/db";
 import { FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";

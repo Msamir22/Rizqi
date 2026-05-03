@@ -216,8 +216,8 @@ Produced as [research.md](./research.md). Summary:
   this change.
 - **Sign-out during onboarding happy path** and **back/forward nav between
   steps** are out of scope — tracked as
-  [#242](https://github.com/Msamir22/Rizqi/issues/242) and
-  [#243](https://github.com/Msamir22/Rizqi/issues/243).
+  [#242](https://github.com/Msamir22/Monyvi/issues/242) and
+  [#243](https://github.com/Msamir22/Monyvi/issues/243).
 
 ## Phase 1: Design & Contracts
 

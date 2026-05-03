@@ -37,14 +37,14 @@ import {
 // Mocks
 // =============================================================================
 
-// `@rizqi/db` is shared between source and tests. We don't need its real
+// `@monyvi/db` is shared between source and tests. We don't need its real
 // `database` here — `createCashAccountWithinWriter` accepts the collection as
 // a parameter and never touches `database.write`. Mocking the module shape
 // satisfies the `import` chain without bringing the runtime in.
 const mockDatabaseGet = jest.fn();
 const mockDatabaseWrite = jest.fn();
 
-jest.mock("@rizqi/db", () => ({
+jest.mock("@monyvi/db", () => ({
   database: {
     get: (collectionName: string): unknown => mockDatabaseGet(collectionName),
     write: (writer: () => Promise<void>): Promise<void> =>

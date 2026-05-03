@@ -56,7 +56,7 @@ const mockObserve = jest.fn(() => ({ subscribe: mockSubscribe }));
 
 const mockQuery = jest.fn(() => ({ observe: mockObserve }));
 
-jest.mock("@rizqi/db", () => ({
+jest.mock("@monyvi/db", () => ({
   database: {
     get: jest.fn(() => ({
       query: mockQuery,

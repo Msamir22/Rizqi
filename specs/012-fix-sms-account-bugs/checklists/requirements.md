@@ -3,7 +3,7 @@
 **Purpose**: Validate specification completeness and quality before proceeding
 to planning  
 **Created**: 2026-03-01  
-**Feature**: [spec.md](file:///e:/Work/My%20Projects/Rizqi/specs/012-fix-sms-account-bugs/spec.md)
+**Feature**: [spec.md](file:///e:/Work/My%20Projects/Monyvi/specs/012-fix-sms-account-bugs/spec.md)
 
 ## Content Quality
 

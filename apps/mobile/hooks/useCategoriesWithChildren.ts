@@ -5,7 +5,7 @@
  * derives the parent-IDs set in-memory. No own DB subscription is created.
  */
 
-import type { Category } from "@rizqi/db";
+import type { Category } from "@monyvi/db";
 import { useMemo } from "react";
 import { useAllCategories } from "../context/CategoriesContext";
 

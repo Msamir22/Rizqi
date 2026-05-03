@@ -6,7 +6,7 @@
  * the `usePaymentSubmission` hook (SRP).
  */
 
-import { formatCurrency } from "@rizqi/logic";
+import { formatCurrency } from "@monyvi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useState } from "react";
 import { buildAccountDisplayNames } from "@/utils/account-display";

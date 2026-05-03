@@ -1,6 +1,6 @@
 import { BaseBudget } from "./base/base-budget";
 import type { AlertFiredLevel } from "../types";
-import { parsePauseIntervals, type PauseInterval } from "@rizqi/logic";
+import { parsePauseIntervals, type PauseInterval } from "@monyvi/logic";
 
 export class Budget extends BaseBudget {
   /**

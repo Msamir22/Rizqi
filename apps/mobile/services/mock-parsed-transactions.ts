@@ -1,4 +1,4 @@
-import type { ParsedSmsTransaction } from "@rizqi/logic";
+import type { ParsedSmsTransaction } from "@monyvi/logic";
 const ONE_HOUR_MS = 3_600_000;
 const ONE_DAY_MS = 86_400_000;
 const TWO_DAYS_MS = 172_800_000;

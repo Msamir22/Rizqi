@@ -3,7 +3,7 @@
 **Purpose**: Validate specification completeness and quality before proceeding
 to planning  
 **Created**: 2026-02-25  
-**Feature**: [spec.md](file:///e:/Work/My%20Projects/Rizqi/specs/008-resolve-todos/spec.md)
+**Feature**: [spec.md](file:///e:/Work/My%20Projects/Monyvi/specs/008-resolve-todos/spec.md)
 
 ## Content Quality
 

@@ -9,7 +9,7 @@
  *   used to test, plus atomicity, rollback, and stale-balance defense)
  *
  * Mock Strategy:
- *   The `@rizqi/db` mock is defined entirely inside the jest.mock factory
+ *   The `@monyvi/db` mock is defined entirely inside the jest.mock factory
  *   to avoid Jest hoisting issues. Follows the same pattern as
  *   transaction-service.test.ts.
  */
@@ -49,7 +49,7 @@ interface MockDbApi {
 // jest.mock declarations
 // ---------------------------------------------------------------------------
 
-jest.mock("@rizqi/db", () => {
+jest.mock("@monyvi/db", () => {
   /** Mutable model: .update(builder) mutates fields in place */
   function createModel(
     id: string,
@@ -165,7 +165,7 @@ const {
   __clearStores: mockClearStores,
   __rewireMocks: mockRewire,
   __getStore: mockGetStore,
-} = jest.requireMock<MockDbApi>("@rizqi/db");
+} = jest.requireMock<MockDbApi>("@monyvi/db");
 
 // ---------------------------------------------------------------------------
 // Test Helpers

@@ -28,14 +28,14 @@ have been read.
 
 ### 🔹 1.1 Project Constitution (HIGHEST AUTHORITY)
 
-- **READ** `e:\Work\My Projects\Rizqi\.specify\memory\constitution.md`
+- **READ** `e:\Work\My Projects\Monyvi\.specify\memory\constitution.md`
 - Treat it as the **absolute highest authority** — overrides everything else
 - All principles are **non-negotiable and MUST be enforced strictly**
 - **FAILURE TO READ THIS FILE = REVIEW IS INVALID**
 
 ### 🔹 1.2 Project Rules (MANDATORY — ALL FILES)
 
-- **READ EVERY FILE** under: `e:\Work\My Projects\Rizqi\.agent\rules\`
+- **READ EVERY FILE** under: `e:\Work\My Projects\Monyvi\.agent\rules\`
 - Treat these rule files as the **source of truth for implementation standards**
 - The agent MUST list which rule files it read as proof of compliance
 - **FAILURE TO READ ALL RULE FILES = REVIEW IS INCOMPLETE**

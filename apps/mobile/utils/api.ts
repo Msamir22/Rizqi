@@ -1,5 +1,5 @@
 /**
- * API Utilities for Rizqi
+ * API Utilities for Monyvi
  */
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL as string;

@@ -23,7 +23,7 @@ import {
   RecurringPaymentValidationErrors,
   validateRecurringPaymentForm,
 } from "@/validation/recurring-payment-validation";
-import { RecurringFrequency, TransactionType } from "@rizqi/db";
+import { RecurringFrequency, TransactionType } from "@monyvi/db";
 import { Ionicons } from "@expo/vector-icons";
 import type { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 // eslint-disable-next-line no-duplicate-imports

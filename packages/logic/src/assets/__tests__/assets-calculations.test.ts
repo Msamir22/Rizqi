@@ -12,7 +12,7 @@
 
 import { calculateTotalAssets } from "../assets-calculations";
 import { MetalPriceUnavailableError } from "../../utils/metal";
-import type { AssetMetal, MarketRate, MetalType } from "@rizqi/db";
+import type { AssetMetal, MarketRate, MetalType } from "@monyvi/db";
 
 // =============================================================================
 // Helpers

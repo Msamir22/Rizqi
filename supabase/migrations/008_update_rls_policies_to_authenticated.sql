@@ -1,5 +1,5 @@
 -- =============================================================================
--- Rizqi Database Schema Migration
+-- Monyvi Database Schema Migration
 -- Version: 008
 -- Description: Update all RLS policies to require authenticated role only
 --              (no public or anon access)

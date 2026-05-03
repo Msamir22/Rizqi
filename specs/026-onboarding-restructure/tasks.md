@@ -36,7 +36,7 @@ implemented and verified independently.
 **Purpose**: Land the `profiles.onboarding_flags` JSONB column end-to-end
 (Supabase migration + regenerated WatermelonDB schema + TypeScript types + model
 getter) so every downstream task can import the `OnboardingFlags` type from
-`@rizqi/db` without tripping over missing types.
+`@monyvi/db` without tripping over missing types.
 
 Reference: quickstart Phase A; research §2; data-model §1, §2, §10;
 contracts/onboarding-flags-schema.md.
@@ -60,7 +60,7 @@ contracts/onboarding-flags-schema.md.
       `packages/db/src/models/Profile.ts` (JSON.parse the `onboardingFlagsRaw`
       field, fall back to `{}`; follow the existing `notificationSettings`
       pattern)
-- [x] T006 Verify `@rizqi/db` builds cleanly: run `npm run -w @rizqi/db build`
+- [x] T006 Verify `@monyvi/db` builds cleanly: run `npm run -w @monyvi/db build`
       (or `npm run typecheck` workspace-root) and confirm
       `Profile.onboardingFlags` is typed as `OnboardingFlags` in consumers
 
@@ -80,8 +80,8 @@ phase can be implemented without building cross-cutting infrastructure.
 Reference: quickstart Phase B, C, E.3; research §3, §4, §5, §6, §8, §9, §10;
 contracts/services.md §2–§6.
 
-- [x] T007 Add `INTRO_SEEN_KEY = "@rizqi/intro-seen"` and
-      `INTRO_LOCALE_OVERRIDE_KEY = "@rizqi/intro-locale-override"` constants to
+- [x] T007 Add `INTRO_SEEN_KEY = "@monyvi/intro-seen"` and
+      `INTRO_LOCALE_OVERRIDE_KEY = "@monyvi/intro-locale-override"` constants to
       `apps/mobile/constants/storage-keys.ts` (do NOT add to
       `CLEARABLE_USER_KEYS` — device-scoped per FR-029/FR-030)
 - [x] T008 [P] Create `apps/mobile/services/intro-flag-service.ts` exporting
@@ -274,7 +274,7 @@ FR-031, FR-033, FR-034, FR-035, FR-013a, FR-039 (auth back).
       `preferredCurrency` overwrite, `preferredLanguage` overwrite with
       `getCurrentLanguage()`, and `onboardingCompleted = true`. Post-commit:
       `options.onTransactionCommitted?.()` callback (research §1,
-      contracts/services.md §1.1). Do NOT clear `@rizqi/intro-locale-override`
+      contracts/services.md §1.1). Do NOT clear `@monyvi/intro-locale-override`
       (FR-030).
 
 ### i18n
@@ -735,7 +735,7 @@ Once Phase 2 completes, the following can proceed in parallel:
 - Do NOT modify `apps/mobile/utils/routing-decision.ts` or
   `apps/mobile/app/index.tsx`'s routing logic (T019 is verification only). The
   existing `onboardingCompleted` signal is correct for this feature.
-- Do NOT clear `@rizqi/intro-locale-override` on any code path (FR-030). The
+- Do NOT clear `@monyvi/intro-locale-override` on any code path (FR-030). The
   override is a device-level preference.
 - Do NOT move the existing `<SmsPermissionPrompt>` rendering into a queue
   component (preserves its existing recurring-visibility behavior for

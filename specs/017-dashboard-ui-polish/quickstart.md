@@ -12,7 +12,7 @@
 ## Running the App
 
 ```bash
-cd e:/Work/My\ Projects/Rizqi
+cd e:/Work/My\ Projects/Monyvi
 npm run start:android
 ```
 
@@ -46,7 +46,7 @@ npm run start:android
 
 ```bash
 # Run existing tests
-cd e:/Work/My\ Projects/Rizqi
+cd e:/Work/My\ Projects/Monyvi
 npx jest --passWithNoTests
 
 # Manual testing

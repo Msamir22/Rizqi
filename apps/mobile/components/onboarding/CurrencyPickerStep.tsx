@@ -19,8 +19,8 @@
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { detectCurrencyFromTimezone } from "@/utils/currency-detection";
-import type { CurrencyType } from "@rizqi/db";
-import { CurrencyInfo, SUPPORTED_CURRENCIES } from "@rizqi/logic";
+import type { CurrencyType } from "@monyvi/db";
+import { CurrencyInfo, SUPPORTED_CURRENCIES } from "@monyvi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useCallback, useMemo, useState } from "react";

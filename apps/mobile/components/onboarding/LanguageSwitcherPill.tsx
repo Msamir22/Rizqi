@@ -7,7 +7,7 @@
  *
  * On tap, an anchored popover opens directly underneath the pill with one
  * row per supported locale. Selecting a row writes the device-scoped
- * `@rizqi/intro-locale-override` AsyncStorage key (FR-030) and applies the
+ * `@monyvi/intro-locale-override` AsyncStorage key (FR-030) and applies the
  * change to the runtime via `changeLanguage`. Selecting the language
  * that's already active simply closes the popover (no-op, no spurious
  * RTL reload).

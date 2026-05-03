@@ -2,16 +2,16 @@
 
 **Outgoing agent:** Claude Opus 4.7 **Handoff date:** 2026-04-18 **Git branch:**
 `024-skip-returning-onboarding` **Worktree path:**
-`E:/Work/My Projects/Rizqi/.claude/worktrees/024-skip-returning-onboarding`
+`E:/Work/My Projects/Monyvi/.claude/worktrees/024-skip-returning-onboarding`
 **Worktree type:** linked worktree (the main checkout at
-`E:/Work/My Projects/Rizqi` is on an unrelated branch
+`E:/Work/My Projects/Monyvi` is on an unrelated branch
 `refactor/dashboard-polish-round1`) **GitHub issue:**
 [#226 — Skip onboarding flow (language, currency, wallet creation) for returning users](https://github.com/Msamir22/Astik/issues/226)
 
 > The incoming agent MUST operate from the **Worktree path** above. If your
 > session is not already there, `cd` into it before doing anything else. Do not
 > create a new worktree or check the branch out elsewhere. The repo has been
-> renamed from "Rizki" to "Rizqi"; the worktree's `.git` pointers were repaired
+> renamed from "Rizki" to "Monyvi"; the worktree's `.git` pointers were repaired
 > earlier in this session — if `git status` errors with a stale "Rizki" path,
 > report it back to the user rather than attempting a self-repair.
 

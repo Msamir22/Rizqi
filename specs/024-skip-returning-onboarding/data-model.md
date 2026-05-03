@@ -71,7 +71,7 @@ CREATE TYPE preferred_language_code AS ENUM ('en', 'ar');
 - On the TypeScript side, `npm run db:migrate` auto-regenerates
   `packages/db/src/types.ts` to export
   `type PreferredLanguageCode = "en" | "ar"` (mirroring existing entries like
-  `CurrencyType`). App code imports `PreferredLanguageCode` from `@rizqi/db` —
+  `CurrencyType`). App code imports `PreferredLanguageCode` from `@monyvi/db` —
   no shadow union type is defined anywhere else. See research.md § 4 for the
   convention note.
 
@@ -156,7 +156,7 @@ cursor and starting at the right phase; see FR-004.
 
 | FR     | Validation rule                                                                          | Enforced where                                                                                                                                                                                                                                                                                                                                                                 |
 | ------ | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| FR-007 | `preferred_language` ∈ `{'en', 'ar'}`.                                                   | Postgres enum (authoritative) + `profile-service.setPreferredLanguage(language: PreferredLanguageCode)` — type imported from `@rizqi/db` (auto-generated).                                                                                                                                                                                                                     |
+| FR-007 | `preferred_language` ∈ `{'en', 'ar'}`.                                                   | Postgres enum (authoritative) + `profile-service.setPreferredLanguage(language: PreferredLanguageCode)` — type imported from `@monyvi/db` (auto-generated).                                                                                                                                                                                                                    |
 | FR-008 | AsyncStorage cursor value is one of the four named steps.                                | `onboarding-cursor-service.writeOnboardingStep()` accepts a typed `OnboardingStep` parameter.                                                                                                                                                                                                                                                                                  |
 | FR-009 | Currency step requires a non-null `preferred_currency` AND a corresponding cash account. | `profile-service.setPreferredCurrencyAndCreateCashAccount()` — sequential (not atomic): one `database.write` updates the profile, then `ensureCashAccount` runs in its own inner writer. Wrapping both in a single outer writer causes a WatermelonDB deadlock, so they intentionally aren't atomic. The onboarding cursor stays at `"currency"` until this function resolves. |
 | FR-010 | Cash account must exist after currency step.                                             | Same function as FR-009.                                                                                                                                                                                                                                                                                                                                                       |
@@ -223,7 +223,7 @@ commands.
 WatermelonDB represents Postgres enums as plain `string` columns client-side.
 The `base-profile.ts` regeneration will produce
 `@field("preferred_language") preferredLanguage!: string`. The narrower
-`PreferredLanguageCode` union (imported from `@rizqi/db`) is enforced at the
+`PreferredLanguageCode` union (imported from `@monyvi/db`) is enforced at the
 service layer — callers cast from the raw `profile.preferredLanguage` only after
 narrowing, typically at the top of `profile-service.setPreferredLanguage()` or
 wherever the value is read before being passed to `changeLanguage()`.

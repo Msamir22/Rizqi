@@ -5,7 +5,7 @@
  * Strategy: "Last Write Wins" - most recent updated_at timestamp wins conflicts
  */
 
-import { schema, SupabaseDatabase } from "@rizqi/db";
+import { schema, SupabaseDatabase } from "@monyvi/db";
 import type { Database } from "@nozbe/watermelondb";
 import {
   SyncDatabaseChangeSet,

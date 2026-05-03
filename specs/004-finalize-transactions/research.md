@@ -54,7 +54,7 @@ The trigger calculates:
 SUM(CASE WHEN type='INCOME' THEN amount WHEN type='EXPENSE' THEN -amount END)
 ```
 
-This assumes that account balance = sum of all transactions. But in Rizqi:
+This assumes that account balance = sum of all transactions. But in Monyvi:
 
 - Accounts can have an **initial balance** set during creation (currently always
   0, but could be non-zero)
@@ -120,7 +120,7 @@ DROP FUNCTION IF EXISTS public.update_account_balance_on_transaction_change();
 
 No transfer triggers exist, and per the decision above, **none should be
 created**. Balance management for transfers is handled by the app layer in
-[transfer-service.ts](file:///E:/Work/My%20Projects/Rizqi/apps/mobile/services/transfer-service.ts).
+[transfer-service.ts](file:///E:/Work/My%20Projects/Monyvi/apps/mobile/services/transfer-service.ts).
 
 ---
 

@@ -1,4 +1,4 @@
-import type { Account, MarketRate } from "@rizqi/db";
+import type { Account, MarketRate } from "@monyvi/db";
 import { convertCurrency } from "../utils/currency";
 
 /**

@@ -43,7 +43,7 @@ with error handling. The sync lock ensures no concurrent sync corruption.
 
 **Decision**:
 
-- **Clear on logout**: All `@rizqi/*` prefixed keys (sign-up prompt dismissal,
+- **Clear on logout**: All `@monyvi/*` prefixed keys (sign-up prompt dismissal,
   cooldown state), preferred currency, SMS sync state.
 - **Preserve on logout**: `hasOnboarded` (device-level, not user-level).
   **Rationale**: The `hasOnboarded` key represents device onboarding, not user
@@ -69,7 +69,7 @@ reused across the app (e.g., full rescan confirmation in settings).
 
 ## R7: Logout-In-Progress Flag Recovery
 
-**Decision**: Set `@rizqi/logout-in-progress` in AsyncStorage before starting
+**Decision**: Set `@monyvi/logout-in-progress` in AsyncStorage before starting
 the logout sequence. Check on app launch in `_layout.tsx`. If set, complete
 cleanup (reset DB, clear session). **Rationale**: Simple and reliable. The flag
 is removed at the end of the logout sequence. If the app is force-closed, the

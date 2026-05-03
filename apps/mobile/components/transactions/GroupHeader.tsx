@@ -1,5 +1,5 @@
-import type { CurrencyType } from "@rizqi/db";
-import { formatCurrency } from "@rizqi/logic";
+import type { CurrencyType } from "@monyvi/db";
+import { formatCurrency } from "@monyvi/logic";
 import { BlurView } from "expo-blur";
 import React from "react";
 import { Platform, Text, useColorScheme, View } from "react-native";

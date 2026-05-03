@@ -2,7 +2,7 @@
 
 **Branch**: `021-voice-transaction-refinements` | **Date**: 2026-03-26 |
 **Spec**:
-[spec.md](file:///e:/Work/My%20Projects/Rizqi/specs/021-voice-transaction-refinements/spec.md)
+[spec.md](file:///e:/Work/My%20Projects/Monyvi/specs/021-voice-transaction-refinements/spec.md)
 **Input**: Feature specification from
 `/specs/021-voice-transaction-refinements/spec.md`
 
@@ -129,13 +129,13 @@ Both `ParsedSmsTransaction` and `ParsedVoiceTransaction` structurally satisfy
 ### ADR-002: Shared Utils in `packages/logic`
 
 **Context**: 5 functions duplicated across SMS and Voice parser services (see
-[research.md](file:///e:/Work/My%20Projects/Rizqi/specs/021-voice-transaction-refinements/research.md)
+[research.md](file:///e:/Work/My%20Projects/Monyvi/specs/021-voice-transaction-refinements/research.md)
 R-005).
 
 **Decision**: Extract `normalizeType`, `VALID_TYPES`, `parseAiDate`,
 `clampConfidence`, `parseCategory` into
 `packages/logic/src/utils/ai-parser-utils.ts`. Both services import from
-`@rizqi/logic`.
+`@monyvi/logic`.
 
 **Trade-Off Analysis**:
 
@@ -174,7 +174,7 @@ shows AI-returned ISO 639-1 code uppercased (e.g., `"AR"`, `"EN"`, `"FR"`).
 
 ### Component 1: Shared AI Parser Utilities (#159)
 
-#### [NEW] [ai-parser-utils.ts](file:///e:/Work/My%20Projects/Rizqi/packages/logic/src/utils/ai-parser-utils.ts)
+#### [NEW] [ai-parser-utils.ts](file:///e:/Work/My%20Projects/Monyvi/packages/logic/src/utils/ai-parser-utils.ts)
 
 Pure functions extracted from both parser services:
 
@@ -197,12 +197,12 @@ Pure functions extracted from both parser services:
 >   depend on abstractions, not each other)
 > - **Algorithm Choice:** O(1) `Set.has()` for type/currency validation
 
-#### [NEW] [ai-parser-utils.test.ts](file:///e:/Work/My%20Projects/Rizqi/packages/logic/src/utils/__tests__/ai-parser-utils.test.ts)
+#### [NEW] [ai-parser-utils.test.ts](file:///e:/Work/My%20Projects/Monyvi/packages/logic/src/utils/__tests__/ai-parser-utils.test.ts)
 
 Unit tests for all shared utilities: `normalizeType`, `parseAiDate`,
 `clampConfidence`, `parseCategory`.
 
-#### [MODIFY] [index.ts](file:///e:/Work/My%20Projects/Rizqi/packages/logic/src/index.ts)
+#### [MODIFY] [index.ts](file:///e:/Work/My%20Projects/Monyvi/packages/logic/src/index.ts)
 
 Add `export * from "./utils/ai-parser-utils";`
 
@@ -210,7 +210,7 @@ Add `export * from "./utils/ai-parser-utils";`
 
 ### Component 2: Type System Refactor (#159)
 
-#### [MODIFY] [types.ts](file:///e:/Work/My%20Projects/Rizqi/packages/logic/src/types.ts)
+#### [MODIFY] [types.ts](file:///e:/Work/My%20Projects/Monyvi/packages/logic/src/types.ts)
 
 1. Replace outdated `ParsedVoiceTransaction` with voice-specific type:
 
@@ -251,9 +251,9 @@ Add `export * from "./utils/ai-parser-utils";`
 
 ### Component 3: AI Parser Service Refactors (#159, #150, #151)
 
-#### [MODIFY] [ai-voice-parser-service.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/services/ai-voice-parser-service.ts)
+#### [MODIFY] [ai-voice-parser-service.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/services/ai-voice-parser-service.ts)
 
-1. **Import shared utils** from `@rizqi/logic`
+1. **Import shared utils** from `@monyvi/logic`
 2. **Remove local duplicates** (`normalizeType`, `VALID_TYPES`,
    `DATE_ONLY_REGEX`, `parseAiDate`)
 3. **Accept `categories` context** — add `categories: readonly Category[]` to
@@ -266,9 +266,9 @@ Add `export * from "./utils/ai-parser-utils";`
 7. **Update `ParseVoiceResult`** to
    `{ transactions: ParsedVoiceTransaction[], transcript, originalTranscript, detectedLanguage }`
 
-#### [MODIFY] [ai-sms-parser-service.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/services/ai-sms-parser-service.ts)
+#### [MODIFY] [ai-sms-parser-service.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/services/ai-sms-parser-service.ts)
 
-1. **Import `normalizeType`, `VALID_TYPES`** from `@rizqi/logic`
+1. **Import `normalizeType`, `VALID_TYPES`** from `@monyvi/logic`
 2. **Remove local** `normalizeType`, `VALID_TYPES` duplicates
 3. Keep SMS-specific logic (`normalizeCurrency`, `parseDate`, `parseCategory` —
    SMS parser's local `parseCategory` is identical to the shared version, so
@@ -278,7 +278,7 @@ Add `export * from "./utils/ai-parser-utils";`
 
 ### Component 4: Edge Function Updates (#150, #151)
 
-#### [MODIFY] [index.ts](file:///e:/Work/My%20Projects/Rizqi/supabase/functions/parse-voice/index.ts)
+#### [MODIFY] [index.ts](file:///e:/Work/My%20Projects/Monyvi/supabase/functions/parse-voice/index.ts)
 
 1. **Add to Gemini JSON schema**:
    - `original_transcript` — "The exact text the user spoke in its original
@@ -298,7 +298,7 @@ Add `export * from "./utils/ai-parser-utils";`
 
 ### Component 5: Voice Flow & Review Screen (#150, #151)
 
-#### [MODIFY] [useVoiceTransactionFlow.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/hooks/useVoiceTransactionFlow.ts)
+#### [MODIFY] [useVoiceTransactionFlow.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/hooks/useVoiceTransactionFlow.ts)
 
 1. **Empty recording guard** — when result has 0 valid transactions:
    ```typescript
@@ -308,27 +308,27 @@ Add `export * from "./utils/ai-parser-utils";`
 2. **Pass `originalTranscript` and `detectedLanguage`** in route navigation
    params
 
-#### [MODIFY] [voice-review.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/app/voice-review.tsx)
+#### [MODIFY] [voice-review.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/app/voice-review.tsx)
 
 1. Accept and display `originalTranscript` with `detectedLanguage` badge
 2. Apply RTL writing direction when `detectedLanguage === "ar"`
 3. Update type references from `ParsedSmsTransaction` to
    `ParsedVoiceTransaction`
 
-#### [MODIFY] [TransactionReview.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/transaction-review/TransactionReview.tsx)
+#### [MODIFY] [TransactionReview.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/transaction-review/TransactionReview.tsx)
 
 1. Change props from `ParsedSmsTransaction[]` → `ReviewableTransaction[]`
 2. Only use fields present on `ReviewableTransaction` interface
 
-#### [MODIFY] [TransactionItem.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/transaction-review/TransactionItem.tsx)
+#### [MODIFY] [TransactionItem.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/transaction-review/TransactionItem.tsx)
 
 1. Update props type to `ReviewableTransaction`
 
-#### [MODIFY] [TransactionEditModal.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/transaction-review/TransactionEditModal.tsx)
+#### [MODIFY] [TransactionEditModal.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/transaction-review/TransactionEditModal.tsx)
 
 1. Update props type to `ReviewableTransaction`
 
-#### [MODIFY] [sms-review.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/app/sms-review.tsx)
+#### [MODIFY] [sms-review.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/app/sms-review.tsx)
 
 1. Cast saved transactions from `ReviewableTransaction` to
    `ParsedSmsTransaction` at the save boundary
@@ -337,22 +337,22 @@ Add `export * from "./utils/ai-parser-utils";`
 
 ### Component 6: UI/UX Fixes (#147, #148, #149)
 
-#### [MODIFY] [VoiceRecordingOverlay.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/voice/VoiceRecordingOverlay.tsx)
+#### [MODIFY] [VoiceRecordingOverlay.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/voice/VoiceRecordingOverlay.tsx)
 
 1. Panel extends to `bottom: 0` with internal `paddingBottom` for safe area
 2. Button sizes: "Done" = 56px (prominent), "Pause"/"Discard" = 48px (secondary)
 3. Layout order: Status/Timer → Waveform → Progress → Controls
 
-#### [MODIFY] [CustomBottomTabBar.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/tab-bar/CustomBottomTabBar.tsx)
+#### [MODIFY] [CustomBottomTabBar.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/tab-bar/CustomBottomTabBar.tsx)
 
 1. Z-index layering: Backdrop(20) < Panel(22) < Tab Bar(25) < Mic Button(30)
 
-#### [MODIFY] [QuickActionFab.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/fab/QuickActionFab.tsx)
+#### [MODIFY] [QuickActionFab.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/fab/QuickActionFab.tsx)
 
 1. Accept `isRecordingActive` prop
 2. Return `null` when recording is active
 
-#### [MODIFY] [\_layout.tsx](<file:///e:/Work/My%20Projects/Rizqi/apps/mobile/app/(tabs)/_layout.tsx>)
+#### [MODIFY] [\_layout.tsx](<file:///e:/Work/My%20Projects/Monyvi/apps/mobile/app/(tabs)/_layout.tsx>)
 
 1. Pass `isRecordingActive={voiceFlow.flowStatus !== "idle"}` to
    `<QuickActionFab />`
@@ -361,7 +361,7 @@ Add `export * from "./utils/ai-parser-utils";`
 
 ### Component 7: Test Updates (FR-012)
 
-#### [MODIFY] [ai-voice-parser-service.test.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/__tests__/services/ai-voice-parser-service.test.ts)
+#### [MODIFY] [ai-voice-parser-service.test.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/__tests__/services/ai-voice-parser-service.test.ts)
 
 1. **Update `makeValidTransaction` helper** — add `originalTranscript`,
    `detectedLanguage` fields; remove SMS-specific fields

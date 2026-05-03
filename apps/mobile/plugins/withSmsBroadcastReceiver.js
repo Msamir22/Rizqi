@@ -278,7 +278,7 @@ function withKotlinSourceFiles(config) {
   return withDangerousMod(config, [
     "android",
     (modConfig) => {
-      const packageName = modConfig.android?.package || "com.rizqi.app";
+      const packageName = modConfig.android?.package || "com.monyvi.app";
       const packagePath = packageName.replace(/\./g, "/");
 
       const sourceDir = path.join(
@@ -332,7 +332,7 @@ function withSmsEventPackageRegistration(config) {
   return withDangerousMod(config, [
     "android",
     (modConfig) => {
-      const packageName = modConfig.android?.package || "com.rizqi.app";
+      const packageName = modConfig.android?.package || "com.monyvi.app";
       const packagePath = packageName.replace(/\./g, "/");
 
       const mainApplicationPath = path.join(
@@ -411,7 +411,7 @@ function withSmsEventPackageRegistration(config) {
 function withSmsManifestChanges(config) {
   return withAndroidManifest(config, (modConfig) => {
     const manifest = modConfig.modResults.manifest;
-    const packageName = modConfig.android?.package || "com.rizqi.app";
+    const packageName = modConfig.android?.package || "com.monyvi.app";
 
     // --- Add RECEIVE_SMS permission ---
     const permissions = manifest["uses-permission"] || [];

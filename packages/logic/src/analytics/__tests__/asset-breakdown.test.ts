@@ -11,7 +11,7 @@ import type {
   CurrencyType,
   MarketRate,
   MetalType,
-} from "@rizqi/db";
+} from "@monyvi/db";
 import {
   calculateAssetBreakdown,
   calculateAssetBreakdownPercentages,

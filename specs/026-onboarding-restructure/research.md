@@ -115,7 +115,7 @@ export async function confirmCurrencyAndOnboard(
     await changeLanguage(preferredLanguage);
   }
 
-  // NOTE: the AsyncStorage `@rizqi/intro-locale-override` is NOT cleared here
+  // NOTE: the AsyncStorage `@monyvi/intro-locale-override` is NOT cleared here
   // (FR-030). It persists as a device-level language preference.
 
   return { accountId };
@@ -149,7 +149,7 @@ JSONB on Supabase, as `string` (stringified JSON) in WatermelonDB, with
 ### Rationale
 
 - WatermelonDB has no native JSONB/object column type. The `@json` decorator
-  exists but the Rizqi codebase doesn't use it (per-field manual parsing is the
+  exists but the Monyvi codebase doesn't use it (per-field manual parsing is the
   established pattern).
 - `notification_settings` was added to the `profiles` table in an earlier
   migration and is stored exactly this way. `Profile.ts` defines:
@@ -225,10 +225,10 @@ Bump schema version (currently 16) to 17. Add `addColumns` step for
 
 ### Decision
 
-**New keys follow the existing `@rizqi/` device-scoped prefix convention**:
+**New keys follow the existing `@monyvi/` device-scoped prefix convention**:
 
-- `@rizqi/intro-seen` (boolean as string: `"true"` / `"false"` / missing)
-- `@rizqi/intro-locale-override` (string: `"en"` | `"ar"` | missing)
+- `@monyvi/intro-seen` (boolean as string: `"true"` / `"false"` / missing)
+- `@monyvi/intro-locale-override` (string: `"en"` | `"ar"` | missing)
 
 Both are **device-scoped**, NOT cleared on logout (inherited from
 `storage-keys.ts` pattern — device-level keys intentionally survive logout so
@@ -236,8 +236,8 @@ returning users don't re-see intro content).
 
 ### Rationale
 
-- Existing `storage-keys.ts` uses `@rizqi/first-use-date` (device-scoped) and
-  `@rizqi/logout-in-progress` (device-scoped). Per-user keys use a different
+- Existing `storage-keys.ts` uses `@monyvi/first-use-date` (device-scoped) and
+  `@monyvi/logout-in-progress` (device-scoped). Per-user keys use a different
   shape: `onboarding:<userId>:step` (with userId in the key).
 - The pitch is pre-auth — there's no `userId` at write time. Device scope is the
   only reasonable scope.
@@ -259,13 +259,13 @@ returning users don't re-see intro content).
 ```ts
 // apps/mobile/constants/storage-keys.ts (additions)
 /** Set to "true" once the user has completed OR explicitly skipped the pre-auth pitch on this device. */
-export const INTRO_SEEN_KEY = "@rizqi/intro-seen";
+export const INTRO_SEEN_KEY = "@monyvi/intro-seen";
 
 /** Explicit language preference selected on any pre-auth surface (pitch, auth,
  *  or Currency step). Empty/missing ⟹ use device locale. Once written, it
  *  behaves as a device-level language preference (FR-030) and is NOT cleared
  *  on sign-up, sign-out, or any other event. */
-export const INTRO_LOCALE_OVERRIDE_KEY = "@rizqi/intro-locale-override";
+export const INTRO_LOCALE_OVERRIDE_KEY = "@monyvi/intro-locale-override";
 
 // Note: these keys are NOT added to CLEARABLE_USER_KEYS — they persist across logout.
 
@@ -724,7 +724,7 @@ For each surface:
 | --- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | Atomic Currency write semantics               | ✅ Resolved — refactor to single outer `database.write()`                                                                          |
 | 2   | JSONB in WatermelonDB                         | ✅ Resolved — follow `notification_settings` precedent                                                                             |
-| 3   | AsyncStorage keys                             | ✅ Resolved — `@rizqi/intro-*` prefix, device-scoped                                                                               |
+| 3   | AsyncStorage keys                             | ✅ Resolved — `@monyvi/intro-*` prefix, device-scoped                                                                              |
 | 4   | Hardware back button                          | ✅ Resolved — `BackHandler` per-surface                                                                                            |
 | 5   | Tooltip primitive                             | ✅ Resolved — new `AnchoredTooltip` component                                                                                      |
 | 6   | i18n mid-app switching + startup-time seeding | ✅ Resolved — existing `changeLanguage()`, + `detectInitialLanguage()` reads override first to avoid post-RTL-reload flash         |

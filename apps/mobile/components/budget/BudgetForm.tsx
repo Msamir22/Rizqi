@@ -29,7 +29,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { useCategories } from "@/hooks/useCategories";
 import { CategorySelectorModal } from "@/components/modals/CategorySelectorModal";
 import { AlertThresholdSlider } from "./AlertThresholdSlider";
-import type { Budget, BudgetPeriod, BudgetType } from "@rizqi/db";
+import type { Budget, BudgetPeriod, BudgetType } from "@monyvi/db";
 import {
   createBudget,
   updateBudget,

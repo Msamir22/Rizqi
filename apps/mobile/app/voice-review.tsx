@@ -20,7 +20,7 @@ import { TransactionReview } from "@/components/transaction-review/TransactionRe
 import { useToast } from "@/components/ui/Toast";
 import { palette } from "@/constants/colors";
 import { batchCreateTransactions } from "@/services/batch-create-transactions";
-import type { ReviewableTransaction } from "@rizqi/logic";
+import type { ReviewableTransaction } from "@monyvi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";

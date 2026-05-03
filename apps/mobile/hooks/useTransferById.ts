@@ -3,7 +3,7 @@
  * Observes a single transfer by ID from WatermelonDB.
  */
 
-import { database, Transfer } from "@rizqi/db";
+import { database, Transfer } from "@monyvi/db";
 import { useEffect, useState } from "react";
 
 interface UseTransferByIdResult {

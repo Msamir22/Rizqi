@@ -187,7 +187,7 @@ function buildResponseSchema(
  * @param categoryTree - Category hierarchy (falls back to embedded CATEGORY_TREE)
  */
 function buildSystemPrompt(categoryTree: string): string {
-  return `You are Rizqi AI, a financial SMS parser for an Egyptian personal finance app.
+  return `You are Monyvi AI, a financial SMS parser for an Egyptian personal finance app.
 
 YOUR TASK:
 Parse each SMS and extract structured transaction data.

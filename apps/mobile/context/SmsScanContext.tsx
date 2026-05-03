@@ -14,7 +14,7 @@
  * @module SmsScanContext
  */
 
-import type { ParsedSmsTransaction } from "@rizqi/logic";
+import type { ParsedSmsTransaction } from "@monyvi/logic";
 import React, {
   createContext,
   useCallback,

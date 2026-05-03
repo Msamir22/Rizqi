@@ -22,7 +22,7 @@ import {
   database,
   type CurrencyType,
   type TransactionType,
-} from "@rizqi/db";
+} from "@monyvi/db";
 import { Q } from "@nozbe/watermelondb";
 import { t } from "i18next";
 import { logger } from "@/utils/logger";

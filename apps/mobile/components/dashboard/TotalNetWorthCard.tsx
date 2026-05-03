@@ -1,7 +1,7 @@
 import { palette } from "@/constants/colors";
 import { TotalNetWorthSkeleton } from "@/components/dashboard/skeletons/TotalNetWorthSkeleton";
-import { CurrencyType } from "@rizqi/db";
-import { formatCurrency } from "@rizqi/logic";
+import { CurrencyType } from "@monyvi/db";
+import { formatCurrency } from "@monyvi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTranslation } from "react-i18next";

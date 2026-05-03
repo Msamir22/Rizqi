@@ -1,4 +1,4 @@
-import { formatCurrency } from "@rizqi/logic";
+import { formatCurrency } from "@monyvi/logic";
 import { BaseAccount } from "./base/base-account";
 
 export class Account extends BaseAccount {

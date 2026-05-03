@@ -7,7 +7,7 @@
  * Architecture & Design Rationale:
  * - Pattern: Shared Utility (Domain Logic in `packages/logic`)
  * - Why: Rate formatting and trend calculation are domain rules, not UI concerns.
- *   Placing in @rizqi/logic makes them reusable by the API layer and testable without React.
+ *   Placing in @monyvi/logic makes them reusable by the API layer and testable without React.
  * - SOLID: SRP — formatRate only handles number formatting.
  *   DIP — components depend on the abstraction (function), not implementation.
  *

@@ -153,7 +153,7 @@ date is updated, and a success toast appears.
   category. Sourced from the `useUpcomingPayments` hook.
 - **RecurringPayment**: The database model representing a recurring
   bill/payment. Has fields for amount, frequency, next due date, account
-  linkage, and category. Lives in `@rizqi/db`.
+  linkage, and category. Lives in `@monyvi/db`.
 
 ## Success Criteria _(mandatory)_
 

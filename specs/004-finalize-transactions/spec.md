@@ -243,7 +243,7 @@ Polish the transactions module for a premium user experience.
 - **FR-017**: Account and Category selectors MUST be in the same horizontal row.
 - **FR-018**: The Supabase account balance triggers MUST be removed via a new
   migration to prevent double-counting during sync (see
-  [research.md](file:///E:/Work/My%20Projects/Rizqi/specs/004-finalize-transactions/research.md)).
+  [research.md](file:///E:/Work/My%20Projects/Monyvi/specs/004-finalize-transactions/research.md)).
 
 ### Key Entities
 
@@ -278,7 +278,7 @@ Polish the transactions module for a premium user experience.
 - No schema migrations are required — all fields already exist.
 - The Supabase balance triggers are REMOVED — balance management is entirely in
   the app layer (see
-  [research.md](file:///E:/Work/My%20Projects/Rizqi/specs/004-finalize-transactions/research.md)).
+  [research.md](file:///E:/Work/My%20Projects/Monyvi/specs/004-finalize-transactions/research.md)).
 - Cross-currency account swaps are allowed — the same numeric amount is applied
   in the new account's currency.
 - The Discard Changes modal is always enabled — no settings toggle (a financial

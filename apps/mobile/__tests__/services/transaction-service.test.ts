@@ -9,7 +9,7 @@
  * - batchDeleteDisplayTransactions
  *
  * Mock Strategy:
- *   The `@rizqi/db` mock is defined entirely inside the jest.mock factory
+ *   The `@monyvi/db` mock is defined entirely inside the jest.mock factory
  *   to avoid Jest hoisting issues. All helpers are exposed as `__`-prefixed
  *   properties and accessed via `jest.requireMock()`.
  */
@@ -44,7 +44,7 @@ interface MockDbApi {
 // jest.mock declarations — factory is hoisted, so everything must be inline
 // ---------------------------------------------------------------------------
 
-jest.mock("@rizqi/db", () => {
+jest.mock("@monyvi/db", () => {
   /** Mutable model: .update(builder) mutates fields in place */
   function createModel(
     id: string,
@@ -149,7 +149,7 @@ const {
   __seed: mockSeed,
   __clearStores: mockClearStores,
   __rewireMocks: mockRewire,
-} = jest.requireMock<MockDbApi>("@rizqi/db");
+} = jest.requireMock<MockDbApi>("@monyvi/db");
 
 // ---------------------------------------------------------------------------
 // Test Helpers

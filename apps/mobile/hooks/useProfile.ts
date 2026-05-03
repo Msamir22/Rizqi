@@ -10,7 +10,7 @@
  * @module useProfile
  */
 
-import { database, Profile } from "@rizqi/db";
+import { database, Profile } from "@monyvi/db";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useState } from "react";
 
@@ -45,7 +45,7 @@ export function useProfile(): UseProfileResult {
 
   // Observe the first profile record
   // TODO: Scope this query by user_id when multi-account support is added.
-  // Currently safe because Rizqi is single-user and login wipes local data.
+  // Currently safe because Monyvi is single-user and login wipes local data.
   useEffect(() => {
     const collection = database.get<Profile>("profiles");
     const subscription = collection

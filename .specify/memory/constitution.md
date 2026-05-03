@@ -28,7 +28,7 @@ Sync Impact Report
     to reconcile outdated entries with current implementation decisions
 -->
 
-# Rizqi Constitution
+# Monyvi Constitution
 
 ## Core Principles
 
@@ -42,7 +42,7 @@ device. Every read and write operation MUST happen locally first.
 - Cloud sync to Supabase runs in the background and MUST be non-blocking. The
   app MUST remain fully functional with zero network connectivity.
 - Local calculations (net worth, account balances, asset valuations) MUST NOT
-  depend on API availability. Use `@rizqi/logic` for on-device computation.
+  depend on API availability. Use `@monyvi/logic` for on-device computation.
 - Sync uses **Last Write Wins** conflict resolution via WatermelonDB's built-in
   sync protocol.
 - All syncable tables MUST include `created_at`, `updated_at`, `deleted`, and
@@ -126,20 +126,20 @@ The app MUST deliver a premium, polished visual experience using NativeWind
 - **No basic MVPs**: Every screen MUST feel premium — vibrant gradients, subtle
   animations, modern typography, and intentional spacing.
 - **Schema-driven UI**: All data-driven screens MUST strictly match the existing
-  database schema (`@rizqi/db` models). Do NOT invent, rename, remove, or infer
+  database schema (`@monyvi/db` models). Do NOT invent, rename, remove, or infer
   fields. Labels, data types, and required/optional states MUST reflect the
   schema exactly.
 
 ### VI. Monorepo Package Boundaries
 
-The Rizqi monorepo uses npm workspaces + Nx with strict dependency direction.
+The Monyvi monorepo uses npm workspaces + Nx with strict dependency direction.
 
-- **`packages/db` (`@rizqi/db`)**: WatermelonDB models, schema definitions, type
-  exports, and sync configuration. MUST NOT import from `apps/` or other
+- **`packages/db` (`@monyvi/db`)**: WatermelonDB models, schema definitions,
+  type exports, and sync configuration. MUST NOT import from `apps/` or other
   packages.
-- **`packages/logic` (`@rizqi/logic`)**: Shared business logic (asset
+- **`packages/logic` (`@monyvi/logic`)**: Shared business logic (asset
   calculations, voice parser, notification parser, currency utils). May import
-  from `@rizqi/db` for types only. MUST NOT import from `apps/`.
+  from `@monyvi/db` for types only. MUST NOT import from `apps/`.
 - **`apps/mobile`**: The React Native Expo app. May import from any package.
 
 - Dependency direction: `apps/ → packages/logic → packages/db`. Never reverse.

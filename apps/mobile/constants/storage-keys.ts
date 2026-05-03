@@ -8,7 +8,7 @@
  */
 
 /** ISO timestamp when the user first launched the app. */
-export const FIRST_USE_DATE_KEY = "@rizqi/first-use-date";
+export const FIRST_USE_DATE_KEY = "@monyvi/first-use-date";
 
 /**
  * Per-user onboarding-step cursor (feature 024).
@@ -25,17 +25,17 @@ export const ONBOARDING_CURSOR_PREFIX = "onboarding";
 // =============================================================================
 
 /** Set to `"true"` once the user has completed or explicitly skipped the pre-auth pitch on this device. */
-export const INTRO_SEEN_KEY = "@rizqi/intro-seen";
+export const INTRO_SEEN_KEY = "@monyvi/intro-seen";
 
 /** Explicit language preference selected on any pre-auth surface (pitch, auth, or Currency step). Device-scoped — persists across sign-up/sign-out. */
-export const INTRO_LOCALE_OVERRIDE_KEY = "@rizqi/intro-locale-override";
+export const INTRO_LOCALE_OVERRIDE_KEY = "@monyvi/intro-locale-override";
 
 // =============================================================================
 // Logout Keys
 // =============================================================================
 
 /** Set to `"true"` before logout begins; removed after completion. Used for force-close recovery. */
-export const LOGOUT_IN_PROGRESS_KEY = "@rizqi/logout-in-progress";
+export const LOGOUT_IN_PROGRESS_KEY = "@monyvi/logout-in-progress";
 
 /**
  * AsyncStorage keys that MUST be cleared on logout.

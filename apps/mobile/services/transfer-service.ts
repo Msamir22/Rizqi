@@ -7,7 +7,7 @@ import {
   Transfer,
   type TransactionSource,
   type TransactionType,
-} from "@rizqi/db";
+} from "@monyvi/db";
 import { ensureCashAccount } from "./account-service";
 
 export interface TransferData {

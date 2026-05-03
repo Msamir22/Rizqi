@@ -1,5 +1,5 @@
 /**
- * WatermelonDB Schema for Rizqi
+ * WatermelonDB Schema for Monyvi
  * AUTO-GENERATED - DO NOT EDIT MANUALLY
  * Run 'npm run db:sync' to regenerate
  */

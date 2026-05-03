@@ -1,7 +1,7 @@
 # Implementation Plan: Fix SMS Scan Reliability & UX
 
 **Branch**: `011-sms-flow-fixes` | **Date**: 2026-02-28 | **Spec**:
-[spec.md](file:///e:/Work/My%20Projects/Rizqi/specs/011-sms-flow-fixes/spec.md)
+[spec.md](file:///e:/Work/My%20Projects/Monyvi/specs/011-sms-flow-fixes/spec.md)
 **Input**: Feature specification from `specs/011-sms-flow-fixes/spec.md`
 
 ## Summary

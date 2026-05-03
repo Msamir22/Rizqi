@@ -13,13 +13,13 @@
  * @module budget-alert-service
  */
 
-import { Budget, database, Transaction } from "@rizqi/db";
+import { Budget, database, Transaction } from "@monyvi/db";
 import { Q } from "@nozbe/watermelondb";
 import {
   getCurrentPeriodBounds,
   getDaysElapsed,
   computeSpendingMetrics,
-} from "@rizqi/logic";
+} from "@monyvi/logic";
 import {
   getSpendingForBudget,
   setAlertFiredLevel,

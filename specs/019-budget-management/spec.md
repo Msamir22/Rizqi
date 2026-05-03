@@ -389,10 +389,10 @@ verifying that only budgets matching that period are shown.
   (Weekly/Monthly/Custom), custom date range (period_start, period_end), alert
   threshold percentage, and status (Active/Paused — deletion uses WatermelonDB's
   built-in sync-aware deletion, not a status value).
-- **Category**: An existing Rizqi entity (3-level hierarchy: L1 Main, L2 Sub, L3
-  User-defined). Budgets link to categories at L1 or L2 level for scoped
+- **Category**: An existing Monyvi entity (3-level hierarchy: L1 Main, L2 Sub,
+  L3 User-defined). Budgets link to categories at L1 or L2 level for scoped
   spending tracking.
-- **Transaction**: An existing Rizqi entity (expense/income records). Budgets
+- **Transaction**: An existing Monyvi entity (expense/income records). Budgets
   aggregate expense transactions by category and date range to calculate
   spending progress.
 

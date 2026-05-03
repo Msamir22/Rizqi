@@ -37,8 +37,8 @@ import {
   type TransactionValidationErrors,
 } from "@/validation/transaction-validation";
 import { Ionicons } from "@expo/vector-icons";
-import type { TransactionType } from "@rizqi/db";
-import { formatAmountInput } from "@rizqi/logic";
+import type { TransactionType } from "@monyvi/db";
+import { formatAmountInput } from "@monyvi/logic";
 import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";

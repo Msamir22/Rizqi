@@ -25,7 +25,7 @@ import { TypeFilterModal } from "@/components/modals/TypeFilterModal";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { useAccountDisplayNames } from "@/hooks/useAccountDisplayNames";
-import type { ReviewableTransaction } from "@rizqi/logic";
+import type { ReviewableTransaction } from "@monyvi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useState } from "react";
 import { FlatList, Text, TouchableOpacity, View } from "react-native";

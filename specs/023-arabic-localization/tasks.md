@@ -35,7 +35,7 @@ implementation and testing.
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T004 Add `LANGUAGE_KEY = '@rizqi/language'` to
+- [ ] T004 Add `LANGUAGE_KEY = '@monyvi/language'` to
       `apps/mobile/constants/storage-keys.ts` and add it to
       `CLEARABLE_USER_KEYS`
 - [ ] T005 Create `apps/mobile/utils/rtl.ts` — exports

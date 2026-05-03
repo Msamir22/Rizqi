@@ -7,7 +7,7 @@ import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { useMonthlyChartData } from "@/hooks/useAnalytics";
-import { formatCurrency } from "@rizqi/logic";
+import { formatCurrency } from "@monyvi/logic";
 import React, { useState } from "react";
 import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 import { BarChart } from "react-native-gifted-charts";

@@ -20,7 +20,7 @@ import { supabase } from "./supabase";
 import { z } from "zod";
 import { logger } from "@/utils/logger";
 
-import type { Category, CurrencyType } from "@rizqi/db";
+import type { Category, CurrencyType } from "@monyvi/db";
 import {
   normalizeCurrency,
   normalizeCurrencySafe,
@@ -33,7 +33,7 @@ import {
   type ReviewableTransaction,
   type VoiceParserError,
   type CategoryMap,
-} from "@rizqi/logic";
+} from "@monyvi/logic";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -119,7 +119,7 @@ const ParseVoiceResponseSchema = z.object({
 });
 
 // ---------------------------------------------------------------------------
-// Removed — normalizeType and parseAiDate are now imported from @rizqi/logic
+// Removed — normalizeType and parseAiDate are now imported from @monyvi/logic
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------

@@ -16,8 +16,8 @@ import React, { memo } from "react";
 import { Text, View, type ViewStyle } from "react-native";
 import { useTranslation } from "react-i18next";
 
-import type { CurrencyType } from "@rizqi/db";
-import { formatCurrency } from "@rizqi/logic";
+import type { CurrencyType } from "@monyvi/db";
+import { formatCurrency } from "@monyvi/logic";
 
 import { palette } from "@/constants/colors";
 import type { PortfolioSplit } from "@/hooks/useMetalHoldings";

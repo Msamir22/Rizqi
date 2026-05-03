@@ -41,7 +41,7 @@ approach).
  *   - Sets `FirstRunTooltipContext.isFirstRunPending = true` via a callback
  *     passed by the caller (decoupled so the service has no React context
  *     dependency).
- *   - The AsyncStorage `@rizqi/intro-locale-override` is NOT cleared
+ *   - The AsyncStorage `@monyvi/intro-locale-override` is NOT cleared
  *     (FR-030 — it persists as a device-level language preference).
  *
  * @param currency - Supported currency code. Validated by the DB enum.
@@ -272,7 +272,7 @@ export function useIntroSeen(): {
 };
 ```
 
-**Implementation**: reads `@rizqi/intro-seen` on mount; AsyncStorage doesn't
+**Implementation**: reads `@monyvi/intro-seen` on mount; AsyncStorage doesn't
 natively emit change events, so the hook exposes a re-read via a bus pattern OR
 the single caller just re-mounts as part of navigation. Simplest: one read on
 mount, since the flag is only read at app-launch time and during the pitch

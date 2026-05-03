@@ -2,7 +2,7 @@
  * Budget Logic Module — Barrel Export
  *
  * Re-exports all budget-related pure logic utilities
- * from the @rizqi/logic package.
+ * from the @monyvi/logic package.
  */
 
 export * from "./budget-period-utils";

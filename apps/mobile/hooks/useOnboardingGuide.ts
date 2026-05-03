@@ -21,7 +21,7 @@
  */
 
 import { logger } from "@/utils/logger";
-import { Account, Budget, Profile, Transaction, database } from "@rizqi/db";
+import { Account, Budget, Profile, Transaction, database } from "@monyvi/db";
 import { Q } from "@nozbe/watermelondb";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Platform } from "react-native";

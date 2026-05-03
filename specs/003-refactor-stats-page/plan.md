@@ -1,7 +1,7 @@
 # Implementation Plan: Stats Page Refactor
 
 **Branch**: `003-refactor-stats-page` | **Date**: 2026-02-15 | **Spec**:
-[spec.md](file:///E:/Work/My%20Projects/Rizqi/specs/003-refactor-stats-page/spec.md)
+[spec.md](file:///E:/Work/My%20Projects/Monyvi/specs/003-refactor-stats-page/spec.md)
 
 ## Summary
 
@@ -72,7 +72,7 @@ Re-check after implementation: All gates expected to pass.
 - Import extracted sub-components and types
 - Fix remaining `isDark` ternaries in main component
 - Replace hardcoded `"EGP"` → `DEFAULT_DISPLAY_CURRENCY`
-- Keep `getYearMonthBoundaries` inline (also exists in `@rizqi/logic`)
+- Keep `getYearMonthBoundaries` inline (also exists in `@monyvi/logic`)
 - Target: ~200 lines
 
 ### Currency Fix

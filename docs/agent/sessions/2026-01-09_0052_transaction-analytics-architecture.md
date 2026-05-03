@@ -7,11 +7,11 @@
 ## Summary
 
 Designed and implemented a fully local transaction analytics architecture for
-Rizqi. The session started with a discussion about moving calculation logic from
-frontend to backend, exploring options for storing pre-aggregated data (Postgres
-VIEW vs table vs JSON field). After thorough analysis of pros/cons and
+Monyvi. The session started with a discussion about moving calculation logic
+from frontend to backend, exploring options for storing pre-aggregated data
+(Postgres VIEW vs table vs JSON field). After thorough analysis of pros/cons and
 offline-first requirements, decided on a **fully local approach** using
-WatermelonDB with shared calculation logic in `@rizqi/logic`.
+WatermelonDB with shared calculation logic in `@monyvi/logic`.
 
 Also implemented **smart sync** with adaptive intervals (15min active, 30min
 background) and data-cleared detection for automatic resync.
@@ -45,8 +45,8 @@ background) and data-cleared detection for automatic resync.
    enables true offline-first, and simplifies architecture. API endpoints
    deferred to web app phase.
 
-2. **Shared Logic Package:** Calculation logic lives in `@rizqi/logic` so it can
-   be reused by both mobile app (now) and future web app (later).
+2. **Shared Logic Package:** Calculation logic lives in `@monyvi/logic` so it
+   can be reused by both mobile app (now) and future web app (later).
 
 3. **Smart Sync Intervals:** Changed from 5-minute fixed interval to adaptive
    15min (foreground) / 30min (background) to reduce database queries by ~66%

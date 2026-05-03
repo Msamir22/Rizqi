@@ -15,8 +15,8 @@
  * @module metal-holding-calculations
  */
 
-import type { Asset, AssetMetal, CurrencyType } from "@rizqi/db";
-import { convertCurrency, getMetalPriceUsd } from "@rizqi/logic";
+import type { Asset, AssetMetal, CurrencyType } from "@monyvi/db";
+import { convertCurrency, getMetalPriceUsd } from "@monyvi/logic";
 
 // ---------------------------------------------------------------------------
 // Constants

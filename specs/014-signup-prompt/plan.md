@@ -99,8 +99,8 @@ Constants for prompt thresholds and AsyncStorage keys:
 - `SIGNUP_DAYS_THRESHOLD = 10` — trigger urgency prompt at ≥ 10 days
 - `SIGNUP_COOLDOWN_TX = 50` — additional transactions before re-triggering
 - `SIGNUP_COOLDOWN_DAYS = 10` — additional days before re-triggering
-- AsyncStorage keys: `@rizqi/signup-prompt-dismissed-at`,
-  `@rizqi/signup-prompt-dismissed-tx-count`, `@rizqi/signup-prompt-never-show`
+- AsyncStorage keys: `@monyvi/signup-prompt-dismissed-at`,
+  `@monyvi/signup-prompt-dismissed-tx-count`, `@monyvi/signup-prompt-never-show`
 
 ---
 
@@ -347,7 +347,7 @@ Test cases:
 - After permanent dismiss → `shouldShowPrompt = false` forever
 - Authenticated user → `shouldShowPrompt = false` regardless
 
-**Run**: `npm test -w @rizqi/mobile -- --testPathPattern=useSignUpPrompt`
+**Run**: `npm test -w @monyvi/mobile -- --testPathPattern=useSignUpPrompt`
 
 ---
 
@@ -361,7 +361,7 @@ Test cases:
 - Network error returns error object
 - Cancelled OAuth does not corrupt state
 
-**Run**: `npm test -w @rizqi/mobile -- --testPathPattern=auth-service`
+**Run**: `npm test -w @monyvi/mobile -- --testPathPattern=auth-service`
 
 ---
 

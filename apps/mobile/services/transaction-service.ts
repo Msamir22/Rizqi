@@ -7,7 +7,7 @@ import {
   Transfer,
   TransactionSource,
   TransactionType,
-} from "@rizqi/db";
+} from "@monyvi/db";
 import { Q, type Model } from "@nozbe/watermelondb";
 import type { DisplayTransaction } from "@/hooks/useTransactionsGrouping";
 

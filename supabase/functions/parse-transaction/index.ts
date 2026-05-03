@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
     }
 
     const systemPrompt = `
-    You are an AI parser for a personal finance app called Rizqi.
+    You are an AI parser for a personal finance app called Monyvi.
     Your job is to parse natural language voice commands into structured financial transactions.
     
     The user might speak in:

@@ -21,8 +21,8 @@ import Animated, {
   withTiming,
   Easing,
 } from "react-native-reanimated";
-import { formatCurrency } from "@rizqi/logic";
-import type { CurrencyType } from "@rizqi/db";
+import { formatCurrency } from "@monyvi/logic";
+import type { CurrencyType } from "@monyvi/db";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "react-i18next";

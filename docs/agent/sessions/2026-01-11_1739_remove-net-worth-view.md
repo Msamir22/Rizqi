@@ -8,7 +8,7 @@
 ## Summary
 
 Removed the PostgreSQL `v_user_net_worth` database view and implemented
-on-the-fly net worth calculations in the `@rizqi/logic` package. The mobile app
+on-the-fly net worth calculations in the `@monyvi/logic` package. The mobile app
 now calculates `totalAccounts`, `totalAssets`, and `totalNetWorth` locally using
 WatermelonDB without any API dependency. Also fixed critical issues in the
 database snapshot functions related to arbitrary row selection and hardcoded

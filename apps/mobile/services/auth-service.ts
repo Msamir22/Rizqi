@@ -272,7 +272,7 @@ async function extractSessionFromRedirectUrl(
   }
 
   // Try fragment-based tokens first (implicit flow)
-  // URL format: rizqi://auth-callback#access_token=...&refresh_token=...
+  // URL format: monyvi://auth-callback#access_token=...&refresh_token=...
   const hashIndex = url.indexOf("#");
   if (hashIndex !== -1) {
     const fragment = url.substring(hashIndex + 1);
@@ -299,7 +299,7 @@ async function extractSessionFromRedirectUrl(
   }
 
   // Try query-based code (PKCE flow)
-  // URL format: rizqi://auth-callback?code=...
+  // URL format: monyvi://auth-callback?code=...
   const queryIndex = url.indexOf("?");
   if (queryIndex !== -1) {
     const queryString = url.substring(queryIndex + 1);

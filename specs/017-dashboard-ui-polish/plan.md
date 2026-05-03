@@ -1,7 +1,7 @@
 # Implementation Plan: Dashboard & UI Polish
 
 **Branch**: `017-dashboard-ui-polish` | **Date**: 2026-03-18 | **Spec**:
-[spec.md](file:///e:/Work/My%20Projects/Rizqi/specs/017-dashboard-ui-polish/spec.md)  
+[spec.md](file:///e:/Work/My%20Projects/Monyvi/specs/017-dashboard-ui-polish/spec.md)  
 **Input**:
 Feature specification from `specs/017-dashboard-ui-polish/spec.md`
 
@@ -85,7 +85,7 @@ apps/mobile/
 **Priority**: P0 (quick fix, highest confidence)  
 **Estimated effort**: ~5 minutes
 
-#### [MODIFY] [usePeriodSummary.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/hooks/usePeriodSummary.ts)
+#### [MODIFY] [usePeriodSummary.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/hooks/usePeriodSummary.ts)
 
 - **Line 252**: Change
   `const savings = totals.totalIncome - totals.totalExpenses;` to
@@ -108,7 +108,7 @@ apps/mobile/
 **Priority**: P1  
 **Estimated effort**: ~30 minutes
 
-#### [NEW] [useProfile.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/hooks/useProfile.ts)
+#### [NEW] [useProfile.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/hooks/useProfile.ts)
 
 Create a hook that:
 
@@ -141,7 +141,7 @@ interface UseProfileResult {
 >   drawer should react.
 > - **SOLID**: SRP — hook observes profile data; component renders it.
 
-#### [MODIFY] [AppDrawer.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/navigation/AppDrawer.tsx)
+#### [MODIFY] [AppDrawer.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/navigation/AppDrawer.tsx)
 
 - Import and use `useProfile()` hook and `useAuth()` hook
 - **Line ~236**: Replace hardcoded `"User"` with `displayName` from
@@ -161,7 +161,7 @@ interface UseProfileResult {
 **Priority**: P2  
 **Estimated effort**: ~45 minutes
 
-#### [MODIFY] [useRecurringPayments.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/hooks/useRecurringPayments.ts)
+#### [MODIFY] [useRecurringPayments.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/hooks/useRecurringPayments.ts)
 
 - Add optional `dateRange?: { start: Date; end: Date }` to
   `UseRecurringPaymentsOptions`
@@ -191,7 +191,7 @@ interface UseRecurringPaymentsOptions {
 > - **SOLID**: Open/Closed — extending existing options interface without
 >   modifying existing consumers.
 
-#### [MODIFY] [UpcomingPayments.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/dashboard/UpcomingPayments.tsx)
+#### [MODIFY] [UpcomingPayments.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/dashboard/UpcomingPayments.tsx)
 
 - Add period filter state:
   `const [selectedPeriod, setSelectedPeriod] = useState<BillsPeriodFilter>("this_month");`
@@ -214,7 +214,7 @@ interface UseRecurringPaymentsOptions {
 **Priority**: P3  
 **Estimated effort**: ~45 minutes
 
-#### [NEW] [useHistoricalRate.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/hooks/useHistoricalRate.ts)
+#### [NEW] [useHistoricalRate.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/hooks/useHistoricalRate.ts)
 
 Create a hook that:
 
@@ -255,7 +255,7 @@ existing pattern where `TransactionCard` receives data via props.
 > - **Algorithm**: O(D) queries where D = number of unique transaction dates in
 >   the list, instead of O(N) queries where N = number of transactions.
 
-#### [MODIFY] [TransactionCard.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/transactions/TransactionCard.tsx)
+#### [MODIFY] [TransactionCard.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/transactions/TransactionCard.tsx)
 
 - Add optional `equivalentAmount?: number` and
   `equivalentCurrency?: CurrencyType` props

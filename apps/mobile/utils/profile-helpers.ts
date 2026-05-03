@@ -9,7 +9,7 @@
  * @module profile-helpers
  */
 
-import type { Profile } from "@rizqi/db";
+import type { Profile } from "@monyvi/db";
 
 // =============================================================================
 // Initials

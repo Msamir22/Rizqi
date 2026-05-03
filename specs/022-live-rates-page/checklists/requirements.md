@@ -2,7 +2,7 @@
 
 **Purpose**: Validate specification completeness and quality before proceeding
 to planning **Created**: 2026-03-26 **Feature**:
-[spec.md](file:///e:/Work/My%20Projects/Rizqi/specs/022-live-rates-page/spec.md)
+[spec.md](file:///e:/Work/My%20Projects/Monyvi/specs/022-live-rates-page/spec.md)
 
 ## Content Quality
 

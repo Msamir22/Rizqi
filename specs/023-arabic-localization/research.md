@@ -174,11 +174,11 @@ The existing `dateHelpers.ts` utility functions need locale-aware variants.
 
 ## 8. Language Preference Persistence
 
-**Decision**: AsyncStorage with key `@rizqi/language`
+**Decision**: AsyncStorage with key `@monyvi/language`
 
 **Rationale**: AsyncStorage is already used for app preferences
 (`storage-keys.ts`). Language preference is not sensitive data, so SecureStore
-is unnecessary. The key follows the existing `@rizqi/` prefix convention.
+is unnecessary. The key follows the existing `@monyvi/` prefix convention.
 
 **Flow**:
 

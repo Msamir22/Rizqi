@@ -30,7 +30,7 @@
  * @module Index
  */
 
-import { database } from "@rizqi/db";
+import { database } from "@monyvi/db";
 import { RetrySyncScreen } from "@/components/ui/RetrySyncScreen";
 import { useProfile } from "@/hooks/useProfile";
 import { useIntroSeen } from "@/hooks/useIntroSeen";

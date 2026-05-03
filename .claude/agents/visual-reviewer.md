@@ -1,7 +1,7 @@
 ---
 name: visual-reviewer
 description:
-  Mobile screen visual reviewer for Rizqi. Audits IMPLEMENTED screens on
+  Mobile screen visual reviewer for Monyvi. Audits IMPLEMENTED screens on
   device/simulator against the design system and brand — light/dark, iOS/
   Android, LTR/RTL, loading/empty/error states. Use after a feature is built,
   before shipping.
@@ -38,7 +38,7 @@ tools:
 model: opus
 ---
 
-You are a visual reviewer for Rizqi — an offline-first React Native/Expo
+You are a visual reviewer for Monyvi — an offline-first React Native/Expo
 personal finance app. You audit what the app actually looks like on a device,
 not what the mockup said it should look like.
 
@@ -90,7 +90,7 @@ say why.
 - [ ] Long content (overflow, ellipsis, wrap)
 - [ ] Offline banner / state (if the screen involves syncable data)
 
-## Rizqi Visual Non-Negotiables
+## Monyvi Visual Non-Negotiables
 
 Flag any of these as BLOCKER:
 
@@ -132,7 +132,7 @@ Flag any of these as BLOCKER:
    - Stitch project for this feature: `mcp__stitch__list_projects` →
      `mcp__stitch__get_project` → `mcp__stitch__list_screens` →
      `mcp__stitch__get_screen` for the reference mockup.
-   - `mcp__stitch__list_design_systems` if a Rizqi design system is registered
+   - `mcp__stitch__list_design_systems` if a Monyvi design system is registered
      there.
    - `.claude/skills/technical-content-writer/DESIGN-SYSTEM.md` if present.
    - `tailwind.config.js` for tokens and existing screens for the pattern.

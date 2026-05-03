@@ -1,7 +1,7 @@
 # Implementation Plan: Live Rates Page
 
 **Branch**: `022-live-rates-page` | **Date**: 2026-03-26 | **Spec**:
-[spec.md](file:///e:/Work/My%20Projects/Rizqi/specs/022-live-rates-page/spec.md)
+[spec.md](file:///e:/Work/My%20Projects/Monyvi/specs/022-live-rates-page/spec.md)
 **Input**: Feature specification from `/specs/022-live-rates-page/spec.md`
 
 ## Summary
@@ -24,7 +24,7 @@ with existing navigation entry points.
 ## Technical Context
 
 **Language/Version**: TypeScript (strict mode) + React Native (Expo managed)
-**Primary Dependencies**: `@rizqi/db` (MarketRate model), `@rizqi/logic`
+**Primary Dependencies**: `@monyvi/db` (MarketRate model), `@monyvi/logic`
 (convertCurrency, getMetalPrice, CURRENCY_INFO_MAP), `react-native-reanimated`
 (Skeleton shimmer), `expo-router` (navigation) **Storage**: WatermelonDB
 (local), Supabase (remote) — both existing **Testing**: Jest + React Native
@@ -46,9 +46,9 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 | I. Offline-First Data Architecture    | ✅ PASS | `market_rates` is already an approved pull-only exception (constitution §I). No new tables needed. Uses `useMarketRates` which reads from WatermelonDB. |
 | II. Documented Business Logic         | ✅ PASS | No new business rules. Purity fractions (0.875/0.75) and currency conversion logic already documented and implemented.                                  |
 | III. Type Safety                      | ✅ PASS | All new code will use strict TypeScript. Interfaces for all component props. No `any` types.                                                            |
-| IV. Service-Layer Separation          | ✅ PASS | Presentation components receive data via props. Hook handles lifecycle/subscriptions. Calculations via `@rizqi/logic`.                                  |
+| IV. Service-Layer Separation          | ✅ PASS | Presentation components receive data via props. Hook handles lifecycle/subscriptions. Calculations via `@monyvi/logic`.                                 |
 | V. Premium UI with Consistent Theming | ✅ PASS | NativeWind (Tailwind) classes primary. Dark/light via `dark:` variants. Shadow via inline styles on interactive components (NativeWind v4 bug).         |
-| VI. Monorepo Package Boundaries       | ✅ PASS | No cross-package violations. `apps/mobile` → `@rizqi/logic` → `@rizqi/db`.                                                                              |
+| VI. Monorepo Package Boundaries       | ✅ PASS | No cross-package violations. `apps/mobile` → `@monyvi/logic` → `@monyvi/db`.                                                                            |
 | VII. Local-First Migrations           | ✅ PASS | No schema changes required. Using existing `market_rates` table as-is.                                                                                  |
 
 **Gate result**: ALL PASS — no violations.
@@ -206,7 +206,7 @@ Custom hook encapsulating all screen state:
 - Calls `useMarketRates()` for raw data
 - Obtains `preferredCurrency` from the existing `useSettings()` hook
 - Derives metal display values (Gold 24K/21K/18K, Silver, Platinum) using
-  `getMetalPrice` and `getGoldPurityPrice` from `@rizqi/logic`
+  `getMetalPrice` and `getGoldPurityPrice` from `@monyvi/logic`
 - Computes trend percentages for each metal/currency
 - Manages search state (`searchQuery`, `filteredCurrencies`)
 - Manages expand/collapse state (`isExpanded`)
@@ -350,8 +350,8 @@ export function calculateTrendPercent(
 >
 > - **Pattern Used**: Shared Utility (Domain Logic in `packages/logic`)
 > - **Why**: Rate formatting and trend calculation are domain rules, not UI
->   concerns. Placing in `@rizqi/logic` makes them reusable by the API layer and
->   testable without React.
+>   concerns. Placing in `@monyvi/logic` makes them reusable by the API layer
+>   and testable without React.
 > - **SOLID Check**: SRP — format-rate only handles number formatting. DIP —
 >   components depend on the abstraction (function), not implementation.
 
@@ -396,8 +396,8 @@ flowchart TD
     E --> H[CurrencySection]
     H --> I[CurrencyRow × N]
     E --> J[LiveRatesFooter]
-    D -->|formatRate, calculateTrendPercent| K["@rizqi/logic format-rate.ts"]
-    D -->|getMetalPrice, convertCurrency| L["@rizqi/logic metal.ts / currency.ts"]
+    D -->|formatRate, calculateTrendPercent| K["@monyvi/logic format-rate.ts"]
+    D -->|getMetalPrice, convertCurrency| L["@monyvi/logic metal.ts / currency.ts"]
 ```
 
 ---

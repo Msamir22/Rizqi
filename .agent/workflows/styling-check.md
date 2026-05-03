@@ -1,8 +1,8 @@
 ---
-description: Run styling checks and common refactorings for Rizqi UI
+description: Run styling checks and common refactorings for Monyvi UI
 ---
 
-# 🎨 Rizqi Styling Workflow
+# 🎨 Monyvi Styling Workflow
 
 This workflow helps ensure that building components follow the established
 styling rules:

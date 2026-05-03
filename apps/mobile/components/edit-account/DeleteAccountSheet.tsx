@@ -13,10 +13,10 @@
  * @module DeleteAccountSheet
  */
 
-import type { CurrencyType } from "@rizqi/db";
+import type { CurrencyType } from "@monyvi/db";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import { formatCurrency } from "@rizqi/logic";
+import { formatCurrency } from "@monyvi/logic";
 import React from "react";
 import {
   ActivityIndicator,

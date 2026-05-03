@@ -16,7 +16,7 @@
  */
 
 import { formatTimeAgo } from "@/utils/dateHelpers";
-import type { CurrencyType } from "@rizqi/db";
+import type { CurrencyType } from "@monyvi/db";
 import {
   type CurrencyInfo,
   CURRENCY_INFO_MAP,
@@ -26,7 +26,7 @@ import {
   formatRate,
   getGoldPurityPrice,
   getMetalPrice,
-} from "@rizqi/logic";
+} from "@monyvi/logic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMarketRates } from "./useMarketRates";
 import { usePreferredCurrency } from "./usePreferredCurrency";

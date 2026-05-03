@@ -25,7 +25,7 @@ spec FR(s) and contract section it implements.
 ## Phase A — Database schema (15 min)
 
 **Goal**: Land the `onboarding_flags` JSONB column end-to-end (Supabase +
-WatermelonDB + types) so downstream code can import from `@rizqi/db` cleanly.
+WatermelonDB + types) so downstream code can import from `@monyvi/db` cleanly.
 
 ### A.1 Write the migration
 
@@ -63,7 +63,7 @@ calls `addColumns` with the new `onboarding_flags` string column. See
 ### A.5 Verify
 
 ```bash
-npm run -w @rizqi/db build   # or equivalent
+npm run -w @monyvi/db build   # or equivalent
 ```
 
 Any TypeScript errors from importers now? Expected: `Profile.onboardingFlags`
@@ -149,7 +149,7 @@ Unit test: `__tests__/services/profile-service.test.ts` covering:
 - Language write: `preferred_language` is overwritten unconditionally with
   `getCurrentLanguage()` (NOT NULL DEFAULT 'en' column — no nullness check
   needed).
-- Override persistence: assert AsyncStorage `@rizqi/intro-locale-override` is
+- Override persistence: assert AsyncStorage `@monyvi/intro-locale-override` is
   NOT modified by this function (FR-030).
 - Failure path: mock the writer to throw; assert NO partial data persists AND
   `onboarding_completed` remains `false` (rollback atomicity).
@@ -583,7 +583,7 @@ Per [`plan.md §Testing Strategy`](./plan.md), run these manual walkthroughs:
    restarts from slide 1 **in Arabic immediately** (no English flash) → auth
    renders in Arabic → Currency step renders in Arabic → confirm → verify
    `profile.preferred_language = "ar"` written atomically and AsyncStorage
-   `@rizqi/intro-locale-override` STILL equals `"ar"` (not cleared).
+   `@monyvi/intro-locale-override` STILL equals `"ar"` (not cleared).
 10. **Android back-button on Currency step** → press hardware back → no-op (step
     remains).
 11. **Android back-button on cash-account tooltip (when visible on its own)** →
@@ -635,7 +635,7 @@ Same treatment. Mark `@deprecated`, schedule removal.
 
 ## Estimated total effort
 
-~4.5 hours of focused work for an experienced React Native + Rizqi codebase
+~4.5 hours of focused work for an experienced React Native + Monyvi codebase
 developer, plus QA passes (~1 hour). Buffer in: ~30 minutes per phase for
 unexpected issues brings the realistic estimate to ~6 hours end-to-end.
 
