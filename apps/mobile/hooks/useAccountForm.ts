@@ -68,12 +68,14 @@ export function useAccountForm(
     cardLast4: "",
     smsSenderName: "",
   });
+  const latestFormDataRef = useRef<AccountFormData>(formData);
 
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [isTouched, setIsTouched] = useState<
     Partial<Record<keyof AccountFormData, boolean>>
   >({});
   const [isCheckingUniqueness, setIsCheckingUniqueness] = useState(false);
+  const [hasNameUniquenessError, setHasNameUniquenessError] = useState(false);
 
   // Resolve the current userId once on mount. Used to scope the uniqueness
   // check; if it stays null we silently skip the check (screen will block
@@ -115,6 +117,7 @@ export function useAccountForm(
 
       const trimmedName = name.trim();
       if (!trimmedName) {
+        setHasNameUniquenessError(false);
         setIsCheckingUniqueness(false);
         return;
       }
@@ -123,6 +126,7 @@ export function useAccountForm(
       if (!userId) {
         // Not signed in yet — don't surface a uniqueness error; the create
         // flow will block submit on the missing session.
+        setHasNameUniquenessError(false);
         setIsCheckingUniqueness(false);
         return;
       }
@@ -138,21 +142,25 @@ export function useAccountForm(
           );
 
           if (result.isUnique && !result.error) {
+            setHasNameUniquenessError(false);
+            const validation = validateAccountForm(latestFormDataRef.current);
             setErrors((prev) => {
-              if (prev.name === t("accounts:validation_account_name_taken")) {
-                const { name: _removed, ...rest } = prev;
-                return rest;
+              if (validation.errors.name) {
+                return { ...prev, name: validation.errors.name };
               }
-              return prev;
+              const { name: _removed, ...rest } = prev;
+              return rest;
             });
           } else if (!result.isUnique && !result.error) {
             setErrors((prev) => ({
               ...prev,
               name: t("accounts:validation_account_name_taken"),
             }));
+            setHasNameUniquenessError(true);
           } else if (result.error) {
             // Don't block the user on uniqueness query failures.
             logger.warn("uniqueness_check_failed", { error: result.error });
+            setHasNameUniquenessError(false);
           }
 
           setIsCheckingUniqueness(false);
@@ -166,7 +174,11 @@ export function useAccountForm(
   // Only update if the user hasn't manually touched the currency field.
   useEffect(() => {
     if (!isTouched.currency) {
-      setFormData((prev) => ({ ...prev, currency: preferredCurrency }));
+      setFormData((prev) => {
+        const next = { ...prev, currency: preferredCurrency };
+        latestFormDataRef.current = next;
+        return next;
+      });
     }
   }, [preferredCurrency, isTouched.currency]);
 
@@ -180,6 +192,7 @@ export function useAccountForm(
     ): void => {
       setFormData((prev) => {
         const newData = { ...prev, [field]: value };
+        latestFormDataRef.current = newData;
 
         // Real-time validation for specific field if it has been touched
         const { errors: newErrors } = validateAccountForm(newData);
@@ -224,9 +237,19 @@ export function useAccountForm(
       cardLast4: "",
       smsSenderName: "",
     });
+    latestFormDataRef.current = {
+      name: "",
+      accountType: initialAccountType ?? "CASH",
+      currency: preferredCurrency,
+      balance: "",
+      bankName: "",
+      cardLast4: "",
+      smsSenderName: "",
+    };
     setErrors({});
     setIsTouched({});
     setIsCheckingUniqueness(false);
+    setHasNameUniquenessError(false);
     if (uniquenessTimerRef.current) {
       clearTimeout(uniquenessTimerRef.current);
       uniquenessTimerRef.current = null;
@@ -235,12 +258,8 @@ export function useAccountForm(
 
   const isValid = useMemo((): boolean => {
     const { isValid: schemaValid } = validateAccountForm(formData);
-    return (
-      schemaValid &&
-      !isCheckingUniqueness &&
-      errors.name !== t("accounts:validation_account_name_taken")
-    );
-  }, [formData, isCheckingUniqueness, errors.name]);
+    return schemaValid && !isCheckingUniqueness && !hasNameUniquenessError;
+  }, [formData, isCheckingUniqueness, hasNameUniquenessError]);
 
   return {
     formData,

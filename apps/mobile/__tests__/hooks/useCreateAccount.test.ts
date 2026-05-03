@@ -64,6 +64,19 @@ jest.mock("expo-router", () => ({
   }),
 }));
 
+jest.mock("react-i18next", () => ({
+  useTranslation: (
+    namespace: "accounts" | "common"
+  ): { t: (key: string, options?: Record<string, unknown>) => string } => ({
+    t: (key: string, options?: Record<string, unknown>): string => {
+      const prefix = `${namespace}:${key}`;
+      return typeof options?.name === "string"
+        ? `${prefix}:${options.name}`
+        : prefix;
+    },
+  }),
+}));
+
 // Import AFTER mocks
 // eslint-disable-next-line import/first
 import { useCreateAccount } from "../../hooks/useCreateAccount";
@@ -161,5 +174,39 @@ describe("useCreateAccount", () => {
 
     expect(mockRouterBack).not.toHaveBeenCalled();
     expect(mockRouterReplace).toHaveBeenCalledWith("/(tabs)/accounts");
+  });
+
+  it("uses localized success toast text without emojis", async () => {
+    const { result } = renderHook();
+
+    await RTR.act(async () => {
+      await result.current.createAccount(accountFormData);
+    });
+
+    expect(mockShowToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "success",
+        title: "accounts:toast_create_success_title",
+        message: "accounts:toast_create_success_message:Cash",
+      })
+    );
+  });
+
+  it("uses localized session-required toast text", async () => {
+    mockGetCurrentUserId.mockResolvedValueOnce(null);
+    const { result } = renderHook();
+
+    await RTR.act(async () => {
+      await result.current.createAccount(accountFormData);
+    });
+
+    expect(mockShowToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "error",
+        title: "accounts:toast_create_session_required_title",
+        message: "accounts:toast_create_session_required_message",
+      })
+    );
+    expect(mockCreateAccountForUser).not.toHaveBeenCalled();
   });
 });

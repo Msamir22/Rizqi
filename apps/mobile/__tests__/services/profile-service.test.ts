@@ -64,16 +64,25 @@ jest.mock("@/services/account-service", () => {
     (): Promise<{ accountId: string; created: boolean }> =>
       Promise.resolve({ accountId: "cash-account-1", created: true })
   );
+  const getDefaultCashAccountName = jest.fn(
+    (language: "en" | "ar"): string => `default-cash-${language}`
+  );
   return {
     ensureCashAccount,
     createCashAccountWithinWriter,
-    __mocks: { ensureCashAccount, createCashAccountWithinWriter },
+    getDefaultCashAccountName,
+    __mocks: {
+      ensureCashAccount,
+      createCashAccountWithinWriter,
+      getDefaultCashAccountName,
+    },
   };
 });
 
 interface AccountServiceMocks {
   ensureCashAccount: jest.Mock;
   createCashAccountWithinWriter: jest.Mock;
+  getDefaultCashAccountName: jest.Mock;
 }
 
 function getAccountServiceMocks(): AccountServiceMocks {
@@ -326,6 +335,25 @@ describe("confirmCurrencyAndOnboard", () => {
       getAccountServiceMocks();
     expect(createCashAccountWithinWriter).toHaveBeenCalledTimes(1);
     expect(ensureCashAccount).not.toHaveBeenCalled();
+  });
+
+  it("passes the runtime language's default cash name into the seeded account", async (): Promise<void> => {
+    const profile = createMockProfile();
+    setupProfileFound(profile);
+    const { getCurrentLanguage } = getChangeLanguageMocks();
+    getCurrentLanguage.mockReturnValue("ar");
+
+    await confirmCurrencyAndOnboard("EGP");
+
+    const { createCashAccountWithinWriter, getDefaultCashAccountName } =
+      getAccountServiceMocks();
+    expect(getDefaultCashAccountName).toHaveBeenCalledWith("ar");
+    expect(createCashAccountWithinWriter).toHaveBeenCalledWith(
+      "user-1",
+      "EGP",
+      expect.anything(),
+      "default-cash-ar"
+    );
   });
 
   it("writes preferredCurrency, preferredLanguage (from runtime), and onboardingCompleted=true in one update()", async (): Promise<void> => {

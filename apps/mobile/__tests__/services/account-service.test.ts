@@ -31,6 +31,8 @@ import {
   CREATE_ACCOUNT_ERROR_CODES,
   createAccountForUser,
   createCashAccountWithinWriter,
+  ensureCashAccount,
+  getDefaultCashAccountName,
 } from "@/services/account-service";
 
 // =============================================================================
@@ -73,6 +75,10 @@ jest.mock("@/services/supabase", () => ({
   getCurrentUserId: jest.fn(),
 }));
 
+jest.mock("@/services/intro-flag-service", () => ({
+  readIntroLocaleOverride: jest.fn(),
+}));
+
 // =============================================================================
 // Helpers
 // =============================================================================
@@ -84,6 +90,12 @@ interface MockAccountRow {
   readonly currency: string;
   readonly deleted: boolean;
   readonly name?: string;
+}
+
+function getIntroFlagMocks(): { readIntroLocaleOverride: jest.Mock } {
+  return jest.requireMock<{ readIntroLocaleOverride: jest.Mock }>(
+    "@/services/intro-flag-service"
+  );
 }
 
 /**
@@ -308,6 +320,75 @@ describe("createCashAccountWithinWriter — cash-account idempotency", () => {
   });
 });
 
+describe("ensureCashAccount - localized seed name", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockDatabaseWrite.mockImplementation((writer: () => Promise<void>) =>
+      writer()
+    );
+  });
+
+  it("stores the default Cash account name using the user's preferred language", async () => {
+    const { collection, createCalls } = buildCollectionStub([]);
+    collection.query.mockReturnValue({
+      fetch: jest.fn().mockResolvedValue([]),
+    });
+    const profilesCollection = {
+      query: jest.fn().mockReturnValue({
+        fetch: jest.fn().mockResolvedValue([{ preferredLanguage: "ar" }]),
+      }),
+    };
+    mockDatabaseGet.mockImplementation((collectionName: string) => {
+      if (collectionName === "profiles") return profilesCollection;
+      if (collectionName === "accounts") return collection;
+      throw new Error(`Unexpected collection: ${collectionName}`);
+    });
+
+    const result = await ensureCashAccount("user-1", "EGP");
+
+    expect(result.created).toBe(true);
+    expect(createCalls[0].name).toBe(getDefaultCashAccountName("ar"));
+  });
+
+  it("falls back to the pre-auth intro locale when no profile language exists", async () => {
+    const { collection, createCalls } = buildCollectionStub([]);
+    collection.query.mockReturnValue({
+      fetch: jest.fn().mockResolvedValue([]),
+    });
+    const profilesCollection = {
+      query: jest.fn().mockReturnValue({
+        fetch: jest.fn().mockResolvedValue([]),
+      }),
+    };
+    const { readIntroLocaleOverride } = getIntroFlagMocks();
+    readIntroLocaleOverride.mockResolvedValue("ar");
+    mockDatabaseGet.mockImplementation((collectionName: string) => {
+      if (collectionName === "profiles") return profilesCollection;
+      if (collectionName === "accounts") return collection;
+      throw new Error(`Unexpected collection: ${collectionName}`);
+    });
+
+    await ensureCashAccount("user-1", "EGP");
+
+    expect(createCalls[0].name).toBe(getDefaultCashAccountName("ar"));
+  });
+
+  it("keeps an explicit caller-provided cash account name as-is", async () => {
+    const { collection, createCalls } = buildCollectionStub([]);
+    collection.query.mockReturnValue({
+      fetch: jest.fn().mockResolvedValue([]),
+    });
+    mockDatabaseGet.mockImplementation((collectionName: string) => {
+      if (collectionName === "accounts") return collection;
+      throw new Error(`Unexpected collection: ${collectionName}`);
+    });
+
+    await ensureCashAccount("user-1", "EGP", "Cash");
+
+    expect(createCalls[0].name).toBe("Cash");
+  });
+});
+
 describe("createAccountForUser", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -322,6 +403,7 @@ describe("createAccountForUser", () => {
     const accountsCollection = {
       query: jest.fn().mockReturnValue({
         fetch: jest.fn().mockResolvedValue([]),
+        fetchCount: jest.fn().mockResolvedValue(0),
       }),
       create: jest.fn(
         async (writer: (acc: Record<string, unknown>) => void) => {
@@ -396,6 +478,7 @@ describe("createAccountForUser", () => {
             deleted: false,
           },
         ]),
+        fetchCount: jest.fn().mockResolvedValue(1),
       }),
       create: jest.fn(),
     };
@@ -466,6 +549,7 @@ describe("createAccountForUser", () => {
     const accountsCollection = {
       query: jest.fn().mockReturnValue({
         fetch: jest.fn().mockResolvedValue([]),
+        fetchCount: jest.fn().mockResolvedValue(0),
       }),
       create: jest.fn(
         async (writer: (acc: Record<string, unknown>) => void) => {

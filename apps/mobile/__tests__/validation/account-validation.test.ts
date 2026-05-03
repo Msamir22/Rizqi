@@ -1,3 +1,7 @@
+jest.mock("i18next", () => ({
+  t: (key: string): string => `translated:${key}`,
+}));
+
 import {
   accountFormSchema,
   editAccountFormSchema,
@@ -65,7 +69,9 @@ describe("accountFormSchema (create)", () => {
   it("rejects whitespace-only name (after trim)", () => {
     const result = validateAccountForm({ ...baseCreate, name: "   " });
     expect(result.isValid).toBe(false);
-    expect(result.errors.name).toBeDefined();
+    expect(result.errors.name).toBe(
+      "translated:accounts:validation_name_required"
+    );
   });
 
   it("accepts a valid integer balance", () => {
@@ -146,6 +152,8 @@ describe("editAccountFormSchema", () => {
   it("rejects a leading minus with no digits", () => {
     const result = validateEditAccountForm({ ...baseEdit, balance: "-" });
     expect(result.isValid).toBe(false);
-    expect(result.errors.balance).toBeDefined();
+    expect(result.errors.balance).toBe(
+      "translated:accounts:validation_balance_edit_invalid"
+    );
   });
 });

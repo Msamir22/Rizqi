@@ -17,6 +17,7 @@ import type { CurrencyType } from "@monyvi/db";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useToast } from "../components/ui/Toast";
 import {
   updateAccountWithBalanceAdjustment,
@@ -74,6 +75,8 @@ export function useUpdateAccount(): UseUpdateAccountResult {
   const isSubmittingRef = useRef(false);
   const { showToast } = useToast();
   const router = useRouter();
+  const { t } = useTranslation("accounts");
+  const { t: tCommon } = useTranslation("common");
 
   const performUpdate = useCallback(
     async (
@@ -90,8 +93,8 @@ export function useUpdateAccount(): UseUpdateAccountResult {
         if (!userId) {
           showToast({
             type: "error",
-            title: "Session Error",
-            message: "You must be signed in to update an account",
+            title: t("toast_update_session_required_title"),
+            message: t("toast_update_session_required_message"),
           });
           return;
         }
@@ -126,8 +129,10 @@ export function useUpdateAccount(): UseUpdateAccountResult {
 
         showToast({
           type: "success",
-          title: "Account Updated ✅",
-          message: `${data.name.trim()} has been updated successfully`,
+          title: t("toast_update_success_title"),
+          message: t("toast_update_success_message", {
+            name: data.name.trim(),
+          }),
         });
 
         router.back();
@@ -141,15 +146,15 @@ export function useUpdateAccount(): UseUpdateAccountResult {
 
         showToast({
           type: "error",
-          title: "Update Failed",
-          message: "Something went wrong. Please try again.",
+          title: t("toast_update_error_title"),
+          message: tCommon("error_generic"),
         });
       } finally {
         isSubmittingRef.current = false;
         setIsSubmitting(false);
       }
     },
-    [isSubmitting, showToast, router]
+    [showToast, router, t, tCommon]
   );
 
   return {
