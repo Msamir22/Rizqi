@@ -26,6 +26,14 @@ import {
   useKeyboardVisibility,
 } from "@/hooks";
 
+const PRIMARY_BUTTON_SHADOW_STYLE = {
+  shadowColor: "rgba(5, 150, 105, 0.2)",
+  shadowOffset: { width: 0, height: 8 },
+  shadowOpacity: 1,
+  shadowRadius: 12,
+  elevation: 8,
+} as const;
+
 export default function AddAccount(): React.ReactNode {
   const insets = useSafeAreaInsets();
   const isKeyboardVisible = useKeyboardVisibility();
@@ -270,7 +278,7 @@ export default function AddAccount(): React.ReactNode {
             disabled={isSubmitting || isCheckingUniqueness || !isValid}
             variant="primary"
             size="lg"
-            className="shadow-xl shadow-nileGreen-600/20"
+            style={PRIMARY_BUTTON_SHADOW_STYLE}
           />
         </View>
       )}
