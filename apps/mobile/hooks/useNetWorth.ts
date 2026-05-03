@@ -120,7 +120,7 @@ export function useNetWorth(): UseNetWorthResult {
 
   // Calculate net worth when data changes
   const netWorthData = useMemo<NetWorthData | null>(() => {
-    if (isLoading || isRatesLoading || !latestRates) {
+    if (isResolvingUser || isLoading || isRatesLoading || !latestRates) {
       return null;
     }
 
@@ -141,6 +141,7 @@ export function useNetWorth(): UseNetWorthResult {
     assetMetals,
     latestRates,
     isLoading,
+    isResolvingUser,
     isRatesLoading,
     toPreferred,
   ]);
@@ -157,7 +158,7 @@ export function useNetWorth(): UseNetWorthResult {
       : null,
     totalAccounts: netWorthData?.totalAccounts ?? null,
     totalAssets: netWorthData?.totalAssets ?? null,
-    isLoading: isLoading || isRatesLoading,
+    isLoading: isResolvingUser || isLoading || isRatesLoading,
     error,
     refresh,
   };
