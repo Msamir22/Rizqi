@@ -20,6 +20,7 @@ import {
   type AccountFormData,
 } from "@/validation/account-validation";
 import { Account, BankDetails, type CurrencyType, database } from "@monyvi/db";
+import { roundForCurrency } from "@monyvi/logic";
 import { Q } from "@nozbe/watermelondb";
 import { queryOwned } from "./user-data-access";
 
@@ -195,7 +196,10 @@ export async function createAccountForUser(
         acc.userId = normalizedUserId;
         acc.name = trimmedName;
         acc.type = validatedData.accountType;
-        acc.balance = parseFloat(validatedData.balance);
+        acc.balance = roundForCurrency(
+          parseFloat(validatedData.balance),
+          validatedData.currency
+        );
         acc.currency = validatedData.currency;
         acc.deleted = false;
         acc.isDefault = isFirstAccount;
