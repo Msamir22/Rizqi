@@ -16,8 +16,8 @@
     "noImplicitAny": true,
     "forceConsistentCasingInFileNames": true,
     "paths": {
-      "@rizqi/logic": ["./packages/logic/src/index.ts"],
-      "@rizqi/db": ["./packages/db/src/index.ts"]
+      "@monyvi/logic": ["./packages/logic/src/index.ts"],
+      "@monyvi/db": ["./packages/db/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp", "dist"]

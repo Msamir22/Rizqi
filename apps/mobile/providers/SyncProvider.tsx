@@ -3,7 +3,7 @@
  * Provides sync status and functions to the app with smart sync intervals
  */
 
-import { database } from "@rizqi/db";
+import { database } from "@monyvi/db";
 import {
   createContext,
   ReactNode,

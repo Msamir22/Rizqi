@@ -4,7 +4,7 @@ trigger: always_on
 
 During our conversation, if you notice that I'm providing some
 instructions/guidelines/rules that are specific to this project that we are
-working on (Rizqi App). and if these instructions/guidelines/rules are not
+working on (Monyvi App). and if these instructions/guidelines/rules are not
 included in any of the rules files (.agent/rules/). Please suggest adding them
 to the rules so that you can apply them in the next context/conversation.
 

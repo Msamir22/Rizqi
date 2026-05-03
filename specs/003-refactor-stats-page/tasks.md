@@ -1,7 +1,7 @@
 # Tasks: Stats Page Refactor
 
 **Branch**: `003-refactor-stats-page`  
-**Plan**: [plan.md](file:///E:/Work/My%20Projects/Rizqi/specs/003-refactor-stats-page/plan.md)
+**Plan**: [plan.md](file:///E:/Work/My%20Projects/Monyvi/specs/003-refactor-stats-page/plan.md)
 
 ## Phase 1: Extract Types and Constants
 

@@ -10,9 +10,9 @@ module.exports = function (api) {
           root: ["./"],
           alias: {
             "@": "./",
-            "@rizqi/mobile": "./",
-            "@rizqi/logic": "../../packages/logic/src",
-            "@rizqi/db": "../../packages/db/src",
+            "@monyvi/mobile": "./",
+            "@monyvi/logic": "../../packages/logic/src",
+            "@monyvi/db": "../../packages/db/src",
           },
         },
       ],

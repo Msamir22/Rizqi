@@ -1,5 +1,5 @@
 /**
- * Voice Transaction Parser for Rizqi
+ * Voice Transaction Parser for Monyvi
  * Parses Egyptian Arabic and English voice input to extract transaction details
  *
  * @deprecated This legacy regex-based parser is superseded by `ai-voice-parser-service.ts`.
@@ -7,7 +7,7 @@
  * TODO: Remove this file entirely once voice parser migration is verified.
  */
 
-import type { CurrencyType } from "@rizqi/db";
+import type { CurrencyType } from "@monyvi/db";
 
 /** @deprecated Legacy return type — do not use in new code. */
 interface LegacyParsedVoiceTransaction {

@@ -1,7 +1,7 @@
 # Feature Specification: Live Rates Page
 
 **GitHub Issue**:
-[#99 — Feature: "Live Rates" Page for Precious Metals & Currencies](https://github.com/Msamir22/Rizqi/issues/99)
+[#99 — Feature: "Live Rates" Page for Precious Metals & Currencies](https://github.com/Msamir22/Monyvi/issues/99)
 **Created**: 2026-03-26 **Status**: Draft **Input**: Create a dedicated "Live
 Rates" screen that displays real-time exchange rates for precious metals (Gold
 24K/21K/18K, Silver, Platinum) and supported fiat currencies (USD, EUR, SAR,
@@ -33,14 +33,14 @@ modifications applied during review:
 
 - **Historical price charts** — Price history and trend charts for metals or
   currencies will be addressed in a future feature
-  ([#160](https://github.com/Msamir22/Rizqi/issues/160)).
+  ([#160](https://github.com/Msamir22/Monyvi/issues/160)).
 - **Currency conversion calculator** — Interactive converter between currencies
   is not part of this screen
-  ([#161](https://github.com/Msamir22/Rizqi/issues/161)).
+  ([#161](https://github.com/Msamir22/Monyvi/issues/161)).
 - **Push notifications** — Alerts for price thresholds or significant changes
-  are out of scope ([#162](https://github.com/Msamir22/Rizqi/issues/162)).
+  are out of scope ([#162](https://github.com/Msamir22/Monyvi/issues/162)).
 - **Favorite/pinned currencies** — User-customizable currency list ordering will
-  be addressed later ([#163](https://github.com/Msamir22/Rizqi/issues/163)).
+  be addressed later ([#163](https://github.com/Msamir22/Monyvi/issues/163)).
 
 ---
 
@@ -209,7 +209,7 @@ The entire Live Rates screen must be fully compatible with both dark and light
 themes, using the app's existing theme system and Tailwind dark: variants.
 
 **Why this priority**: Theme compatibility is a non-negotiable requirement for
-all Rizqi screens.
+all Monyvi screens.
 
 **Independent Test**: Can be tested by toggling the device theme and verifying
 all elements render correctly in both modes.
@@ -310,7 +310,7 @@ drawer entry, verifying both navigate to the Live Rates screen.
   screen showing a clock icon (🕐) followed by "Updated X min ago" based on the
   `market_rates.updated_at` timestamp.
 - **FR-012**: System MUST convert all prices to the user's preferred currency
-  using the `convertCurrency` utility from `@rizqi/logic`.
+  using the `convertCurrency` utility from `@monyvi/logic`.
 - **FR-013**: System MUST re-derive all displayed values when the user's
   preferred currency changes.
 - **FR-014**: System MUST show the last cached rate with a staleness indicator
@@ -357,7 +357,7 @@ drawer entry, verifying both navigate to the Live Rates screen.
   `market_rates` table with real-time Supabase subscription.
 - **Currency Info**: Display metadata for supported currencies. Key attributes:
   code, name, symbol, flag emoji. Source: existing `CURRENCY_INFO_MAP` from
-  `@rizqi/logic`.
+  `@monyvi/logic`.
 
 ---
 
@@ -366,7 +366,7 @@ drawer entry, verifying both navigate to the Live Rates screen.
 - The existing `useMarketRates` hook provides sufficiently fresh rate data,
   including `latestRates`, `previousDayRate`, `isConnected`, and `isStale` — all
   needed for this feature.
-- The `convertCurrency` utility from `@rizqi/logic` can convert between any two
+- The `convertCurrency` utility from `@monyvi/logic` can convert between any two
   supported currencies using the market rates object.
 - The gold 21K and 18K prices are not stored separately — they are derived from
   the 24K price × purity fraction.

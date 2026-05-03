@@ -2,21 +2,21 @@
 
 **Outgoing agent:** Claude Sonnet 4.5 **Handoff date:** 2026-04-24 **Git
 branch:** `026-onboarding-restructure` **Worktree path:**
-`E:/Work/My Projects/Rizqi/.claude/worktrees/beautiful-wu-306b86` **Worktree
-type:** linked worktree (main checkout is `E:/Work/My Projects/Rizqi` on `main`)
-**GitHub issue:** https://github.com/Msamir22/Rizqi/issues/246 (absorbs closed
-#242, #243; bundles closed #245; depends on merged #226)
+`E:/Work/My Projects/Monyvi/.claude/worktrees/beautiful-wu-306b86` **Worktree
+type:** linked worktree (main checkout is `E:/Work/My Projects/Monyvi` on
+`main`) **GitHub issue:** https://github.com/Msamir22/Monyvi/issues/246 (absorbs
+closed #242, #243; bundles closed #245; depends on merged #226)
 
 > The incoming agent MUST operate from the **Worktree path** above. If your
 > session is not already there, `cd` into it before doing anything else. Do not
 > create a new worktree or check the branch out elsewhere. The main checkout
-> (`E:/Work/My Projects/Rizqi`) is on `main` and must stay untouched.
+> (`E:/Work/My Projects/Monyvi`) is on `main` and must stay untouched.
 
 ---
 
 ## Feature summary
 
-Full restructure of Rizqi's onboarding experience. Pre-auth gets 3 pitch slides
+Full restructure of Monyvi's onboarding experience. Pre-auth gets 3 pitch slides
 (Voice → SMS/Offline → Live Market) in the device locale with a corner language
 switcher; auth screen is redesigned to absorb the "slide 4 closer" (welcome +
 tagline + value-prop pills + existing OAuth/email + trust microbar); post-auth
@@ -124,7 +124,7 @@ files. Each bullet is self-contained.
 
 ### Language-override persistence (FR-030)
 
-- `@rizqi/intro-locale-override` is **never cleared** — not on sign-up, not on
+- `@monyvi/intro-locale-override` is **never cleared** — not on sign-up, not on
   sign-out, not on Currency confirmation. It behaves as a device-level language
   preference.
 - Earlier plan discussion worried about "contamination" for a second account on
@@ -149,7 +149,7 @@ files. Each bullet is self-contained.
   `@field("onboarding_flags") onboardingFlagsRaw?: string` on the base model,
   and a typed `get onboardingFlags(): OnboardingFlags` getter on the extended
   model that `JSON.parse`s with a `{}` fallback.
-- Rizqi's codebase does NOT use WatermelonDB's `@json` decorator — per-field
+- Monyvi's codebase does NOT use WatermelonDB's `@json` decorator — per-field
   manual parsing is the established pattern. Do not introduce `@json` just
   because it exists; follow the precedent.
 - Keys are boolean and one-way: `cash_account_tooltip_dismissed` and
@@ -230,7 +230,7 @@ Do not re-introduce any of these during implementation:
 - Voice-first Add Transaction modal (replaced by mic-button tooltip on existing
   button)
 - `FirstRunTooltipQueue` orchestrator component
-- Clearing `@rizqi/intro-locale-override` on any code path
+- Clearing `@monyvi/intro-locale-override` on any code path
 
 ---
 

@@ -2,7 +2,7 @@
 
 **Purpose**: Validate specification completeness and quality before proceeding
 to planning **Created**: 2026-03-19 **Feature**:
-[spec.md](file:///e:/Work/My%20Projects/Rizqi/specs/019-budget-management/spec.md)
+[spec.md](file:///e:/Work/My%20Projects/Monyvi/specs/019-budget-management/spec.md)
 
 ## Content Quality
 

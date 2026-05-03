@@ -14,8 +14,8 @@ import {
   Transaction,
   Transfer,
   type CurrencyType,
-} from "@rizqi/db";
-import { convertCurrency } from "@rizqi/logic";
+} from "@monyvi/db";
+import { convertCurrency } from "@monyvi/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
 import { useMarketRates } from "./useMarketRates";

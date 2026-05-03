@@ -2,7 +2,7 @@ import { palette } from "@/constants/colors";
 import { RecentTransactionsSkeleton } from "@/components/dashboard/skeletons/RecentTransactionsSkeleton";
 import { useCategoryLookup } from "@/context/CategoriesContext";
 import { formatTransactionDate } from "@/utils/transactions";
-import { Category, Transaction } from "@rizqi/db";
+import { Category, Transaction } from "@monyvi/db";
 import { router } from "expo-router";
 import React, { useCallback } from "react";
 import { Text, TouchableOpacity, View } from "react-native";

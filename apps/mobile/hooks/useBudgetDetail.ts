@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Budget, database, Transaction, Category } from "@rizqi/db";
+import { Budget, database, Transaction, Category } from "@monyvi/db";
 import { Q } from "@nozbe/watermelondb";
 import {
   getCurrentPeriodBounds,
@@ -19,7 +19,7 @@ import {
   filterExcludedTransactions,
   type SpendingMetrics,
   type WeeklyBucket,
-} from "@rizqi/logic";
+} from "@monyvi/logic";
 import {
   getSpendingForBudget,
   getCategoryAndSubcategoryIds,

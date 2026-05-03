@@ -7,7 +7,7 @@
  * All dates are treated as local-time Date objects (no timezone conversion).
  */
 
-import type { BudgetPeriod } from "@rizqi/db";
+import type { BudgetPeriod } from "@monyvi/db";
 
 // =============================================================================
 // CONSTANTS

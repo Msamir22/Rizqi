@@ -23,7 +23,7 @@ import {
   GOLD_PURITY_OPTIONS,
   FINENESS_OPTIONS,
 } from "../purity-utils";
-import type { MetalType } from "@rizqi/db";
+import type { MetalType } from "@monyvi/db";
 
 // =============================================================================
 // karatToFraction

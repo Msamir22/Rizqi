@@ -5,7 +5,7 @@
  * Automatically handles fallback for invalid icon/library combinations.
  */
 
-import type { Category } from "@rizqi/db";
+import type { Category } from "@monyvi/db";
 import {
   FontAwesome5,
   Ionicons,

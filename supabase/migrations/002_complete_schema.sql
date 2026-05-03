@@ -1,7 +1,7 @@
 -- =============================================================================
--- Rizqi Database Schema Migration
+-- Monyvi Database Schema Migration
 -- Version: 002
--- Description: Complete schema for Rizqi personal finance app
+-- Description: Complete schema for Monyvi personal finance app
 -- =============================================================================
 
 -- =============================================================================

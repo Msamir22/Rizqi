@@ -1,7 +1,7 @@
 # Implementation Plan: Metals Page Redesign
 
 **Branch**: `018-metals-page-redesign` | **Date**: 2026-03-18 | **Spec**:
-[spec.md](file:///e:/Work/My%20Projects/Rizqi/specs/018-metals-page-redesign/spec.md)
+[spec.md](file:///e:/Work/My%20Projects/Monyvi/specs/018-metals-page-redesign/spec.md)
 **Input**: Feature specification from `/specs/018-metals-page-redesign/spec.md`
 
 ### Out of Scope
@@ -15,7 +15,7 @@ Redesign the "My Metals" screen (`metals.tsx`) to replace all hardcoded
 placeholders with real data from WatermelonDB (`assets` + `asset_metals`
 tables), add portfolio analytics (profit/loss, metal split), implement a premium
 add-holding modal with conditional tab visibility, and ensure full dark/light
-theme support. Leverages existing `@rizqi/logic` calculations and `@rizqi/db`
+theme support. Leverages existing `@monyvi/logic` calculations and `@monyvi/db`
 models.
 
 ## Technical Context
@@ -33,15 +33,15 @@ reads/writes via WatermelonDB; no direct API calls for data
 
 _GATE: All 7 principles verified._
 
-| #   | Principle                   | Status  | Notes                                                                                            |
-| --- | --------------------------- | ------- | ------------------------------------------------------------------------------------------------ |
-| I   | Offline-First Data          | ✅ PASS | All reads from WatermelonDB. No API calls for holdings data.                                     |
-| II  | Documented Business Logic   | ✅ PASS | Profit/loss formula documented in spec. No new business rules needed.                            |
-| III | Type Safety                 | ✅ PASS | All new code will use strict types. No `any`. Explicit return types.                             |
-| IV  | Service-Layer Separation    | ✅ PASS | New `metal-holding-service.ts` for DB writes. Hook for observation only. Components render only. |
-| V   | Premium UI with Theming     | ✅ PASS | NativeWind dark: variants. Schema-driven UI. No hardcoded hex in JSX.                            |
-| VI  | Monorepo Package Boundaries | ✅ PASS | Logic stays in `@rizqi/logic`, service in `apps/mobile/services/`, hook in `apps/mobile/hooks/`. |
-| VII | Local-First Migrations      | ✅ PASS | New migration for gold/silver purity enums.                                                      |
+| #   | Principle                   | Status  | Notes                                                                                             |
+| --- | --------------------------- | ------- | ------------------------------------------------------------------------------------------------- |
+| I   | Offline-First Data          | ✅ PASS | All reads from WatermelonDB. No API calls for holdings data.                                      |
+| II  | Documented Business Logic   | ✅ PASS | Profit/loss formula documented in spec. No new business rules needed.                             |
+| III | Type Safety                 | ✅ PASS | All new code will use strict types. No `any`. Explicit return types.                              |
+| IV  | Service-Layer Separation    | ✅ PASS | New `metal-holding-service.ts` for DB writes. Hook for observation only. Components render only.  |
+| V   | Premium UI with Theming     | ✅ PASS | NativeWind dark: variants. Schema-driven UI. No hardcoded hex in JSX.                             |
+| VI  | Monorepo Package Boundaries | ✅ PASS | Logic stays in `@monyvi/logic`, service in `apps/mobile/services/`, hook in `apps/mobile/hooks/`. |
+| VII | Local-First Migrations      | ✅ PASS | New migration for gold/silver purity enums.                                                       |
 
 ## Project Structure
 
@@ -93,7 +93,7 @@ apps/mobile/components/navigation/PageHeader.tsx   # Supports rightAction prop f
 
 **Structure Decision**: Mobile app pattern — new components in feature-specific
 `components/metals/` directory. Service in `services/`. Hook in `hooks/`. All
-logic reuses existing `@rizqi/logic` functions.
+logic reuses existing `@monyvi/logic` functions.
 
 ---
 
@@ -103,7 +103,7 @@ logic reuses existing `@rizqi/logic` functions.
 
 ---
 
-#### [NEW] [024_gold_silver_purity_enums.sql](file:///e:/Work/My%20Projects/Rizqi/supabase/migrations/024_gold_silver_purity_enums.sql)
+#### [NEW] [024_gold_silver_purity_enums.sql](file:///e:/Work/My%20Projects/Monyvi/supabase/migrations/024_gold_silver_purity_enums.sql)
 
 Create two Postgres enums as single source of truth for purity options:
 
@@ -120,7 +120,7 @@ Research confirmed these are correct:
 
 These enums serve as the authoritative reference for purity dropdowns in the UI.
 
-#### [MODIFY] [purity-utils.ts](file:///e:/Work/My%20Projects/Rizqi/packages/logic/src/utils/purity-utils.ts)
+#### [MODIFY] [purity-utils.ts](file:///e:/Work/My%20Projects/Monyvi/packages/logic/src/utils/purity-utils.ts)
 
 Update `GOLD_PURITY_OPTIONS` and `FINENESS_OPTIONS` to align with the DB enum
 values (verify current values match — they already do based on research).
@@ -131,7 +131,7 @@ values (verify current values match — they already do based on research).
 
 ---
 
-#### [NEW] [Tooltip.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/ui/Tooltip.tsx)
+#### [NEW] [Tooltip.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/ui/Tooltip.tsx)
 
 Extract the existing tooltip logic from `ReadOnlyDropdown.tsx` into a reusable
 `Tooltip` component:
@@ -155,7 +155,7 @@ Extract the existing tooltip logic from `ReadOnlyDropdown.tsx` into a reusable
 
 ---
 
-#### [NEW] [metal-holding-service.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/services/metal-holding-service.ts)
+#### [NEW] [metal-holding-service.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/services/metal-holding-service.ts)
 
 Service for creating metal holdings. Follows the existing
 `transaction-service.ts` pattern:
@@ -175,7 +175,7 @@ Service for creating metal holdings. Follows the existing
 
 ---
 
-#### [NEW] [useMetalHoldings.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/hooks/useMetalHoldings.ts)
+#### [NEW] [useMetalHoldings.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/hooks/useMetalHoldings.ts)
 
 Reactive hook that observes metal holdings from WatermelonDB. Follows the
 `useAssetBreakdown.ts` pattern:
@@ -184,7 +184,7 @@ Reactive hook that observes metal holdings from WatermelonDB. Follows the
   `asset_metals`
 - Groups holdings by `metal_type` (GOLD / SILVER)
 - Computes per-holding current value, profit/loss %, and aggregates using
-  `@rizqi/logic` utilities
+  `@monyvi/logic` utilities
 - Returns:
   `{ goldHoldings, silverHoldings, totalValue, totalPurchasePrice, profitLoss, portfolioSplit, isLoading }`
 - **Sort order**: Holdings sorted by purchase date descending — newest first
@@ -207,7 +207,7 @@ Reactive hook that observes metal holdings from WatermelonDB. Follows the
 
 ---
 
-#### [NEW] [MetalsHeroCard.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/metals/MetalsHeroCard.tsx)
+#### [NEW] [MetalsHeroCard.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/metals/MetalsHeroCard.tsx)
 
 Total portfolio value card. Shows:
 
@@ -217,21 +217,21 @@ Total portfolio value card. Shows:
 
 ---
 
-#### [NEW] [MetalSplitCards.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/metals/MetalSplitCards.tsx)
+#### [NEW] [MetalSplitCards.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/metals/MetalSplitCards.tsx)
 
 Two side-by-side summary cards showing Gold and Silver portfolio split. Hidden
 when user holds only one metal type (FR-008).
 
 ---
 
-#### [NEW] [MetalTabs.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/metals/MetalTabs.tsx)
+#### [NEW] [MetalTabs.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/metals/MetalTabs.tsx)
 
 Gold/Silver tab switcher following Mockup 3 (Jewel Collection) style. Shows item
 count + total per tab.
 
 ---
 
-#### [NEW] [HoldingCard.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/metals/HoldingCard.tsx)
+#### [NEW] [HoldingCard.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/metals/HoldingCard.tsx)
 
 Individual holding card showing: name, item form, purity badge (using
 `formatPurityForDisplay()`), weight, current value, purchase date, profit/loss %
@@ -239,7 +239,7 @@ Individual holding card showing: name, item form, purity badge (using
 
 ---
 
-#### [NEW] [LiveRatesStrip.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/metals/LiveRatesStrip.tsx)
+#### [NEW] [LiveRatesStrip.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/metals/LiveRatesStrip.tsx)
 
 Inline market rates strip at bottom of scroll. Gold + Silver prices per gram.
 Uses `useMarketRates` hook's `latestRates` and `previousDayRate` for directional
@@ -247,7 +247,7 @@ arrows (FR-011).
 
 ---
 
-#### [NEW] [AddHoldingModal.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/metals/AddHoldingModal.tsx)
+#### [NEW] [AddHoldingModal.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/metals/AddHoldingModal.tsx)
 
 Redesigned bottom sheet modal (Gold-themed Premium style). Key features:
 
@@ -291,7 +291,7 @@ value. Explains how profit is calculated (FR-007). No separate
 
 ---
 
-#### [NEW] [EmptyMetalsState.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/metals/EmptyMetalsState.tsx)
+#### [NEW] [EmptyMetalsState.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/metals/EmptyMetalsState.tsx)
 
 Empty state when user has no holdings. Uses a **generated illustration** (via
 `generate_image` tool) showing precious metals/gold/silver themed artwork.
@@ -300,7 +300,7 @@ pattern for illustrated empty states across the app.
 
 ---
 
-#### [NEW] [Skeleton.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/ui/Skeleton.tsx)
+#### [NEW] [Skeleton.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/ui/Skeleton.tsx)
 
 Reusable shimmer skeleton primitive component for loading states:
 
@@ -328,7 +328,7 @@ Reusable shimmer skeleton primitive component for loading states:
 
 ---
 
-#### [MODIFY] [metals.tsx](<file:///e:/Work/My%20Projects/Rizqi/apps/mobile/app/(tabs)/metals.tsx>)
+#### [MODIFY] [metals.tsx](<file:///e:/Work/My%20Projects/Monyvi/apps/mobile/app/(tabs)/metals.tsx>)
 
 Complete rewrite of the metals page. The existing 380-line file with hardcoded
 data will be replaced with:
@@ -363,7 +363,7 @@ data will be replaced with:
 #### 2. Existing logic tests
 
 - **Covers**: `calculateTotalAssets()`, purity utils, metal price utils —
-  already tested via `@rizqi/logic` if tests exist
+  already tested via `@monyvi/logic` if tests exist
 - **Run**: `npx nx test logic` (to verify no regressions)
 
 ### Manual Verification

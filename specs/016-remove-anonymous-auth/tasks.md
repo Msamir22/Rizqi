@@ -126,7 +126,7 @@ sign-up/sign-in options → no "Skip" or "Continue as Guest"
       toggle (Sign Up / Sign In), submit button with loading state, "Forgot
       Password?" link (Sign In mode only), inline error messages
 - [ ] T024 [US1] Create `apps/mobile/app/auth.tsx` — unified Authentication
-      screen with: welcoming header ("Welcome to Rizqi"), Google OAuth button
+      screen with: welcoming header ("Welcome to Monyvi"), Google OAuth button
       (via `SocialLoginButtons`), email/password form (via `EmailPasswordForm`),
       email verification pending state, forgot-password flow, no "Skip" option.
       Filter `SocialLoginButtons` to Google-only. Must handle network errors

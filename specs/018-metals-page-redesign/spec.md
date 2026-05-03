@@ -1,7 +1,7 @@
 # Feature Specification: Metals Page Redesign
 
 **GitHub Issue**:
-[#36 — Wire `metals.tsx` to real data instead of hardcoded placeholders](https://github.com/Msamir22/Rizqi/issues/36)  
+[#36 — Wire `metals.tsx` to real data instead of hardcoded placeholders](https://github.com/Msamir22/Monyvi/issues/36)  
 **Created**:
 2026-03-18  
 **Status**: Draft  
@@ -212,7 +212,7 @@ existing theme system and Tailwind dark: variants. All text, backgrounds,
 borders, badges, buttons, and modal surfaces must adapt correctly.
 
 **Why this priority**: Theme compatibility is a non-negotiable requirement for
-all Rizqi screens.
+all Monyvi screens.
 
 **Independent Test**: Can be tested by toggling the device theme and verifying
 all elements render correctly in both modes.

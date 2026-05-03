@@ -1,16 +1,16 @@
 # Implementation Plan: Multi-Currency Architecture
 
 **Branch**: `006-multi-currency` | **Date**: 2026-02-20 | **Spec**:
-[spec.md](file:///e:/Work/My%20Projects/Rizqi/specs/006-multi-currency/spec.md)  
+[spec.md](file:///e:/Work/My%20Projects/Monyvi/specs/006-multi-currency/spec.md)  
 **Research**:
-[research.md](file:///e:/Work/My%20Projects/Rizqi/specs/006-multi-currency/research.md)  
+[research.md](file:///e:/Work/My%20Projects/Monyvi/specs/006-multi-currency/research.md)  
 **Data
 Model**:
-[data-model.md](file:///e:/Work/My%20Projects/Rizqi/specs/006-multi-currency/data-model.md)
+[data-model.md](file:///e:/Work/My%20Projects/Monyvi/specs/006-multi-currency/data-model.md)
 
 ## Summary
 
-Refactor Rizqi from a hardcoded EGP-based currency system to a scalable,
+Refactor Monyvi from a hardcoded EGP-based currency system to a scalable,
 multi-currency architecture where:
 
 1. Exchange rates are stored relative to **USD as the universal base currency**
@@ -46,9 +46,9 @@ metals.dev Copper plan ($1.79/mo, 2000 req/mo)
 | Principle                       | Status | Notes                                               |
 | ------------------------------- | ------ | --------------------------------------------------- |
 | Offline-First Data Architecture | ✅     | All conversions use local WatermelonDB market rates |
-| Documented Business Logic       | ✅     | Conversion formulas documented in `@rizqi/logic`    |
+| Documented Business Logic       | ✅     | Conversion formulas documented in `@monyvi/logic`   |
 | Type Safety                     | ✅     | All new types/interfaces use strict TypeScript      |
-| Service-Layer Separation        | ✅     | `@rizqi/logic` handles conversion, not UI           |
+| Service-Layer Separation        | ✅     | `@monyvi/logic` handles conversion, not UI          |
 | Monorepo Package Boundaries     | ✅     | Changes scoped to `packages/db`, `packages/logic`   |
 | Local-First Migrations          | ✅     | SQL migration file in `supabase/migrations/`        |
 
@@ -64,7 +64,7 @@ Changes are organized by dependency order (foundation → consumers).
 > the migration. All current data is test data and will be discarded. This is
 > the simplest and safest approach for a pre-production app.
 
-#### [NEW] [026_multi_currency_usd_base.sql](file:///e:/Work/My%20Projects/Rizqi/supabase/migrations/026_multi_currency_usd_base.sql)
+#### [NEW] [026_multi_currency_usd_base.sql](file:///e:/Work/My%20Projects/Monyvi/supabase/migrations/026_multi_currency_usd_base.sql)
 
 **Step 1 — Truncate all tables** (order matters for foreign key constraints):
 
@@ -78,7 +78,7 @@ Changes are organized by dependency order (foundation → consumers).
 - Drop `cnh_egp` column (CNH offshore yuan removed — CNY covers China)
 - All 4 metal columns: `xxx_egp_per_gram` → `xxx_usd_per_gram`
 - See
-  [data-model.md § 2](file:///e:/Work/My%20Projects/Rizqi/specs/006-multi-currency/data-model.md)
+  [data-model.md § 2](file:///e:/Work/My%20Projects/Monyvi/specs/006-multi-currency/data-model.md)
   for the complete mapping
 
 **Step 3 — Rename snapshot table columns**:
@@ -102,11 +102,11 @@ Changes are organized by dependency order (foundation → consumers).
 
 This auto-generates:
 
-#### [AUTO] [schema.ts](file:///e:/Work/My%20Projects/Rizqi/packages/db/src/schema.ts)
+#### [AUTO] [schema.ts](file:///e:/Work/My%20Projects/Monyvi/packages/db/src/schema.ts)
 
 - All `_egp` column names → `_usd` column names
 
-#### [AUTO] [base-market-rate.ts](file:///e:/Work/My%20Projects/Rizqi/packages/db/src/models/base/base-market-rate.ts)
+#### [AUTO] [base-market-rate.ts](file:///e:/Work/My%20Projects/Monyvi/packages/db/src/models/base/base-market-rate.ts)
 
 - All `_egp` field decorators/properties → `_usd`
 
@@ -115,11 +115,11 @@ This auto-generates:
 - `base-daily-snapshot-balance.ts`, `base-daily-snapshot-assets.ts`,
   `base-daily-snapshot-net-worth.ts` — field renames from `_egp` → `_usd`
 
-#### [AUTO] [supabase-types.ts](file:///e:/Work/My%20Projects/Rizqi/packages/db/src/supabase-types.ts)
+#### [AUTO] [supabase-types.ts](file:///e:/Work/My%20Projects/Monyvi/packages/db/src/supabase-types.ts)
 
 - All `_egp` → `_usd` in type definitions
 
-#### [MODIFY] [MarketRate.ts](file:///e:/Work/My%20Projects/Rizqi/packages/db/src/models/MarketRate.ts)
+#### [MODIFY] [MarketRate.ts](file:///e:/Work/My%20Projects/Monyvi/packages/db/src/models/MarketRate.ts)
 
 Refactor `getRate()` to support **any-to-any** conversion:
 
@@ -152,7 +152,7 @@ private getUsdValue(currency: CurrencyType): number {
 
 ### Phase 3: Edge Function (`supabase/functions`)
 
-#### [MODIFY] [index.ts](file:///e:/Work/My%20Projects/Rizqi/supabase/functions/fetch-metal-rates/index.ts)
+#### [MODIFY] [index.ts](file:///e:/Work/My%20Projects/Monyvi/supabase/functions/fetch-metal-rates/index.ts)
 
 - Change API URL: `currency=EGP` → `currency=USD`
 - Rename `MarketRatesRow` interface: all `_egp` → `_usd` fields
@@ -168,7 +168,7 @@ private getUsdValue(currency: CurrencyType): number {
 
 ### Phase 4: Logic Layer (`packages/logic`)
 
-#### [MODIFY] [currency.ts](file:///e:/Work/My%20Projects/Rizqi/packages/logic/src/utils/currency.ts)
+#### [MODIFY] [currency.ts](file:///e:/Work/My%20Projects/Monyvi/packages/logic/src/utils/currency.ts)
 
 **Replace** the EGP-hardcoded functions with a generic conversion:
 
@@ -190,7 +190,7 @@ export function convertCurrency(
 - **Remove**: `egpToCurrency()`, `currencyToEGP()`, `convertToEGP()`
 - **Keep**: `formatCurrency()` (already currency-agnostic), `CURRENCY_SYMBOLS`
 
-#### [MODIFY] [metal.ts](file:///e:/Work/My%20Projects/Rizqi/packages/logic/src/utils/metal.ts)
+#### [MODIFY] [metal.ts](file:///e:/Work/My%20Projects/Monyvi/packages/logic/src/utils/metal.ts)
 
 - Rename field references: `goldEgpPerGram` → `goldUsdPerGram`, etc.
 - Add `targetCurrency` parameter for converting metal prices to user's preferred
@@ -224,7 +224,7 @@ export function getMetalPrice(
 }
 ```
 
-#### [MODIFY] [asset-breakdown.ts](file:///e:/Work/My%20Projects/Rizqi/packages/logic/src/analytics/asset-breakdown.ts)
+#### [MODIFY] [asset-breakdown.ts](file:///e:/Work/My%20Projects/Monyvi/packages/logic/src/analytics/asset-breakdown.ts)
 
 - Replace `convertToEGP()` with `convertCurrency()`
 - Add `preferredCurrency` parameter:
@@ -238,11 +238,11 @@ export function calculateAssetBreakdown(
 ): AssetBreakdown { ... }
 ```
 
-#### [MODIFY] [net-worth-calculations.ts](file:///e:/Work/My%20Projects/Rizqi/packages/logic/src/net-worth/net-worth-calculations.ts)
+#### [MODIFY] [net-worth-calculations.ts](file:///e:/Work/My%20Projects/Monyvi/packages/logic/src/net-worth/net-worth-calculations.ts)
 
 - Add `currency` field to `NetWorthData` interface
 
-#### [NEW] [region.ts](file:///e:/Work/My%20Projects/Rizqi/packages/logic/src/utils/region.ts)
+#### [NEW] [region.ts](file:///e:/Work/My%20Projects/Monyvi/packages/logic/src/utils/region.ts)
 
 Region-based default currency detection for all 36 supported currencies:
 

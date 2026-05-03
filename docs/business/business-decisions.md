@@ -1,4 +1,4 @@
-# Rizqi - Finalized Business Decisions
+# Monyvi - Finalized Business Decisions
 
 > **Status:** 🟢 Confirmed  
 > **Last Updated:** 2026-03-09  
@@ -986,7 +986,7 @@ WatermelonDB for offline access.
 | `display_name`          | TEXT        | ❌       | For greeting ("Good Morning, Mohamed")                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `avatar_url`            | TEXT        | ❌       | From Google profile or custom                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `preferred_currency`    | CHAR(3)     | ✅       | Default: 'EGP'                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `preferred_language`    | TEXT        | ❌       | `'en'` or `'ar'`. Overwritten atomically inside `confirmCurrencyAndOnboard` with the user's currently-active runtime language (which already reflects any pre-auth `LanguageSwitcherPill` choice). The device-scoped `@rizqi/intro-locale-override` AsyncStorage key is NOT cleared afterward (FR-030).                                                                                                                                                                                           |
+| `preferred_language`    | TEXT        | ❌       | `'en'` or `'ar'`. Overwritten atomically inside `confirmCurrencyAndOnboard` with the user's currently-active runtime language (which already reflects any pre-auth `LanguageSwitcherPill` choice). The device-scoped `@monyvi/intro-locale-override` AsyncStorage key is NOT cleared afterward (FR-030).                                                                                                                                                                                          |
 | `theme`                 | ENUM        | ✅       | `'LIGHT'`, `'DARK'`, `'SYSTEM'` (default: SYSTEM)                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `sms_detection_enabled` | BOOLEAN     | ✅       | Toggle SMS auto-detection (default: false)                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `onboarding_completed`  | BOOLEAN     | ✅       | **Routing signal** (FR-031). Flipped `true` atomically inside `confirmCurrencyAndOnboard` alongside the cash-account create + currency + language writes. The routing gate in `apps/mobile/app/index.tsx` reads this field to decide Currency-step vs dashboard. `preferred_currency` cannot be used as the routing signal because it's `NOT NULL DEFAULT 'EGP'` — always populated, so it cannot distinguish "never onboarded" from "legitimately chose EGP". (Decision: 2026-04-22, issue #246) |
@@ -1076,8 +1076,8 @@ after the initial pull-sync, then routes based on
     - Overwrites `profiles.preferred_language` with the currently-active runtime
       language (already reflects any `LanguageSwitcherPill` choice)
     - Flips `profiles.onboarding_completed = true`
-  - The `@rizqi/intro-locale-override` AsyncStorage key is NOT cleared afterward
-    — it persists as a device-level preference (FR-030).
+  - The `@monyvi/intro-locale-override` AsyncStorage key is NOT cleared
+    afterward — it persists as a device-level preference (FR-030).
   - Routes to dashboard.
 - **`onboarding_completed = true`** → routes directly to dashboard.
 

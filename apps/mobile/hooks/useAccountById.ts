@@ -12,7 +12,7 @@
  * @module useAccountById
  */
 
-import { Account, BankDetails, database } from "@rizqi/db";
+import { Account, BankDetails, database } from "@monyvi/db";
 import { useEffect, useRef, useState } from "react";
 import { observeOwnedById } from "@/services/user-data-access";
 import { useCurrentUserId } from "./useCurrentUserId";

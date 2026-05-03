@@ -6,7 +6,7 @@ import { Switch, Text, TouchableOpacity, View } from "react-native";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { formatToLocalDateString } from "@/utils/dateHelpers";
-import type { RecurringFrequency } from "@rizqi/db";
+import type { RecurringFrequency } from "@monyvi/db";
 import { TextField } from "../ui/TextField";
 import { useTranslation } from "react-i18next";
 

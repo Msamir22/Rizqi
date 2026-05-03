@@ -19,7 +19,7 @@
  * @module build-category-tree
  */
 
-import { Category } from "@rizqi/db";
+import { Category } from "@monyvi/db";
 
 // ---------------------------------------------------------------------------
 // Types (minimal shape required — decoupled from WatermelonDB model)

@@ -14,7 +14,7 @@ import { z } from "zod";
 import { supabase } from "./supabase";
 import { logger } from "@/utils/logger";
 
-import type { Category } from "@rizqi/db";
+import type { Category } from "@monyvi/db";
 import {
   buildCategoryMap,
   buildCategoryTree,
@@ -25,7 +25,7 @@ import {
   type CategoryMap,
   type ParsedSmsTransaction,
   type SmsMessage,
-} from "@rizqi/logic";
+} from "@monyvi/logic";
 
 // ---------------------------------------------------------------------------
 // Schemas — AI response validation

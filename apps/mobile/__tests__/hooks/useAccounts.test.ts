@@ -121,13 +121,13 @@ const mockBankDetailsCollection: MockCollection<MockBankDetails> = {
   query: jest.fn(() => mockBankDetailsQuery),
 };
 
-jest.mock("@rizqi/db", () => ({
+jest.mock("@monyvi/db", () => ({
   database: {
     get: (collectionName: string): unknown => mockDatabaseGet(collectionName),
   },
 }));
 
-jest.mock("@rizqi/logic", () => ({
+jest.mock("@monyvi/logic", () => ({
   calculateAccountsTotalBalance: jest.fn(() => 0),
   convertCurrency: jest.fn(() => 0),
 }));

@@ -3,7 +3,7 @@
 **Purpose**: Validate specification completeness and quality before proceeding
 to planning  
 **Created**: 2026-03-26  
-**Feature**: [spec.md](file:///e:/Work/My%20Projects/Rizqi/specs/021-voice-transaction-refinements/spec.md)
+**Feature**: [spec.md](file:///e:/Work/My%20Projects/Monyvi/specs/021-voice-transaction-refinements/spec.md)
 
 ## Content Quality
 

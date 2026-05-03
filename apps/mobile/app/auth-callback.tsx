@@ -1,7 +1,7 @@
 /**
  * Auth Callback Route
  *
- * Catch-all route for deep link redirects (`rizqi://auth-callback`).
+ * Catch-all route for deep link redirects (`monyvi://auth-callback`).
  * Handles:
  * 1. OAuth redirects \u2014 when openAuthSessionAsync doesn't catch the URL
  * 2. Email verification deep links \u2014 confirms email and routes appropriately

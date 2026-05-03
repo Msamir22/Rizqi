@@ -11,7 +11,7 @@
 
 import { getMetalPriceUsd, getMetalPrice, getGoldPurityPrice } from "../metal";
 import { convertCurrency } from "../currency";
-import type { MarketRate, MetalType } from "@rizqi/db";
+import type { MarketRate, MetalType } from "@monyvi/db";
 
 // =============================================================================
 // MOCKS

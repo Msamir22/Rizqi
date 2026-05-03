@@ -11,7 +11,7 @@ import type {
   CurrencyType,
   Transaction,
   Category,
-} from "@rizqi/db";
+} from "@monyvi/db";
 import {
   calculateMonthlyTotals,
   aggregateByCategory,

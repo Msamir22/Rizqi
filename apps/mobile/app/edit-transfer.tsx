@@ -32,9 +32,9 @@ import {
   deleteTransfer,
   updateTransfer,
 } from "@/services/transfer-service";
-import { formatAmountInput } from "@rizqi/logic";
+import { formatAmountInput } from "@monyvi/logic";
 import { Ionicons } from "@expo/vector-icons";
-import type { TransactionType } from "@rizqi/db";
+import type { TransactionType } from "@monyvi/db";
 import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";

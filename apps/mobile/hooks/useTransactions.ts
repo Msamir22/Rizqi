@@ -3,8 +3,8 @@
  * Reactive hook for transaction data from WatermelonDB
  */
 
-import { database, Transaction } from "@rizqi/db";
-import { getMonthBoundaries } from "@rizqi/logic";
+import { database, Transaction } from "@monyvi/db";
+import { getMonthBoundaries } from "@monyvi/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useState } from "react";
 

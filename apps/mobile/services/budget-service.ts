@@ -18,14 +18,14 @@ import {
   type BudgetType,
   type CurrencyType,
   type AlertFiredLevel,
-} from "@rizqi/db";
+} from "@monyvi/db";
 import { Q, type Collection } from "@nozbe/watermelondb";
 import {
   getCurrentPeriodBounds,
   filterExcludedTransactions,
   buildPauseInterval,
   parsePauseIntervals,
-} from "@rizqi/logic";
+} from "@monyvi/logic";
 
 // =============================================================================
 // TYPES

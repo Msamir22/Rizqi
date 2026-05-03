@@ -1,10 +1,10 @@
 /**
- * Bank Notification Parser for Rizqi
+ * Bank Notification Parser for Monyvi
  * Parses Egyptian bank notifications (InstaPay, Debit Cards)
  * Based on specification in notification_parser_spec.md
  */
 
-import { CurrencyType } from "@rizqi/db";
+import { CurrencyType } from "@monyvi/db";
 import { ParsedNotification } from "../types";
 
 /**

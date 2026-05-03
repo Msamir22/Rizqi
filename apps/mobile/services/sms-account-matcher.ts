@@ -30,11 +30,11 @@ import {
   BankDetails,
   database,
   type CurrencyType,
-} from "@rizqi/db";
+} from "@monyvi/db";
 import {
   type ReviewableTransaction,
   isKnownFinancialSender,
-} from "@rizqi/logic";
+} from "@monyvi/logic";
 import { Q } from "@nozbe/watermelondb";
 
 // ---------------------------------------------------------------------------

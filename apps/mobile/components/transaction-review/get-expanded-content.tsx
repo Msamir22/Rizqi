@@ -1,4 +1,4 @@
-import type { ReviewableTransaction } from "@rizqi/logic";
+import type { ReviewableTransaction } from "@monyvi/logic";
 import React from "react";
 import { Text, View } from "react-native";
 

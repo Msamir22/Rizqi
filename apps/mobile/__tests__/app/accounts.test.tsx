@@ -88,7 +88,7 @@ jest.mock("@/hooks/usePreferredCurrency", () => ({
   }),
 }));
 
-jest.mock("@rizqi/logic", () => ({
+jest.mock("@monyvi/logic", () => ({
   formatCurrency: (): string => "EGP 1,700",
 }));
 

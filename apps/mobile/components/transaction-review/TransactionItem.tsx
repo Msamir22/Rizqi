@@ -27,7 +27,7 @@ import { palette } from "@/constants/colors";
 import type { MatchReason } from "@/services/sms-account-matcher";
 import { formatDate as formatDateHelper } from "@/utils/dateHelpers";
 import { useLocale } from "@/context/LocaleContext";
-import { formatCurrency, type ReviewableTransaction } from "@rizqi/logic";
+import { formatCurrency, type ReviewableTransaction } from "@monyvi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import React, { memo, useCallback, useState } from "react";

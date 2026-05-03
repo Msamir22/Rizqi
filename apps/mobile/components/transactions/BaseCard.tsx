@@ -1,8 +1,8 @@
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { formatDate } from "@/utils/dateHelpers";
-import type { CurrencyType } from "@rizqi/db";
-import { formatCurrency } from "@rizqi/logic";
+import type { CurrencyType } from "@monyvi/db";
+import { formatCurrency } from "@monyvi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React from "react";

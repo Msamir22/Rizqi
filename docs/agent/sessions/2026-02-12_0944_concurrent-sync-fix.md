@@ -87,7 +87,7 @@ During Metro hot reload:
    `supabase-types.ts`
 2. Metro detects file changes → triggers hot reload
 3. **All modules in the dependency chain are re-evaluated**, including `sync.ts`
-   (which imports `@rizqi/db` → `schema.ts`)
+   (which imports `@monyvi/db` → `schema.ts`)
 4. `let activeSyncPromise = null` is re-executed → lock resets
 5. New sync call proceeds while previous `synchronize()` is still in-flight
 

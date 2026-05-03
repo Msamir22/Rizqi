@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Category, MarketRate } from "@rizqi/db";
+import type { Category, MarketRate } from "@monyvi/db";
 import { useToast } from "@/components/ui/Toast";
 import { useCategories } from "@/hooks/useCategories";
 import { useCategoryLookup } from "@/context/CategoriesContext";
@@ -18,7 +18,7 @@ import {
 } from "@/services/sms-account-matcher";
 import { prepareSavePayload } from "@/services/sms-review-save-service";
 import { getCurrentUserId } from "@/services/supabase";
-import type { ReviewableTransaction } from "@rizqi/logic";
+import type { ReviewableTransaction } from "@monyvi/logic";
 import type { TransactionEdits } from "@/services/sms-edit-modal-service";
 
 export type ReviewListItem =

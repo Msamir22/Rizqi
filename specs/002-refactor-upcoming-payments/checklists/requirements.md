@@ -3,7 +3,7 @@
 **Purpose**: Validate specification completeness and quality before proceeding
 to planning  
 **Created**: 2026-02-14  
-**Feature**: [spec.md](file:///E:/Work/My%20Projects/Rizqi/specs/002-refactor-upcoming-payments/spec.md)
+**Feature**: [spec.md](file:///E:/Work/My%20Projects/Monyvi/specs/002-refactor-upcoming-payments/spec.md)
 
 ## Content Quality
 

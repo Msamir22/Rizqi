@@ -13,7 +13,7 @@
  * @module useEditAccountForm
  */
 
-import type { Account, AccountType, CurrencyType } from "@rizqi/db";
+import type { Account, AccountType, CurrencyType } from "@monyvi/db";
 import { t } from "i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {

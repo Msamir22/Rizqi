@@ -98,25 +98,25 @@ export interface OnboardingFlags {
 
 ### 3.1 New keys
 
-| Key                            | Value shape                 | Scope  | Persisted across logout?                                      | Purpose                                                                                                                                                                                                                                                                    |
-| ------------------------------ | --------------------------- | ------ | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@rizqi/intro-seen`            | `"true"` or missing         | Device | Yes                                                           | Set once the user completes OR explicitly skips the pre-auth pitch (FR-005).                                                                                                                                                                                               |
-| `@rizqi/intro-locale-override` | `"en"` \| `"ar"` \| missing | Device | Yes (NOT cleared on sign-up, sign-out, or any event — FR-030) | Set whenever the user changes language via the shared `LanguageSwitcherPill` (pitch, auth, or Currency step). Read by `initI18n()` at startup before any screen renders (FR-002) and by `confirmCurrencyAndOnboard` indirectly via `getCurrentLanguage()` (FR-014 step c). |
+| Key                             | Value shape                 | Scope  | Persisted across logout?                                      | Purpose                                                                                                                                                                                                                                                                    |
+| ------------------------------- | --------------------------- | ------ | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@monyvi/intro-seen`            | `"true"` or missing         | Device | Yes                                                           | Set once the user completes OR explicitly skips the pre-auth pitch (FR-005).                                                                                                                                                                                               |
+| `@monyvi/intro-locale-override` | `"en"` \| `"ar"` \| missing | Device | Yes (NOT cleared on sign-up, sign-out, or any event — FR-030) | Set whenever the user changes language via the shared `LanguageSwitcherPill` (pitch, auth, or Currency step). Read by `initI18n()` at startup before any screen renders (FR-002) and by `confirmCurrencyAndOnboard` indirectly via `getCurrentLanguage()` (FR-014 step c). |
 
 ### 3.2 Keys unchanged (referenced)
 
-| Key                         | Purpose                                 | Notes                                                                                                                                                                                                       |
-| --------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@rizqi/first-use-date`     | First-launch timestamp                  | Unchanged.                                                                                                                                                                                                  |
-| `@rizqi/logout-in-progress` | Logout recovery                         | Unchanged.                                                                                                                                                                                                  |
-| `onboarding:<userId>:step`  | Legacy per-step cursor from feature 024 | **Deprecated** by this feature. No new writes. Reads may still exist in `onboarding-cursor-service.ts` — drop during impl (see plan §Operational Notes). Existing values on device are harmless (not read). |
+| Key                          | Purpose                                 | Notes                                                                                                                                                                                                       |
+| ---------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@monyvi/first-use-date`     | First-launch timestamp                  | Unchanged.                                                                                                                                                                                                  |
+| `@monyvi/logout-in-progress` | Logout recovery                         | Unchanged.                                                                                                                                                                                                  |
+| `onboarding:<userId>:step`   | Legacy per-step cursor from feature 024 | **Deprecated** by this feature. No new writes. Reads may still exist in `onboarding-cursor-service.ts` — drop during impl (see plan §Operational Notes). Existing values on device are harmless (not read). |
 
 ### 3.3 Storage key constants
 
 ```ts
 // apps/mobile/constants/storage-keys.ts (additions)
-export const INTRO_SEEN_KEY = "@rizqi/intro-seen";
-export const INTRO_LOCALE_OVERRIDE_KEY = "@rizqi/intro-locale-override";
+export const INTRO_SEEN_KEY = "@monyvi/intro-seen";
+export const INTRO_LOCALE_OVERRIDE_KEY = "@monyvi/intro-locale-override";
 
 // NOTE: these are NOT added to CLEARABLE_USER_KEYS — intentionally device-scoped.
 ```
@@ -247,7 +247,7 @@ CurrencyType (locked in; may change via Settings later — out of scope for this
 
 Flags are never removed once set. The merge is additive only.
 
-### 7.3 `@rizqi/intro-seen` lifecycle
+### 7.3 `@monyvi/intro-seen` lifecycle
 
 ```text
 missing (fresh install)
@@ -257,7 +257,7 @@ missing (fresh install)
 "true" (persists across app restarts + logout + sign-in with a different account)
 ```
 
-### 7.4 `@rizqi/intro-locale-override` lifecycle
+### 7.4 `@monyvi/intro-locale-override` lifecycle
 
 ```text
 missing (first launch on device — use device locale)

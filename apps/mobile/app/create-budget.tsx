@@ -9,7 +9,7 @@
 
 import { PageHeader } from "@/components/navigation/PageHeader";
 import { BudgetForm } from "@/components/budget/BudgetForm";
-import { Budget, database } from "@rizqi/db";
+import { Budget, database } from "@monyvi/db";
 import { useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";

@@ -1,4 +1,4 @@
-import { TransactionType } from "@rizqi/db";
+import { TransactionType } from "@monyvi/db";
 import { z } from "zod";
 
 // ---------------------------------------------------------------------------

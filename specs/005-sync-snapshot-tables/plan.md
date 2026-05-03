@@ -1,7 +1,7 @@
 # Implementation Plan: Sync Snapshot Tables Locally
 
 **Branch**: `005-sync-snapshot-tables` | **Date**: 2026-02-19 | **Spec**:
-[spec.md](file:///e:/Work/My%20Projects/Rizqi/specs/005-sync-snapshot-tables/spec.md)  
+[spec.md](file:///e:/Work/My%20Projects/Monyvi/specs/005-sync-snapshot-tables/spec.md)  
 **Input**:
 Feature specification from `/specs/005-sync-snapshot-tables/spec.md`
 
@@ -102,7 +102,7 @@ needed. Changes span `supabase/migrations`, `packages/db`, `apps/mobile`, and
 > [!IMPORTANT] Per project rules, all DDL changes go through local migration
 > files. Never use Supabase MCP for DDL.
 
-#### [NEW] [025_sync_snapshot_tables.sql](file:///e:/Work/My%20Projects/Rizqi/supabase/migrations/025_sync_snapshot_tables.sql)
+#### [NEW] [025_sync_snapshot_tables.sql](file:///e:/Work/My%20Projects/Monyvi/supabase/migrations/025_sync_snapshot_tables.sql)
 
 SQL migration to:
 
@@ -116,7 +116,7 @@ SQL migration to:
 
 ### Phase 2: WatermelonDB Schema Generation
 
-#### [MODIFY] [transform-schema.js](file:///e:/Work/My%20Projects/Rizqi/scripts/transform-schema.js)
+#### [MODIFY] [transform-schema.js](file:///e:/Work/My%20Projects/Monyvi/scripts/transform-schema.js)
 
 1. Remove `daily_snapshot_balance`, `daily_snapshot_assets`,
    `daily_snapshot_net_worth` from `EXCLUDED_TABLES`
@@ -136,7 +136,7 @@ Then run:
 
 ### Phase 3: Sync Logic
 
-#### [MODIFY] [sync.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/services/sync.ts)
+#### [MODIFY] [sync.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/services/sync.ts)
 
 1. Remove `daily_snapshot_*` from `EXCLUDED_TABLES`
 2. Add a new type alias for snapshot table names (read-only, pull-only)
@@ -152,7 +152,7 @@ Then run:
 
 ### Phase 4: Replace API with Local Query
 
-#### [MODIFY] [useNetWorth.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/hooks/useNetWorth.ts)
+#### [MODIFY] [useNetWorth.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/hooks/useNetWorth.ts)
 
 Rewrite `useMonthlyPercentageChange` to:
 
@@ -163,7 +163,7 @@ Rewrite `useMonthlyPercentageChange` to:
 5. Make it reactive using WatermelonDB's `observe()` pattern (updates
    automatically on sync)
 
-#### [DELETE] [net-worth.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/services/net-worth.ts)
+#### [DELETE] [net-worth.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/services/net-worth.ts)
 
 Delete the entire file (only contained `getNetWorthComparison()` which called
 the API).
@@ -172,19 +172,19 @@ the API).
 
 ### Phase 5: Remove API Endpoint
 
-#### [DELETE] [net-worth-comparison.ts](file:///e:/Work/My%20Projects/Rizqi/apps/api/src/routes/net-worth-comparison.ts)
+#### [DELETE] [net-worth-comparison.ts](file:///e:/Work/My%20Projects/Monyvi/apps/api/src/routes/net-worth-comparison.ts)
 
 Delete the route file.
 
-#### [MODIFY] [index.ts](file:///e:/Work/My%20Projects/Rizqi/apps/api/src/index.ts)
+#### [MODIFY] [index.ts](file:///e:/Work/My%20Projects/Monyvi/apps/api/src/index.ts)
 
 Remove:
 
 - `import netWorthRouter from "./routes/net-worth-comparison";` (line 44)
 - `app.use("/api/net-worth", netWorthRouter);` (line 55)
 
-Also check if `NetWorthComparison` is exported from `@rizqi/logic` contracts and
-clean up if needed.
+Also check if `NetWorthComparison` is exported from `@monyvi/logic` contracts
+and clean up if needed.
 
 ---
 

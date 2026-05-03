@@ -85,7 +85,7 @@ WatermelonDB query against `daily_snapshot_net_worth`.
   query.
 - New flow: `(tabs)/index.tsx` → `useMonthlyPercentageChange()` → local
   WatermelonDB query (no API, no network).
-- The `NetWorthComparison` interface in `@rizqi/logic` can be reused. The
+- The `NetWorthComparison` interface in `@monyvi/logic` can be reused. The
   `getSameDayLastMonth()` helper is also reusable.
 - `useMonthlyPercentageChange` currently depends on `useNetWorth` for loading
   state — this can be simplified since the local query is

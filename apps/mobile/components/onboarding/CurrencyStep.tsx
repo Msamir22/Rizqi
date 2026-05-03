@@ -19,8 +19,8 @@ import { useToast } from "@/components/ui/Toast";
 import { confirmCurrencyAndOnboard } from "@/services/profile-service";
 import { detectCurrencyFromTimezone } from "@/utils/currency-detection";
 import { logger } from "@/utils/logger";
-import type { CurrencyType } from "@rizqi/db";
-import { SUPPORTED_CURRENCIES, type CurrencyInfo } from "@rizqi/logic";
+import type { CurrencyType } from "@monyvi/db";
+import { SUPPORTED_CURRENCIES, type CurrencyInfo } from "@monyvi/logic";
 import { LanguageSwitcherPill } from "./LanguageSwitcherPill";
 
 const CURRENCY_ITEM_HEIGHT = 80;

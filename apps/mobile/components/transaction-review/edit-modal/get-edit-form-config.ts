@@ -1,4 +1,4 @@
-import type { ReviewableTransaction } from "@rizqi/logic";
+import type { ReviewableTransaction } from "@monyvi/logic";
 
 export interface SourceTypeBadge {
   readonly label: string;

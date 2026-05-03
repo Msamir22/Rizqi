@@ -1,9 +1,9 @@
 /**
- * Database Provider for Rizqi Mobile
+ * Database Provider for Monyvi Mobile
  * Provides WatermelonDB context to the app and handles initialization
  */
 
-import { Account, Category, database, Transaction } from "@rizqi/db";
+import { Account, Category, database, Transaction } from "@monyvi/db";
 import { Collection, Database } from "@nozbe/watermelondb";
 import {
   createContext,

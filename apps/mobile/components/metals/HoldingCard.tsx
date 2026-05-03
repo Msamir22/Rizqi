@@ -16,8 +16,8 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { memo } from "react";
 import { Text, View } from "react-native";
 
-import type { CurrencyType } from "@rizqi/db";
-import { formatCurrency, formatPurityForDisplay } from "@rizqi/logic";
+import type { CurrencyType } from "@monyvi/db";
+import { formatCurrency, formatPurityForDisplay } from "@monyvi/logic";
 
 import { useTheme } from "@/context/ThemeContext";
 import type { MetalHolding } from "@/hooks/useMetalHoldings";

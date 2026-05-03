@@ -1,5 +1,5 @@
-import { CurrencyType } from "@rizqi/db";
-import { formatCurrency } from "@rizqi/logic";
+import { CurrencyType } from "@monyvi/db";
+import { formatCurrency } from "@monyvi/logic";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { palette } from "@/constants/colors";

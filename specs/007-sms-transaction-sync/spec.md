@@ -450,7 +450,7 @@ correct transaction data and action buttons.
 
 ## Compliance & Distribution (Pre-Production)
 
-Rizqi qualifies for Google Play's READ_SMS permission under the **"SMS-based
+Monyvi qualifies for Google Play's READ_SMS permission under the **"SMS-based
 money management"** exception category (apps that track and manage budget).
 
 **Eligible permissions**: `READ_SMS`, `RECEIVE_MMS`, `RECEIVE_SMS`,

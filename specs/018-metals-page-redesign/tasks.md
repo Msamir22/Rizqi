@@ -58,7 +58,7 @@ component
       `apps/mobile/hooks/useMetalHoldings.ts` — observe `assets` (type=METAL,
       deleted=false) with `asset_metals`, group by metal_type, compute
       per-holding current value + profit/loss % + aggregates using
-      `@rizqi/logic` utilities. **Sort**: purchase date descending — newest
+      `@monyvi/logic` utilities. **Sort**: purchase date descending — newest
       first (FR-024). **Duplicates**: no name uniqueness constraint. Returns:
       `goldHoldings`, `silverHoldings`, `totalValue`, `totalPurchasePrice`,
       `profitLoss`, `portfolioSplit`, `isLoading`

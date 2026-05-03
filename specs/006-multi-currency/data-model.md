@@ -1,7 +1,7 @@
 # Data Model: Multi-Currency Architecture
 
 **Branch**: `006-multi-currency` | **Date**: 2026-02-20  
-**Spec**: [spec.md](file:///e:/Work/My%20Projects/Rizqi/specs/006-multi-currency/spec.md)
+**Spec**: [spec.md](file:///e:/Work/My%20Projects/Monyvi/specs/006-multi-currency/spec.md)
 
 ---
 

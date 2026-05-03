@@ -20,7 +20,7 @@
  */
 
 import { useMemo } from "react";
-import type { Account } from "@rizqi/db";
+import type { Account } from "@monyvi/db";
 import { useAccounts } from "@/hooks/useAccounts";
 import {
   buildAccountDisplayNames,

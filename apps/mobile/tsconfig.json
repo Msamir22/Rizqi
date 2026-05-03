@@ -4,7 +4,9 @@
     "jsx": "react-jsx",
     "strict": true,
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@monyvi/logic": ["../../packages/logic/src/index.ts"],
+      "@monyvi/db": ["../../packages/db/src/index.ts"]
     }
   },
   "include": [

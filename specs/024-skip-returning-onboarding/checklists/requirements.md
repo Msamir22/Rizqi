@@ -51,7 +51,7 @@ simplified data model; per-step progress moved to AsyncStorage) **Feature**:
   `specs/024-skip-returning-onboarding/mockups/`.
 - **Out of scope** for this feature (filed as separate issues 2026-04-18):
   sign-out during onboarding happy path →
-  [#242](https://github.com/Msamir22/Rizqi/issues/242); back/forward navigation
-  between steps → [#243](https://github.com/Msamir22/Rizqi/issues/243).
+  [#242](https://github.com/Msamir22/Monyvi/issues/242); back/forward navigation
+  between steps → [#243](https://github.com/Msamir22/Monyvi/issues/243).
 - **Pre-production status** (Assumption 5): no migration strategy for legacy
   AsyncStorage users; they flow through the new onboarding once.

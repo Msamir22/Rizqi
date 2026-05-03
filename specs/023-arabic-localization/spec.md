@@ -7,7 +7,7 @@
 
 ### User Story 1 - Browse the App in Arabic (Priority: P1)
 
-An Egyptian user opens Rizqi and sees all labels, buttons, navigation items,
+An Egyptian user opens Monyvi and sees all labels, buttons, navigation items,
 headers, and messages displayed in Arabic. The user can navigate every screen
 without encountering English text in the UI chrome.
 

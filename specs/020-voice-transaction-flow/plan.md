@@ -38,7 +38,7 @@ _GATE: Must pass before implementation._
 | III. Type Safety              | ✅ PASS | All new code will use strict TypeScript, zod for API response validation, explicit return types.                 |
 | IV. Service-Layer Separation  | ✅ PASS | `ai-voice-parser-service.ts` (service layer) → hooks for React lifecycle → components for UI only.               |
 | V. Premium UI                 | ✅ PASS | Animated waveform, pulse mic, progress bar, Tailwind styling per constitution.                                   |
-| VI. Monorepo Boundaries       | ✅ PASS | No cross-boundary violations. Service in `apps/mobile/services/`, types in `@rizqi/logic`.                       |
+| VI. Monorepo Boundaries       | ✅ PASS | No cross-boundary violations. Service in `apps/mobile/services/`, types in `@monyvi/logic`.                      |
 | VII. Local-First Migrations   | ✅ PASS | No DB schema changes required.                                                                                   |
 
 ---

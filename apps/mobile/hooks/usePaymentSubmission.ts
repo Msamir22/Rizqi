@@ -8,7 +8,7 @@
  * @module usePaymentSubmission
  */
 
-import type { CurrencyType, RecurringPayment } from "@rizqi/db";
+import type { CurrencyType, RecurringPayment } from "@monyvi/db";
 import { useCallback, useState } from "react";
 import { InteractionManager } from "react-native";
 import { useTranslation } from "react-i18next";

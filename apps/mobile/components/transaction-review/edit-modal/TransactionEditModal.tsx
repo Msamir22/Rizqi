@@ -18,14 +18,14 @@ import type { PendingAccount } from "@/services/pending-account-service";
 import type { AccountWithBankDetails } from "@/services/sms-account-matcher";
 import type { TransactionEdits } from "@/services/sms-edit-modal-service";
 import { formatToLocalDateString } from "@/utils/dateHelpers";
-import type { Category, MarketRate } from "@rizqi/db";
+import type { Category, MarketRate } from "@monyvi/db";
 import {
   formatConversionPreview,
   formatAmountInput,
   parseAmountInput,
   CURRENCY_INFO_MAP,
   type ReviewableTransaction,
-} from "@rizqi/logic";
+} from "@monyvi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import React from "react";

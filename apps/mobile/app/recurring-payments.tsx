@@ -18,8 +18,8 @@ import type {
   CurrencyType,
   RecurringPayment,
   RecurringStatus,
-} from "@rizqi/db";
-import { formatCurrency } from "@rizqi/logic";
+} from "@monyvi/db";
+import { formatCurrency } from "@monyvi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useCallback } from "react";

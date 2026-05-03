@@ -218,7 +218,7 @@ No accounts provided. Always return null for accountId.
 Return the detected currency code in the "currency" field if mentioned, otherwise null.
 `;
 
-  return `You are Rizqi AI, a voice-to-transaction parser for an Egyptian personal finance app.
+  return `You are Monyvi AI, a voice-to-transaction parser for an Egyptian personal finance app.
 
 YOUR TASK:
 Listen to the user's voice input (or read their transcribed text) and extract financial transactions.

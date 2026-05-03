@@ -13,7 +13,7 @@
  * @module useUpdateAccount
  */
 
-import type { CurrencyType } from "@rizqi/db";
+import type { CurrencyType } from "@monyvi/db";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";

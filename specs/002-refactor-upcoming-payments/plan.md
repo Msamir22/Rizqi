@@ -1,7 +1,7 @@
 # Implementation Plan: Refactor Upcoming Payments
 
 **Branch**: `002-refactor-upcoming-payments` | **Date**: 2026-02-14 | **Spec**:
-[spec.md](file:///E:/Work/My%20Projects/Rizqi/specs/002-refactor-upcoming-payments/spec.md)
+[spec.md](file:///E:/Work/My%20Projects/Monyvi/specs/002-refactor-upcoming-payments/spec.md)
 **Input**: Feature specification from
 `specs/002-refactor-upcoming-payments/spec.md`
 
@@ -16,7 +16,7 @@ project rules in `.agent/rules/`. Extract business logic to `dateHelpers.ts` and
 ## Technical Context
 
 **Language/Version**: TypeScript (strict mode) **Primary Dependencies**: React
-Native, Expo, NativeWind v4, WatermelonDB, `@rizqi/db`, `@rizqi/logic`
+Native, Expo, NativeWind v4, WatermelonDB, `@monyvi/db`, `@monyvi/logic`
 **Storage**: WatermelonDB (local SQLite), Supabase (cloud sync) **Testing**:
 Manual visual verification (light/dark mode toggle), ESLint **Target Platform**:
 Android/iOS via Expo **Project Type**: Mobile (monorepo) **Performance Goals**:

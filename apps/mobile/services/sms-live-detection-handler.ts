@@ -17,7 +17,7 @@
  * @module sms-live-detection-handler
  */
 
-import type { ParsedSmsTransaction } from "@rizqi/logic";
+import type { ParsedSmsTransaction } from "@monyvi/logic";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ACTION_CONFIRM,
@@ -33,10 +33,10 @@ import { createSmsAtmTransfer } from "./transfer-service";
 // ---------------------------------------------------------------------------
 
 /** AsyncStorage key for the auto-confirm preference */
-const AUTO_CONFIRM_KEY = "@rizqi/sms_auto_confirm";
+const AUTO_CONFIRM_KEY = "@monyvi/sms_auto_confirm";
 
 /** AsyncStorage key for the live detection enabled preference */
-const LIVE_DETECTION_KEY = "@rizqi/sms_live_detection_enabled";
+const LIVE_DETECTION_KEY = "@monyvi/sms_live_detection_enabled";
 
 // ---------------------------------------------------------------------------
 // T046: Review page conflict — queue management

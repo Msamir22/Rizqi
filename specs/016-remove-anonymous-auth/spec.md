@@ -21,7 +21,7 @@ Anonymous User Flow and Enforce Authentication"
 
 ### User Story 1 — New User Must Authenticate Before Using the App (Priority: P1)
 
-A first-time user downloads and opens Rizqi. Instead of being dropped into the
+A first-time user downloads and opens Monyvi. Instead of being dropped into the
 dashboard with anonymous tracking, the user is greeted by a unified
 **Authentication screen** (internally `auth.tsx`). They must create an account
 or sign in using one of:
@@ -254,7 +254,7 @@ verifying no guest-mode UI elements appear.
 
 The unified Authentication screen (replacing the current `sign-up.tsx`) should:
 
-- Display a welcoming title/header (e.g., "Welcome to Rizqi")
+- Display a welcoming title/header (e.g., "Welcome to Monyvi")
 - Show Google OAuth button (Facebook and Apple deferred — may show as
   disabled/coming-soon or be hidden until implemented)
 - Include an email/password section with a toggle/tab between "Sign Up" and

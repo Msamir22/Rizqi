@@ -3,8 +3,8 @@
  * Reactive hook for account data from WatermelonDB
  */
 
-import { Account, BankDetails, database } from "@rizqi/db";
-import { calculateAccountsTotalBalance, convertCurrency } from "@rizqi/logic";
+import { Account, BankDetails, database } from "@monyvi/db";
+import { calculateAccountsTotalBalance, convertCurrency } from "@monyvi/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
 import { observeOwnedById, queryOwned } from "@/services/user-data-access";

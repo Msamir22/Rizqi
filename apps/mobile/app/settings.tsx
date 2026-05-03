@@ -1,7 +1,7 @@
 import { formatToLocalDateString } from "@/utils/dateHelpers";
 import { palette } from "@/constants/colors";
-import type { CurrencyType } from "@rizqi/db";
-import { CURRENCY_INFO_MAP } from "@rizqi/logic";
+import type { CurrencyType } from "@monyvi/db";
+import { CURRENCY_INFO_MAP } from "@monyvi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";

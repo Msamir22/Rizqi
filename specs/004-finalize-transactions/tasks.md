@@ -223,7 +223,7 @@ correct balance adjustments and data integrity.
 
 ### Implementation
 
-- [ ] T030 [US5] Set up Maestro CLI and configure for Rizqi dev build in
+- [ ] T030 [US5] Set up Maestro CLI and configure for Monyvi dev build in
       `apps/mobile/e2e/maestro/` — create `.maestro/` config, document setup in
       README
 - [ ] T031 [P] [US5] Write `create-transaction.yaml` in

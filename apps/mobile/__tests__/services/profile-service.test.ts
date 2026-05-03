@@ -6,10 +6,10 @@
  */
 
 // =============================================================================
-// Mock: @rizqi/db
+// Mock: @monyvi/db
 // =============================================================================
 
-jest.mock("@rizqi/db", () => {
+jest.mock("@monyvi/db", () => {
   const mockFind = jest.fn();
   const mockFetch = jest.fn();
   const mockWrite = jest.fn((fn: () => Promise<unknown>) => fn());
@@ -40,7 +40,7 @@ interface DbMocks {
 }
 
 function getDbMocks(): DbMocks {
-  return jest.requireMock<{ __mocks: DbMocks }>("@rizqi/db").__mocks;
+  return jest.requireMock<{ __mocks: DbMocks }>("@monyvi/db").__mocks;
 }
 
 // =============================================================================

@@ -1,5 +1,5 @@
 import { palette } from "@/constants/colors";
-import type { CurrencyType } from "@rizqi/db";
+import type { CurrencyType } from "@monyvi/db";
 import React from "react";
 import { IconLibrary } from "../common/CategoryIcon";
 import { BaseCard } from "./BaseCard";

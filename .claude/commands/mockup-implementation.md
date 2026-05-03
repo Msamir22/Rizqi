@@ -6,7 +6,7 @@ description: Instructions for implementing mockups
 
 ## Product Context
 
-- App name: **Rizqi**
+- App name: **Monyvi**
 - Platform: **Mobile only** (iOS & Android)
 - Domain: **Fintech** (expense tracking + wealth tracking)
 - Goal: Clear, trustworthy, calm, and efficient UI that supports frequent daily

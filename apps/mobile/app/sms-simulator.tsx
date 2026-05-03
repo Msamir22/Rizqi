@@ -22,7 +22,7 @@ import {
 } from "@/services/dev/sms-simulator";
 import { SMS_FIXTURES, type SmsFixture } from "@/services/dev/sms-fixtures";
 import { onTransactionDetected } from "@/services/sms-live-listener-service";
-import type { ParsedSmsTransaction } from "@rizqi/logic";
+import type { ParsedSmsTransaction } from "@monyvi/logic";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   FlatList,

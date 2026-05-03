@@ -45,7 +45,7 @@ describe("intro-flag-service", () => {
     it("writes 'true' to INTRO_SEEN_KEY", async () => {
       mockSetItem.mockResolvedValueOnce();
       await markIntroSeen();
-      expect(mockSetItem).toHaveBeenCalledWith("@rizqi/intro-seen", "true");
+      expect(mockSetItem).toHaveBeenCalledWith("@monyvi/intro-seen", "true");
     });
 
     it("is idempotent — calling twice writes same value", async () => {
@@ -55,7 +55,7 @@ describe("intro-flag-service", () => {
       expect(mockSetItem).toHaveBeenCalledTimes(2);
       expect(mockSetItem).toHaveBeenNthCalledWith(
         2,
-        "@rizqi/intro-seen",
+        "@monyvi/intro-seen",
         "true"
       );
     });
@@ -88,7 +88,7 @@ describe("intro-flag-service", () => {
       mockSetItem.mockResolvedValueOnce();
       await setIntroLocaleOverride("ar");
       expect(mockSetItem).toHaveBeenCalledWith(
-        "@rizqi/intro-locale-override",
+        "@monyvi/intro-locale-override",
         "ar"
       );
     });

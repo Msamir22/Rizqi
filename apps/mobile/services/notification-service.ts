@@ -18,7 +18,7 @@
 
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
-import type { ParsedSmsTransaction } from "@rizqi/logic";
+import type { ParsedSmsTransaction } from "@monyvi/logic";
 
 // ---------------------------------------------------------------------------
 // Constants

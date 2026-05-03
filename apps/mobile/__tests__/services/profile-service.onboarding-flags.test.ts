@@ -1,9 +1,9 @@
 /* eslint-disable */
 
 import { setOnboardingFlag } from "@/services/profile-service";
-import { database } from "@rizqi/db";
+import { database } from "@monyvi/db";
 
-jest.mock("@rizqi/db", () => ({
+jest.mock("@monyvi/db", () => ({
   database: {
     get: jest.fn(),
     write: jest.fn(),

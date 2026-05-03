@@ -15,13 +15,13 @@
  * @module sms-sync-service
  */
 
-import { database, Transaction, Transfer } from "@rizqi/db";
+import { database, Transaction, Transfer } from "@monyvi/db";
 import {
   computeSmsHash,
   isKnownFinancialSender,
   type ParsedSmsTransaction,
   type SmsMessage,
-} from "@rizqi/logic";
+} from "@monyvi/logic";
 import { Q } from "@nozbe/watermelondb";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { InteractionManager } from "react-native";
@@ -95,7 +95,7 @@ interface ScanOptions {
 const DEFAULT_MAX_COUNT = 2000;
 const DEFAULT_BATCH_SIZE = 50;
 const DEFAULT_YIELD_INTERVAL = 3;
-const SCAN_IN_PROGRESS_KEY = "@rizqi/sms_scan_in_progress";
+const SCAN_IN_PROGRESS_KEY = "@monyvi/sms_scan_in_progress";
 /** Default to 3 months ago for both initial and full resync. */
 const THREE_MONTHS_MS = 90 * 24 * 60 * 60 * 1000;
 

@@ -1,7 +1,7 @@
 # Implementation Plan: Refine AI SMS Parsing Accuracy
 
 **Branch**: `010-refine-ai-parsing` | **Date**: 2026-02-28 | **Spec**:
-[spec.md](file:///e:/Work/My%20Projects/Rizqi/specs/010-refine-ai-parsing/spec.md)  
+[spec.md](file:///e:/Work/My%20Projects/Monyvi/specs/010-refine-ai-parsing/spec.md)  
 **Input**:
 Feature specification from `/specs/010-refine-ai-parsing/spec.md`
 
@@ -46,7 +46,7 @@ _GATE: All 7 principles pass._
 
 ### Component 1: Edge Function — Prompt & Schema
 
-#### [MODIFY] [index.ts](file:///e:/Work/My%20Projects/Rizqi/supabase/functions/parse-sms/index.ts)
+#### [MODIFY] [index.ts](file:///e:/Work/My%20Projects/Monyvi/supabase/functions/parse-sms/index.ts)
 
 **`buildResponseSchema` (line 96–209)**:
 
@@ -75,7 +75,7 @@ builder call.
 
 ### Component 2: Client Service — AI Response Types & Mapping
 
-#### [MODIFY] [ai-sms-parser-service.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/services/ai-sms-parser-service.ts)
+#### [MODIFY] [ai-sms-parser-service.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/services/ai-sms-parser-service.ts)
 
 **Interface changes**:
 
@@ -108,7 +108,7 @@ builder call.
 
 ### Component 3: Deterministic Account Suggestions
 
-#### [MODIFY] [build-initial-account-state.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/utils/build-initial-account-state.ts)
+#### [MODIFY] [build-initial-account-state.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/utils/build-initial-account-state.ts)
 
 **New function — `buildDeterministicSuggestions`**:
 
@@ -153,32 +153,32 @@ The following files currently thread `accountSuggestions` from the AI result to
 `AccountSetupStep`. Since suggestions are now computed inside
 `buildInitialAccountState`, this threading is removed:
 
-#### [MODIFY] [sms-sync-service.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/services/sms-sync-service.ts)
+#### [MODIFY] [sms-sync-service.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/services/sms-sync-service.ts)
 
 - Remove `accountSuggestions` from the `SmsSyncResult` interface
 - Remove `accountSuggestions` from the returned result object
 
-#### [MODIFY] [SmsScanContext.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/context/SmsScanContext.tsx)
+#### [MODIFY] [SmsScanContext.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/context/SmsScanContext.tsx)
 
 - Remove `accountSuggestions` state and setter from context
 
-#### [MODIFY] [useSmsScan.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/hooks/useSmsScan.ts)
+#### [MODIFY] [useSmsScan.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/hooks/useSmsScan.ts)
 
 - Remove `accountSuggestions` state variable and setter
 - Remove from return object
 
-#### [MODIFY] [AccountSetupStep.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/sms-sync/AccountSetupStep.tsx)
+#### [MODIFY] [AccountSetupStep.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/sms-sync/AccountSetupStep.tsx)
 
 - Remove `accountSuggestions` from props interface
 - Update `buildInitialAccountState` call: `(transactions, db)` instead of
   `(transactions, accountSuggestions, db)`
 - Remove from `useEffect` dependency array
 
-#### [MODIFY] [sms-review.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/app/sms-review.tsx)
+#### [MODIFY] [sms-review.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/app/sms-review.tsx)
 
 - Remove `accountSuggestions` prop from `AccountSetupStep` usage
 
-#### [MODIFY] [sms-scan.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/app/sms-scan.tsx)
+#### [MODIFY] [sms-scan.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/app/sms-scan.tsx)
 
 - Remove `setCtxAccountSuggestions` call
 
@@ -186,7 +186,7 @@ The following files currently thread `accountSuggestions` from the AI result to
 
 ### Component 5: UI — Confidence Tag
 
-#### [MODIFY] [SmsTransactionItem.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/components/sms-sync/SmsTransactionItem.tsx)
+#### [MODIFY] [SmsTransactionItem.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/components/sms-sync/SmsTransactionItem.tsx)
 
 Add confidence tag chip (bottom row, after category chip):
 

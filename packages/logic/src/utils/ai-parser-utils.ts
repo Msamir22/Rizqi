@@ -15,7 +15,7 @@
  * @module ai-parser-utils
  */
 
-import type { Category, CurrencyType, TransactionType } from "@rizqi/db";
+import type { Category, CurrencyType, TransactionType } from "@monyvi/db";
 import { SUPPORTED_CURRENCIES } from "./currency-data";
 
 // Constants

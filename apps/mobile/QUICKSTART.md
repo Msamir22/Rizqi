@@ -1,4 +1,4 @@
-# Rizqi Mobile App - Quick Start Guide
+# Monyvi Mobile App - Quick Start Guide
 
 ## Prerequisites
 

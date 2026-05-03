@@ -64,7 +64,7 @@ const mockFindAndObserve = jest.fn(() => ({
   }),
 }));
 
-jest.mock("@rizqi/db", () => ({
+jest.mock("@monyvi/db", () => ({
   database: {
     get: jest.fn(() => ({
       findAndObserve: mockFindAndObserve,

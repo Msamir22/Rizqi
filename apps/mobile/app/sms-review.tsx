@@ -29,7 +29,7 @@ import {
   flushQueuedTransactions,
   setReviewingActive,
 } from "@/services/sms-live-detection-handler";
-import type { ReviewableTransaction } from "@rizqi/logic";
+import type { ReviewableTransaction } from "@monyvi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";

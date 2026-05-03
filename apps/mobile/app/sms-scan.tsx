@@ -17,7 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
-import { SUPPORTED_CURRENCIES, type ParsedSmsTransaction } from "@rizqi/logic";
+import { SUPPORTED_CURRENCIES, type ParsedSmsTransaction } from "@monyvi/logic";
 import { SmsScanProgress } from "@/components/sms-sync/SmsScanProgress";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAllCategories } from "@/context/CategoriesContext";

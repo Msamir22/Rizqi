@@ -17,7 +17,7 @@
  */
 
 import { AppRegistry } from "react-native";
-import { RegexSmsParser, computeSmsHash } from "@rizqi/logic";
+import { RegexSmsParser, computeSmsHash } from "@monyvi/logic";
 import { handleDetectedSms } from "./sms-live-detection-handler";
 
 // ---------------------------------------------------------------------------

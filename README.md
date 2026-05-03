@@ -1,4 +1,4 @@
-# Rizqi Project
+# Monyvi Project
 
 A friction-less mobile money tracker for the Egyptian market.
 
@@ -19,7 +19,7 @@ A friction-less mobile money tracker for the Egyptian market.
 ## Project Structure
 
 ```
-/rizqi
+/monyvi
   /apps/mobile - Expo App
   /packages
     /logic - Parsers and utilities (ready)
@@ -72,23 +72,23 @@ npm start
 
 ## Shared Packages (Ready for Mobile)
 
-### @rizqi/logic
+### @monyvi/logic
 
 - Voice parser (Egyptian Arabic + English)
 - Notification parser (InstaPay, debit cards)
 - Category detection
 - Currency conversion
 
-### @rizqi/db
+### @monyvi/db
 
 - WatermelonDB schema
 - Account & Transaction models
 
-### @rizqi/ui
+### @monyvi/ui
 
 - Egyptian color palette:
   - Nile Green #065F46
-  - Rizqi Mint #10B981
+  - Monyvi Mint #10B981
   - Expense Red #EF4444
   - Pharaonic Gold #D97706
 

@@ -19,7 +19,7 @@ import {
   accountFormSchema,
   type AccountFormData,
 } from "@/validation/account-validation";
-import { Account, BankDetails, type CurrencyType, database } from "@rizqi/db";
+import { Account, BankDetails, type CurrencyType, database } from "@monyvi/db";
 import { Q } from "@nozbe/watermelondb";
 import { queryOwned } from "./user-data-access";
 

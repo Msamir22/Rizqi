@@ -15,7 +15,7 @@
  */
 
 import { Platform } from "react-native";
-import type { SmsMessage } from "@rizqi/logic";
+import type { SmsMessage } from "@monyvi/logic";
 
 // ---------------------------------------------------------------------------
 // Types

@@ -48,8 +48,8 @@ during the brainstorm phase.
 
 ### Cross-references
 
-- Product scope: [Issue #246](https://github.com/Msamir22/Rizqi/issues/246)
-- Prerequisite: [Issue #226](https://github.com/Msamir22/Rizqi/issues/226)
+- Product scope: [Issue #246](https://github.com/Msamir22/Monyvi/issues/246)
+- Prerequisite: [Issue #226](https://github.com/Msamir22/Monyvi/issues/226)
 - Closed/absorbed: #242, #243, #245
 - Visual design: [`design/slides-concepts.md`](../design/slides-concepts.md)
 - Business decisions:

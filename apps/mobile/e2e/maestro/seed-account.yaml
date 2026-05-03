@@ -1,4 +1,4 @@
-appId: com.rizqi.app
+appId: com.monyvi.app
 
 ---
 
@@ -7,7 +7,7 @@ appId: com.rizqi.app
 
 # Step 1: Launch app
 - launchApp:
-    appId: com.rizqi.app
+    appId: com.monyvi.app
     clearState: false
 
 - waitForAnimationToEnd

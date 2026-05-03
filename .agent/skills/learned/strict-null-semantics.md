@@ -1,7 +1,7 @@
 ---
 name: strict-null-semantics
 description:
-  Rizqi architectural rule for handling unselected or pending entity IDs. Never
+  Monyvi architectural rule for handling unselected or pending entity IDs. Never
   coerce nullable IDs to empty strings just to satisfy validation or type
   checkers.
 ---
@@ -9,8 +9,8 @@ description:
 # Strict Null Semantics for Entity IDs
 
 When managing entity IDs (such as `accountId`, `categoryId`, etc.) across the
-UI, state hooks, and validation layers in Rizqi, you must adhere strictly to the
-true domain model.
+UI, state hooks, and validation layers in Monyvi, you must adhere strictly to
+the true domain model.
 
 ## Core Directives
 

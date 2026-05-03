@@ -46,7 +46,7 @@ export interface OnboardingFlags {
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://rizqi.app/schemas/onboarding_flags.v1.json",
+  "$id": "https://monyvi.app/schemas/onboarding_flags.v1.json",
   "title": "OnboardingFlags",
   "type": "object",
   "additionalProperties": false,
@@ -178,7 +178,7 @@ ALTER TABLE profiles DROP COLUMN IF EXISTS onboarding_flags;
 
 ### 6.3 Existing rows behavior
 
-Because Rizqi has no production users, there are no existing rows to worry
+Because Monyvi has no production users, there are no existing rows to worry
 about. In test/staging environments, existing rows pick up the default
 `'{}'::JSONB` atomically during the `ADD COLUMN`. No separate backfill script
 needed.

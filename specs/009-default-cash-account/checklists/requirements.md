@@ -3,7 +3,7 @@
 **Purpose**: Validate specification completeness and quality before proceeding
 to planning  
 **Created**: 2026-02-26  
-**Feature**: [spec.md](file:///e:/Work/My%20Projects/Rizqi/specs/009-default-cash-account/spec.md)
+**Feature**: [spec.md](file:///e:/Work/My%20Projects/Monyvi/specs/009-default-cash-account/spec.md)
 
 ## Content Quality
 

@@ -24,8 +24,8 @@ import {
 import type { AccountMatch } from "@/services/sms-account-matcher";
 import type { TransactionEdits } from "@/services/sms-edit-modal-service";
 import { ensureCashAccount } from "@/services/account-service";
-import type { ReviewableTransaction } from "@rizqi/logic";
-import type { CurrencyType } from "@rizqi/db";
+import type { ReviewableTransaction } from "@monyvi/logic";
+import type { CurrencyType } from "@monyvi/db";
 
 // ---------------------------------------------------------------------------
 // Types

@@ -2,7 +2,7 @@
  * Parsers Barrel Exports
  *
  * Re-exports all SMS parser modules for clean imports from
- * `@rizqi/logic` or `packages/logic/src/parsers`.
+ * `@monyvi/logic` or `packages/logic/src/parsers`.
  *
  * @module parsers/index
  */

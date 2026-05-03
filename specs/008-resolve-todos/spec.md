@@ -273,7 +273,7 @@ drilldown displays converted totals in USD.
 - The user's preferred currency is provided by the `usePreferredCurrency` hook
   (reads from Profile → device locale → USD fallback).
 - Market rate conversion utilities already exist or will be provided by
-  `@rizqi/logic`.
+  `@monyvi/logic`.
 - The `parse-voice` edge function should also receive the counterparty rename
   for consistency, even though the primary TODOs are in `parse-sms`.
 - Existing locally stored transactions with the `merchant` field (from previous

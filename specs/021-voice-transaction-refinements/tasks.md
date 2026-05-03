@@ -61,8 +61,8 @@ returns `ParsedVoiceTransaction` objects. SMS parser returns
 ### Implementation for User Story 2
 
 - [x] T007 [US2] Import shared utils (`normalizeType`, `VALID_TYPES`,
-      `parseAiDate`, `clampConfidence`, `parseCategory`) from `@rizqi/logic` and
-      remove local duplicates (`normalizeType`, `VALID_TYPES`,
+      `parseAiDate`, `clampConfidence`, `parseCategory`) from `@monyvi/logic`
+      and remove local duplicates (`normalizeType`, `VALID_TYPES`,
       `DATE_ONLY_REGEX`, `parseAiDate`) in
       `apps/mobile/services/ai-voice-parser-service.ts`
 - [x] T008 [US2] Tighten `AiVoiceTransactionSchema` Zod schema — remove
@@ -83,7 +83,7 @@ returns `ParsedVoiceTransaction` objects. SMS parser returns
       `{ transactions: readonly ParsedVoiceTransaction[], transcript: string, originalTranscript: string, detectedLanguage: string }`
       in `apps/mobile/services/ai-voice-parser-service.ts`
 - [ ] T012 [P] [US2] Import `normalizeType`, `VALID_TYPES`, `parseCategory` from
-      `@rizqi/logic` and remove local duplicates in
+      `@monyvi/logic` and remove local duplicates in
       `apps/mobile/services/ai-sms-parser-service.ts`
 - [ ] T013 [US2] Update `TransactionReview` component props from
       `ParsedSmsTransaction[]` to `ReviewableTransaction[]` — only reference

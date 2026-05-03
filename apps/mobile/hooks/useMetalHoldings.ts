@@ -17,7 +17,7 @@
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
 
-import { Asset, AssetMetal, database } from "@rizqi/db";
+import { Asset, AssetMetal, database } from "@monyvi/db";
 
 import {
   type MetalHolding,

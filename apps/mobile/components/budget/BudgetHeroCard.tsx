@@ -17,8 +17,8 @@ import { Text, TouchableOpacity, View, type ViewStyle } from "react-native";
 import { useTranslation } from "react-i18next";
 import { CircularProgress } from "./CircularProgress";
 import type { BudgetWithMetrics } from "@/hooks/useBudgets";
-import { formatCurrency } from "@rizqi/logic";
-import type { CurrencyType } from "@rizqi/db";
+import { formatCurrency } from "@monyvi/logic";
+import type { CurrencyType } from "@monyvi/db";
 
 // ---------------------------------------------------------------------------
 // Types

@@ -16,7 +16,7 @@ import {
   formatExchangeRate,
   formatConversionPreview,
 } from "../currency";
-import type { CurrencyType, MarketRate } from "@rizqi/db";
+import type { CurrencyType, MarketRate } from "@monyvi/db";
 
 // =============================================================================
 // Helpers

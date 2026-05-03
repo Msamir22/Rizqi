@@ -29,8 +29,8 @@ import {
   Transaction,
   Transfer,
   type CurrencyType,
-} from "@rizqi/db";
-import type { ReviewableTransaction } from "@rizqi/logic";
+} from "@monyvi/db";
+import type { ReviewableTransaction } from "@monyvi/logic";
 import { Q, type Model } from "@nozbe/watermelondb";
 import { ensureCashAccount } from "./account-service";
 import { getCurrentUserId } from "./supabase";

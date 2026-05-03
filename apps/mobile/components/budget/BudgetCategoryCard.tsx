@@ -15,8 +15,8 @@
 import { palette } from "@/constants/colors";
 import { useCategoryLookup } from "@/context/CategoriesContext";
 import type { BudgetWithMetrics } from "@/hooks/useBudgets";
-import type { CurrencyType } from "@rizqi/db";
-import { formatCurrency } from "@rizqi/logic";
+import type { CurrencyType } from "@monyvi/db";
+import { formatCurrency } from "@monyvi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Text, TouchableOpacity, View, type ViewStyle } from "react-native";

@@ -1,7 +1,7 @@
 # Implementation Plan: Default Cash Account
 
 **Branch**: `009-default-cash-account` | **Date**: 2026-02-26 | **Spec**:
-[spec.md](file:///e:/Work/My%20Projects/Rizqi/specs/009-default-cash-account/spec.md)
+[spec.md](file:///e:/Work/My%20Projects/Monyvi/specs/009-default-cash-account/spec.md)
 **Input**: Feature specification from `/specs/009-default-cash-account/spec.md`
 
 ## Summary
@@ -89,15 +89,15 @@ Extract `detectCurrencyFromDevice()` from
 `packages/logic/`. This function is pure (no React imports) and will be needed
 by the new `account-service.ts` which has no access to hooks.
 
-#### [NEW] [currency-detection.ts](file:///e:/Work/My%20Projects/Rizqi/packages/logic/src/utils/currency-detection.ts)
+#### [NEW] [currency-detection.ts](file:///e:/Work/My%20Projects/Monyvi/packages/logic/src/utils/currency-detection.ts)
 
 - Export `detectCurrencyFromDevice(): CurrencyType` — uses `expo-localization`
   `getLocales()`, checks against `SUPPORTED_CURRENCIES`, falls back to `"USD"`.
 - Export from `packages/logic/src/index.ts` barrel.
 
-#### [MODIFY] [usePreferredCurrency.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/hooks/usePreferredCurrency.ts)
+#### [MODIFY] [usePreferredCurrency.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/hooks/usePreferredCurrency.ts)
 
-- Import `detectCurrencyFromDevice` from `@rizqi/logic` instead of defining
+- Import `detectCurrencyFromDevice` from `@monyvi/logic` instead of defining
   locally.
 - Delete the local `detectCurrencyFromDevice` function.
 
@@ -107,7 +107,7 @@ by the new `account-service.ts` which has no access to hooks.
 
 New service file providing Cash account operations.
 
-#### [NEW] [account-service.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/services/account-service.ts)
+#### [NEW] [account-service.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/services/account-service.ts)
 
 Two exported functions:
 
@@ -126,7 +126,7 @@ Two exported functions:
    - Returns `accountId` or `null`.
    - Used by SMS batch save to look up (not create) Cash account.
 
-#### [MODIFY] [index.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/services/index.ts)
+#### [MODIFY] [index.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/services/index.ts)
 
 - Re-export `ensureCashAccount` and `findCashAccount` from `account-service.ts`.
 
@@ -136,7 +136,7 @@ Two exported functions:
 
 Wire `ensureCashAccount` into both onboarding completion paths.
 
-#### [MODIFY] [onboarding.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/app/onboarding.tsx)
+#### [MODIFY] [onboarding.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/app/onboarding.tsx)
 
 - Import `ensureCashAccount` from `@/services/account-service` and
   `getCurrentUserId` from `@/services/supabase`.
@@ -149,7 +149,7 @@ Wire `ensureCashAccount` into both onboarding completion paths.
 - The cash account creation is **fire-and-forget** — doesn't block navigation.
   Errors are swallowed silently (FR-005: retried on next launch).
 
-#### [MODIFY] [index.tsx](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/app/index.tsx)
+#### [MODIFY] [index.tsx](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/app/index.tsx)
 
 - In `initializeApp()`, after `ensureAuthenticated()`:
   1. Get `userId` and call `ensureCashAccount(userId)`.
@@ -181,7 +181,7 @@ Show the playful toast after Cash account creation.
 
 Remove lazy creation and use lookup instead.
 
-#### [MODIFY] [batch-sms-transactions.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/services/batch-sms-transactions.ts)
+#### [MODIFY] [batch-sms-transactions.ts](file:///e:/Work/My%20Projects/Monyvi/apps/mobile/services/batch-sms-transactions.ts)
 
 - **Delete** `findOrCreateCashAccount()` function (lines 83-114).
 - **Replace** ATM withdrawal routing logic (lines 188-193):

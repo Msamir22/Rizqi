@@ -1,4 +1,4 @@
-// Shared types and interfaces for Rizqi
+// Shared types and interfaces for Monyvi
 
 export * from "./accounts/accounts-calculations";
 export * from "./analytics";

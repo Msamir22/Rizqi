@@ -18,10 +18,10 @@ Supersedes closed issues #242 and #243 and bundles #245. Design artifacts
   dismissed, mic-button tooltip seen) be stored? → A: A single per-profile
   onboarding-flags record holding the markers as boolean keys, kept alongside
   the existing profile row. Follows the same pattern already used for other
-  per-profile preference bundles in Rizqi, so new tooltip flags can be added
+  per-profile preference bundles in Monyvi, so new tooltip flags can be added
   later without schema migrations.
 - Q: Should this feature add structured analytics/telemetry for the onboarding
-  funnel (pitch → auth → Currency → tooltips)? → A: No. Rizqi is still in dev
+  funnel (pitch → auth → Currency → tooltips)? → A: No. Monyvi is still in dev
   phase with no production users, so no funnel telemetry is shipped with this
   feature. Success criteria that depended on quantitative measurement are
   softened to internal-testing verification (see SC-003, SC-004).
@@ -49,9 +49,9 @@ Supersedes closed issues #242 and #243 and bundles #245. Design artifacts
 
 ### User Story 1 — First-time visitor sees the pitch before committing (Priority: P1)
 
-A user opens Rizqi for the very first time on their device. They have never
+A user opens Monyvi for the very first time on their device. They have never
 signed up. Before being asked to create an account, they see a short pitch that
-explains what Rizqi does — voice-based transaction entry, bank-SMS auto-import,
+explains what Monyvi does — voice-based transaction entry, bank-SMS auto-import,
 live exchange rates, gold/silver tracking. They can absorb the pitch in the
 language their phone is already set to. If they change their mind about the
 language, they can switch it from a small corner affordance. At the end of the
@@ -60,9 +60,9 @@ carries the same visual tone as the pitch.
 
 **Why this priority**: This is the single conversion moment for unauthenticated
 visitors. Today the pitch is hidden behind the auth wall; a visitor has to
-create an account before understanding what Rizqi is. That is a conversion leak.
-Surfacing the pitch pre-auth, in the user's own language, is the feature's most
-direct lever on new-user acquisition.
+create an account before understanding what Monyvi is. That is a conversion
+leak. Surfacing the pitch pre-auth, in the user's own language, is the feature's
+most direct lever on new-user acquisition.
 
 **Independent Test**: Fresh install → open app → verify pre-auth slides appear
 in the device's locale (or English fallback); swipe or skip to the end; confirm
@@ -792,15 +792,15 @@ Guide card.
 
 ## Related
 
-- Issue [#246](https://github.com/Msamir22/Rizqi/issues/246) — the canonical
+- Issue [#246](https://github.com/Msamir22/Monyvi/issues/246) — the canonical
   product issue for this restructure (this spec implements it)
-- Issue [#226](https://github.com/Msamir22/Rizqi/issues/226) — prerequisite
+- Issue [#226](https://github.com/Msamir22/Monyvi/issues/226) — prerequisite
   (schema + initial routing)
-- Issue [#242](https://github.com/Msamir22/Rizqi/issues/242) — closed, absorbed
+- Issue [#242](https://github.com/Msamir22/Monyvi/issues/242) — closed, absorbed
   (sign-out during onboarding)
-- Issue [#243](https://github.com/Msamir22/Rizqi/issues/243) — closed, absorbed
+- Issue [#243](https://github.com/Msamir22/Monyvi/issues/243) — closed, absorbed
   (back navigation between onboarding steps)
-- Issue [#245](https://github.com/Msamir22/Rizqi/issues/245) — closed, bundled
+- Issue [#245](https://github.com/Msamir22/Monyvi/issues/245) — closed, bundled
   (cash-account tooltip)
 - Design artifacts:
   [`specs/026-onboarding-restructure/design/slides-concepts.md`](./design/slides-concepts.md)

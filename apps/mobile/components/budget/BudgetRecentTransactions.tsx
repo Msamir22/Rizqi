@@ -8,8 +8,8 @@
 
 import React from "react";
 import { Text, View } from "react-native";
-import type { Transaction } from "@rizqi/db";
-import { formatCurrency } from "@rizqi/logic";
+import type { Transaction } from "@monyvi/db";
+import { formatCurrency } from "@monyvi/logic";
 import { palette } from "@/constants/colors";
 import { useCategoryLookup } from "@/context/CategoriesContext";
 import {

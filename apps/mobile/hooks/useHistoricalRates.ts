@@ -8,8 +8,8 @@
  * @module useHistoricalRates
  */
 
-import { database, type CurrencyType, MarketRate } from "@rizqi/db";
-import { convertCurrency, formatCurrency } from "@rizqi/logic";
+import { database, type CurrencyType, MarketRate } from "@monyvi/db";
+import { convertCurrency, formatCurrency } from "@monyvi/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
 

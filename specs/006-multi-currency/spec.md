@@ -24,7 +24,7 @@ currency."
 
 ### User Story 1 - View Totals in Preferred Currency (Priority: P1)
 
-A user opens the Rizqi app and sees all aggregated financial data — total
+A user opens the Monyvi app and sees all aggregated financial data — total
 balance, total assets, net worth — displayed in their preferred currency. An
 Egyptian user with USD and EUR accounts sees their total balance converted to
 EGP. A user who later relocates or prefers USD sees the same data displayed in
@@ -111,7 +111,7 @@ tolerance (±0.01%).
 A user who owns gold assets sees their gold valuations (and other precious
 metals) displayed in their preferred currency, not hardcoded to EGP.
 
-**Why this priority**: Gold tracking is a core Rizqi feature for the Egyptian
+**Why this priority**: Gold tracking is a core Monyvi feature for the Egyptian
 market. Users who set USD as their preferred currency need metal valuations in
 USD.
 

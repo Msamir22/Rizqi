@@ -3,7 +3,7 @@
 **Purpose**: Validate specification completeness and quality before proceeding
 to planning  
 **Created**: 2026-02-21  
-**Feature**: [spec.md](file:///e:/Work/My%20Projects/Rizqi/specs/007-sms-transaction-sync/spec.md)
+**Feature**: [spec.md](file:///e:/Work/My%20Projects/Monyvi/specs/007-sms-transaction-sync/spec.md)
 
 ## Content Quality
 

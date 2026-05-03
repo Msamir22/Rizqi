@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
- * One-shot rename: Astik -> Rizqi across source + configs + docs.
+ * One-shot rename: RIZQI -> Monyvi across source + configs + docs.
  *
  * Skips: node_modules, .git, lockfiles, binary assets, ios/android generated
  * dirs, build outputs, and *.svg (we already renamed SVG asset files).
  *
  * Preserves case:
- *   Astik  -> Rizqi
- *   astik  -> rizqi
- *   ASTIK  -> RIZQI
+ *   Rizqi  -> Monyvi
+ *   rizqi  -> monyvi
+ *   RIZQI  -> MONYVI
  */
 const fs = require("fs");
 const path = require("path");
@@ -35,7 +35,7 @@ const SKIP_FILES = new Set([
   "package-lock.json",
   "yarn.lock",
   "pnpm-lock.yaml",
-  "rename-astik-to-rizqi.js",
+  "rename-astik-to-monyvi.js",
 ]);
 const EXTS = new Set([
   ".ts",
@@ -59,13 +59,13 @@ const EXTS = new Set([
 
 // Order matters: apply most specific first.
 const REPLACEMENTS = [
-  { re: /@astik\//g, to: "@rizqi/" },
-  { re: /com\.msamir22\.astikmobile/g, to: "com.rizqi.app" },
-  { re: /com\.astik\.app/g, to: "com.rizqi.app" },
-  { re: /com\.astik\./g, to: "com.rizqi." },
-  { re: /ASTIK/g, to: "RIZQI" },
-  { re: /Astik/g, to: "Rizqi" },
-  { re: /astik/g, to: "rizqi" },
+  { re: /@rizqi\//g, to: "@monyvi/" },
+  { re: /com\.msamir22\.rizqimobile/g, to: "com.monyvi.app" },
+  { re: /com\.rizqi\.app/g, to: "com.monyvi.app" },
+  { re: /com\.rizqi\./g, to: "com.monyvi." },
+  { re: /RIZQI/g, to: "MONYVI" },
+  { re: /Rizqi/g, to: "Monyvi" },
+  { re: /rizqi/g, to: "monyvi" },
 ];
 
 let touched = 0;

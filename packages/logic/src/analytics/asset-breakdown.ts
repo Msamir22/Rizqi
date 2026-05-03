@@ -4,7 +4,7 @@
  * All values are computed in USD (universal base currency)
  */
 
-import type { Account, AssetMetal, MarketRate } from "@rizqi/db";
+import type { Account, AssetMetal, MarketRate } from "@monyvi/db";
 import { convertCurrency } from "../utils/currency";
 import { MetalPriceUnavailableError, getMetalPriceUsd } from "../utils/metal";
 

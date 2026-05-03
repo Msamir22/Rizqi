@@ -1,4 +1,4 @@
-# Rizqi Mobile App
+# Monyvi Mobile App
 
 React Native mobile app built with Expo.
 

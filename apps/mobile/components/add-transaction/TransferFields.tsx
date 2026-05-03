@@ -1,10 +1,10 @@
 import { palette } from "@/constants/colors";
-import { Account } from "@rizqi/db";
+import { Account } from "@monyvi/db";
 import { Ionicons } from "@expo/vector-icons";
 import { Text, TouchableOpacity, View } from "react-native";
 import { useEffect, useMemo, useState } from "react";
 import { AccountSelectorModal } from "../modals/AccountSelectorModal";
-import { formatAmountInput } from "@rizqi/logic";
+import { formatAmountInput } from "@monyvi/logic";
 import { useTranslation } from "react-i18next";
 
 interface TransferFieldsProps {

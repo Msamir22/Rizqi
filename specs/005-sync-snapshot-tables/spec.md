@@ -11,7 +11,7 @@ queries, and restructure the breakdown JSONB column"
 
 ### User Story 1 - Net Worth Comparison Offline (Priority: P1)
 
-A user opens the Rizqi app while offline (no internet) and views their
+A user opens the Monyvi app while offline (no internet) and views their
 dashboard. They see a net worth comparison card showing how their net worth has
 changed compared to last month. Previously, this required an API call to the
 server which would fail offline. Now, the comparison data is available from the

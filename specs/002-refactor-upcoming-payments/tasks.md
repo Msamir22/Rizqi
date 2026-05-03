@@ -71,7 +71,7 @@ files.
       `apps/mobile/components/dashboard/upcoming-payments/FeaturedPaymentCard.tsx`
       — move from `UpcomingPayments.tsx` lines 333-379. Import
       `FeaturedPaymentCardProps` from `./types`. Import `getPaymentIcon` from
-      `@/utils/recurring-helpers`. Import `formatCurrency` from `@rizqi/logic`.
+      `@/utils/recurring-helpers`. Import `formatCurrency` from `@monyvi/logic`.
       Import `palette` from `@/constants/colors`. Replace `formatDueDate` calls
       with `getDueText` from `@/utils/dateHelpers` (pass `payment.nextDueDate`
       instead of `payment.daysUntilDue`).

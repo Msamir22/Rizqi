@@ -54,7 +54,7 @@ jest.mock("expo-router", () => ({
   },
 }));
 
-jest.mock("@rizqi/db", () => ({ database: {} }));
+jest.mock("@monyvi/db", () => ({ database: {} }));
 
 jest.mock("@/providers/SyncProvider", () => ({
   useSync: (): unknown => mockUseSync(),
