@@ -53,6 +53,9 @@ const AR_LATIN_KEY_EXCEPTIONS = new Set<string>([
   // Add entries as: "namespace.flatKey"
 ]);
 
+/** Brand terms that stay untranslated across locales and source labels. */
+const BRAND_TEXT_EXCEPTIONS = new Set(["Monyvi"]);
+
 /**
  * Short Latin values (currency codes, brand names) that are legitimate
  * in AR files regardless of which key uses them.
@@ -64,7 +67,7 @@ const AR_LATIN_SHORT_ALLOWLIST = new Set([
   "GBP",
   "SAR",
   "AED",
-  "Monyvi",
+  ...BRAND_TEXT_EXCEPTIONS,
 ]);
 
 /** Regex for purely numeric/placeholder values like "0.00", "0.0" */
@@ -132,6 +135,10 @@ function hasArabicScript(str: string): boolean {
 
 function hasInterpolation(str: string): boolean {
   return /\{\{.*?\}\}/.test(str);
+}
+
+function isBrandTextException(value: string): boolean {
+  return BRAND_TEXT_EXCEPTIONS.has(value.trim());
 }
 
 // ---------------------------------------------------------------------------
@@ -294,6 +301,7 @@ function scanMultilineText(
     // Skip single-line matches — Pass 2 handles those
     if (!m[0].includes("\n")) continue;
     const captured = m[1].trim();
+    if (isBrandTextException(captured)) continue;
     // Skip if the content is already wrapped in t()
     if (/^\{?\s*t\s*\(/.test(captured)) continue;
     // Skip i18n-ignore
@@ -332,7 +340,7 @@ function scanLinePatterns(
     if (textMatch) {
       // Only flag if the content is NOT a t() call
       const inner = textMatch[1].trim();
-      if (!/^\{?\s*t\s*\(/.test(inner)) {
+      if (!isBrandTextException(inner) && !/^\{?\s*t\s*\(/.test(inner)) {
         addFinding(relativePath, lineNum, `<Text>${inner}</Text>`, errors);
       }
     }
@@ -342,18 +350,24 @@ function scanLinePatterns(
       /placeholder=["']([A-Z][A-Za-z ]{2,})["']/
     );
     if (placeholderMatch) {
-      addFinding(
-        relativePath,
-        lineNum,
-        `placeholder="${placeholderMatch[1]}"`,
-        errors
-      );
+      const placeholder = placeholderMatch[1];
+      if (!isBrandTextException(placeholder)) {
+        addFinding(
+          relativePath,
+          lineNum,
+          `placeholder="${placeholder}"`,
+          errors
+        );
+      }
     }
 
     // Pattern 3: title="English text"
     const titleMatch = line.match(/title=["']([A-Z][A-Za-z ]{2,})["']/);
     if (titleMatch) {
-      addFinding(relativePath, lineNum, `title="${titleMatch[1]}"`, errors);
+      const title = titleMatch[1];
+      if (!isBrandTextException(title)) {
+        addFinding(relativePath, lineNum, `title="${title}"`, errors);
+      }
     }
 
     // Pattern 4: accessibilityLabel="English text"
@@ -361,12 +375,15 @@ function scanLinePatterns(
       /accessibilityLabel=["']([A-Z][A-Za-z ]{2,})["']/
     );
     if (a11yLabelMatch) {
-      addFinding(
-        relativePath,
-        lineNum,
-        `accessibilityLabel="${a11yLabelMatch[1]}"`,
-        errors
-      );
+      const accessibilityLabel = a11yLabelMatch[1];
+      if (!isBrandTextException(accessibilityLabel)) {
+        addFinding(
+          relativePath,
+          lineNum,
+          `accessibilityLabel="${accessibilityLabel}"`,
+          errors
+        );
+      }
     }
 
     // Pattern 5: accessibilityHint="English text"
@@ -374,34 +391,43 @@ function scanLinePatterns(
       /accessibilityHint=["']([A-Z][A-Za-z ]{2,})["']/
     );
     if (a11yHintMatch) {
-      addFinding(
-        relativePath,
-        lineNum,
-        `accessibilityHint="${a11yHintMatch[1]}"`,
-        errors
-      );
+      const accessibilityHint = a11yHintMatch[1];
+      if (!isBrandTextException(accessibilityHint)) {
+        addFinding(
+          relativePath,
+          lineNum,
+          `accessibilityHint="${accessibilityHint}"`,
+          errors
+        );
+      }
     }
 
     // Pattern 6: Alert.alert("English text"
     const alertMatch = line.match(/Alert\.alert\(\s*["']([A-Z][A-Za-z ]{2,})/);
     if (alertMatch) {
-      addFinding(
-        relativePath,
-        lineNum,
-        `Alert.alert("${alertMatch[1]}")`,
-        errors
-      );
+      const alertTitle = alertMatch[1];
+      if (!isBrandTextException(alertTitle)) {
+        addFinding(
+          relativePath,
+          lineNum,
+          `Alert.alert("${alertTitle}")`,
+          errors
+        );
+      }
     }
 
     // Pattern 7: throw new Error("English text"
     const throwMatch = line.match(/throw new Error\(["']([A-Z][A-Za-z ]{2,})/);
     if (throwMatch) {
-      addFinding(
-        relativePath,
-        lineNum,
-        `throw new Error("${throwMatch[1]}")`,
-        errors
-      );
+      const errorMessage = throwMatch[1];
+      if (!isBrandTextException(errorMessage)) {
+        addFinding(
+          relativePath,
+          lineNum,
+          `throw new Error("${errorMessage}")`,
+          errors
+        );
+      }
     }
   }
 }
