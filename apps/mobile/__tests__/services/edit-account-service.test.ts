@@ -23,7 +23,7 @@ interface MockModelRecord {
   [key: string]: unknown;
   update: jest.Mock;
   markAsDeleted: jest.Mock;
-  prepareUpdate: jest.Mock;
+  prepareUpdate: jest.Mock<MockModelRecord, [MockPreparedBuilder]>;
   prepareMarkAsDeleted: jest.Mock;
   bankDetails: { fetch: jest.Mock };
   transactions: { fetch: jest.Mock };
@@ -48,6 +48,8 @@ interface MockDbApi {
   readonly __getStore: (table: string) => Map<string, MockModelRecord>;
 }
 
+type MockPreparedBuilder = (record: MockModelRecord) => void;
+
 // ---------------------------------------------------------------------------
 // jest.mock declarations
 // ---------------------------------------------------------------------------
@@ -63,6 +65,10 @@ jest.mock("@monyvi/db", () => {
 
   function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null;
+  }
+
+  function isMockPreparedBuilder(value: unknown): value is MockPreparedBuilder {
+    return typeof value === "function";
   }
 
   function recordValue(record: MockModelRecord, columnName: string): unknown {
@@ -103,6 +109,13 @@ jest.mock("@monyvi/db", () => {
     return actual === expected;
   }
 
+  const stores: Record<string, Map<string, MockModelRecord>> = {};
+
+  function getStore(t: string): Map<string, MockModelRecord> {
+    if (!stores[t]) stores[t] = new Map();
+    return stores[t];
+  }
+
   /** Mutable model: .update(builder) mutates fields in place */
   function createModel(
     id: string,
@@ -121,15 +134,16 @@ jest.mock("@monyvi/db", () => {
     });
 
     // Default child relation mocks — return empty arrays
-    m.prepareUpdate = jest.fn(
-      (builder: (r: Record<string, unknown>) => void) => {
-        builder(m);
-        return m;
-      }
-    );
+    m.prepareUpdate = jest.fn((builder: MockPreparedBuilder) => {
+      m._preparedBuilder = builder;
+      return m;
+    });
 
     m.prepareMarkAsDeleted = jest.fn(() => {
-      m._preparedState = "markAsDeleted";
+      m._preparedBuilder = (record: MockModelRecord): void => {
+        record.deleted = true;
+        record._preparedState = "markAsDeleted";
+      };
       return m;
     });
 
@@ -142,11 +156,18 @@ jest.mock("@monyvi/db", () => {
     return m as MockModelRecord;
   }
 
-  const stores: Record<string, Map<string, MockModelRecord>> = {};
+  function applyPreparedBatch(
+    ...records: readonly MockModelRecord[]
+  ): Promise<void> {
+    for (const record of records) {
+      const preparedBuilder = record._preparedBuilder;
+      if (isMockPreparedBuilder(preparedBuilder)) {
+        preparedBuilder(record);
+        delete record._preparedBuilder;
+      }
+    }
 
-  function getStore(t: string): Map<string, MockModelRecord> {
-    if (!stores[t]) stores[t] = new Map();
-    return stores[t];
+    return Promise.resolve();
   }
 
   function createCollection(tableName: string): Record<string, jest.Mock> {
@@ -178,7 +199,7 @@ jest.mock("@monyvi/db", () => {
   const db = {
     write: jest.fn((cb: () => Promise<unknown>) => cb()),
     get: jest.fn((t: string) => createCollection(t)),
-    batch: jest.fn(() => Promise.resolve()),
+    batch: jest.fn(applyPreparedBatch),
   };
 
   return {
@@ -205,7 +226,7 @@ jest.mock("@monyvi/db", () => {
     __rewireMocks: () => {
       db.write.mockImplementation((cb: () => Promise<unknown>) => cb());
       db.get.mockImplementation((t: string) => createCollection(t));
-      db.batch.mockImplementation(() => Promise.resolve());
+      db.batch.mockImplementation(applyPreparedBatch);
     },
   };
 });
