@@ -170,7 +170,7 @@ const CURRENCY_SYMBOLS: Partial<Record<CurrencyType, string>> = {
  * BTC = 8 (satoshi precision).
  * Override per call via `minimumFractionDigits`/`maximumFractionDigits`.
  */
-const CURRENCY_PRECISION: Partial<Record<CurrencyType, number>> = {
+export const CURRENCY_PRECISION: Partial<Record<CurrencyType, number>> = {
   // Three-decimal currencies (ISO 4217)
   BHD: 3,
   KWD: 3,
@@ -181,7 +181,7 @@ const CURRENCY_PRECISION: Partial<Record<CurrencyType, number>> = {
 };
 
 /** Default precision for currencies not listed in CURRENCY_PRECISION (ISO 4217 standard) */
-const DEFAULT_PRECISION = 2;
+export const DEFAULT_PRECISION = 2;
 
 function hasNonZeroFractionAtPrecision(
   amount: number,
