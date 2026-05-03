@@ -25,6 +25,7 @@ import {
   type CurrencyType,
   type TransactionType,
 } from "@monyvi/db";
+import { roundForCurrency } from "@monyvi/logic";
 import { Q } from "@nozbe/watermelondb";
 import { t } from "i18next";
 import { logger } from "@/utils/logger";
@@ -259,7 +260,7 @@ export async function updateAccountWithinWriter(
   // Update account fields
   await existingAccount.update((acc) => {
     acc.name = data.name.trim();
-    acc.balance = data.balance;
+    acc.balance = roundForCurrency(data.balance, existingAccount.currency);
     acc.isDefault = data.isDefault;
   });
 
@@ -467,7 +468,7 @@ async function createBalanceAdjustmentTransactionWithinWriter(
   await transactionsCollection.create((tx) => {
     tx.userId = userId;
     tx.accountId = accountId;
-    tx.amount = Math.abs(difference);
+    tx.amount = roundForCurrency(Math.abs(difference), currency);
     tx.currency = currency;
     tx.type = transactionType;
     tx.categoryId = categoryId;

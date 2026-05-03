@@ -47,7 +47,7 @@
           "imageWidth": 200
         }
       ],
-      "expo-secure-store",
+      ["expo-secure-store", { "configureAndroidBackup": false }],
       "@react-native-community/datetimepicker",
       "expo-localization",
       [
@@ -58,6 +58,7 @@
         }
       ],
       "./plugins/withSmsBroadcastReceiver",
+      "./plugins/withDisableBackup",
       [
         "@sentry/react-native",
         {

@@ -1468,7 +1468,33 @@ Uses a 3-step **Chain of Responsibility** in `sms-account-resolver.ts`:
 
 ---
 
-## 21. Next Steps
+## 21. Android Auto-Backup
+
+**Decision:** Disabled entirely (`android:allowBackup="false"`) via Expo config
+plugin (`plugins/withDisableBackup.js`).
+
+**Rationale:**
+
+- Monyvi is offline-first with Supabase sync. Re-signing in restores all data —
+  Android backup provides no additional recovery value.
+- The WatermelonDB SQLite database contains sensitive financial data (account
+  balances, bank details with card last-4 digits, transaction history with
+  notes). Backing this to Google Drive exposes it without explicit user consent.
+- SecureStore (auth tokens) should never be backed up to cloud storage.
+- XML exclusion files (`fullBackupContent` / `dataExtractionRules`) are fragile
+  — every new table, SharedPreference, or file added in the future must be
+  manually excluded. A single omission silently re-opens the vulnerability.
+  Disabling backup entirely eliminates this maintenance burden.
+
+**Implementation:**
+
+- `expo-secure-store` plugin configured with
+  `{ "configureAndroidBackup": false }` to prevent it from injecting backup XML
+  references.
+- Custom config plugin (`withDisableBackup.js`) sets `allowBackup="false"` and
+  removes any backup-related attributes from the AndroidManifest.
+
+## 22. Next Steps
 
 1. ✅ Business discovery complete
 2. ⏳ Generate SQL migration file
