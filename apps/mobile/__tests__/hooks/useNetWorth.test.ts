@@ -1,21 +1,4 @@
-import React from "react";
-
-interface ReactTestRendererInstance {
-  unmount: () => void;
-}
-
-interface ReactTestRendererAct {
-  (callback: () => Promise<void>): Promise<void>;
-  (callback: () => void): void;
-}
-
-interface ReactTestRendererModule {
-  act: ReactTestRendererAct;
-  create: (element: React.ReactElement) => ReactTestRendererInstance;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
-const RTR: ReactTestRendererModule = require("react-test-renderer");
+import { renderHook } from "@testing-library/react-native";
 
 interface MockObserver<T> {
   readonly next: (result: readonly T[]) => void;
@@ -107,19 +90,6 @@ function buildObservable<T>(): MockObservable<T> {
   };
 }
 
-function renderHook(): { readonly unmount: () => void } {
-  const HookWrapper = (): React.JSX.Element | null => {
-    useNetWorth();
-    return null;
-  };
-
-  let renderer: ReactTestRendererInstance = { unmount: () => undefined };
-  RTR.act(() => {
-    renderer = RTR.create(React.createElement(HookWrapper));
-  });
-  return { unmount: () => renderer.unmount() };
-}
-
 beforeEach(() => {
   jest.clearAllMocks();
   mockAccountsObserveWithColumns.mockReturnValue(buildObservable());
@@ -128,7 +98,7 @@ beforeEach(() => {
 
 describe("useNetWorth", () => {
   it("scopes account reads to the current user", () => {
-    const { unmount } = renderHook();
+    const { unmount } = renderHook(() => useNetWorth());
 
     expect(mockQueryOwned).toHaveBeenCalledWith(
       mockAccountsCollection,
