@@ -60,44 +60,6 @@ BEGIN
 END;
 $$;
 
--- Recreate update_account_balance_on_transaction_change with DECIMAL(15,3)
-CREATE OR REPLACE FUNCTION public.update_account_balance_on_transaction_change()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-  affected_account_id UUID;
-  new_balance DECIMAL(15, 3);
-BEGIN
-  IF TG_OP = 'DELETE' THEN
-    affected_account_id := OLD.account_id;
-  ELSIF TG_OP = 'UPDATE' THEN
-    IF OLD.account_id != NEW.account_id THEN
-      new_balance := public.recalculate_account_balance(OLD.account_id);
-      UPDATE public.accounts
-      SET balance = new_balance, updated_at = NOW()
-      WHERE id = OLD.account_id;
-    END IF;
-    affected_account_id := NEW.account_id;
-  ELSE
-    affected_account_id := NEW.account_id;
-  END IF;
-
-  new_balance := public.recalculate_account_balance(affected_account_id);
-
-  UPDATE public.accounts
-  SET balance = new_balance, updated_at = NOW()
-  WHERE id = affected_account_id;
-
-  IF TG_OP = 'DELETE' THEN
-    RETURN OLD;
-  ELSE
-    RETURN NEW;
-  END IF;
-END;
-$$;
-
 -- Recreate recalculate_all_account_balances with DECIMAL(15,3)
 CREATE OR REPLACE FUNCTION public.recalculate_all_account_balances()
 RETURNS INTEGER
