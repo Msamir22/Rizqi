@@ -7,8 +7,10 @@ const workspaceRoot = path.resolve(projectRoot, "../..");
 
 const config = getSentryExpoConfig(projectRoot);
 
-// 1. Watch the whole monorepo so @monyvi/logic and @monyvi/db hot-reload.
-config.watchFolders = [workspaceRoot];
+// 1. Add the monorepo root while preserving Expo/Sentry defaults.
+config.watchFolders = Array.from(
+  new Set([...(config.watchFolders ?? []), workspaceRoot])
+);
 
 // 2. Resolve modules from the app first, then the workspace root.
 config.resolver.nodeModulesPaths = [
@@ -16,8 +18,8 @@ config.resolver.nodeModulesPaths = [
   path.resolve(workspaceRoot, "node_modules"),
 ];
 
-// 3. Prevent Metro from walking up and picking stray node_modules.
-config.resolver.disableHierarchicalLookup = true;
+// 3. Keep Expo's hierarchical lookup default so expo-doctor stays aligned.
+config.resolver.disableHierarchicalLookup = false;
 
 // SVG transformer (existing).
 config.transformer.babelTransformerPath =

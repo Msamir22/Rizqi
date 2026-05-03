@@ -24,6 +24,9 @@
   "expo": {
     "doctor": {
       "reactNativeDirectoryCheck": {
+        "exclude": [
+          "@nozbe/watermelondb"
+        ],
         "listUnknownPackages": false
       }
     }
