@@ -19,8 +19,10 @@ import {
 } from "@monyvi/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
+import { queryOwned } from "@/services/user-data-access";
 import { useMarketRates } from "./useMarketRates";
 import { usePreferredCurrency } from "./usePreferredCurrency";
+import { useCurrentUserId } from "./useCurrentUserId";
 interface UseNetWorthResult {
   readonly totalNetWorth: number | null;
   readonly totalNetWorthUsd: number | null;
@@ -51,14 +53,31 @@ export function useNetWorth(): UseNetWorthResult {
   const [refreshKey, setRefreshKey] = useState(0);
   const { latestRates, isLoading: isRatesLoading } = useMarketRates();
   const { preferredCurrency } = usePreferredCurrency();
+  const { userId, isResolvingUser } = useCurrentUserId();
 
   const refresh = (): void => {
     setRefreshKey((prev) => prev + 1);
   };
 
   useEffect(() => {
+    if (isResolvingUser) {
+      setAccounts([]);
+      setIsLoading(true);
+      return;
+    }
+
+    if (!userId) {
+      setAccounts([]);
+      setIsLoading(false);
+      return;
+    }
+
     const accountsCollection = database.get<Account>("accounts");
-    const query = accountsCollection.query(Q.where("deleted", false));
+    const query = queryOwned(
+      accountsCollection,
+      userId,
+      Q.where("deleted", false)
+    );
 
     // Use observeWithColumns to react to balance changes
     const subscription = query.observeWithColumns(["balance"]).subscribe({
@@ -70,7 +89,7 @@ export function useNetWorth(): UseNetWorthResult {
     });
 
     return () => subscription.unsubscribe();
-  }, [refreshKey]);
+  }, [refreshKey, userId, isResolvingUser]);
 
   useEffect(() => {
     const assetMetalsCollection = database.get<AssetMetal>("asset_metals");

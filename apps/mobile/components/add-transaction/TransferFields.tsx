@@ -9,8 +9,8 @@ import { useTranslation } from "react-i18next";
 
 interface TransferFieldsProps {
   accounts: Account[];
-  fromAccountId: string;
-  toAccountId: string;
+  fromAccountId: string | null;
+  toAccountId: string | null;
   onSelectFrom: (id: string) => void;
   onSelectTo: (id: string) => void;
   amount: string;
@@ -66,6 +66,7 @@ export function TransferFields({
   // This logic normally lives in the parent form, but visual feedback is here
 
   const handleSwap = (): void => {
+    if (!fromAccountId || !toAccountId) return;
     onSelectFrom(toAccountId);
     onSelectTo(fromAccountId);
   };

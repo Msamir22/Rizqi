@@ -1,5 +1,5 @@
 /**
- * SMS Account Matcher Service
+ * Parsed Transaction Account Matcher Service
  *
  * Single source of truth for all SMS → Account matching logic.
  * Both live detection (`resolveAccountForSms`) and batch review-page matching
@@ -10,8 +10,7 @@
  * 1. Card last 4 + sender match against bank_details
  * 2. Sender match alone against bank_details / account name
  * 3. Name + currency match via bank registry (isKnownFinancialSender)
- * 4. Default account (isDefault flag)
- * 5. First bank account fallback (sorted by created_at ASC)
+ * 4. Default bank account (isDefault flag)
  *
  * Architecture & Design Rationale:
  * - Pattern: Strategy (multi-strategy matching with priority ordering)
@@ -47,6 +46,7 @@ type MatchReason =
   | "sms_sender"
   | "account_name"
   | "bank_registry"
+  | "voice_ai"
   | "default"
   | "first_bank"
   | "none";
@@ -411,8 +411,13 @@ function matchTransaction(
   transaction: ReviewableTransaction,
   accounts: readonly AccountWithBankDetails[]
 ): AccountMatch {
+  if (transaction.source === "VOICE") {
+    return matchVoiceTransaction(transaction, accounts);
+  }
+
+  const bankAccounts = accounts.filter((acc) => acc.type === "BANK");
   const input: MatchInput = {
-    // Use originLabel as the sender identifier (SMS: sender address, Voice: counterparty)
+    // Use originLabel as the sender identifier (SMS: sender address)
     senderDisplayName: transaction.originLabel ?? "",
     cardLast4:
       "cardLast4" in transaction
@@ -421,7 +426,36 @@ function matchTransaction(
     currency: transaction.currency ?? undefined,
   };
 
-  return matchAccountCore(input, accounts);
+  return matchAccountCore(input, bankAccounts);
+}
+
+function matchVoiceTransaction(
+  transaction: ReviewableTransaction,
+  accounts: readonly AccountWithBankDetails[]
+): AccountMatch {
+  if (transaction.accountId) {
+    const aiMatchedAccount = accounts.find(
+      (account) => account.id === transaction.accountId
+    );
+    if (aiMatchedAccount) {
+      return {
+        accountId: aiMatchedAccount.id,
+        accountName: aiMatchedAccount.name,
+        matchReason: "voice_ai",
+      };
+    }
+  }
+
+  const defaultAcc = accounts.find((account) => account.isDefault);
+  if (defaultAcc) {
+    return {
+      accountId: defaultAcc.id,
+      accountName: defaultAcc.name,
+      matchReason: "default",
+    };
+  }
+
+  return { accountId: null, accountName: null, matchReason: "none" };
 }
 
 // ---------------------------------------------------------------------------
@@ -429,12 +463,12 @@ function matchTransaction(
 // ---------------------------------------------------------------------------
 
 /**
- * Matches parsed SMS transactions to user accounts in batches.
+ * Matches parsed review transactions to user accounts in batches.
  * Fetches accounts once, then processes ~20 txns/batch, calling
- * `matchAccountCore` for each. Yields results via callback for
+ * source-aware matching for each. Yields results via callback for
  * progressive rendering.
  *
- * @param transactions - Array of parsed SMS transactions
+ * @param transactions - Array of parsed review transactions
  * @param userId - Current user's ID
  * @param batchSize - Number of transactions per batch (default: 20)
  * @param onBatchComplete - Called after each batch with index → match map
@@ -452,9 +486,10 @@ async function matchTransactionsBatched(
       ? batchSize
       : DEFAULT_BATCH_SIZE;
 
+  // Review is shared by SMS and voice. Load all account types once; each
+  // transaction is source-gated in `matchTransaction` before fallback runs.
   const accounts =
-    preloadedAccounts?.filter((acc) => acc.type === "BANK") ??
-    (await fetchAccountsWithDetails(userId, "BANK"));
+    preloadedAccounts ?? (await fetchAccountsWithDetails(userId));
 
   for (let start = 0; start < transactions.length; start += safeBatchSize) {
     const end = Math.min(start + safeBatchSize, transactions.length);

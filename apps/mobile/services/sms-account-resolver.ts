@@ -66,7 +66,7 @@ export async function resolveAccountForSms(
     return null;
   }
 
-  const accounts = await fetchAccountsWithDetails(userId);
+  const accounts = await fetchAccountsWithDetails(userId, "BANK");
 
   // Extract card last 4 from raw SMS body for Step 1 matching
   const cardFromSms = extractCardLast4(smsBody);
