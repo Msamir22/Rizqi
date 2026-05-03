@@ -114,13 +114,24 @@ export function useEditAccountForm(
     cardLast4: bankDetails?.cardLast4 ?? "",
     smsSenderName: bankDetails?.smsSenderName ?? "",
   });
+  const latestFormDataRef = useRef<EditAccountFormData>(formData);
 
   const [isDefault, setIsDefault] = useState(account.isDefault);
   const [errors, setErrors] = useState<EditValidationErrors>({});
+  const [isSchemaValid, setIsSchemaValid] = useState((): boolean => {
+    return validateEditAccountForm({
+      name: account.name,
+      balance: String(account.balance),
+      bankName: bankDetails?.bankName ?? "",
+      cardLast4: bankDetails?.cardLast4 ?? "",
+      smsSenderName: bankDetails?.smsSenderName ?? "",
+    }).isValid;
+  });
   const [isTouched, setIsTouched] = useState<
     Partial<Record<keyof EditAccountFormData, boolean>>
   >({});
   const [isCheckingUniqueness, setIsCheckingUniqueness] = useState(false);
+  const [hasNameUniquenessError, setHasNameUniquenessError] = useState(false);
 
   // Debounce timer ref for uniqueness check
   const uniquenessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -146,18 +157,14 @@ export function useEditAccountForm(
 
       const trimmedName = name.trim();
       if (!trimmedName) {
-        setErrors((prev) => {
-          const { name: _removed, ...rest } = prev;
-          return rest;
-        });
+        setHasNameUniquenessError(false);
         setIsCheckingUniqueness(false);
         return;
       }
 
-      setIsCheckingUniqueness(true);
-
       uniquenessTimerRef.current = setTimeout(() => {
         void (async () => {
+          setIsCheckingUniqueness(true);
           const result = await checkAccountNameUniqueness(
             account.userId,
             trimmedName,
@@ -166,8 +173,14 @@ export function useEditAccountForm(
           );
 
           if (result.isUnique && !result.error) {
-            // Clear any previous uniqueness error
+            setHasNameUniquenessError(false);
+            const validation = validateEditAccountForm(
+              latestFormDataRef.current
+            );
             setErrors((prev) => {
+              if (validation.errors.name) {
+                return { ...prev, name: validation.errors.name };
+              }
               const { name: _removed, ...rest } = prev;
               return rest;
             });
@@ -176,9 +189,11 @@ export function useEditAccountForm(
               ...prev,
               name: t("accounts:validation_account_name_taken"),
             }));
+            setHasNameUniquenessError(true);
           } else if (result.error) {
             // Don't block the user on uniqueness check errors
             logger.warn("uniqueness_check_failed", { error: result.error });
+            setHasNameUniquenessError(false);
           }
 
           setIsCheckingUniqueness(false);
@@ -198,12 +213,14 @@ export function useEditAccountForm(
     ): void => {
       setFormData((prev) => {
         const newData = { ...prev, [field]: value };
+        latestFormDataRef.current = newData;
 
         // Run field-level validation
-        const { errors: newErrors } = validateEditAccountForm(newData);
+        const validation = validateEditAccountForm(newData);
+        setIsSchemaValid(validation.isValid);
         setErrors((prevErrors) => ({
           ...prevErrors,
-          [field]: newErrors[field],
+          [field]: validation.errors[field],
         }));
 
         return newData;
@@ -231,6 +248,7 @@ export function useEditAccountForm(
    */
   const validate = useCallback((): boolean => {
     const { isValid, errors: newErrors } = validateEditAccountForm(formData);
+    setIsSchemaValid(isValid);
     setErrors(newErrors);
     return isValid;
   }, [formData]);
@@ -239,9 +257,8 @@ export function useEditAccountForm(
    * Whether the form passes all validation rules.
    */
   const isValid = useMemo((): boolean => {
-    const { isValid: valid } = validateEditAccountForm(formData);
-    return valid && !isCheckingUniqueness;
-  }, [formData, isCheckingUniqueness]);
+    return isSchemaValid && !isCheckingUniqueness && !hasNameUniquenessError;
+  }, [isSchemaValid, isCheckingUniqueness, hasNameUniquenessError]);
 
   /**
    * Whether any field differs from the original account data.
