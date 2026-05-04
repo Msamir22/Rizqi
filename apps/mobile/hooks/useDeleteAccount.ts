@@ -17,6 +17,7 @@ import { Q } from "@nozbe/watermelondb";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useToast } from "../components/ui/Toast";
 import {
   deleteAccountWithCascade,
@@ -77,6 +78,8 @@ export function useDeleteAccount(accountId: string): UseDeleteAccountResult {
   const [isLoadingCounts, setIsLoadingCounts] = useState(true);
   const { showToast } = useToast();
   const router = useRouter();
+  const { t } = useTranslation("accounts");
+  const { t: tCommon } = useTranslation("common");
 
   // Fetch linked record counts on mount
   useEffect(() => {
@@ -160,8 +163,8 @@ export function useDeleteAccount(accountId: string): UseDeleteAccountResult {
       if (!userId) {
         showToast({
           type: "error",
-          title: "Session Error",
-          message: "You must be signed in to delete an account",
+          title: t("toast_delete_session_required_title"),
+          message: t("toast_delete_session_required_message"),
         });
         return;
       }
@@ -185,8 +188,8 @@ export function useDeleteAccount(accountId: string): UseDeleteAccountResult {
 
         showToast({
           type: "success",
-          title: "Account Deleted \uD83D\uDDD1\uFE0F",
-          message: "Account and all linked records have been removed",
+          title: t("toast_delete_success_title"),
+          message: t("toast_delete_success_message"),
         });
 
         router.back();
@@ -200,14 +203,14 @@ export function useDeleteAccount(accountId: string): UseDeleteAccountResult {
 
         showToast({
           type: "error",
-          title: "Delete Failed",
-          message: "Something went wrong. Please try again.",
+          title: t("toast_delete_error_title"),
+          message: tCommon("error_generic"),
         });
       } finally {
         setIsDeleting(false);
       }
     },
-    [isDeleting, showToast, router]
+    [isDeleting, showToast, router, t, tCommon]
   );
 
   return {

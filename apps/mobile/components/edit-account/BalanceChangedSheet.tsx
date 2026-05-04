@@ -27,6 +27,8 @@ import {
 } from "react-native";
 import { useTranslation } from "react-i18next";
 import { palette } from "@/constants/colors";
+import type { CurrencyType } from "@monyvi/db";
+import { formatCurrency } from "@monyvi/logic";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -57,7 +59,7 @@ interface BalanceChangedSheetProps {
   /** The new balance after the edit */
   readonly newBalance: number;
   /** The account currency code (e.g., "EGP") for display */
-  readonly currencyCode: string;
+  readonly currencyCode: CurrencyType;
   /** Whether a submission is in progress */
   readonly isSubmitting?: boolean;
 }
@@ -70,8 +72,13 @@ interface BalanceChangedSheetProps {
  * Formats a number as a compact currency string for display.
  * Uses locale-aware formatting with 2 decimal places.
  */
-function formatAmount(amount: number, currency: string): string {
-  return `${currency} ${Math.abs(amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+function formatAmount(amount: number, currency: CurrencyType): string {
+  return formatCurrency({
+    amount: Math.abs(amount),
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 // ---------------------------------------------------------------------------
