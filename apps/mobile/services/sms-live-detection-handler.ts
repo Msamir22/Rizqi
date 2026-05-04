@@ -25,6 +25,7 @@ import {
   showTransactionNotification,
 } from "./notification-service";
 import { resolveAccountForSms } from "./sms-account-resolver";
+import { hasExistingSmsBodyHash } from "./sms-dedup-service";
 import { createTransaction } from "./transaction-service";
 import { createSmsAtmTransfer } from "./transfer-service";
 
@@ -96,6 +97,13 @@ async function saveDetectedTransaction(
   parsed: ParsedSmsTransaction,
   accountId: string
 ): Promise<void> {
+  if (await hasExistingSmsBodyHash(parsed.smsBodyHash)) {
+    console.info(
+      `[sms-detection] Skipped duplicate SMS transaction: ${parsed.smsBodyHash}`
+    );
+    return;
+  }
+
   // ATM withdrawals: route as bank → cash transfer
   if (parsed.isAtmWithdrawal) {
     const result = await createSmsAtmTransfer({
@@ -130,6 +138,7 @@ async function saveDetectedTransaction(
     type: parsed.type,
     date: parsed.date,
     source: "SMS",
+    smsBodyHash: parsed.smsBodyHash,
   });
 
   console.log(

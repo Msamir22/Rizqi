@@ -26,6 +26,7 @@ export async function createTransaction(data: {
   date?: Date;
   linkedRecurringId?: string;
   source: TransactionSource;
+  smsBodyHash?: string;
 }): Promise<Transaction> {
   const userId = await getCurrentUserId();
   if (!userId) {
@@ -51,6 +52,7 @@ export async function createTransaction(data: {
       tx.date = data.date || new Date();
       tx.source = data.source;
       tx.linkedRecurringId = data.linkedRecurringId || undefined;
+      tx.smsBodyHash = data.smsBodyHash || undefined;
       tx.isDraft = false;
       tx.deleted = false;
     });

@@ -248,6 +248,21 @@ describe("transaction-service", () => {
       expect(result.amount).toBe(300);
     });
 
+    it("should persist the SMS body hash for SMS transactions", async () => {
+      seedAccount("acc-1", 1000);
+      const result = await createTransaction({
+        amount: 125,
+        currency: "EGP",
+        categoryId: "cat-1",
+        accountId: "acc-1",
+        type: "EXPENSE",
+        source: "SMS",
+        smsBodyHash: "sms-hash-1",
+      });
+
+      expect(result.smsBodyHash).toBe("sms-hash-1");
+    });
+
     it("should throw when user is not authenticated", async () => {
       const supabaseMock = jest.requireMock<{ getCurrentUserId: jest.Mock }>(
         "@/services/supabase"
