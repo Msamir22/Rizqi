@@ -27,6 +27,8 @@ const mockExchangeCodeForSession = jest.fn();
 const mockSignUpWithEmail = jest.fn();
 const mockSignInWithEmailFn = jest.fn();
 const mockResetPasswordForEmail = jest.fn();
+const mockReadIntroLocaleOverride = jest.fn();
+const mockGetCurrentLanguage = jest.fn();
 
 jest.mock("@/services/supabase", () => ({
   signInWithOAuthProvider: (...args: unknown[]): Promise<unknown> =>
@@ -49,6 +51,16 @@ jest.mock("@/services/supabase", () => ({
 
 jest.mock("@/constants/auth-constants", () => ({
   AUTH_REDIRECT_URL: "monyvi://auth-callback",
+}));
+
+jest.mock("@/services/intro-flag-service", () => ({
+  readIntroLocaleOverride: (): Promise<"en" | "ar" | null> =>
+    mockReadIntroLocaleOverride() as Promise<"en" | "ar" | null>,
+}));
+
+jest.mock("@/i18n/changeLanguage", () => ({
+  getCurrentLanguage: (): "en" | "ar" =>
+    mockGetCurrentLanguage() as "en" | "ar",
 }));
 
 const mockOpenAuthSession = jest.fn<
@@ -268,6 +280,8 @@ describe("auth-service - signInWithOAuth", () => {
 describe("auth-service - signUpWithEmail", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockReadIntroLocaleOverride.mockResolvedValue(null);
+    mockGetCurrentLanguage.mockReturnValue("en");
   });
 
   it("delegates to supabase signUpWithEmail and returns result", async () => {
@@ -282,10 +296,27 @@ describe("auth-service - signUpWithEmail", () => {
 
     expect(mockSignUpWithEmail).toHaveBeenCalledWith(
       "test@example.com",
-      "password123"
+      "password123",
+      { preferredLanguage: "en" }
     );
     expect(result.needsVerification).toBe(true);
     expect(result.error).toBeNull();
+  });
+
+  it("passes the pre-auth Arabic language override into signup metadata", async () => {
+    mockReadIntroLocaleOverride.mockResolvedValueOnce("ar");
+    mockSignUpWithEmail.mockResolvedValue({
+      success: true,
+      needsVerification: true,
+    });
+
+    await signUpWithEmail("arabic@example.com", "password123");
+
+    expect(mockSignUpWithEmail).toHaveBeenCalledWith(
+      "arabic@example.com",
+      "password123",
+      { preferredLanguage: "ar" }
+    );
   });
 
   it("returns error result when supabase signUpWithEmail fails", async () => {
@@ -305,7 +336,8 @@ describe("auth-service - signUpWithEmail", () => {
 
     expect(mockSignUpWithEmail).toHaveBeenCalledWith(
       "existing@example.com",
-      "password123"
+      "password123",
+      { preferredLanguage: "en" }
     );
     expect(result.success).toBe(false);
     expect(result.error).toEqual(mockError);
