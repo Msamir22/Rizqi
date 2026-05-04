@@ -75,7 +75,11 @@ export function validateTransactionForm(
   type: TransactionType | "TRANSFER",
   data:
     | { amount: string; accountId: string | null; categoryId: string }
-    | { amount: string; fromAccountId: string; toAccountId: string }
+    | {
+        amount: string;
+        fromAccountId: string | null;
+        toAccountId: string | null;
+      }
 ): { isValid: boolean; errors: TransactionValidationErrors } {
   const schema = type === "TRANSFER" ? transferSchema : baseTransactionSchema;
   const result = schema.safeParse(data);

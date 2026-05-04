@@ -1,8 +1,12 @@
 import {
   matchAccountCore,
+  matchTransaction,
+  matchTransactionsBatched,
+  type AccountMatch,
   type AccountWithBankDetails,
   type MatchInput,
 } from "../../services/sms-account-matcher";
+import type { ReviewableTransaction } from "@monyvi/logic";
 
 jest.mock("@monyvi/db", () => ({
   database: {
@@ -136,5 +140,123 @@ describe("sms-account-matcher - matchAccountCore", () => {
     const emptyResult = matchAccountCore(input, []);
     expect(emptyResult.matchReason).toBe("none");
     expect(emptyResult.accountId).toBe(null);
+  });
+});
+
+describe("sms-account-matcher - source-aware transaction matching", () => {
+  const baseDate = new Date("2026-01-01T00:00:00Z");
+
+  const cashDefault: AccountWithBankDetails = {
+    id: "acc_cash_default",
+    name: "Cash",
+    currency: "EGP",
+    isDefault: true,
+    createdAt: baseDate,
+    type: "CASH",
+  };
+
+  const bankDefault: AccountWithBankDetails = {
+    id: "acc_bank_default",
+    name: "CIB Main",
+    currency: "EGP",
+    isDefault: true,
+    createdAt: new Date(baseDate.getTime() + 1000),
+    type: "BANK",
+  };
+
+  const bankRegular: AccountWithBankDetails = {
+    id: "acc_bank_regular",
+    name: "NBE",
+    currency: "EGP",
+    isDefault: false,
+    createdAt: new Date(baseDate.getTime() + 2000),
+    type: "BANK",
+  };
+
+  function tx(
+    overrides: Partial<ReviewableTransaction> = {}
+  ): ReviewableTransaction {
+    return {
+      amount: 100,
+      currency: "EGP",
+      type: "EXPENSE",
+      date: baseDate,
+      categoryId: "cat-1",
+      categoryDisplayName: "Other",
+      confidence: 0.9,
+      originLabel: "UNKNOWN",
+      source: "SMS",
+      ...overrides,
+    };
+  }
+
+  it("keeps SMS fallback bank-scoped and ignores a default cash account", () => {
+    const result = matchTransaction(tx(), [cashDefault, bankRegular]);
+
+    expect(result.accountId).toBe(null);
+    expect(result.matchReason).toBe("none");
+  });
+
+  it("allows SMS fallback to a default bank account", () => {
+    const result = matchTransaction(tx(), [cashDefault, bankDefault]);
+
+    expect(result.accountId).toBe("acc_bank_default");
+    expect(result.matchReason).toBe("default");
+  });
+
+  it("keeps batched SMS review bank-scoped even when preloaded accounts include cash", async () => {
+    const batches: Array<ReadonlyMap<number, AccountMatch>> = [];
+
+    await matchTransactionsBatched(
+      [tx()],
+      "user-1",
+      20,
+      (batch) => batches.push(batch),
+      [cashDefault, bankRegular]
+    );
+
+    expect(batches).toHaveLength(1);
+    expect(batches[0].get(0)?.accountId).toBe(null);
+    expect(batches[0].get(0)?.matchReason).toBe("none");
+  });
+
+  it("uses a valid AI account id for voice transactions", () => {
+    const result = matchTransaction(
+      tx({ source: "VOICE", accountId: "acc_bank_regular" }),
+      [cashDefault, bankRegular]
+    );
+
+    expect(result.accountId).toBe("acc_bank_regular");
+    expect(result.matchReason).toBe("voice_ai");
+  });
+
+  it("allows voice AI selection to target non-bank accounts", () => {
+    const result = matchTransaction(
+      tx({ source: "VOICE", accountId: "acc_cash_default" }),
+      [cashDefault, bankRegular]
+    );
+
+    expect(result.accountId).toBe("acc_cash_default");
+    expect(result.matchReason).toBe("voice_ai");
+  });
+
+  it("falls voice transactions back to the global default account", () => {
+    const result = matchTransaction(tx({ source: "VOICE" }), [
+      cashDefault,
+      bankRegular,
+    ]);
+
+    expect(result.accountId).toBe("acc_cash_default");
+    expect(result.matchReason).toBe("default");
+  });
+
+  it("requires review when voice has no valid AI account and no default account", () => {
+    const result = matchTransaction(
+      tx({ source: "VOICE", accountId: "missing-account" }),
+      [bankRegular]
+    );
+
+    expect(result.accountId).toBe(null);
+    expect(result.matchReason).toBe("none");
   });
 });

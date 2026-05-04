@@ -5,7 +5,6 @@ export * from "./analytics";
 export * from "./assets/assets-calculations";
 export * from "./net-worth/net-worth-calculations";
 export * from "./parsers/notification-parser";
-export * from "./parsers/voice-parser";
 export * from "./parsers";
 export * from "./types";
 export * from "./utils/currency";

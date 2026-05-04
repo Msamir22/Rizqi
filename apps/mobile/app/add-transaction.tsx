@@ -23,6 +23,7 @@ import { useMarketRates } from "@/hooks/useMarketRates";
 import { createRecurringPayment } from "@/services/recurring-payment-service";
 import { createTransaction } from "@/services/transaction-service";
 import { createTransfer } from "@/services/transfer-service";
+import { resolveInitialTransactionAccountSelection } from "@/utils/account-selection";
 import { useBudgetAlert } from "@/hooks/useBudgetAlert";
 import { BudgetAlertModal } from "@/components/budget/BudgetAlertModal";
 import {
@@ -57,8 +58,10 @@ export default function AddTransaction(): React.ReactNode {
   const [targetAmount, setTargetAmount] = useState<string>("");
 
   // Selection State
-  const [selectedAccountId, setSelectedAccountId] = useState<string>("");
-  const [toAccountId, setToAccountId] = useState<string>(""); // For Transfer
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(
+    null
+  );
+  const [toAccountId, setToAccountId] = useState<string | null>(null); // For Transfer
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
 
   // Optional Fields
@@ -130,16 +133,9 @@ export default function AddTransaction(): React.ReactNode {
   useEffect(() => {
     if (!hasAccounts || selectedAccountId) return;
 
-    // It's safe to use the non-null assertion operator (!)
-    // because we've already checked that accounts.length > 0
-    const firstAccount = accounts.at(0)!;
-    setSelectedAccountId(firstAccount.id);
-
-    if (accounts.length > 1) {
-      // For transfer destination, pick different account if possible
-      const otherAccount = accounts.at(1)!;
-      setToAccountId(otherAccount.id);
-    }
+    const selection = resolveInitialTransactionAccountSelection(accounts);
+    setSelectedAccountId(selection.selectedAccountId);
+    setToAccountId(selection.toAccountId);
   }, [accounts, selectedAccountId, hasAccounts]);
 
   // Track the previous type to only auto-reset category on type change.
@@ -265,6 +261,10 @@ export default function AddTransaction(): React.ReactNode {
     type: TransactionType,
     currency: CurrencyType
   ): Promise<string> => {
+    if (!selectedAccountId) {
+      throw new Error(t("please_select_an_account"));
+    }
+
     const recurring = await createRecurringPayment({
       name: recurringName,
       amount,
@@ -286,7 +286,7 @@ export default function AddTransaction(): React.ReactNode {
       return;
     }
 
-    if (!selectedAccount) {
+    if (!selectedAccountId || !selectedAccount) {
       setFormErrors({ fromAccountId: t("please_select_source_account") });
       setIsSubmitting(false);
       return;
@@ -333,7 +333,7 @@ export default function AddTransaction(): React.ReactNode {
     type: TransactionType;
     linkedRecurringId?: string;
   }): Promise<Transaction | undefined> => {
-    if (!selectedAccount) {
+    if (!selectedAccountId || !selectedAccount) {
       setFormErrors({ accountId: t("please_select_an_account") });
       setIsSubmitting(false);
       return undefined;
