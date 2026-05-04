@@ -11,6 +11,7 @@ import {
 import { usePreferredCurrency } from "./usePreferredCurrency";
 
 const UNIQUENESS_DEBOUNCE_MS = 300;
+const DEFAULT_INITIAL_BALANCE = "0";
 
 interface UseAccountFormOptions {
   /**
@@ -63,7 +64,7 @@ export function useAccountForm(
     name: "",
     accountType: initialAccountType ?? "CASH",
     currency: preferredCurrency,
-    balance: "",
+    balance: DEFAULT_INITIAL_BALANCE,
     bankName: "",
     cardLast4: "",
     smsSenderName: "",
@@ -232,7 +233,7 @@ export function useAccountForm(
       name: "",
       accountType: initialAccountType ?? "CASH",
       currency: preferredCurrency,
-      balance: "",
+      balance: DEFAULT_INITIAL_BALANCE,
       bankName: "",
       cardLast4: "",
       smsSenderName: "",

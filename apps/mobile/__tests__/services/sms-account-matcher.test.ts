@@ -230,6 +230,16 @@ describe("sms-account-matcher - source-aware transaction matching", () => {
     expect(result.matchReason).toBe("voice_ai");
   });
 
+  it("allows voice AI selection to target non-bank accounts", () => {
+    const result = matchTransaction(
+      tx({ source: "VOICE", accountId: "acc_cash_default" }),
+      [cashDefault, bankRegular]
+    );
+
+    expect(result.accountId).toBe("acc_cash_default");
+    expect(result.matchReason).toBe("voice_ai");
+  });
+
   it("falls voice transactions back to the global default account", () => {
     const result = matchTransaction(tx({ source: "VOICE" }), [
       cashDefault,

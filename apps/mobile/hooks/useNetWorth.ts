@@ -49,6 +49,8 @@ export function useNetWorth(): UseNetWorthResult {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [assetMetals, setAssetMetals] = useState<AssetMetal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAccountsLoading, setIsAccountsLoading] = useState(true);
+  const [isAssetMetalsLoading, setIsAssetMetalsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const { latestRates, isLoading: isRatesLoading } = useMarketRates();
@@ -63,12 +65,14 @@ export function useNetWorth(): UseNetWorthResult {
     if (isResolvingUser) {
       setAccounts([]);
       setIsLoading(true);
+      setIsAccountsLoading(true);
       return;
     }
 
     if (!userId) {
       setAccounts([]);
       setIsLoading(false);
+      setIsAccountsLoading(false);
       return;
     }
 
@@ -79,12 +83,18 @@ export function useNetWorth(): UseNetWorthResult {
       Q.where("deleted", false)
     );
 
+    setIsAccountsLoading(true);
+
     // Use observeWithColumns to react to balance changes
     const subscription = query.observeWithColumns(["balance"]).subscribe({
-      next: (result) => setAccounts(result),
+      next: (result) => {
+        setAccounts(result);
+        setIsAccountsLoading(false);
+      },
       error: (err: unknown) => {
         console.error("Error observing accounts:", err);
         setError(err instanceof Error ? err : new Error(String(err)));
+        setIsAccountsLoading(false);
       },
     });
 
@@ -99,11 +109,13 @@ export function useNetWorth(): UseNetWorthResult {
       next: (result) => {
         setAssetMetals(result);
         setIsLoading(false);
+        setIsAssetMetalsLoading(false);
       },
       error: (err: unknown) => {
         console.error("Error observing asset metals:", err);
         setError(err instanceof Error ? err : new Error(String(err)));
         setIsLoading(false);
+        setIsAssetMetalsLoading(false);
       },
     });
 
@@ -120,7 +132,14 @@ export function useNetWorth(): UseNetWorthResult {
 
   // Calculate net worth when data changes
   const netWorthData = useMemo<NetWorthData | null>(() => {
-    if (isLoading || isRatesLoading || !latestRates) {
+    if (
+      isResolvingUser ||
+      isLoading ||
+      isAccountsLoading ||
+      isAssetMetalsLoading ||
+      isRatesLoading ||
+      !latestRates
+    ) {
       return null;
     }
 
@@ -141,6 +160,9 @@ export function useNetWorth(): UseNetWorthResult {
     assetMetals,
     latestRates,
     isLoading,
+    isResolvingUser,
+    isAccountsLoading,
+    isAssetMetalsLoading,
     isRatesLoading,
     toPreferred,
   ]);
@@ -157,7 +179,7 @@ export function useNetWorth(): UseNetWorthResult {
       : null,
     totalAccounts: netWorthData?.totalAccounts ?? null,
     totalAssets: netWorthData?.totalAssets ?? null,
-    isLoading: isLoading || isRatesLoading,
+    isLoading: isResolvingUser || isLoading || isRatesLoading,
     error,
     refresh,
   };
