@@ -38,6 +38,7 @@ import {
   startSmsListener,
   stopSmsListener,
 } from "../services/sms-live-listener-service";
+import { requestNotificationPermission } from "../services/notification-service";
 import { ConfirmationModal } from "@/components/modals/ConfirmationModal";
 import { Dropdown, type DropdownItem } from "@/components/ui/Dropdown";
 import { useToast } from "@/components/ui/Toast";
@@ -89,17 +90,43 @@ export default function SettingsScreen(): React.JSX.Element {
 
   const handleToggleLiveDetection = useCallback(
     async (value: boolean): Promise<void> => {
-      setLiveDetection(value);
-      await setLiveDetectionEnabled(value);
-      if (value) {
-        startSmsListener();
-      } else {
+      if (!value) {
+        setLiveDetection(false);
+        await setLiveDetectionEnabled(false);
         stopSmsListener();
         setAutoConfirmSms(false);
         await setAutoConfirm(false);
+        return;
       }
+
+      if (smsPermissionStatus !== "granted") {
+        const smsPermission = await requestPermission();
+
+        if (smsPermission !== "granted") {
+          showToast({
+            type: "warning",
+            title: t("grant_sms_permission"),
+          });
+          return;
+        }
+      }
+
+      const canShowNotifications = await requestNotificationPermission();
+
+      if (!canShowNotifications) {
+        showToast({
+          type: "warning",
+          title: t("notifications"),
+          message: t("auto_detect_description"),
+        });
+        return;
+      }
+
+      setLiveDetection(true);
+      await setLiveDetectionEnabled(true);
+      startSmsListener();
     },
-    []
+    [requestPermission, showToast, smsPermissionStatus, t]
   );
 
   const handleToggleAutoConfirm = useCallback(

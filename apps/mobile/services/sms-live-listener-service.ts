@@ -26,6 +26,7 @@ import {
 import {
   DeviceEventEmitter,
   type EmitterSubscription,
+  NativeModules,
   Platform,
 } from "react-native";
 import {
@@ -48,6 +49,12 @@ interface NativeSmsEvent {
   readonly sender: string;
   readonly body: string;
   readonly timestamp: number;
+}
+
+interface NativeSmsModules {
+  readonly SmsEventModule?: {
+    readonly getConstants?: () => unknown;
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -74,6 +81,21 @@ const recentHashes = new Set<string>();
 // ---------------------------------------------------------------------------
 // Internal processing
 // ---------------------------------------------------------------------------
+
+/**
+ * Touch the native module before subscribing so React Native creates the
+ * SmsEventModule instance and its initialize() stores ReactApplicationContext.
+ */
+function ensureSmsEventModuleInitialized(): void {
+  const { SmsEventModule } = NativeModules as NativeSmsModules;
+
+  if (!SmsEventModule) {
+    console.warn("[sms-live-listener] SmsEventModule is unavailable");
+    return;
+  }
+
+  SmsEventModule.getConstants?.();
+}
 
 /**
  * Process an incoming SMS event from native:
@@ -173,6 +195,8 @@ export function startSmsListener(): void {
   }
 
   try {
+    ensureSmsEventModuleInitialized();
+
     nativeSubscription = DeviceEventEmitter.addListener(
       NATIVE_SMS_EVENT,
       (event: NativeSmsEvent) => {
