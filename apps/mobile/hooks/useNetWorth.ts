@@ -161,6 +161,8 @@ export function useNetWorth(): UseNetWorthResult {
     latestRates,
     isLoading,
     isResolvingUser,
+    isAccountsLoading,
+    isAssetMetalsLoading,
     isRatesLoading,
     toPreferred,
   ]);
