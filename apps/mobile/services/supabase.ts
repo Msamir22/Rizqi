@@ -249,6 +249,8 @@ interface EmailAuthResult {
   readonly success: boolean;
   readonly error?: AuthError;
   readonly needsVerification?: boolean;
+  readonly userId?: string;
+  readonly userCreatedAt?: string;
 }
 
 interface EmailSignUpOptions {
@@ -305,7 +307,12 @@ export async function signUpWithEmail(
   // Supabase returns user with `email_confirmed_at = null` for unverified users
   const needsVerification = !data.user?.email_confirmed_at;
 
-  return { success: true, needsVerification };
+  return {
+    success: true,
+    needsVerification,
+    userId: data.user?.id,
+    userCreatedAt: data.user?.created_at,
+  };
 }
 
 /**

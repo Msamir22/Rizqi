@@ -116,14 +116,21 @@ describe("intro-flag-service", () => {
       jest.setSystemTime(new Date("2026-05-05T10:00:00.000Z"));
       mockSetItem.mockResolvedValueOnce();
 
-      await setPendingSignupLocale(" New@Example.COM ", "ar");
+      await setPendingSignupLocale(
+        " New@Example.COM ",
+        "ar",
+        " signup-user-1 ",
+        "2026-05-05T09:59:57.000Z"
+      );
 
       expect(mockSetItem).toHaveBeenCalledWith(
         "@monyvi/pending-signup-locale",
         JSON.stringify({
           email: "new@example.com",
           language: "ar",
-          createdAt: "2026-05-05T10:00:00.000Z",
+          userId: "signup-user-1",
+          userCreatedAt: "2026-05-05T09:59:57.000Z",
+          markerCreatedAt: "2026-05-05T10:00:00.000Z",
         })
       );
       jest.useRealTimers();
@@ -134,14 +141,18 @@ describe("intro-flag-service", () => {
         JSON.stringify({
           email: "New@Example.COM",
           language: "ar",
-          createdAt: "2026-05-05T10:00:00.000Z",
+          userId: "signup-user-1",
+          userCreatedAt: "2026-05-05T09:59:57.000Z",
+          markerCreatedAt: "2026-05-05T10:00:00.000Z",
         })
       );
 
       await expect(readPendingSignupLocale()).resolves.toEqual({
         email: "new@example.com",
         language: "ar",
-        createdAt: "2026-05-05T10:00:00.000Z",
+        userId: "signup-user-1",
+        userCreatedAt: "2026-05-05T09:59:57.000Z",
+        markerCreatedAt: "2026-05-05T10:00:00.000Z",
       });
     });
 
@@ -150,7 +161,9 @@ describe("intro-flag-service", () => {
         JSON.stringify({
           email: "new@example.com",
           language: "fr",
-          createdAt: "2026-05-05T10:00:00.000Z",
+          userId: "signup-user-1",
+          userCreatedAt: "2026-05-05T09:59:57.000Z",
+          markerCreatedAt: "2026-05-05T10:00:00.000Z",
         })
       );
 
