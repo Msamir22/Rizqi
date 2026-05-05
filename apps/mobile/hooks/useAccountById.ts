@@ -54,15 +54,15 @@ export function useAccountById(id: string | null): UseAccountByIdResult {
   const [bankDetails, setBankDetails] = useState<BankDetailsData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const bankDetailsRequestIdRef = useRef(0);
+  const bankDetailsKeyRef = useRef<string | null>(null);
   const { userId, isResolvingUser } = useCurrentUserId();
 
   useEffect(() => {
-    let isActive = true;
-
     if (!id) {
       setAccount(null);
       setBankDetails(null);
       setIsLoading(false);
+      bankDetailsKeyRef.current = null;
       return undefined;
     }
 
@@ -75,14 +75,57 @@ export function useAccountById(id: string | null): UseAccountByIdResult {
       setAccount(null);
       setBankDetails(null);
       setIsLoading(false);
+      bankDetailsKeyRef.current = null;
       return undefined;
     }
 
     setIsLoading(true);
 
-    const loadBankDetails = async (record: Account): Promise<void> => {
+    const collection = database.get<Account>("accounts");
+    const subscription = observeOwnedById<Account>(
+      collection,
+      id,
+      userId
+    ).subscribe({
+      next: (record) => {
+        if (record === null) {
+          setAccount(null);
+          setBankDetails(null);
+          setIsLoading(false);
+          return;
+        }
+        setAccount(record);
+      },
+      error: (err: unknown) => {
+        logger.error("useAccountById_observation_failed", err);
+        setAccount(null);
+        setBankDetails(null);
+        setIsLoading(false);
+      },
+    });
+
+    return (): void => {
+      subscription.unsubscribe();
+    };
+  }, [id, userId, isResolvingUser]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    if (!account) {
+      bankDetailsKeyRef.current = null;
+      return undefined;
+    }
+
+    const detailsKey = `${account.id}:${account.isBank ? "BANK" : "NON_BANK"}`;
+    if (bankDetailsKeyRef.current === detailsKey) {
+      return undefined;
+    }
+    bankDetailsKeyRef.current = detailsKey;
+
+    const loadBankDetails = async (): Promise<void> => {
       const requestId = ++bankDetailsRequestIdRef.current;
-      if (!record.isBank) {
+      if (!account.isBank) {
         if (!isActive || requestId !== bankDetailsRequestIdRef.current) return;
         setBankDetails(null);
         setIsLoading(false);
@@ -90,7 +133,7 @@ export function useAccountById(id: string | null): UseAccountByIdResult {
       }
 
       try {
-        const details = (await record.bankDetails.fetch()) as BankDetails[];
+        const details = (await account.bankDetails.fetch()) as BankDetails[];
         if (!isActive || requestId !== bankDetailsRequestIdRef.current) return;
 
         if (details.length > 0) {
@@ -114,35 +157,12 @@ export function useAccountById(id: string | null): UseAccountByIdResult {
       }
     };
 
-    const collection = database.get<Account>("accounts");
-    const subscription = observeOwnedById<Account>(
-      collection,
-      id,
-      userId
-    ).subscribe({
-      next: (record) => {
-        if (record === null) {
-          setAccount(null);
-          setBankDetails(null);
-          setIsLoading(false);
-          return;
-        }
-        setAccount(record);
-        void loadBankDetails(record);
-      },
-      error: (err: unknown) => {
-        logger.error("useAccountById_observation_failed", err);
-        setAccount(null);
-        setBankDetails(null);
-        setIsLoading(false);
-      },
-    });
+    void loadBankDetails();
 
     return (): void => {
       isActive = false;
-      subscription.unsubscribe();
     };
-  }, [id, userId, isResolvingUser]);
+  }, [account]);
 
   return { account, bankDetails, isLoading };
 }

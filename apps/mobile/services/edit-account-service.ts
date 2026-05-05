@@ -107,6 +107,20 @@ export interface UniquenessCheckResult {
   readonly error?: string;
 }
 
+export interface LinkedRecordsCounts {
+  readonly transactions: number;
+  readonly transfers: number;
+  readonly debts: number;
+  readonly recurringPayments: number;
+}
+
+export const EMPTY_LINKED_RECORDS_COUNTS: LinkedRecordsCounts = {
+  transactions: 0,
+  transfers: 0,
+  debts: 0,
+  recurringPayments: 0,
+};
+
 type SoftDeletableRecord = Model & {
   deleted: boolean;
 };
@@ -181,6 +195,46 @@ export async function checkAccountNameUniqueness(
     logger.error("checkAccountNameUniqueness_failed", error);
     return { isUnique: false, error: message };
   }
+}
+
+export async function getAccountLinkedRecordCounts(
+  accountId: string
+): Promise<LinkedRecordsCounts> {
+  const [transactions, transfers, debts, recurringPayments] = await Promise.all(
+    [
+      database
+        .get<Transaction>("transactions")
+        .query(Q.where("account_id", accountId), Q.where("deleted", false))
+        .fetchCount(),
+      database
+        .get<Transfer>("transfers")
+        .query(
+          Q.and(
+            Q.or(
+              Q.where("from_account_id", accountId),
+              Q.where("to_account_id", accountId)
+            ),
+            Q.where("deleted", false)
+          )
+        )
+        .fetchCount(),
+      database
+        .get<Debt>("debts")
+        .query(Q.where("account_id", accountId), Q.where("deleted", false))
+        .fetchCount(),
+      database
+        .get<RecurringPayment>("recurring_payments")
+        .query(Q.where("account_id", accountId), Q.where("deleted", false))
+        .fetchCount(),
+    ]
+  );
+
+  return {
+    transactions,
+    transfers,
+    debts,
+    recurringPayments,
+  };
 }
 
 // ---------------------------------------------------------------------------
