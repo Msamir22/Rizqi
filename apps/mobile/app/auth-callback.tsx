@@ -17,11 +17,7 @@
  */
 
 import { useAuth } from "@/context/AuthContext";
-import {
-  useLocalSearchParams,
-  useRootNavigation,
-  useRouter,
-} from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect } from "react";
 import { View } from "react-native";
 
@@ -43,13 +39,12 @@ function isPasswordRecoveryLink(
 
 export default function AuthCallbackScreen(): React.JSX.Element {
   const router = useRouter();
-  const rootNavigation = useRootNavigation();
   const { isAuthenticated, isLoading } = useAuth();
   const params = useLocalSearchParams();
 
   useEffect(() => {
     const handleRedirect = (): void => {
-      if (isLoading || !rootNavigation?.isReady()) return;
+      if (isLoading) return;
 
       if (!isAuthenticated) {
         router.replace("/auth");
@@ -69,7 +64,7 @@ export default function AuthCallbackScreen(): React.JSX.Element {
     };
 
     handleRedirect();
-  }, [router, rootNavigation, isAuthenticated, isLoading, params]);
+  }, [router, isAuthenticated, isLoading, params]);
 
   // Render nothing while redirecting
   return <View />;
