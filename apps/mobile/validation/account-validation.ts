@@ -1,12 +1,13 @@
 import { AccountType, CurrencyType } from "@monyvi/db";
+import { t } from "i18next";
 import { z } from "zod";
 
 const NON_NEGATIVE_BALANCE_PATTERN = /^(?:0|[1-9]\d*)(?:\.\d+)?$/;
 const SIGNED_BALANCE_PATTERN = /^-?(?:0|[1-9]\d*)(?:\.\d+)?$/;
 
 const BALANCE_VALIDATION_MESSAGES = {
-  createInvalid: "Initial balance must be a valid number",
-  editInvalid: "Balance must be a valid number",
+  createInvalid: "validation_balance_create_invalid",
+  editInvalid: "validation_balance_edit_invalid",
 } as const;
 
 export function isValidAccountBalance(
@@ -26,8 +27,8 @@ export const accountFormSchema = z.object({
   name: z
     .string()
     .trim()
-    .min(1, "Account name is required")
-    .max(50, "Account name must be less than 50 characters"),
+    .min(1, "validation_name_required")
+    .max(50, "validation_name_max"),
   accountType: z.enum([
     "CASH",
     "BANK",
@@ -35,31 +36,31 @@ export const accountFormSchema = z.object({
   ] as const) as z.ZodType<AccountType>,
   currency: z
     .string()
-    .min(1, "Currency is required") as z.ZodType<CurrencyType>,
+    .min(1, "validation_currency_required") as z.ZodType<CurrencyType>,
   balance: z
     .string()
-    .min(1, "Initial balance is required")
+    .min(1, "validation_initial_balance_required")
     .refine(
       (val) => isValidAccountBalance(val, { allowNegative: false }),
       BALANCE_VALIDATION_MESSAGES.createInvalid
     )
     .refine(
       (val) => parseFloat(val) >= 0,
-      "Initial balance cannot be negative"
+      "validation_initial_balance_non_negative"
     ),
   bankName: z
     .string()
-    .max(50, "Bank name must be less than 50 characters")
+    .max(50, "validation_bank_name_max")
     .optional()
     .or(z.literal("")),
   cardLast4: z
     .string()
     .optional()
     .or(z.literal(""))
-    .refine((val) => !val || /^\d{4}$/.test(val), "Must be exactly 4 digits"),
+    .refine((val) => !val || /^\d{4}$/.test(val), "validation_card_last_4"),
   smsSenderName: z
     .string()
-    .max(100, "SMS sender name must be less than 100 characters")
+    .max(100, "validation_sms_sender_name_max")
     .optional()
     .or(z.literal("")),
 });
@@ -91,7 +92,7 @@ export function validateAccountForm(data: unknown): {
   result.error.issues.forEach((issue) => {
     const path = issue.path[0] as keyof AccountFormData;
     if (path && !errors[path]) {
-      errors[path] = issue.message;
+      errors[path] = t(`accounts:${issue.message}`);
     }
   });
 
@@ -109,28 +110,28 @@ export const editAccountFormSchema = z.object({
   name: z
     .string()
     .trim()
-    .min(1, "Account name is required")
-    .max(50, "Account name must be less than 50 characters"),
+    .min(1, "validation_name_required")
+    .max(50, "validation_name_max"),
   balance: z
     .string()
-    .min(1, "Balance is required")
+    .min(1, "validation_balance_required")
     .refine(
       (val) => isValidAccountBalance(val, { allowNegative: true }),
       BALANCE_VALIDATION_MESSAGES.editInvalid
     ),
   bankName: z
     .string()
-    .max(50, "Bank name must be less than 50 characters")
+    .max(50, "validation_bank_name_max")
     .optional()
     .or(z.literal("")),
   cardLast4: z
     .string()
     .optional()
     .or(z.literal(""))
-    .refine((val) => !val || /^\d{4}$/.test(val), "Must be exactly 4 digits"),
+    .refine((val) => !val || /^\d{4}$/.test(val), "validation_card_last_4"),
   smsSenderName: z
     .string()
-    .max(100, "SMS sender name must be less than 100 characters")
+    .max(100, "validation_sms_sender_name_max")
     .optional()
     .or(z.literal("")),
 });
@@ -162,7 +163,7 @@ export function validateEditAccountForm(data: unknown): {
   result.error.issues.forEach((issue) => {
     const path = issue.path[0] as keyof EditAccountFormData;
     if (path && !errors[path]) {
-      errors[path] = issue.message;
+      errors[path] = t(`accounts:${issue.message}`);
     }
   });
 

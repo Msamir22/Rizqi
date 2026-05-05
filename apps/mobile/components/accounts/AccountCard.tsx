@@ -75,11 +75,11 @@ function AccountCardImpl({
 
     switch (account.type) {
       case "BANK":
-        return t("account_type_bank");
+        return t("type_bank");
       case "DIGITAL_WALLET":
-        return t("account_type_digital_wallet");
+        return t("type_digital_wallet");
       case "CASH":
-        return t("account_type_cash");
+        return t("type_cash");
       default:
         return "";
     }

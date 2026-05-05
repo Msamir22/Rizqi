@@ -22,7 +22,7 @@ import { PageHeader } from "@/components/navigation/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import { useToast } from "@/components/ui/Toast";
-import { ACCOUNT_TYPES, CURRENCIES } from "@/constants/accounts";
+import { CURRENCIES } from "@/constants/accounts";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { useKeyboardVisibility } from "@/hooks";
@@ -168,9 +168,8 @@ function EditAccountForm({
 
   // Look up display values for read-only fields
   const accountTypeLabel = useMemo(() => {
-    const found = ACCOUNT_TYPES.find((t) => t.id === accountType);
-    return found?.label ?? accountType;
-  }, [accountType]);
+    return t(`type_${accountType.toLowerCase()}`);
+  }, [accountType, t]);
 
   const accountTypeIcon = useMemo((): string => {
     const emojiMap: Record<string, string> = {

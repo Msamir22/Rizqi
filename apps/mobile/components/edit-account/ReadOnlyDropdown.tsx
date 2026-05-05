@@ -16,6 +16,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useState } from "react";
 import { Pressable, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
@@ -56,11 +57,13 @@ export function ReadOnlyDropdown({
   label,
   displayValue,
   icon,
-  tooltipText = "Cannot be changed after creation",
+  tooltipText,
   className = "",
 }: ReadOnlyDropdownProps): React.JSX.Element {
   const { isDark } = useTheme();
+  const { t } = useTranslation("accounts");
   const [showTooltip, setShowTooltip] = useState(false);
+  const resolvedTooltipText = tooltipText ?? t("read_only_default_tooltip");
 
   const handleLockPress = useCallback((): void => {
     setShowTooltip((prev) => !prev);
@@ -93,7 +96,7 @@ export function ReadOnlyDropdown({
             onPress={handleLockPress}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel={`${label} is locked. Tap for more info.`}
+            accessibilityLabel={t("read_only_locked_label", { label })}
           >
             <Ionicons
               name="lock-closed"
@@ -103,7 +106,7 @@ export function ReadOnlyDropdown({
           </Pressable>
 
           <Tooltip
-            text={tooltipText}
+            text={resolvedTooltipText}
             visible={showTooltip}
             onDismiss={handleTooltipDismiss}
             position="top"

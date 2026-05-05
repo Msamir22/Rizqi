@@ -1,6 +1,7 @@
 import { ACCOUNT_TYPES } from "@/constants/accounts";
 import { AccountType } from "@monyvi/db";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 export type FilterType = AccountType | "ALL";
 
@@ -13,9 +14,13 @@ export function AccountTypeTabs({
   selectedFilter,
   onSelectFilter,
 }: AccountTypeTabsProps): React.JSX.Element {
+  const { t } = useTranslation("accounts");
   const filters: Array<{ id: FilterType; label: string }> = [
-    { id: "ALL", label: "All" },
-    ...ACCOUNT_TYPES.map((t) => ({ id: t.id, label: t.label })),
+    { id: "ALL", label: t("filter_all") },
+    ...ACCOUNT_TYPES.map((accountType) => ({
+      id: accountType.id,
+      label: t(`type_${accountType.id.toLowerCase()}`),
+    })),
   ];
 
   return (

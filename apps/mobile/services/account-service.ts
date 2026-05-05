@@ -19,9 +19,19 @@ import {
   accountFormSchema,
   type AccountFormData,
 } from "@/validation/account-validation";
-import { Account, BankDetails, type CurrencyType, database } from "@monyvi/db";
+import enAccounts from "@/locales/en/accounts.json";
+import arAccounts from "@/locales/ar/accounts.json";
+import {
+  Account,
+  BankDetails,
+  Profile,
+  type CurrencyType,
+  type PreferredLanguageCode,
+  database,
+} from "@monyvi/db";
 import { roundForCurrency } from "@monyvi/logic";
 import { Q } from "@nozbe/watermelondb";
+import { readIntroLocaleOverride } from "./intro-flag-service";
 import { queryOwned } from "./user-data-access";
 
 // ---------------------------------------------------------------------------
@@ -52,6 +62,10 @@ export interface CreateAccountResult {
 
 const CASH_ACCOUNT_NAME = "Cash";
 const CASH_ACCOUNT_TYPE = "CASH";
+const DEFAULT_CASH_ACCOUNT_NAMES: Record<PreferredLanguageCode, string> = {
+  en: enAccounts.default_cash_account_name,
+  ar: arAccounts.default_cash_account_name,
+};
 
 /** Sentinel error code returned when currency cannot be determined. */
 export const CURRENCY_UNKNOWN_ERROR = "CURRENCY_UNKNOWN";
@@ -67,6 +81,49 @@ export type CreateAccountErrorCode =
   (typeof CREATE_ACCOUNT_ERROR_CODES)[keyof typeof CREATE_ACCOUNT_ERROR_CODES];
 
 const pendingCreateKeys = new Set<string>();
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function isSupportedLanguage(value: unknown): value is PreferredLanguageCode {
+  return value === "en" || value === "ar";
+}
+
+export function getDefaultCashAccountName(
+  language: PreferredLanguageCode
+): string {
+  return DEFAULT_CASH_ACCOUNT_NAMES[language];
+}
+
+async function readPreferredLanguageForUser(
+  userId: string
+): Promise<PreferredLanguageCode | null> {
+  try {
+    const profiles = await database
+      .get<Profile>("profiles")
+      .query(Q.where("user_id", userId), Q.where("deleted", Q.notEq(true)))
+      .fetch();
+    const language = profiles[0]?.preferredLanguage;
+    return isSupportedLanguage(language) ? language : null;
+  } catch (error: unknown) {
+    logger.warn(
+      "cash_account_preferred_language_lookup_failed",
+      error instanceof Error ? { message: error.message } : { error }
+    );
+    return null;
+  }
+}
+
+async function resolveDefaultCashAccountName(userId: string): Promise<string> {
+  const profileLanguage = await readPreferredLanguageForUser(userId);
+  if (profileLanguage !== null) {
+    return getDefaultCashAccountName(profileLanguage);
+  }
+
+  const introLanguage = await readIntroLocaleOverride();
+  return getDefaultCashAccountName(introLanguage ?? "en");
+}
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -185,12 +242,12 @@ export async function createAccountForUser(
         throw new Error(CREATE_ACCOUNT_ERROR_CODES.DUPLICATE_ACCOUNT);
       }
 
-      const activeAccounts = await queryOwned(
+      const activeAccountCount = await queryOwned(
         accountsCollection,
         normalizedUserId,
         Q.where("deleted", Q.notEq(true))
-      ).fetch();
-      const isFirstAccount = activeAccounts.length === 0;
+      ).fetchCount();
+      const isFirstAccount = activeAccountCount === 0;
 
       const account = await accountsCollection.create((acc) => {
         acc.userId = normalizedUserId;
@@ -271,6 +328,9 @@ export async function ensureCashAccount(
       };
     }
 
+    const accountName = name?.trim()
+      ? name.trim()
+      : await resolveDefaultCashAccountName(normalizedUserId);
     let accountId: string | null = null;
     let created = false;
 
@@ -280,7 +340,7 @@ export async function ensureCashAccount(
         normalizedUserId,
         resolvedCurrency,
         accountsCollection,
-        name
+        accountName
       );
       accountId = result.accountId;
       created = result.created;

@@ -7,7 +7,7 @@
  * - Android: EncryptedSharedPreferences - survives app restarts but NOT manual data clear
  */
 
-import { SupabaseDatabase } from "@monyvi/db";
+import { SupabaseDatabase, type PreferredLanguageCode } from "@monyvi/db";
 import { createClient, AuthError } from "@supabase/supabase-js";
 import * as SecureStore from "expo-secure-store";
 import { AUTH_REDIRECT_URL } from "@/constants/auth-constants";
@@ -249,6 +249,18 @@ interface EmailAuthResult {
   readonly success: boolean;
   readonly error?: AuthError;
   readonly needsVerification?: boolean;
+  readonly userId?: string;
+  readonly userCreatedAt?: string;
+}
+
+interface EmailSignUpOptions {
+  readonly preferredLanguage?: PreferredLanguageCode;
+}
+
+function isPreferredLanguageCode(
+  value: unknown
+): value is PreferredLanguageCode {
+  return value === "en" || value === "ar";
 }
 
 /**
@@ -264,12 +276,29 @@ interface EmailAuthResult {
  */
 export async function signUpWithEmail(
   email: string,
-  password: string
+  password: string,
+  options: EmailSignUpOptions = {}
 ): Promise<EmailAuthResult> {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-  });
+  const preferredLanguage = isPreferredLanguageCode(options.preferredLanguage)
+    ? options.preferredLanguage
+    : undefined;
+  const credentials =
+    preferredLanguage !== undefined
+      ? {
+          email,
+          password,
+          options: {
+            data: {
+              preferred_language: preferredLanguage,
+            },
+          },
+        }
+      : {
+          email,
+          password,
+        };
+
+  const { data, error } = await supabase.auth.signUp(credentials);
 
   if (error) {
     return { success: false, error };
@@ -278,7 +307,12 @@ export async function signUpWithEmail(
   // Supabase returns user with `email_confirmed_at = null` for unverified users
   const needsVerification = !data.user?.email_confirmed_at;
 
-  return { success: true, needsVerification };
+  return {
+    success: true,
+    needsVerification,
+    userId: data.user?.id,
+    userCreatedAt: data.user?.created_at,
+  };
 }
 
 /**

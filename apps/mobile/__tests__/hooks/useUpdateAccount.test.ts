@@ -67,6 +67,19 @@ jest.mock("expo-haptics", () => ({
   NotificationFeedbackType: { Success: "success", Error: "error" },
 }));
 
+jest.mock("react-i18next", () => ({
+  useTranslation: (
+    namespace: "accounts" | "common"
+  ): { t: (key: string, options?: Record<string, unknown>) => string } => ({
+    t: (key: string, options?: Record<string, unknown>): string => {
+      const prefix = `${namespace}:${key}`;
+      return typeof options?.name === "string"
+        ? `${prefix}:${options.name}`
+        : prefix;
+    },
+  }),
+}));
+
 // Import AFTER mocks
 // eslint-disable-next-line import/first
 import { useUpdateAccount } from "../../hooks/useUpdateAccount";
@@ -142,9 +155,13 @@ describe("useUpdateAccount", () => {
         readonly [{ readonly title?: string }]
       >
     ).map(([arg]) => arg.title);
-    expect(titles).not.toContain("Account Updated ✅");
+    expect(titles).not.toContain("accounts:toast_update_success_title");
     expect(mockShowToast).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "error", title: "Update Failed" })
+      expect.objectContaining({
+        type: "error",
+        title: "accounts:toast_update_error_title",
+        message: "common:error_generic",
+      })
     );
     expect(mockRouterBack).not.toHaveBeenCalled();
   });
@@ -191,7 +208,11 @@ describe("useUpdateAccount", () => {
     // ledger entry while still mutating the account.
     expect(mockUpdateAccountWithBalanceAdjustment).not.toHaveBeenCalled();
     expect(mockShowToast).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "error", title: "Session Error" })
+      expect.objectContaining({
+        type: "error",
+        title: "accounts:toast_update_session_required_title",
+        message: "accounts:toast_update_session_required_message",
+      })
     );
     expect(mockRouterBack).not.toHaveBeenCalled();
   });
@@ -226,7 +247,11 @@ describe("useUpdateAccount", () => {
       null
     );
     expect(mockShowToast).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "success", title: "Account Updated ✅" })
+      expect.objectContaining({
+        type: "success",
+        title: "accounts:toast_update_success_title",
+        message: "accounts:toast_update_success_message:Renamed",
+      })
     );
     expect(mockRouterBack).toHaveBeenCalledTimes(1);
   });

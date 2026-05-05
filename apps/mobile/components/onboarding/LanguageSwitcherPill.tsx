@@ -53,11 +53,19 @@ import { palette } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useIntroLocaleOverride } from "@/hooks/useIntroLocaleOverride";
-import { setIntroLocaleOverride } from "@/services/intro-flag-service";
-import { setPreferredLanguage } from "@/services/profile-service";
+import { applyLanguageSelection } from "@/services/language-selection-service";
 import { logger } from "@/utils/logger";
 
 type SupportedLocale = "en" | "ar";
+
+interface LanguageSwitcherPillProps {
+  /**
+   * Persist the selected language to the authenticated profile when possible.
+   * Keep this false on auth/pitch surfaces so changing the login UI language
+   * cannot overwrite a returning user's stored preference.
+   */
+  readonly persistAuthenticatedProfile?: boolean;
+}
 
 interface LocaleOption {
   readonly code: SupportedLocale;
@@ -152,7 +160,9 @@ function computePopoverLeft(
   return Math.max(minLeft, Math.min(defaultLeft, maxLeft));
 }
 
-export function LanguageSwitcherPill(): React.ReactElement {
+export function LanguageSwitcherPill({
+  persistAuthenticatedProfile = false,
+}: LanguageSwitcherPillProps): React.ReactElement {
   const { i18n } = useTranslation();
   const { t: tCommon } = useTranslation("common");
   const { isDark } = useTheme();
@@ -165,6 +175,8 @@ export function LanguageSwitcherPill(): React.ReactElement {
   // back to the stale profile value on the next reload (the 2026-04-26
   // user-reported bug where Arabic in Currency-step "didn't stick").
   const { isAuthenticated } = useAuth();
+  const shouldPersistProfileLanguage =
+    persistAuthenticatedProfile && isAuthenticated;
   const pillRef = useRef<RNView | null>(null);
   const [pillRect, setPillRect] = useState<LayoutRectangle | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -206,27 +218,14 @@ export function LanguageSwitcherPill(): React.ReactElement {
         return;
       }
       setIsChanging(true);
-      // Always write the override first so a cold launch (after the RTL
-      // reload) starts in the right language. Then, when authenticated,
-      // also persist to the profile so `AppReadyGate` won't override it
-      // back. Order matters — if we wrote the profile first and the RTL
-      // reload happened before the override write committed, AsyncStorage
-      // would be one tick behind and the splash would show the old locale.
-      //
-      // Authenticated path uses `setIntroLocaleOverride` (raw service)
-      // followed by `setPreferredLanguage`, so `changeLanguage` runs
-      // exactly once (mirrors `app/settings.tsx`). Pre-auth path calls
-      // the `useIntroLocaleOverride` hook's `setOverride`, which writes
-      // the override AND calls `changeLanguage` itself — that's correct
-      // because there's no profile to persist into pre-auth.
+      // Delegate the storage/profile/RTL ordering to the service layer so
+      // auth bootstrap edge cases keep the visible language switch working.
       void (async (): Promise<void> => {
         try {
-          if (isAuthenticated) {
-            await setIntroLocaleOverride(lang);
-            await setPreferredLanguage(lang);
-          } else {
-            await setOverride(lang);
-          }
+          await applyLanguageSelection(lang, {
+            isAuthenticated: shouldPersistProfileLanguage,
+            setUnauthenticatedOverride: setOverride,
+          });
         } catch (error: unknown) {
           logger.warn(
             "LanguageSwitcherPill.setOverride.failed",
@@ -237,7 +236,7 @@ export function LanguageSwitcherPill(): React.ReactElement {
         }
       })();
     },
-    [currentLang, setOverride, handleClose, isAuthenticated]
+    [currentLang, setOverride, handleClose, shouldPersistProfileLanguage]
   );
 
   const popoverLeft = pillRect ? computePopoverLeft(pillRect, screenWidth) : 0;

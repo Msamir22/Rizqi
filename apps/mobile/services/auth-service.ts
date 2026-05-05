@@ -23,6 +23,15 @@ import {
 
 import { AUTH_REDIRECT_URL } from "@/constants/auth-constants";
 import {
+  getCurrentLanguage,
+  type SupportedLanguage,
+} from "@/i18n/changeLanguage";
+import {
+  readIntroLocaleOverride,
+  setPendingOAuthSignupLocale,
+  setPendingSignupLocale,
+} from "@/services/intro-flag-service";
+import {
   signInWithOAuthProvider,
   supabase,
   resetPasswordForEmail as supabaseResetPassword,
@@ -86,6 +95,9 @@ export async function signInWithOAuth(
   provider: OAuthProvider
 ): Promise<OAuthResult> {
   try {
+    const preferredLanguage = await resolveSignupPreferredLanguage();
+    await setPendingOAuthSignupLocale(preferredLanguage);
+
     const oauthResponse = await signInWithOAuthProvider(provider);
 
     // Provider returned an error (e.g., network failure)
@@ -170,7 +182,17 @@ export async function signUpWithEmail(
   email: string,
   password: string
 ): Promise<EmailAuthResult> {
-  return supabaseSignUp(email, password);
+  const preferredLanguage = await resolveSignupPreferredLanguage();
+  const result = await supabaseSignUp(email, password, { preferredLanguage });
+  if (result.success && result.userId && result.userCreatedAt) {
+    await setPendingSignupLocale(
+      email,
+      preferredLanguage,
+      result.userId,
+      result.userCreatedAt
+    );
+  }
+  return result;
 }
 
 /**
@@ -240,6 +262,15 @@ function isTimeoutSentinel(
   result: BrowserOrTimeout
 ): result is TimeoutSentinel {
   return "type" in result && result.type === "TIMEOUT";
+}
+
+/**
+ * Resolve the language selected before authentication. The AsyncStorage
+ * override captures explicit pre-auth language choices; current i18n covers
+ * device-locale initialization when no explicit override exists.
+ */
+async function resolveSignupPreferredLanguage(): Promise<SupportedLanguage> {
+  return (await readIntroLocaleOverride()) ?? getCurrentLanguage();
 }
 
 /**

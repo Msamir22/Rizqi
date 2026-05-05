@@ -13,6 +13,7 @@
  */
 
 import React from "react";
+import type { PendingSignupLocale } from "@/services/intro-flag-service";
 
 // react-test-renderer has no TS types; minimal shape used by this test.
 interface ReactTestRendererInstance {
@@ -20,7 +21,10 @@ interface ReactTestRendererInstance {
   unmount: () => void;
 }
 interface ReactTestRendererModule {
-  act: (fn: () => void | Promise<void>) => void;
+  act: {
+    (fn: () => Promise<void>): Promise<void>;
+    (fn: () => void): void;
+  };
   create: (element: React.ReactElement) => ReactTestRendererInstance;
 }
 // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
@@ -56,6 +60,12 @@ jest.mock("@/utils/logger", () => ({
 const mockUseAuth = jest.fn();
 const mockUseSync = jest.fn();
 const mockUseProfile = jest.fn();
+const mockSync = jest.fn<Promise<void>, []>();
+const mockReadPendingSignupLocale = jest.fn<
+  Promise<PendingSignupLocale | null>,
+  []
+>();
+const mockClearPendingSignupLocale = jest.fn<Promise<void>, []>();
 
 jest.mock("@/context/AuthContext", () => ({
   useAuth: (): unknown => mockUseAuth(),
@@ -69,23 +79,41 @@ jest.mock("@/hooks/useProfile", () => ({
   useProfile: (): unknown => mockUseProfile(),
 }));
 
+jest.mock("@/services/profile-service", () => ({
+  setPreferredLanguage: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock("@/services/intro-flag-service", () => ({
+  readPendingSignupLocale: (): Promise<unknown> =>
+    mockReadPendingSignupLocale(),
+  clearPendingSignupLocale: (): Promise<void> => mockClearPendingSignupLocale(),
+}));
+
 // =============================================================================
 // Imports (after mocks)
 // =============================================================================
 
 import * as SplashScreen from "expo-splash-screen";
 import { changeLanguage } from "@/i18n/changeLanguage";
+import { setPreferredLanguage } from "@/services/profile-service";
 import { AppReadyGate } from "@/components/AppReadyGate";
 
 const mockHideAsync = SplashScreen.hideAsync as jest.Mock;
 const mockChangeLanguage = changeLanguage as jest.Mock;
+const mockSetPreferredLanguage = setPreferredLanguage as jest.Mock;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockReadPendingSignupLocale.mockResolvedValue(null);
+  mockClearPendingSignupLocale.mockResolvedValue(undefined);
+  mockSync.mockResolvedValue(undefined);
 });
 
 async function flushPromises(): Promise<void> {
-  await new Promise((r) => setImmediate(r));
+  await RTR.act(async () => {
+    await new Promise((r) => setImmediate(r));
+    await new Promise((r) => setImmediate(r));
+  });
 }
 
 // =============================================================================
@@ -95,6 +123,11 @@ async function flushPromises(): Promise<void> {
 function setState(opts: {
   authIsLoading: boolean;
   isAuthenticated: boolean;
+  user?: {
+    readonly id?: string;
+    readonly email?: string;
+    readonly created_at?: string;
+  } | null;
   initialSyncState?: "in-progress" | "success" | "failed" | "timeout";
   profileIsLoading?: boolean;
   profile?: Record<string, unknown> | null;
@@ -102,9 +135,11 @@ function setState(opts: {
   mockUseAuth.mockReturnValue({
     isLoading: opts.authIsLoading,
     isAuthenticated: opts.isAuthenticated,
+    user: opts.user ?? null,
   });
   mockUseSync.mockReturnValue({
     initialSyncState: opts.initialSyncState ?? "in-progress",
+    sync: mockSync,
   });
   mockUseProfile.mockReturnValue({
     profile: opts.profile ?? null,
@@ -256,6 +291,154 @@ describe("AppReadyGate", () => {
     expect(changeLanguageOrder).toBeLessThan(hideAsyncOrder);
   });
 
+  it("persists the pending signup language for a matching new profile before hiding splash", async (): Promise<void> => {
+    const signupCreatedAt = "2026-05-05T10:00:00.000Z";
+    mockReadPendingSignupLocale.mockResolvedValue({
+      kind: "email",
+      email: "new@example.com",
+      language: "ar",
+      userId: "new-user-1",
+      userCreatedAt: signupCreatedAt,
+      markerCreatedAt: "2026-05-05T11:00:00.000Z",
+    });
+    setState({
+      authIsLoading: false,
+      isAuthenticated: true,
+      user: { id: "new-user-1", email: "new@example.com" },
+      initialSyncState: "success",
+      profileIsLoading: false,
+      profile: {
+        preferredLanguage: "en",
+        onboardingCompleted: false,
+        userId: "new-user-1",
+        createdAt: new Date("2026-05-05T10:00:03.000Z"),
+      },
+    });
+
+    RTR.act(() => {
+      RTR.create(React.createElement(AppReadyGate));
+    });
+    await flushPromises();
+
+    expect(mockSetPreferredLanguage).toHaveBeenCalledWith("ar");
+    expect(mockSync).toHaveBeenCalledTimes(1);
+    expect(mockClearPendingSignupLocale).toHaveBeenCalledTimes(1);
+    expect(mockHideAsync).toHaveBeenCalledTimes(1);
+
+    const setLanguageOrder =
+      mockSetPreferredLanguage.mock.invocationCallOrder[0];
+    const hideAsyncOrder = mockHideAsync.mock.invocationCallOrder[0];
+    expect(setLanguageOrder).toBeLessThan(hideAsyncOrder);
+  });
+
+  it("keeps the stored profile language when an existing user signs in after changing auth-screen language", async (): Promise<void> => {
+    mockReadPendingSignupLocale.mockResolvedValue({
+      kind: "email",
+      email: "returning@example.com",
+      language: "ar",
+      userId: "signup-user-1",
+      userCreatedAt: "2026-05-05T10:00:00.000Z",
+      markerCreatedAt: "2026-05-05T10:00:00.000Z",
+    });
+    setState({
+      authIsLoading: false,
+      isAuthenticated: true,
+      user: { id: "returning-user-1", email: "returning@example.com" },
+      initialSyncState: "success",
+      profileIsLoading: false,
+      profile: {
+        preferredLanguage: "en",
+        onboardingCompleted: false,
+        userId: "returning-user-1",
+        createdAt: new Date("2026-04-01T10:00:00.000Z"),
+      },
+    });
+
+    RTR.act(() => {
+      RTR.create(React.createElement(AppReadyGate));
+    });
+    await flushPromises();
+
+    expect(mockSetPreferredLanguage).not.toHaveBeenCalled();
+    expect(mockSync).not.toHaveBeenCalled();
+    expect(mockChangeLanguage).not.toHaveBeenCalled();
+    expect(mockClearPendingSignupLocale).toHaveBeenCalledTimes(1);
+    expect(mockHideAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it("persists the pending OAuth signup language only for a newly created Google user", async (): Promise<void> => {
+    mockReadPendingSignupLocale.mockResolvedValue({
+      kind: "oauth",
+      language: "ar",
+      authStartedAt: "2026-05-05T10:00:00.000Z",
+      markerCreatedAt: "2026-05-05T10:00:00.000Z",
+    });
+    setState({
+      authIsLoading: false,
+      isAuthenticated: true,
+      user: {
+        id: "google-user-1",
+        email: "new-google@example.com",
+        created_at: "2026-05-05T10:00:05.000Z",
+      },
+      initialSyncState: "success",
+      profileIsLoading: false,
+      profile: {
+        preferredLanguage: "en",
+        onboardingCompleted: false,
+        userId: "google-user-1",
+        createdAt: new Date("2026-05-05T10:00:06.000Z"),
+      },
+    });
+
+    RTR.act(() => {
+      RTR.create(React.createElement(AppReadyGate));
+    });
+    await flushPromises();
+
+    expect(mockSetPreferredLanguage).toHaveBeenCalledWith("ar");
+    expect(mockSync).toHaveBeenCalledTimes(1);
+    expect(mockClearPendingSignupLocale).toHaveBeenCalledTimes(1);
+    expect(mockHideAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the stored profile language for a returning Google user after changing auth-screen language", async (): Promise<void> => {
+    mockReadPendingSignupLocale.mockResolvedValue({
+      kind: "oauth",
+      language: "ar",
+      authStartedAt: "2026-05-05T10:00:00.000Z",
+      markerCreatedAt: "2026-05-05T10:00:00.000Z",
+    });
+    setState({
+      authIsLoading: false,
+      isAuthenticated: true,
+      user: {
+        id: "google-user-1",
+        email: "returning-google@example.com",
+        created_at: "2026-04-01T10:00:00.000Z",
+      },
+      initialSyncState: "success",
+      profileIsLoading: false,
+      profile: {
+        preferredLanguage: "en",
+        onboardingCompleted: false,
+        userId: "google-user-1",
+        createdAt: new Date("2026-04-01T10:00:02.000Z"),
+      },
+    });
+
+    RTR.act(() => {
+      RTR.create(React.createElement(AppReadyGate));
+    });
+    await flushPromises();
+
+    expect(mockSetPreferredLanguage).not.toHaveBeenCalled();
+    expect(mockSync).not.toHaveBeenCalled();
+    expect(mockChangeLanguage).not.toHaveBeenCalled();
+    expect(mockClearPendingSignupLocale).toHaveBeenCalledTimes(1);
+    expect(mockHideAsync).toHaveBeenCalledTimes(1);
+  });
+
   it("does NOT call changeLanguage when stored language matches current i18n", async (): Promise<void> => {
     setState({
       authIsLoading: false,
@@ -272,6 +455,58 @@ describe("AppReadyGate", () => {
 
     expect(mockChangeLanguage).not.toHaveBeenCalled();
     expect(mockHideAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-reads the pending OAuth marker after Google auth completes without a remount", async (): Promise<void> => {
+    mockReadPendingSignupLocale.mockResolvedValueOnce(null);
+    setState({
+      authIsLoading: false,
+      isAuthenticated: false,
+    });
+
+    let renderer: ReactTestRendererInstance | null = null;
+    RTR.act(() => {
+      renderer = RTR.create(React.createElement(AppReadyGate));
+    });
+    await flushPromises();
+
+    expect(mockHideAsync).toHaveBeenCalledTimes(1);
+    expect(mockSetPreferredLanguage).not.toHaveBeenCalled();
+
+    mockHideAsync.mockClear();
+    mockReadPendingSignupLocale.mockResolvedValueOnce({
+      kind: "oauth",
+      language: "ar",
+      authStartedAt: "2026-05-05T10:00:00.000Z",
+      markerCreatedAt: "2026-05-05T10:00:00.000Z",
+    });
+    setState({
+      authIsLoading: false,
+      isAuthenticated: true,
+      user: {
+        id: "google-user-after-auth",
+        email: "new-google@example.com",
+        created_at: "2026-05-05T10:00:05.000Z",
+      },
+      initialSyncState: "success",
+      profileIsLoading: false,
+      profile: {
+        preferredLanguage: "en",
+        onboardingCompleted: false,
+        userId: "google-user-after-auth",
+        createdAt: new Date("2026-05-05T10:00:06.000Z"),
+      },
+    });
+
+    RTR.act(() => {
+      renderer?.update(React.createElement(AppReadyGate));
+    });
+    await flushPromises();
+
+    expect(mockReadPendingSignupLocale).toHaveBeenCalledTimes(2);
+    expect(mockSetPreferredLanguage).toHaveBeenCalledWith("ar");
+    expect(mockSync).toHaveBeenCalledTimes(1);
+    expect(mockClearPendingSignupLocale).toHaveBeenCalledTimes(1);
   });
 
   it("hides splash at most once even if inputs re-resolve", async (): Promise<void> => {

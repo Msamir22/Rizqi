@@ -60,6 +60,8 @@ function AccountsListEmpty({
   onAdd: () => void;
 }): ReactElement {
   const { t } = useTranslation("accounts");
+  const selectedType =
+    selectedFilter === "ALL" ? "" : t(getAccountTypeLabelKey(selectedFilter));
   return (
     <View className="flex-1 items-center justify-center py-20 px-10">
       <View className="w-20 h-20 rounded-full items-center justify-center mb-6 bg-slate-100 dark:bg-slate-800">
@@ -68,13 +70,13 @@ function AccountsListEmpty({
       <Text className="text-lg font-bold text-center mb-2 text-slate-800 dark:text-white">
         {selectedFilter === "ALL"
           ? t("no_accounts_title")
-          : t("no_accounts_type_title", { type: selectedFilter.toLowerCase() })}
+          : t("no_accounts_type_title", { type: selectedType })}
       </Text>
       <Text className="text-sm text-slate-400 text-center mb-10">
         {selectedFilter === "ALL"
           ? t("no_accounts_message")
           : t("no_accounts_type_message", {
-              type: selectedFilter.toLowerCase(),
+              type: selectedType,
             })}
       </Text>
 
@@ -83,6 +85,15 @@ function AccountsListEmpty({
       )}
     </View>
   );
+}
+
+function getAccountTypeLabelKey(filter: Exclude<FilterType, "ALL">): string {
+  const keyMap: Record<Exclude<FilterType, "ALL">, string> = {
+    CASH: "type_cash",
+    BANK: "type_bank",
+    DIGITAL_WALLET: "type_digital_wallet",
+  };
+  return keyMap[filter];
 }
 
 /**

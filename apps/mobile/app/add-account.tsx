@@ -135,6 +135,7 @@ export default function AddAccount(): React.ReactNode {
           >
             {ACCOUNT_TYPES.map((type) => {
               const isSelected = formData.accountType === type.id;
+              const accountTypeLabel = t(`type_${type.id.toLowerCase()}`);
               return (
                 <TouchableOpacity
                   key={type.id}
@@ -143,7 +144,9 @@ export default function AddAccount(): React.ReactNode {
                   accessibilityRole="radio"
                   accessibilityState={{ selected: isSelected }}
                   accessibilityLabel={
-                    isSelected ? `${type.label}, selected` : type.label
+                    isSelected
+                      ? `${accountTypeLabel}, ${tCommon("selected")}`
+                      : accountTypeLabel
                   }
                   className={`flex-row items-center rounded-2xl px-3 py-3 border ${
                     isSelected
@@ -182,7 +185,7 @@ export default function AddAccount(): React.ReactNode {
                         : "text-slate-500 dark:text-slate-400"
                     }`}
                   >
-                    {type.label}
+                    {accountTypeLabel}
                   </Text>
                 </TouchableOpacity>
               );

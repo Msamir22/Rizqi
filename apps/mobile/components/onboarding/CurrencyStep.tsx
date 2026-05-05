@@ -211,7 +211,7 @@ export function CurrencyStep(): React.ReactElement {
         className="flex-row items-center justify-between px-6"
         style={{ paddingTop: insets.top + 8 }}
       >
-        <LanguageSwitcherPill />
+        <LanguageSwitcherPill persistAuthenticatedProfile />
         <TouchableOpacity onPress={handleSignOut} hitSlop={12}>
           <Text className="text-sm font-medium text-slate-500 dark:text-slate-400">
             {t("currency_step_signout")}

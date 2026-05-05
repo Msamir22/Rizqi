@@ -19,6 +19,7 @@ export async function applyRTL(isArabic: boolean): Promise<void> {
 
   // Only reload if RTL state actually changed
   if (I18nManager.isRTL !== shouldForceRTL) {
+    I18nManager.allowRTL(shouldForceRTL);
     I18nManager.forceRTL(shouldForceRTL);
 
     // Reload the JS bundle to apply RTL changes

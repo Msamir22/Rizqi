@@ -25,7 +25,10 @@ import {
   getCurrentLanguage,
   type SupportedLanguage,
 } from "@/i18n/changeLanguage";
-import { createCashAccountWithinWriter } from "@/services/account-service";
+import {
+  createCashAccountWithinWriter,
+  getDefaultCashAccountName,
+} from "@/services/account-service";
 import { clearOnboardingStep } from "@/services/onboarding-cursor-service";
 import { getCurrentUserId } from "@/services/supabase";
 import { logger } from "@/utils/logger";
@@ -236,6 +239,7 @@ export async function confirmCurrencyAndOnboard(
   const profile = await getProfile();
   const userId = profile.userId;
   const language: SupportedLanguage = getCurrentLanguage();
+  const cashAccountName = getDefaultCashAccountName(language);
 
   let accountId = "";
 
@@ -245,7 +249,8 @@ export async function confirmCurrencyAndOnboard(
     const result = await createCashAccountWithinWriter(
       userId,
       currency,
-      accountsCollection
+      accountsCollection,
+      cashAccountName
     );
     accountId = result.accountId;
 

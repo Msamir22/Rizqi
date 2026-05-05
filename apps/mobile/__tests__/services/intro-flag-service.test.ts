@@ -4,6 +4,10 @@ import {
   markIntroSeen,
   readIntroLocaleOverride,
   setIntroLocaleOverride,
+  readPendingSignupLocale,
+  setPendingOAuthSignupLocale,
+  setPendingSignupLocale,
+  clearPendingSignupLocale,
 } from "@/services/intro-flag-service";
 
 jest.mock("@react-native-async-storage/async-storage");
@@ -12,6 +16,9 @@ const mockGetItem = AsyncStorage.getItem as jest.MockedFunction<
 >;
 const mockSetItem = AsyncStorage.setItem as jest.MockedFunction<
   typeof AsyncStorage.setItem
+>;
+const mockRemoveItem = AsyncStorage.removeItem as jest.MockedFunction<
+  typeof AsyncStorage.removeItem
 >;
 
 describe("intro-flag-service", () => {
@@ -101,6 +108,118 @@ describe("intro-flag-service", () => {
         unknown
       >;
       expect(svc.clearIntroLocaleOverride).toBeUndefined();
+    });
+  });
+
+  describe("pending signup locale", () => {
+    it("persists a normalized email with the signup language", async () => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date("2026-05-05T10:00:00.000Z"));
+      mockSetItem.mockResolvedValueOnce();
+
+      await setPendingSignupLocale(
+        " New@Example.COM ",
+        "ar",
+        " signup-user-1 ",
+        "2026-05-05T09:59:57.000Z"
+      );
+
+      expect(mockSetItem).toHaveBeenCalledWith(
+        "@monyvi/pending-signup-locale",
+        JSON.stringify({
+          kind: "email",
+          email: "new@example.com",
+          language: "ar",
+          userId: "signup-user-1",
+          userCreatedAt: "2026-05-05T09:59:57.000Z",
+          markerCreatedAt: "2026-05-05T10:00:00.000Z",
+        })
+      );
+      jest.useRealTimers();
+    });
+
+    it("reads a valid pending signup locale marker", async () => {
+      mockGetItem.mockResolvedValueOnce(
+        JSON.stringify({
+          kind: "email",
+          email: "New@Example.COM",
+          language: "ar",
+          userId: "signup-user-1",
+          userCreatedAt: "2026-05-05T09:59:57.000Z",
+          markerCreatedAt: "2026-05-05T10:00:00.000Z",
+        })
+      );
+
+      await expect(readPendingSignupLocale()).resolves.toEqual({
+        kind: "email",
+        email: "new@example.com",
+        language: "ar",
+        userId: "signup-user-1",
+        userCreatedAt: "2026-05-05T09:59:57.000Z",
+        markerCreatedAt: "2026-05-05T10:00:00.000Z",
+      });
+    });
+
+    it("returns null for invalid pending signup locale payloads", async () => {
+      mockGetItem.mockResolvedValueOnce(
+        JSON.stringify({
+          email: "new@example.com",
+          kind: "email",
+          language: "fr",
+          userId: "signup-user-1",
+          userCreatedAt: "2026-05-05T09:59:57.000Z",
+          markerCreatedAt: "2026-05-05T10:00:00.000Z",
+        })
+      );
+
+      await expect(readPendingSignupLocale()).resolves.toBeNull();
+    });
+
+    it("persists an OAuth signup language marker", async () => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date("2026-05-05T10:00:00.000Z"));
+      mockSetItem.mockResolvedValueOnce();
+
+      await setPendingOAuthSignupLocale("ar");
+
+      expect(mockSetItem).toHaveBeenCalledWith(
+        "@monyvi/pending-signup-locale",
+        JSON.stringify({
+          kind: "oauth",
+          language: "ar",
+          authStartedAt: "2026-05-05T10:00:00.000Z",
+          markerCreatedAt: "2026-05-05T10:00:00.000Z",
+        })
+      );
+      jest.useRealTimers();
+    });
+
+    it("reads a valid OAuth signup locale marker", async () => {
+      mockGetItem.mockResolvedValueOnce(
+        JSON.stringify({
+          kind: "oauth",
+          language: "ar",
+          authStartedAt: "2026-05-05T10:00:00.000Z",
+          markerCreatedAt: "2026-05-05T10:00:00.000Z",
+        })
+      );
+
+      await expect(readPendingSignupLocale()).resolves.toEqual({
+        kind: "oauth",
+        language: "ar",
+        authStartedAt: "2026-05-05T10:00:00.000Z",
+        markerCreatedAt: "2026-05-05T10:00:00.000Z",
+      });
+    });
+
+    it("clears the pending signup locale marker", async () => {
+      mockRemoveItem.mockResolvedValueOnce();
+
+      await clearPendingSignupLocale();
+
+      expect(mockRemoveItem).toHaveBeenCalledWith(
+        "@monyvi/pending-signup-locale"
+      );
     });
   });
 });

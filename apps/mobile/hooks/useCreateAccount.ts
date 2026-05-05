@@ -1,5 +1,6 @@
 import { useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useToast } from "../components/ui/Toast";
 import {
   CREATE_ACCOUNT_ERROR_CODES,
@@ -24,6 +25,8 @@ export function useCreateAccount(): UseCreateAccountResult {
   const [error, setError] = useState<Error | null>(null);
   const { showToast } = useToast();
   const router = useRouter();
+  const { t } = useTranslation("accounts");
+  const { t: tCommon } = useTranslation("common");
 
   /**
    * Performs the database write operation to create an account and optional bank details.
@@ -41,8 +44,8 @@ export function useCreateAccount(): UseCreateAccountResult {
         if (!userId) {
           showToast({
             type: "error",
-            title: "Session Error",
-            message: "You must be signed in to create an account",
+            title: t("toast_create_session_required_title"),
+            message: t("toast_create_session_required_message"),
           });
           return;
         }
@@ -56,8 +59,8 @@ export function useCreateAccount(): UseCreateAccountResult {
           ) {
             showToast({
               type: "warning",
-              title: "Account Already Exists",
-              message: "This account was already created.",
+              title: t("toast_create_duplicate_title"),
+              message: t("toast_create_duplicate_message"),
             });
             return;
           }
@@ -67,8 +70,8 @@ export function useCreateAccount(): UseCreateAccountResult {
 
         showToast({
           type: "success",
-          title: "Account Created 🎉",
-          message: `${data.name} has been added successfully`,
+          title: t("toast_create_success_title"),
+          message: t("toast_create_success_message", { name: data.name }),
         });
 
         if (router.canGoBack()) {
@@ -84,15 +87,15 @@ export function useCreateAccount(): UseCreateAccountResult {
 
         showToast({
           type: "error",
-          title: "Creation Failed",
-          message: "Something went wrong. Please try again.",
+          title: t("toast_create_error_title"),
+          message: tCommon("error_generic"),
         });
       } finally {
         isSubmittingRef.current = false;
         setIsSubmitting(false);
       }
     },
-    [showToast, router]
+    [showToast, router, t, tCommon]
   );
 
   return {
