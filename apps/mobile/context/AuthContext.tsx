@@ -24,6 +24,7 @@ import React, {
   useState,
 } from "react";
 import { supabase } from "@/services/supabase";
+import { logger } from "@/utils/logger";
 
 const AUTH_BOOTSTRAP_TIMEOUT_MS = 10_000;
 
@@ -138,7 +139,14 @@ export function AuthProvider({
         applySession(initialSession, false);
         setIsLoading(false);
       })
-      .catch(() => setIsLoading(false));
+      .catch((error: unknown) => {
+        const isTimeout =
+          error instanceof Error && error.message === "auth-bootstrap-timeout";
+        if (!isTimeout) {
+          logger.error("Auth bootstrap failed", { error });
+        }
+        setIsLoading(false);
+      });
 
     // Listen for auth changes
     const {
