@@ -54,7 +54,7 @@ function computeReady(
   isAuthenticated: boolean,
   initialSyncState: "in-progress" | "success" | "failed" | "timeout",
   profileIsLoading: boolean,
-  pendingSignupLocaleIsLoading: boolean,
+  pendingSignupLocaleIsReady: boolean,
   profileOnboardingCompleted: boolean | undefined
 ): boolean {
   if (authIsLoading) return false;
@@ -63,7 +63,7 @@ function computeReady(
   // Authenticated path: wait for sync to settle + profile observation ready.
   if (initialSyncState === "in-progress") return false;
   if (profileIsLoading) return false;
-  if (profileOnboardingCompleted === false && pendingSignupLocaleIsLoading) {
+  if (profileOnboardingCompleted === false && !pendingSignupLocaleIsReady) {
     return false;
   }
   return true;
@@ -154,23 +154,29 @@ function isCreatedDuringOAuthSignup(
 
 export function AppReadyGate(): null {
   const { user, isLoading: authIsLoading, isAuthenticated } = useAuth();
-  const { initialSyncState } = useSync();
+  const { initialSyncState, sync } = useSync();
   const { profile, isLoading: profileIsLoading } = useProfile();
   const [pendingSignupLocale, setPendingSignupLocale] =
     useState<PendingSignupLocale | null>(null);
   const [pendingSignupLocaleIsLoading, setPendingSignupLocaleIsLoading] =
     useState(true);
+  const [pendingSignupLocaleAuthUserId, setPendingSignupLocaleAuthUserId] =
+    useState<string | null>(null);
   const hiddenRef = useRef(false);
   // Prevents concurrent hide attempts while an earlier one is in flight,
   // without permanently latching on a rejection (CR review on AppReadyGate.tsx:108).
   const hideInFlightRef = useRef(false);
+
+  const pendingSignupLocaleIsReady =
+    !pendingSignupLocaleIsLoading &&
+    (!isAuthenticated || pendingSignupLocaleAuthUserId === (user?.id ?? null));
 
   const ready = computeReady(
     authIsLoading,
     isAuthenticated,
     initialSyncState,
     profileIsLoading,
-    pendingSignupLocaleIsLoading,
+    pendingSignupLocaleIsReady,
     profile?.onboardingCompleted
   );
 
@@ -192,12 +198,30 @@ export function AppReadyGate(): null {
   }, []);
 
   useEffect(() => {
-    // `hiddenRef` is only set AFTER `SplashScreen.hideAsync()` succeeds, so
-    // a rejected hide (rare but possible) doesn't permanently trap the user
-    // behind the native splash. `hideInFlightRef` blocks concurrent attempts
-    // while the async hide is pending.
-    if (!ready || hiddenRef.current || hideInFlightRef.current) return;
-    hideInFlightRef.current = true;
+    if (!isAuthenticated || !user?.id) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadPendingSignupLocaleForUser = async (): Promise<void> => {
+      setPendingSignupLocaleIsLoading(true);
+      const marker = await readPendingSignupLocale();
+      if (!cancelled) {
+        setPendingSignupLocale(marker);
+        setPendingSignupLocaleAuthUserId(user.id);
+        setPendingSignupLocaleIsLoading(false);
+      }
+    };
+
+    void loadPendingSignupLocaleForUser();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, user?.id]);
+
+  useEffect(() => {
+    if (!ready || hideInFlightRef.current) return;
 
     const storedLanguage = isSupportedLanguage(profile?.preferredLanguage)
       ? profile.preferredLanguage
@@ -220,11 +244,21 @@ export function AppReadyGate(): null {
         user?.id === pendingSignupLocale.userId ||
         normalizeEmail(user?.email) === pendingSignupLocale.email);
     const targetLanguage = signupLanguage ?? storedLanguage;
+    const shouldApplyTargetLanguage =
+      targetLanguage !== undefined && targetLanguage !== i18n.language;
+    const shouldHideSplash = !hiddenRef.current;
+
+    if (!signupLanguage && !shouldApplyTargetLanguage && !shouldHideSplash) {
+      return;
+    }
+
+    hideInFlightRef.current = true;
 
     const finish = async (): Promise<void> => {
       if (signupLanguage && profile?.preferredLanguage !== signupLanguage) {
         try {
           await setPreferredLanguage(signupLanguage);
+          await sync();
         } catch (error) {
           logger.warn(
             "appReadyGate.signupLanguagePersist.failed",
@@ -241,7 +275,7 @@ export function AppReadyGate(): null {
       // Sync the UI language with the user's stored preference BEFORE we
       // hide the splash, so the first painted frame is in the right
       // language and not the device-locale fallback from initI18n.
-      if (targetLanguage && targetLanguage !== i18n.language) {
+      if (shouldApplyTargetLanguage) {
         try {
           await changeLanguage(targetLanguage);
         } catch (error) {
@@ -252,18 +286,23 @@ export function AppReadyGate(): null {
         }
       }
 
-      try {
-        await SplashScreen.hideAsync();
-        hiddenRef.current = true;
-      } catch (error) {
-        logger.warn(
-          "appReadyGate.splash.hideAsync.failed",
-          error instanceof Error ? { message: error.message } : { error }
-        );
-        // Leave hiddenRef=false so a subsequent render can retry the hide.
-      } finally {
-        hideInFlightRef.current = false;
+      if (shouldHideSplash) {
+        try {
+          await SplashScreen.hideAsync();
+          hiddenRef.current = true;
+        } catch (error) {
+          logger.warn(
+            "appReadyGate.splash.hideAsync.failed",
+            error instanceof Error ? { message: error.message } : { error }
+          );
+          // Leave hiddenRef=false so a subsequent render can retry the hide.
+        } finally {
+          hideInFlightRef.current = false;
+        }
+        return;
       }
+
+      hideInFlightRef.current = false;
     };
 
     void finish();
@@ -278,6 +317,7 @@ export function AppReadyGate(): null {
     profile?.createdAt,
     profile?.onboardingCompleted,
     pendingSignupLocale,
+    sync,
   ]);
 
   return null;
