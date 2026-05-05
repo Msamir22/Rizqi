@@ -5,6 +5,7 @@ import {
   readIntroLocaleOverride,
   setIntroLocaleOverride,
   readPendingSignupLocale,
+  setPendingOAuthSignupLocale,
   setPendingSignupLocale,
   clearPendingSignupLocale,
 } from "@/services/intro-flag-service";
@@ -126,6 +127,7 @@ describe("intro-flag-service", () => {
       expect(mockSetItem).toHaveBeenCalledWith(
         "@monyvi/pending-signup-locale",
         JSON.stringify({
+          kind: "email",
           email: "new@example.com",
           language: "ar",
           userId: "signup-user-1",
@@ -139,6 +141,7 @@ describe("intro-flag-service", () => {
     it("reads a valid pending signup locale marker", async () => {
       mockGetItem.mockResolvedValueOnce(
         JSON.stringify({
+          kind: "email",
           email: "New@Example.COM",
           language: "ar",
           userId: "signup-user-1",
@@ -148,6 +151,7 @@ describe("intro-flag-service", () => {
       );
 
       await expect(readPendingSignupLocale()).resolves.toEqual({
+        kind: "email",
         email: "new@example.com",
         language: "ar",
         userId: "signup-user-1",
@@ -160,6 +164,7 @@ describe("intro-flag-service", () => {
       mockGetItem.mockResolvedValueOnce(
         JSON.stringify({
           email: "new@example.com",
+          kind: "email",
           language: "fr",
           userId: "signup-user-1",
           userCreatedAt: "2026-05-05T09:59:57.000Z",
@@ -168,6 +173,43 @@ describe("intro-flag-service", () => {
       );
 
       await expect(readPendingSignupLocale()).resolves.toBeNull();
+    });
+
+    it("persists an OAuth signup language marker", async () => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date("2026-05-05T10:00:00.000Z"));
+      mockSetItem.mockResolvedValueOnce();
+
+      await setPendingOAuthSignupLocale("ar");
+
+      expect(mockSetItem).toHaveBeenCalledWith(
+        "@monyvi/pending-signup-locale",
+        JSON.stringify({
+          kind: "oauth",
+          language: "ar",
+          authStartedAt: "2026-05-05T10:00:00.000Z",
+          markerCreatedAt: "2026-05-05T10:00:00.000Z",
+        })
+      );
+      jest.useRealTimers();
+    });
+
+    it("reads a valid OAuth signup locale marker", async () => {
+      mockGetItem.mockResolvedValueOnce(
+        JSON.stringify({
+          kind: "oauth",
+          language: "ar",
+          authStartedAt: "2026-05-05T10:00:00.000Z",
+          markerCreatedAt: "2026-05-05T10:00:00.000Z",
+        })
+      );
+
+      await expect(readPendingSignupLocale()).resolves.toEqual({
+        kind: "oauth",
+        language: "ar",
+        authStartedAt: "2026-05-05T10:00:00.000Z",
+        markerCreatedAt: "2026-05-05T10:00:00.000Z",
+      });
     });
 
     it("clears the pending signup locale marker", async () => {

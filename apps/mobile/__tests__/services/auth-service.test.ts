@@ -29,6 +29,7 @@ const mockSignInWithEmailFn = jest.fn();
 const mockResetPasswordForEmail = jest.fn();
 const mockReadIntroLocaleOverride = jest.fn();
 const mockSetPendingSignupLocale = jest.fn();
+const mockSetPendingOAuthSignupLocale = jest.fn();
 const mockGetCurrentLanguage = jest.fn();
 
 jest.mock("@/services/supabase", () => ({
@@ -59,6 +60,8 @@ jest.mock("@/services/intro-flag-service", () => ({
     mockReadIntroLocaleOverride() as Promise<"en" | "ar" | null>,
   setPendingSignupLocale: (...args: unknown[]): Promise<void> =>
     mockSetPendingSignupLocale(...args) as Promise<void>,
+  setPendingOAuthSignupLocale: (...args: unknown[]): Promise<void> =>
+    mockSetPendingOAuthSignupLocale(...args) as Promise<void>,
 }));
 
 jest.mock("@/i18n/changeLanguage", () => ({
@@ -122,6 +125,8 @@ describe("auth-service - signInWithOAuth", () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
+    mockReadIntroLocaleOverride.mockResolvedValue(null);
+    mockGetCurrentLanguage.mockReturnValue("en");
   });
 
   afterEach(() => {
@@ -141,6 +146,7 @@ describe("auth-service - signInWithOAuth", () => {
 
       const result = await signInWithOAuth("google");
 
+      expect(mockSetPendingOAuthSignupLocale).toHaveBeenCalledWith("en");
       expect(mockSignInWithOAuthProvider).toHaveBeenCalledWith("google");
       expect(mockOpenAuthSession).toHaveBeenCalledWith(
         "https://accounts.google.com/o/oauth2/auth?...",
@@ -164,6 +170,7 @@ describe("auth-service - signInWithOAuth", () => {
 
       const result = await signInWithOAuth("google");
 
+      expect(mockSetPendingOAuthSignupLocale).toHaveBeenCalledWith("en");
       expect(mockExchangeCodeForSession).toHaveBeenCalledWith("pkce-auth-code");
       expect(mockSetSession).not.toHaveBeenCalled();
       expect(result).toEqual({ success: true });

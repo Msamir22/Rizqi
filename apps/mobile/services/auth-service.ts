@@ -28,6 +28,7 @@ import {
 } from "@/i18n/changeLanguage";
 import {
   readIntroLocaleOverride,
+  setPendingOAuthSignupLocale,
   setPendingSignupLocale,
 } from "@/services/intro-flag-service";
 import {
@@ -94,6 +95,9 @@ export async function signInWithOAuth(
   provider: OAuthProvider
 ): Promise<OAuthResult> {
   try {
+    const preferredLanguage = await resolveSignupPreferredLanguage();
+    await setPendingOAuthSignupLocale(preferredLanguage);
+
     const oauthResponse = await signInWithOAuthProvider(provider);
 
     // Provider returned an error (e.g., network failure)

@@ -36,11 +36,23 @@ import { logger } from "@/utils/logger";
 /** Valid locale override values stored in AsyncStorage. */
 export type IntroLocale = "en" | "ar";
 
-export interface PendingSignupLocale {
+export type PendingSignupLocale =
+  | PendingEmailSignupLocale
+  | PendingOAuthSignupLocale;
+
+export interface PendingEmailSignupLocale {
+  readonly kind: "email";
   readonly email: string;
   readonly language: IntroLocale;
   readonly userId: string;
   readonly userCreatedAt: string;
+  readonly markerCreatedAt: string;
+}
+
+export interface PendingOAuthSignupLocale {
+  readonly kind: "oauth";
+  readonly language: IntroLocale;
+  readonly authStartedAt: string;
   readonly markerCreatedAt: string;
 }
 
@@ -71,6 +83,29 @@ function parsePendingSignupLocale(raw: string): PendingSignupLocale | null {
     const parsed: unknown = JSON.parse(raw);
     if (!isRecord(parsed)) return null;
 
+    const kind = parsed.kind;
+    if (kind === "oauth") {
+      const language = parsed.language;
+      const authStartedAt = parsed.authStartedAt;
+      const markerCreatedAt = parsed.markerCreatedAt;
+      if (
+        !VALID_LOCALES.has(language as IntroLocale) ||
+        typeof authStartedAt !== "string" ||
+        typeof markerCreatedAt !== "string" ||
+        Number.isNaN(Date.parse(authStartedAt)) ||
+        Number.isNaN(Date.parse(markerCreatedAt))
+      ) {
+        return null;
+      }
+
+      return {
+        kind: "oauth",
+        language: language as IntroLocale,
+        authStartedAt,
+        markerCreatedAt,
+      };
+    }
+
     const email = parsed.email;
     const language = parsed.language;
     const userId = parsed.userId;
@@ -78,6 +113,7 @@ function parsePendingSignupLocale(raw: string): PendingSignupLocale | null {
     const markerCreatedAt = parsed.markerCreatedAt;
 
     if (
+      kind !== "email" ||
       typeof email !== "string" ||
       !VALID_LOCALES.has(language as IntroLocale) ||
       typeof userId !== "string" ||
@@ -99,6 +135,7 @@ function parsePendingSignupLocale(raw: string): PendingSignupLocale | null {
     }
 
     return {
+      kind: "email",
       email: normalizedEmail,
       language: language as IntroLocale,
       userId: normalizedUserId,
@@ -231,6 +268,7 @@ export async function setPendingSignupLocale(
     await AsyncStorage.setItem(
       PENDING_SIGNUP_LOCALE_KEY,
       JSON.stringify({
+        kind: "email",
         email: normalizedEmail,
         language,
         userId: normalizedUserId,
@@ -241,6 +279,37 @@ export async function setPendingSignupLocale(
   } catch (error: unknown) {
     logger.warn(
       "[intro-flag] Failed to write pending-signup-locale",
+      errorPayload(error)
+    );
+  }
+}
+
+/**
+ * Persist a one-shot marker before starting an OAuth auth flow.
+ *
+ * OAuth is a combined sign-in/sign-up path and does not support the same
+ * `options.data` signup metadata used by email signup. AppReadyGate consumes
+ * this marker only if the authenticated user/profile were created during the
+ * OAuth attempt, so returning users keep their stored profile language.
+ */
+export async function setPendingOAuthSignupLocale(
+  language: IntroLocale
+): Promise<void> {
+  const now = new Date().toISOString();
+
+  try {
+    await AsyncStorage.setItem(
+      PENDING_SIGNUP_LOCALE_KEY,
+      JSON.stringify({
+        kind: "oauth",
+        language,
+        authStartedAt: now,
+        markerCreatedAt: now,
+      } satisfies PendingOAuthSignupLocale)
+    );
+  } catch (error: unknown) {
+    logger.warn(
+      "[intro-flag] Failed to write pending-oauth-signup-locale",
       errorPayload(error)
     );
   }
