@@ -17,9 +17,17 @@
  */
 
 import { useAuth } from "@/context/AuthContext";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import {
+  useLocalSearchParams,
+  useRootNavigationState,
+  useRouter,
+} from "expo-router";
 import { useEffect } from "react";
 import { View } from "react-native";
+
+interface RootNavigationStateSnapshot {
+  key?: string;
+}
 
 /**
  * Detect whether the current deep link is a password-recovery callback.
@@ -39,12 +47,16 @@ function isPasswordRecoveryLink(
 
 export default function AuthCallbackScreen(): React.JSX.Element {
   const router = useRouter();
+  const rootNavigationState = useRootNavigationState() as
+    | RootNavigationStateSnapshot
+    | undefined;
+  const rootNavigationKey = rootNavigationState?.key;
   const { isAuthenticated, isLoading } = useAuth();
   const params = useLocalSearchParams();
 
   useEffect(() => {
     const handleRedirect = (): void => {
-      if (isLoading) return;
+      if (isLoading || !rootNavigationKey) return;
 
       if (!isAuthenticated) {
         router.replace("/auth");
@@ -64,7 +76,7 @@ export default function AuthCallbackScreen(): React.JSX.Element {
     };
 
     handleRedirect();
-  }, [router, isAuthenticated, isLoading, params]);
+  }, [router, rootNavigationKey, isAuthenticated, isLoading, params]);
 
   // Render nothing while redirecting
   return <View />;
