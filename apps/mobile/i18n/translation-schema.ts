@@ -260,6 +260,10 @@ interface AccountsTranslations {
   readonly type_cash: string;
   readonly type_bank: string;
   readonly type_digital_wallet: string;
+  readonly filter_all: string;
+  readonly default_cash_account_name: string;
+  readonly read_only_default_tooltip: string;
+  readonly read_only_locked_label: string;
   readonly net_worth: string;
   readonly total_balance: string;
   readonly no_accounts: string;

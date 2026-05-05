@@ -15,6 +15,7 @@
   "filter_all": "All",
   "default_cash_account_name": "Cash",
   "read_only_default_tooltip": "Cannot be changed after creation",
+  "read_only_locked_label": "{{label}} is locked. Tap for more info.",
   "net_worth": "Net Worth",
   "total_balance": "Total Balance",
   "no_accounts": "No accounts yet. Add your first account to get started.",

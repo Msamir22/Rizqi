@@ -245,7 +245,7 @@ export async function createAccountForUser(
       const activeAccountCount = await queryOwned(
         accountsCollection,
         normalizedUserId,
-        Q.where("deleted", false)
+        Q.where("deleted", Q.notEq(true))
       ).fetchCount();
       const isFirstAccount = activeAccountCount === 0;
 

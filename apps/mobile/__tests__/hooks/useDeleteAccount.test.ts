@@ -122,4 +122,32 @@ describe("useDeleteAccount", () => {
       })
     );
   });
+
+  it("uses localized generic error toast text when deletion fails", async () => {
+    mockDeleteAccountWithCascade.mockRejectedValueOnce(
+      new Error("cascade delete failed")
+    );
+    const { result } = renderHook(() => useDeleteAccount("acc-1"));
+
+    await waitFor(() => {
+      expect(result.current.isLoadingCounts).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.performDelete("acc-1");
+    });
+
+    expect(mockDeleteAccountWithCascade).toHaveBeenCalledWith(
+      "acc-1",
+      "user-1"
+    );
+    expect(mockShowToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "error",
+        title: "accounts:toast_delete_error_title",
+        message: "common:error_generic",
+      })
+    );
+    expect(mockRouterBack).not.toHaveBeenCalled();
+  });
 });

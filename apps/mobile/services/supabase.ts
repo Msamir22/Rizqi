@@ -255,6 +255,12 @@ interface EmailSignUpOptions {
   readonly preferredLanguage?: PreferredLanguageCode;
 }
 
+function isPreferredLanguageCode(
+  value: unknown
+): value is PreferredLanguageCode {
+  return value === "en" || value === "ar";
+}
+
 /**
  * Sign up a new user with email and password.
  *
@@ -271,14 +277,17 @@ export async function signUpWithEmail(
   password: string,
   options: EmailSignUpOptions = {}
 ): Promise<EmailAuthResult> {
+  const preferredLanguage = isPreferredLanguageCode(options.preferredLanguage)
+    ? options.preferredLanguage
+    : undefined;
   const credentials =
-    options.preferredLanguage !== undefined
+    preferredLanguage !== undefined
       ? {
           email,
           password,
           options: {
             data: {
-              preferred_language: options.preferredLanguage,
+              preferred_language: preferredLanguage,
             },
           },
         }

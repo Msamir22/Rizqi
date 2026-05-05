@@ -319,6 +319,27 @@ describe("auth-service - signUpWithEmail", () => {
     );
   });
 
+  it("falls back to the current Arabic app language for signup metadata", async () => {
+    mockReadIntroLocaleOverride.mockResolvedValueOnce(null);
+    mockGetCurrentLanguage.mockReturnValueOnce("ar");
+    mockSignUpWithEmail.mockResolvedValue({
+      success: true,
+      needsVerification: true,
+    });
+
+    const result = await signUpWithEmail(
+      "arabic-fallback@example.com",
+      "password123"
+    );
+
+    expect(mockSignUpWithEmail).toHaveBeenCalledWith(
+      "arabic-fallback@example.com",
+      "password123",
+      { preferredLanguage: "ar" }
+    );
+    expect(result.success).toBe(true);
+  });
+
   it("returns error result when supabase signUpWithEmail fails", async () => {
     const mockError = {
       message: "User already registered",

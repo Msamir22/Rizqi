@@ -74,7 +74,7 @@ interface BalanceChangedSheetProps {
  */
 function formatAmount(amount: number, currency: CurrencyType): string {
   return formatCurrency({
-    amount: Math.abs(amount),
+    amount,
     currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -201,7 +201,7 @@ export function BalanceChangedSheet({
                       style={{ color: changeColor }}
                     >
                       {changeSign}
-                      {formatAmount(difference, currencyCode)}
+                      {formatAmount(Math.abs(difference), currencyCode)}
                     </Text>
                   </View>
                 </View>

@@ -464,6 +464,16 @@ describe("createAccountForUser", () => {
         deleted: false,
       }),
     ]);
+    expect(accountsCollection.query).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ _args: ["user_id", "user-1"] }),
+      expect.objectContaining({
+        _args: [
+          "deleted",
+          expect.objectContaining({ _kind: "notEq", _v: true }),
+        ],
+      })
+    );
   });
 
   it("fails closed without creating when an active account with the same name and currency already exists", async () => {

@@ -96,7 +96,7 @@ export function ReadOnlyDropdown({
             onPress={handleLockPress}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel={`${label} is locked. Tap for more info.`}
+            accessibilityLabel={t("read_only_locked_label", { label })}
           >
             <Ionicons
               name="lock-closed"

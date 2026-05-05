@@ -19,6 +19,7 @@
   "filter_all": "الكل",
   "default_cash_account_name": "كاش",
   "read_only_default_tooltip": "لا يمكن تغييره بعد إنشاء الحساب",
+  "read_only_locked_label": "حقل {{label}} مقفل. اضغط لمعرفة المزيد.",
   "net_worth": "صافي الثروة",
   "total_balance": "إجمالي الرصيد",
   "no_accounts": "لا توجد حسابات بعد. أضف حسابك الأول للبدء.",

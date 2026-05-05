@@ -100,9 +100,11 @@ export function useAccountForm(
 
   // Debounce timer for uniqueness check — mirrors useEditAccountForm.
   const uniquenessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeUniquenessRequestRef = useRef(0);
 
   useEffect(() => {
     return () => {
+      activeUniquenessRequestRef.current += 1;
       if (uniquenessTimerRef.current) {
         clearTimeout(uniquenessTimerRef.current);
       }
@@ -115,6 +117,8 @@ export function useAccountForm(
       if (uniquenessTimerRef.current) {
         clearTimeout(uniquenessTimerRef.current);
       }
+      const requestId = activeUniquenessRequestRef.current + 1;
+      activeUniquenessRequestRef.current = requestId;
 
       const trimmedName = name.trim();
       if (!trimmedName) {
@@ -136,35 +140,66 @@ export function useAccountForm(
 
       uniquenessTimerRef.current = setTimeout(() => {
         void (async () => {
-          const result = await checkAccountNameUniqueness(
-            userId,
-            trimmedName,
-            currency
-          );
+          try {
+            const result = await checkAccountNameUniqueness(
+              userId,
+              trimmedName,
+              currency
+            );
 
-          if (result.isUnique && !result.error) {
-            setHasNameUniquenessError(false);
-            const validation = validateAccountForm(latestFormDataRef.current);
-            setErrors((prev) => {
-              if (validation.errors.name) {
-                return { ...prev, name: validation.errors.name };
-              }
-              const { name: _removed, ...rest } = prev;
-              return rest;
-            });
-          } else if (!result.isUnique && !result.error) {
-            setErrors((prev) => ({
-              ...prev,
-              name: t("accounts:validation_account_name_taken"),
-            }));
-            setHasNameUniquenessError(true);
-          } else if (result.error) {
-            // Don't block the user on uniqueness query failures.
-            logger.warn("uniqueness_check_failed", { error: result.error });
-            setHasNameUniquenessError(false);
+            const latestFormData = latestFormDataRef.current;
+            if (
+              requestId !== activeUniquenessRequestRef.current ||
+              latestFormData.name.trim() !== trimmedName ||
+              latestFormData.currency !== currency
+            ) {
+              return;
+            }
+
+            if (result.isUnique && !result.error) {
+              setHasNameUniquenessError(false);
+              const validation = validateAccountForm(latestFormData);
+              setErrors((prev) => {
+                if (validation.errors.name) {
+                  return { ...prev, name: validation.errors.name };
+                }
+                const { name: _removed, ...rest } = prev;
+                return rest;
+              });
+            } else if (!result.isUnique && !result.error) {
+              setErrors((prev) => ({
+                ...prev,
+                name: t("accounts:validation_account_name_taken"),
+              }));
+              setHasNameUniquenessError(true);
+            } else if (result.error) {
+              // Don't block the user on uniqueness query failures.
+              logger.warn("uniqueness_check_failed", { error: result.error });
+              setHasNameUniquenessError(false);
+            }
+          } catch (error: unknown) {
+            logger.warn(
+              "uniqueness_check_failed",
+              error instanceof Error ? { error: error.message } : { error }
+            );
+            const latestFormData = latestFormDataRef.current;
+            if (
+              requestId === activeUniquenessRequestRef.current &&
+              latestFormData.name.trim() === trimmedName &&
+              latestFormData.currency === currency
+            ) {
+              setHasNameUniquenessError(false);
+            }
+          } finally {
+            const latestFormData = latestFormDataRef.current;
+            if (
+              requestId === activeUniquenessRequestRef.current &&
+              latestFormData.name.trim() === trimmedName &&
+              latestFormData.currency === currency
+            ) {
+              setIsCheckingUniqueness(false);
+            }
           }
-
-          setIsCheckingUniqueness(false);
         })();
       }, UNIQUENESS_DEBOUNCE_MS);
     },
@@ -175,13 +210,18 @@ export function useAccountForm(
   // Only update if the user hasn't manually touched the currency field.
   useEffect(() => {
     if (!isTouched.currency) {
-      setFormData((prev) => {
-        const next = { ...prev, currency: preferredCurrency };
-        latestFormDataRef.current = next;
-        return next;
-      });
+      const next = {
+        ...latestFormDataRef.current,
+        currency: preferredCurrency,
+      };
+      latestFormDataRef.current = next;
+      setFormData(next);
+
+      if (next.name.trim()) {
+        checkUniqueness(next.name, next.currency);
+      }
     }
-  }, [preferredCurrency, isTouched.currency]);
+  }, [preferredCurrency, isTouched.currency, checkUniqueness]);
 
   /**
    * Updates a single field in the form and performs partial validation.
@@ -229,6 +269,7 @@ export function useAccountForm(
    * Resets the form to initial values.
    */
   const resetForm = useCallback((): void => {
+    activeUniquenessRequestRef.current += 1;
     setFormData({
       name: "",
       accountType: initialAccountType ?? "CASH",
@@ -242,7 +283,7 @@ export function useAccountForm(
       name: "",
       accountType: initialAccountType ?? "CASH",
       currency: preferredCurrency,
-      balance: "",
+      balance: DEFAULT_INITIAL_BALANCE,
       bankName: "",
       cardLast4: "",
       smsSenderName: "",
