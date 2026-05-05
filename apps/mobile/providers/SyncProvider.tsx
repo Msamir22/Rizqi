@@ -62,6 +62,7 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
     useState<InitialSyncState>("in-progress");
 
   const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const hasCheckedInterruptedLogoutRef = useRef(false);
 
   const sync = useCallback(async (forceFullSync = false): Promise<void> => {
     // Check if authenticated before syncing
@@ -206,7 +207,10 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
   useEffect(() => {
     const initialSync = async (): Promise<void> => {
       // FR-012: Complete any interrupted logout from a force-close
-      await completeInterruptedLogout(database);
+      if (!hasCheckedInterruptedLogoutRef.current) {
+        hasCheckedInterruptedLogoutRef.current = true;
+        await completeInterruptedLogout(database);
+      }
 
       // Check user is authenticated before syncing
       if (!isAuthenticated) {

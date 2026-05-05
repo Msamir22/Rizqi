@@ -15,6 +15,7 @@ import React, {
   useMemo,
   useState,
 } from "react";
+import { useAuth } from "@/context/AuthContext";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -46,10 +47,18 @@ const CategoriesContext = createContext<CategoriesContextValue | null>(null);
 export function CategoriesProvider({
   children,
 }: CategoriesProviderProps): React.JSX.Element {
+  const { isAuthenticated } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(isAuthenticated);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      setCategories([]);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
     const subscription = database
       .get<Category>("categories")
       .query(Q.where("deleted", false), Q.sortBy("sort_order", Q.asc))
@@ -66,7 +75,7 @@ export function CategoriesProvider({
       });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [isAuthenticated]);
 
   const categoryMap = useMemo(
     () => new Map(categories.map((c) => [c.id, c])),

@@ -173,20 +173,6 @@ export default function SettingsScreen(): React.JSX.Element {
 
     setIsLoggingOut(false);
 
-    if (result.error === "no_network") {
-      showToast({
-        type: "error",
-        title: t("no_network_logout"),
-      });
-      return;
-    }
-
-    if (result.error === "sync_failed") {
-      setShowSyncWarning(true);
-      return;
-    }
-
-    // "unknown" or any other unhandled error
     showToast({
       type: "error",
       title: t("logout_error"),

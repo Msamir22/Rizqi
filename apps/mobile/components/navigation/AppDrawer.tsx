@@ -197,16 +197,11 @@ export function AppDrawer({
 
       if (result.success) {
         onClose();
+        router.replace("/auth");
         return;
       }
 
-      if (result.error === "no_network") {
-        return;
-      }
-
-      if (result.error === "sync_failed") {
-        setShowSyncWarning(true);
-      }
+      // TODO: Surface a toast once drawer-level toast handling exists.
     } catch {
       // TODO: Replace with structured logging (e.g., Sentry)
     } finally {
@@ -223,6 +218,7 @@ export function AppDrawer({
 
       if (result.success) {
         onClose();
+        router.replace("/auth");
       }
       // If force logout fails, there's not much we can do in the drawer
       // TODO: Replace with structured logging (e.g., Sentry)

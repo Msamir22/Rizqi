@@ -7,6 +7,7 @@ import { database, Profile, type CurrencyType } from "@monyvi/db";
 import { SUPPORTED_CURRENCIES } from "@monyvi/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 
 interface UsePreferredCurrencyResult {
   /** The user's preferred display currency */
@@ -25,12 +26,20 @@ interface UsePreferredCurrencyResult {
  * - `isLoading`: `true` while the initial Profile observation is pending, `false` otherwise.
  */
 export function usePreferredCurrency(): UsePreferredCurrencyResult {
+  const { isAuthenticated } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(isAuthenticated);
   const { showToast } = useToast();
 
   // Observe the first profile record
   useEffect(() => {
+    if (!isAuthenticated) {
+      setProfile(null);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
     const collection = database.get<Profile>("profiles");
     const subscription = collection
       .query(Q.where("deleted", false), Q.take(1))
@@ -47,7 +56,7 @@ export function usePreferredCurrency(): UsePreferredCurrencyResult {
       });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [isAuthenticated]);
 
   const preferredCurrency = useMemo<CurrencyType>(() => {
     if (profile?.preferredCurrency) {

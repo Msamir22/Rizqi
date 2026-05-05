@@ -11,11 +11,11 @@ import {
   CLEARABLE_USER_KEYS,
   LOGOUT_IN_PROGRESS_KEY,
 } from "@/constants/storage-keys";
+import { logger } from "@/utils/logger";
 import type { Database } from "@nozbe/watermelondb";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { fetch } from "@react-native-community/netinfo";
 import { supabase } from "./supabase";
-import { getActiveSyncPromise, resetSyncState, syncDatabase } from "./sync";
+import { resetSyncState } from "./sync";
 
 // =============================================================================
 // Types
@@ -26,18 +26,15 @@ interface LogoutResult {
   /** Whether the logout completed successfully. */
   readonly success: boolean;
   /** If `success` is false, the reason for failure. */
-  readonly error?: "no_network" | "sync_failed" | "unknown";
+  readonly error?: "unknown";
 }
 
 // =============================================================================
 // Constants
 // =============================================================================
 
-/** Maximum number of sync retry attempts before giving up. */
-const MAX_SYNC_RETRIES = 1;
-
-/** Maximum time (ms) to wait for an in-flight sync before abandoning it. */
-const ACTIVE_SYNC_TIMEOUT_MS = 10_000;
+/** Allows auth-driven route replacement to unmount WatermelonDB observers. */
+const PRIVATE_SUBSCRIBER_TEARDOWN_DELAY_MS = 300;
 
 // =============================================================================
 // Core Logout Functions
@@ -48,47 +45,27 @@ const ACTIVE_SYNC_TIMEOUT_MS = 10_000;
  *
  * Steps:
  * 1. Set `logout_in_progress` flag (force-close recovery)
- * 2. Verify network connectivity
- * 3. Await any in-flight sync, then run a fresh sync (retry once on failure)
- * 4. Reset local WatermelonDB database
- * 5. Clear user-specific AsyncStorage keys (preserve device-level keys)
- * 6. Destroy Supabase session
- * 7. Remove `logout_in_progress` flag
+ * 2. Destroy Supabase session
+ * 3. Schedule local private-data cleanup in the background
  *
  * @param database - The WatermelonDB database instance
- * @param forceSkipSync - If true, skip sync entirely (used after user acknowledges data loss risk)
+ * @param forceSkipSync - Deprecated. Kept for existing force-logout callers.
  * @returns LogoutResult indicating success or the reason for failure
  */
 export async function performLogout(
   database: Database,
   forceSkipSync = false
 ): Promise<LogoutResult> {
+  void forceSkipSync;
+
   try {
-    if (!forceSkipSync) {
-      // Step 2: Check network connectivity
-      const networkState = await fetch();
-      if (!networkState.isConnected) {
-        return { success: false, error: "no_network" };
-      }
-
-      // Step 3: Await any in-flight sync, then run a fresh sync
-      const syncSucceeded = await attemptSync(database);
-      if (!syncSucceeded) {
-        return { success: false, error: "sync_failed" };
-      }
-    }
-
-    // Mark logout as interrupted only once cleanup becomes irreversible
     await AsyncStorage.setItem(LOGOUT_IN_PROGRESS_KEY, "true");
-
-    // Steps 4–7: Perform the actual cleanup
-    await executeLogoutCleanup(database);
+    await destroySession();
+    scheduleLocalLogoutCleanup(database);
 
     return { success: true };
   } catch {
-    // FR-008: If DB reset fails, still try to clear the session
     try {
-      await destroySession();
       await AsyncStorage.removeItem(LOGOUT_IN_PROGRESS_KEY);
     } catch {
       // Best-effort cleanup — nothing more we can do
@@ -102,7 +79,7 @@ export async function performLogout(
  * Complete an interrupted logout that was interrupted by a force-close.
  *
  * Checks for the `logout_in_progress` flag in AsyncStorage.
- * If present, runs the cleanup steps (reset DB, clear keys, new session).
+ * If present, runs the cleanup steps (reset DB, clear keys, remove flag).
  * Sync is skipped since we can't guarantee the app state after a force-close.
  *
  * @param database - The WatermelonDB database instance
@@ -116,9 +93,7 @@ export async function completeInterruptedLogout(
       return; // No interrupted logout to complete
     }
 
-    // TODO: Replace with structured logging (e.g., Sentry)
-    await executeLogoutCleanup(database);
-    // TODO: Replace with structured logging (e.g., Sentry)
+    await executeLocalLogoutCleanup(database);
   } catch {
     // TODO: Replace with structured logging (e.g., Sentry)
     // Remove the flag to prevent infinite loops
@@ -135,64 +110,36 @@ export async function completeInterruptedLogout(
 // =============================================================================
 
 /**
- * Attempt to sync local data to the server, with one retry on failure.
- *
- * @param database - The WatermelonDB database instance
- * @returns true if sync succeeded, false if it failed after retries
- */
-async function attemptSync(database: Database): Promise<boolean> {
-  // Wait for any active sync to complete first, but bound the wait
-  const activeSync = getActiveSyncPromise();
-  if (activeSync) {
-    try {
-      const timeout = new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          reject(new Error("Active sync timed out"));
-        }, ACTIVE_SYNC_TIMEOUT_MS);
-      });
-      await Promise.race([activeSync, timeout]);
-    } catch {
-      // Active sync failed or timed out — we'll try a fresh one below
-    }
-  }
-
-  for (let attempt = 0; attempt <= MAX_SYNC_RETRIES; attempt++) {
-    try {
-      await syncDatabase(database);
-      return true;
-    } catch {
-      const isLastAttempt = attempt === MAX_SYNC_RETRIES;
-      if (isLastAttempt) {
-        // TODO: Replace with structured logging (e.g., Sentry)
-        return false;
-      }
-      // TODO: Replace with structured logging (e.g., Sentry)
-    }
-  }
-
-  // This is unreachable because the for-loop always exits via
-  // return true (sync success) or return false (last attempt failed).
-  // Kept for TypeScript exhaustiveness.
-  return false;
-}
-
-/**
- * Execute the logout cleanup steps: reset DB → clear keys → destroy session → remove flag.
+ * Execute the local cleanup steps after session termination.
  *
  * @param database - The WatermelonDB database instance
  */
-async function executeLogoutCleanup(database: Database): Promise<void> {
-  // Step 4: Reset local WatermelonDB database
+async function executeLocalLogoutCleanup(database: Database): Promise<void> {
+  await waitForPrivateSubscribersToUnmount();
+
+  // Reset local WatermelonDB database
   await resetSyncState(database);
 
-  // Step 5: Clear user-specific AsyncStorage keys
+  // Clear user-specific AsyncStorage keys
   await clearUserPreferences();
 
-  // Step 6: Destroy session
-  await destroySession();
-
-  // Step 7: Remove force-close recovery flag
+  // Remove force-close recovery flag after cleanup completes
   await AsyncStorage.removeItem(LOGOUT_IN_PROGRESS_KEY);
+}
+
+function scheduleLocalLogoutCleanup(database: Database): void {
+  executeLocalLogoutCleanup(database).catch((error: unknown) => {
+    logger.warn(
+      "logout.localCleanup.failed",
+      error instanceof Error ? { message: error.message } : { error }
+    );
+  });
+}
+
+function waitForPrivateSubscribersToUnmount(): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, PRIVATE_SUBSCRIBER_TEARDOWN_DELAY_MS);
+  });
 }
 
 /**
@@ -211,5 +158,8 @@ async function clearUserPreferences(): Promise<void> {
  * Destroy the current Supabase session. Session becomes null.
  */
 async function destroySession(): Promise<void> {
-  await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    throw error;
+  }
 }
