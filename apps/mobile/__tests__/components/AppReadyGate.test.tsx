@@ -56,6 +56,7 @@ jest.mock("@/utils/logger", () => ({
 const mockUseAuth = jest.fn();
 const mockUseSync = jest.fn();
 const mockUseProfile = jest.fn();
+const mockUseIntroLocaleOverride = jest.fn();
 
 jest.mock("@/context/AuthContext", () => ({
   useAuth: (): unknown => mockUseAuth(),
@@ -69,19 +70,33 @@ jest.mock("@/hooks/useProfile", () => ({
   useProfile: (): unknown => mockUseProfile(),
 }));
 
+jest.mock("@/hooks/useIntroLocaleOverride", () => ({
+  useIntroLocaleOverride: (): unknown => mockUseIntroLocaleOverride(),
+}));
+
+jest.mock("@/services/profile-service", () => ({
+  setPreferredLanguage: jest.fn().mockResolvedValue(undefined),
+}));
+
 // =============================================================================
 // Imports (after mocks)
 // =============================================================================
 
 import * as SplashScreen from "expo-splash-screen";
 import { changeLanguage } from "@/i18n/changeLanguage";
+import { setPreferredLanguage } from "@/services/profile-service";
 import { AppReadyGate } from "@/components/AppReadyGate";
 
 const mockHideAsync = SplashScreen.hideAsync as jest.Mock;
 const mockChangeLanguage = changeLanguage as jest.Mock;
+const mockSetPreferredLanguage = setPreferredLanguage as jest.Mock;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockUseIntroLocaleOverride.mockReturnValue({
+    override: null,
+    isLoading: false,
+  });
 });
 
 async function flushPromises(): Promise<void> {
@@ -254,6 +269,36 @@ describe("AppReadyGate", () => {
     const changeLanguageOrder = mockChangeLanguage.mock.invocationCallOrder[0];
     const hideAsyncOrder = mockHideAsync.mock.invocationCallOrder[0];
     expect(changeLanguageOrder).toBeLessThan(hideAsyncOrder);
+  });
+
+  it("persists the pre-auth language override for a not-onboarded profile before hiding splash", async (): Promise<void> => {
+    mockUseIntroLocaleOverride.mockReturnValue({
+      override: "ar",
+      isLoading: false,
+    });
+    setState({
+      authIsLoading: false,
+      isAuthenticated: true,
+      initialSyncState: "success",
+      profileIsLoading: false,
+      profile: {
+        preferredLanguage: "en",
+        onboardingCompleted: false,
+      },
+    });
+
+    RTR.act(() => {
+      RTR.create(React.createElement(AppReadyGate));
+    });
+    await flushPromises();
+
+    expect(mockSetPreferredLanguage).toHaveBeenCalledWith("ar");
+    expect(mockHideAsync).toHaveBeenCalledTimes(1);
+
+    const setLanguageOrder =
+      mockSetPreferredLanguage.mock.invocationCallOrder[0];
+    const hideAsyncOrder = mockHideAsync.mock.invocationCallOrder[0];
+    expect(setLanguageOrder).toBeLessThan(hideAsyncOrder);
   });
 
   it("does NOT call changeLanguage when stored language matches current i18n", async (): Promise<void> => {

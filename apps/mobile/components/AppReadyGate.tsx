@@ -28,9 +28,11 @@
  */
 
 import { useAuth } from "@/context/AuthContext";
+import { useIntroLocaleOverride } from "@/hooks/useIntroLocaleOverride";
 import { useProfile } from "@/hooks/useProfile";
 import { useSync } from "@/providers/SyncProvider";
 import { changeLanguage, type SupportedLanguage } from "@/i18n/changeLanguage";
+import { setPreferredLanguage } from "@/services/profile-service";
 import i18n from "@/i18n";
 import { logger } from "@/utils/logger";
 import * as SplashScreen from "expo-splash-screen";
@@ -44,7 +46,9 @@ function computeReady(
   authIsLoading: boolean,
   isAuthenticated: boolean,
   initialSyncState: "in-progress" | "success" | "failed" | "timeout",
-  profileIsLoading: boolean
+  profileIsLoading: boolean,
+  introLocaleOverrideIsLoading: boolean,
+  profileOnboardingCompleted: boolean | undefined
 ): boolean {
   if (authIsLoading) return false;
   // Unauthenticated path: AuthGuard will redirect to /auth; no sync/profile gate.
@@ -52,13 +56,24 @@ function computeReady(
   // Authenticated path: wait for sync to settle + profile observation ready.
   if (initialSyncState === "in-progress") return false;
   if (profileIsLoading) return false;
+  if (profileOnboardingCompleted === false && introLocaleOverrideIsLoading) {
+    return false;
+  }
   return true;
+}
+
+function isSupportedLanguage(value: unknown): value is SupportedLanguage {
+  return value === "en" || value === "ar";
 }
 
 export function AppReadyGate(): null {
   const { isLoading: authIsLoading, isAuthenticated } = useAuth();
   const { initialSyncState } = useSync();
   const { profile, isLoading: profileIsLoading } = useProfile();
+  const {
+    override: introLocaleOverride,
+    isLoading: introLocaleOverrideIsLoading,
+  } = useIntroLocaleOverride();
   const hiddenRef = useRef(false);
   // Prevents concurrent hide attempts while an earlier one is in flight,
   // without permanently latching on a rejection (CR review on AppReadyGate.tsx:108).
@@ -68,7 +83,9 @@ export function AppReadyGate(): null {
     authIsLoading,
     isAuthenticated,
     initialSyncState,
-    profileIsLoading
+    profileIsLoading,
+    introLocaleOverrideIsLoading,
+    profile?.onboardingCompleted
   );
 
   useEffect(() => {
@@ -79,21 +96,33 @@ export function AppReadyGate(): null {
     if (!ready || hiddenRef.current || hideInFlightRef.current) return;
     hideInFlightRef.current = true;
 
-    const storedLanguage = profile?.preferredLanguage as
-      | SupportedLanguage
-      | undefined;
+    const storedLanguage = isSupportedLanguage(profile?.preferredLanguage)
+      ? profile.preferredLanguage
+      : undefined;
+    const preAuthLanguage =
+      !profile?.onboardingCompleted && isSupportedLanguage(introLocaleOverride)
+        ? introLocaleOverride
+        : undefined;
+    const targetLanguage = preAuthLanguage ?? storedLanguage;
 
     const finish = async (): Promise<void> => {
+      if (preAuthLanguage && profile?.preferredLanguage !== preAuthLanguage) {
+        try {
+          await setPreferredLanguage(preAuthLanguage);
+        } catch (error) {
+          logger.warn(
+            "appReadyGate.preAuthLanguagePersist.failed",
+            error instanceof Error ? { message: error.message } : { error }
+          );
+        }
+      }
+
       // Sync the UI language with the user's stored preference BEFORE we
       // hide the splash, so the first painted frame is in the right
       // language and not the device-locale fallback from initI18n.
-      if (
-        storedLanguage &&
-        (storedLanguage === "en" || storedLanguage === "ar") &&
-        storedLanguage !== i18n.language
-      ) {
+      if (targetLanguage && targetLanguage !== i18n.language) {
         try {
-          await changeLanguage(storedLanguage);
+          await changeLanguage(targetLanguage);
         } catch (error) {
           logger.warn(
             "appReadyGate.changeLanguage.failed",
@@ -117,7 +146,13 @@ export function AppReadyGate(): null {
     };
 
     void finish();
-  }, [ready, profile?.preferredLanguage]);
+  }, [
+    ready,
+    profile,
+    profile?.preferredLanguage,
+    profile?.onboardingCompleted,
+    introLocaleOverride,
+  ]);
 
   return null;
 }
