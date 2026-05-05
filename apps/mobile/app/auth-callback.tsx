@@ -17,8 +17,8 @@
  */
 
 import { useAuth } from "@/context/AuthContext";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect } from "react";
+import { useDeferredRouterReplace } from "@/hooks/useDeferredRouterReplace";
+import { type Href, useLocalSearchParams } from "expo-router";
 import { View } from "react-native";
 
 /**
@@ -38,37 +38,27 @@ function isPasswordRecoveryLink(
 }
 
 export default function AuthCallbackScreen(): React.JSX.Element {
-  const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
   const params = useLocalSearchParams();
 
-  useEffect(() => {
-    const handleRedirect = (): void => {
-      if (isLoading) return;
+  let redirectHref: Href | null = null;
+  if (!isLoading) {
+    if (!isAuthenticated) {
+      redirectHref = "/auth";
+    } else if (isPasswordRecoveryLink(params)) {
+      // TODO: Create dedicated /reset-password route. For now, send to settings
+      // where the user can change their password.
+      redirectHref = "/settings";
+    } else {
+      // index.tsx handles the profile-driven routing decision.
+      redirectHref = "/";
+    }
+  }
 
-      if (!isAuthenticated) {
-        router.replace("/auth");
-        return;
-      }
-
-      // Check for password-recovery deep link before normal routing
-      if (isPasswordRecoveryLink(params)) {
-        // TODO: Create dedicated /reset-password route. For now, send to settings
-        // where the user can change their password.
-        router.replace("/settings");
-        return;
-      }
-
-      try {
-        // index.tsx handles the profile-driven routing decision
-        router.replace("/");
-      } catch {
-        router.replace("/");
-      }
-    };
-
-    handleRedirect();
-  }, [router, isAuthenticated, isLoading, params]);
+  useDeferredRouterReplace({
+    enabled: redirectHref !== null,
+    href: redirectHref ?? "/",
+  });
 
   // Render nothing while redirecting
   return <View />;

@@ -24,6 +24,9 @@ import React, {
   useState,
 } from "react";
 import { supabase } from "@/services/supabase";
+import { logger } from "@/utils/logger";
+
+const AUTH_BOOTSTRAP_TIMEOUT_MS = 10_000;
 
 // =============================================================================
 // Types
@@ -58,6 +61,27 @@ export function useAuth(): AuthContextValue {
 // =============================================================================
 // Provider
 // =============================================================================
+
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  timeoutMessage: string
+): Promise<T> {
+  let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+
+  const timeout = new Promise<never>((_resolve, reject) => {
+    timeoutHandle = setTimeout(
+      () => reject(new Error(timeoutMessage)),
+      timeoutMs
+    );
+  });
+
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timeoutHandle !== null) {
+      clearTimeout(timeoutHandle);
+    }
+  });
+}
 
 interface AuthProviderProps {
   children: React.ReactNode;
@@ -106,13 +130,23 @@ export function AuthProvider({
 
   useEffect(() => {
     // Bootstrap: get initial session
-    supabase.auth
-      .getSession()
+    withTimeout(
+      supabase.auth.getSession(),
+      AUTH_BOOTSTRAP_TIMEOUT_MS,
+      "auth-bootstrap-timeout"
+    )
       .then(({ data: { session: initialSession } }) => {
         applySession(initialSession, false);
         setIsLoading(false);
       })
-      .catch(() => setIsLoading(false));
+      .catch((error: unknown) => {
+        const isTimeout =
+          error instanceof Error && error.message === "auth-bootstrap-timeout";
+        if (!isTimeout) {
+          logger.error("Auth bootstrap failed", { error });
+        }
+        setIsLoading(false);
+      });
 
     // Listen for auth changes
     const {
