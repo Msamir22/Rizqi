@@ -59,10 +59,35 @@ type NotificationActionHandler = (
 let isInitialized = false;
 let actionHandler: NotificationActionHandler | null = null;
 let responseSubscription: Notifications.Subscription | null = null;
+const handledNotificationKeys = new Set<string>();
+
+const MAX_HANDLED_NOTIFICATION_KEYS = 200;
 
 // ---------------------------------------------------------------------------
 // Initialization
 // ---------------------------------------------------------------------------
+
+/**
+ * Check whether the app can show local notifications.
+ */
+export async function hasNotificationPermission(): Promise<boolean> {
+  const permissions = await Notifications.getPermissionsAsync();
+  return permissions.granted;
+}
+
+/**
+ * Request notification permission when enabling notification-backed features.
+ */
+export async function requestNotificationPermission(): Promise<boolean> {
+  const existing = await Notifications.getPermissionsAsync();
+
+  if (existing.granted) {
+    return true;
+  }
+
+  const requested = await Notifications.requestPermissionsAsync();
+  return requested.granted;
+}
 
 /**
  * Initialize the notification service.
@@ -146,29 +171,7 @@ export function registerNotificationActionHandler(
 
   responseSubscription = Notifications.addNotificationResponseReceivedListener(
     (response) => {
-      const actionId = response.actionIdentifier;
-      const data = response.notification.request.content
-        .data as unknown as TransactionNotificationPayload;
-
-      // Only handle our SMS transaction notifications
-      if (data?.type !== "sms_transaction") {
-        return;
-      }
-
-      // Ignore default tap (no action button pressed)
-      if (
-        actionId === Notifications.DEFAULT_ACTION_IDENTIFIER ||
-        !actionHandler
-      ) {
-        return;
-      }
-
-      actionHandler(actionId, data).catch((err: unknown) => {
-        console.error(
-          "[notification-service] Action handler failed:",
-          err instanceof Error ? err.message : String(err)
-        );
-      });
+      void handleNotificationActionResponse(response);
     }
   );
 
@@ -179,6 +182,75 @@ export function registerNotificationActionHandler(
     }
     actionHandler = null;
   };
+}
+
+async function handleNotificationActionResponse(
+  response: Notifications.NotificationResponse
+): Promise<void> {
+  const actionId = response.actionIdentifier;
+  const data = response.notification.request.content
+    .data as unknown as TransactionNotificationPayload;
+
+  // Only handle our SMS transaction notifications
+  if (data?.type !== "sms_transaction") {
+    return;
+  }
+
+  // Ignore default tap (no action button pressed)
+  if (actionId === Notifications.DEFAULT_ACTION_IDENTIFIER || !actionHandler) {
+    return;
+  }
+
+  const notificationId = response.notification.request.identifier;
+  const notificationKey =
+    data.transactionData.smsBodyHash ||
+    response.notification.request.identifier;
+
+  if (!markNotificationKeyHandled(notificationKey)) {
+    await dismissDeliveredNotification(notificationId);
+    return;
+  }
+
+  await dismissDeliveredNotification(notificationId);
+
+  try {
+    await actionHandler(actionId, data);
+  } catch (err: unknown) {
+    console.error(
+      "[notification-service] Action handler failed:",
+      err instanceof Error ? err.message : String(err)
+    );
+  }
+}
+
+function markNotificationKeyHandled(notificationKey: string): boolean {
+  if (handledNotificationKeys.has(notificationKey)) {
+    return false;
+  }
+
+  handledNotificationKeys.add(notificationKey);
+
+  if (handledNotificationKeys.size > MAX_HANDLED_NOTIFICATION_KEYS) {
+    const oldestKey = handledNotificationKeys.values().next().value;
+    if (typeof oldestKey === "string") {
+      handledNotificationKeys.delete(oldestKey);
+    }
+  }
+
+  return true;
+}
+
+async function dismissDeliveredNotification(
+  notificationId: string
+): Promise<void> {
+  try {
+    await Notifications.dismissNotificationAsync(notificationId);
+  } catch (err: unknown) {
+    console.error(
+      "[notification-service] Failed to dismiss notification:",
+      err instanceof Error ? err.message : String(err)
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -210,6 +282,16 @@ export async function showTransactionNotification(
   resolvedAccountId: string,
   resolvedAccountName: string
 ): Promise<void> {
+  await initializeNotifications();
+
+  const canShowNotification = await hasNotificationPermission();
+  if (!canShowNotification) {
+    console.warn(
+      "[notification-service] Notification permission denied; SMS notification skipped"
+    );
+    return;
+  }
+
   const isExpense = parsed.type === "EXPENSE";
   const typeEmoji = isExpense ? "💸" : "💰";
   const typeLabel = isExpense ? "Expense" : "Income";
@@ -231,18 +313,15 @@ export async function showTransactionNotification(
   };
 
   await Notifications.scheduleNotificationAsync({
+    identifier: `sms-transaction-${parsed.smsBodyHash}`,
     content: {
       title,
       body,
       categoryIdentifier: SMS_TRANSACTION_CATEGORY,
       data: payload as unknown as Record<string, unknown>,
       sound: "default",
-      ...(Platform.OS === "android" && {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        _channelId: SMS_CHANNEL_ID,
-      }),
     },
-    trigger: null, // Immediate
+    trigger: Platform.OS === "android" ? { channelId: SMS_CHANNEL_ID } : null,
   });
 }
 
