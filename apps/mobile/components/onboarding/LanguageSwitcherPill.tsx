@@ -58,6 +58,15 @@ import { logger } from "@/utils/logger";
 
 type SupportedLocale = "en" | "ar";
 
+interface LanguageSwitcherPillProps {
+  /**
+   * Persist the selected language to the authenticated profile when possible.
+   * Keep this false on auth/pitch surfaces so changing the login UI language
+   * cannot overwrite a returning user's stored preference.
+   */
+  readonly persistAuthenticatedProfile?: boolean;
+}
+
 interface LocaleOption {
   readonly code: SupportedLocale;
   /** Native-label name shown in the popover (always self-named, never
@@ -151,7 +160,9 @@ function computePopoverLeft(
   return Math.max(minLeft, Math.min(defaultLeft, maxLeft));
 }
 
-export function LanguageSwitcherPill(): React.ReactElement {
+export function LanguageSwitcherPill({
+  persistAuthenticatedProfile = false,
+}: LanguageSwitcherPillProps): React.ReactElement {
   const { i18n } = useTranslation();
   const { t: tCommon } = useTranslation("common");
   const { isDark } = useTheme();
@@ -164,6 +175,8 @@ export function LanguageSwitcherPill(): React.ReactElement {
   // back to the stale profile value on the next reload (the 2026-04-26
   // user-reported bug where Arabic in Currency-step "didn't stick").
   const { isAuthenticated } = useAuth();
+  const shouldPersistProfileLanguage =
+    persistAuthenticatedProfile && isAuthenticated;
   const pillRef = useRef<RNView | null>(null);
   const [pillRect, setPillRect] = useState<LayoutRectangle | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -210,7 +223,7 @@ export function LanguageSwitcherPill(): React.ReactElement {
       void (async (): Promise<void> => {
         try {
           await applyLanguageSelection(lang, {
-            isAuthenticated,
+            isAuthenticated: shouldPersistProfileLanguage,
             setUnauthenticatedOverride: setOverride,
           });
         } catch (error: unknown) {
@@ -223,7 +236,7 @@ export function LanguageSwitcherPill(): React.ReactElement {
         }
       })();
     },
-    [currentLang, setOverride, handleClose, isAuthenticated]
+    [currentLang, setOverride, handleClose, shouldPersistProfileLanguage]
   );
 
   const popoverLeft = pillRect ? computePopoverLeft(pillRect, screenWidth) : 0;
