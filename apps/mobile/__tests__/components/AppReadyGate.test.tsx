@@ -54,11 +54,16 @@ jest.mock("@/utils/logger", () => ({
 
 // Mock the three hooks the gate consumes. Tests override return values per case.
 const mockUseAuth = jest.fn();
+const mockUseLogout = jest.fn();
 const mockUseSync = jest.fn();
 const mockUseProfile = jest.fn();
 
 jest.mock("@/context/AuthContext", () => ({
   useAuth: (): unknown => mockUseAuth(),
+}));
+
+jest.mock("@/context/LogoutContext", () => ({
+  useLogout: (): unknown => mockUseLogout(),
 }));
 
 jest.mock("@/providers/SyncProvider", () => ({
@@ -82,6 +87,7 @@ const mockChangeLanguage = changeLanguage as jest.Mock;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockUseLogout.mockReturnValue({ isLoggingOut: false });
 });
 
 async function flushPromises(): Promise<void> {
@@ -194,6 +200,26 @@ describe("AppReadyGate", () => {
     });
     await flushPromises();
 
+    expect(mockHideAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not read sync/profile while logout is in progress", async (): Promise<void> => {
+    mockUseLogout.mockReturnValue({ isLoggingOut: true });
+    setState({
+      authIsLoading: false,
+      isAuthenticated: true,
+      initialSyncState: "in-progress",
+      profileIsLoading: true,
+      profile: null,
+    });
+
+    RTR.act(() => {
+      RTR.create(React.createElement(AppReadyGate));
+    });
+    await flushPromises();
+
+    expect(mockUseSync).not.toHaveBeenCalled();
+    expect(mockUseProfile).not.toHaveBeenCalled();
     expect(mockHideAsync).toHaveBeenCalledTimes(1);
   });
 

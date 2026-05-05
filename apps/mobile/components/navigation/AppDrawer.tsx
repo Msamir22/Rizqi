@@ -44,8 +44,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useDatabase } from "@/providers/DatabaseProvider";
-import { performLogout } from "@/services/logout-service";
+import { LogoutOverlay, useLogout } from "@/context/LogoutContext";
 import { useTranslation } from "react-i18next";
 
 // =============================================================================
@@ -67,7 +66,6 @@ interface AppDrawerProps {
 // =============================================================================
 
 const DRAWER_WIDTH = Dimensions.get("window").width * 0.8;
-
 const MENU_SECTIONS: MenuSection[] = [
   {
     titleKey: "menu_section_main",
@@ -142,7 +140,6 @@ export function AppDrawer({
   const { profile, isLoading: isProfileLoading } = useProfile();
   const { t } = useTranslation("settings");
   const { t: tCommon } = useTranslation("common");
-  const { t: tDrawer } = useTranslation("drawer");
 
   // Derive display properties from raw profile using pure helpers
   const displayName = useMemo(
@@ -155,7 +152,7 @@ export function AppDrawer({
     [profile, user?.email]
   );
 
-  const database = useDatabase();
+  const { isLoggingOut, requestLogout } = useLogout();
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
 
@@ -169,8 +166,6 @@ export function AppDrawer({
 
   // Logout UI state
   const [showSyncWarning, setShowSyncWarning] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-
   useEffect(() => {
     Animated.timing(slideAnim, {
       toValue: visible ? 0 : -DRAWER_WIDTH,
@@ -189,49 +184,14 @@ export function AppDrawer({
     [onClose]
   );
 
-  const handleLogoutPress = useCallback(async (): Promise<void> => {
-    setIsLoggingOut(true);
+  const handleLogoutPress = useCallback((): void => {
+    requestLogout();
+  }, [requestLogout]);
 
-    try {
-      const result = await performLogout(database);
-
-      if (result.success) {
-        onClose();
-        return;
-      }
-
-      if (result.error === "no_network") {
-        return;
-      }
-
-      if (result.error === "sync_failed") {
-        setShowSyncWarning(true);
-      }
-    } catch {
-      // TODO: Replace with structured logging (e.g., Sentry)
-    } finally {
-      setIsLoggingOut(false);
-    }
-  }, [database, onClose]);
-
-  const handleForceLogout = useCallback(async (): Promise<void> => {
+  const handleForceLogout = useCallback((): void => {
     setShowSyncWarning(false);
-    setIsLoggingOut(true);
-
-    try {
-      const result = await performLogout(database, true);
-
-      if (result.success) {
-        onClose();
-      }
-      // If force logout fails, there's not much we can do in the drawer
-      // TODO: Replace with structured logging (e.g., Sentry)
-    } catch {
-      // TODO: Replace with structured logging (e.g., Sentry)
-    } finally {
-      setIsLoggingOut(false);
-    }
-  }, [database, onClose]);
+    requestLogout(true);
+  }, [requestLogout]);
 
   return (
     <Modal
@@ -240,135 +200,139 @@ export function AppDrawer({
       animationType="fade"
       onRequestClose={onClose}
     >
-      {/* Backdrop */}
-      <Pressable className="flex-1 bg-black/50" onPress={onClose}>
-        {/* Drawer */}
-        <Animated.View
-          style={{
-            width: DRAWER_WIDTH,
-            height: "100%",
-            transform: [{ translateX: slideAnim }],
-          }}
-        >
-          <Pressable
-            className="flex-1 bg-background dark:bg-background-dark"
-            style={{ paddingTop: insets.top }}
-          >
-            {/* Header with gradient */}
-            <LinearGradient
-              colors={[palette.nileGreen[700], palette.slate[900]]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              className="p-5 pb-6"
+      {isLoggingOut ? (
+        <LogoutOverlay />
+      ) : (
+        <>
+          {/* Backdrop */}
+          <Pressable className="flex-1 bg-black/50" onPress={onClose}>
+            {/* Drawer */}
+            <Animated.View
+              style={{
+                width: DRAWER_WIDTH,
+                height: "100%",
+                transform: [{ translateX: slideAnim }],
+              }}
             >
-              {/* Avatar */}
-              {isProfileLoading ? (
-                <View className="w-16 h-16 rounded-full bg-nileGreen-500/20 items-center justify-center mb-3 border-2 border-nileGreen-500/30">
-                  <ActivityIndicator
-                    size="small"
-                    color={palette.nileGreen[400]}
-                  />
-                </View>
-              ) : avatarUrl && !avatarError ? (
-                <Image
-                  source={{ uri: avatarUrl }}
-                  resizeMode="cover"
-                  className="w-16 h-16 rounded-full mb-3 border-2 border-nileGreen-500/30"
-                  onError={() => setAvatarError(true)}
-                />
-              ) : (
-                <View className="w-16 h-16 rounded-full bg-nileGreen-500/20 items-center justify-center mb-3 border-2 border-nileGreen-500/30">
-                  <Text className="text-nileGreen-400 text-xl font-bold">
-                    {initials || "?"}
-                  </Text>
-                </View>
-              )}
-              {/* User info */}
-              {isProfileLoading ? (
-                <>
-                  <View className="h-5 w-32 rounded bg-slate-700/50 mb-1" />
-                  <View className="h-4 w-44 rounded bg-slate-700/30" />
-                </>
-              ) : (
-                <>
-                  <Text
-                    className="text-white text-lg font-bold"
-                    numberOfLines={1}
-                  >
-                    {displayName}
-                  </Text>
-                  {user?.email && displayName !== user.email ? (
-                    <Text className="text-slate-400 text-sm" numberOfLines={1}>
-                      {user.email}
-                    </Text>
-                  ) : null}
-                </>
-              )}
-            </LinearGradient>
-
-            {/* Menu sections */}
-            <View className="flex-1 p-4">
-              {MENU_SECTIONS.map((section) => (
-                <DrawerMenuSection
-                  key={section.titleKey}
-                  titleKey={section.titleKey}
-                  items={section.items}
-                  onItemPress={handleNavigation}
-                />
-              ))}
-            </View>
-
-            {/* Settings section */}
-            <View
-              className="border-t p-4 border-slate-200 dark:border-slate-800"
-              style={{ paddingBottom: insets.bottom + 16 }}
-            >
-              {/* Dark mode toggle */}
-              <View className="flex-row items-center justify-between py-3">
-                <View className="flex-row items-center">
-                  <Ionicons
-                    name="moon-outline"
-                    size={22}
-                    color={isDark ? palette.slate[300] : palette.slate[600]}
-                  />
-                  <Text className="ms-4 text-base text-slate-800 dark:text-white">
-                    {t("dark_mode")}
-                  </Text>
-                </View>
-                <Switch
-                  value={isDark}
-                  onValueChange={toggleTheme}
-                  trackColor={{
-                    false: palette.slate[300],
-                    true: palette.nileGreen[500],
-                  }}
-                  thumbColor="white"
-                />
-              </View>
-
-              {/* Logout */}
-              <TouchableOpacity
-                onPress={handleLogoutPress}
-                disabled={isLoggingOut}
-                className="flex-row items-center py-3"
+              <Pressable
+                className="flex-1 bg-background dark:bg-background-dark"
+                style={{ paddingTop: insets.top }}
               >
-                {isLoggingOut ? (
-                  <ActivityIndicator size={22} color={palette.red[400]} />
-                ) : (
-                  <Ionicons
-                    name="log-out-outline"
-                    size={22}
-                    color={palette.red[400]}
-                  />
-                )}
-                <Text className="ms-4 text-base text-red-400">
-                  {isLoggingOut ? tDrawer("logging_out") : t("logout")}
-                </Text>
-              </TouchableOpacity>
-            </View>
+                {/* Header with gradient */}
+                <LinearGradient
+                  colors={[palette.nileGreen[700], palette.slate[900]]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  className="p-5 pb-6"
+                >
+                  {/* Avatar */}
+                  {isProfileLoading ? (
+                    <View className="w-16 h-16 rounded-full bg-nileGreen-500/20 items-center justify-center mb-3 border-2 border-nileGreen-500/30">
+                      <ActivityIndicator
+                        size="small"
+                        color={palette.nileGreen[400]}
+                      />
+                    </View>
+                  ) : avatarUrl && !avatarError ? (
+                    <Image
+                      source={{ uri: avatarUrl }}
+                      resizeMode="cover"
+                      className="w-16 h-16 rounded-full mb-3 border-2 border-nileGreen-500/30"
+                      onError={() => setAvatarError(true)}
+                    />
+                  ) : (
+                    <View className="w-16 h-16 rounded-full bg-nileGreen-500/20 items-center justify-center mb-3 border-2 border-nileGreen-500/30">
+                      <Text className="text-nileGreen-400 text-xl font-bold">
+                        {initials || "?"}
+                      </Text>
+                    </View>
+                  )}
+                  {/* User info */}
+                  {isProfileLoading ? (
+                    <>
+                      <View className="h-5 w-32 rounded bg-slate-700/50 mb-1" />
+                      <View className="h-4 w-44 rounded bg-slate-700/30" />
+                    </>
+                  ) : (
+                    <>
+                      <Text
+                        className="text-white text-lg font-bold"
+                        numberOfLines={1}
+                      >
+                        {displayName}
+                      </Text>
+                      {user?.email && displayName !== user.email ? (
+                        <Text
+                          className="text-slate-400 text-sm"
+                          numberOfLines={1}
+                        >
+                          {user.email}
+                        </Text>
+                      ) : null}
+                    </>
+                  )}
+                </LinearGradient>
+
+                {/* Menu sections */}
+                <View className="flex-1 p-4">
+                  {MENU_SECTIONS.map((section) => (
+                    <DrawerMenuSection
+                      key={section.titleKey}
+                      titleKey={section.titleKey}
+                      items={section.items}
+                      onItemPress={handleNavigation}
+                    />
+                  ))}
+                </View>
+
+                {/* Settings section */}
+                <View
+                  className="border-t p-4 border-slate-200 dark:border-slate-800"
+                  style={{ paddingBottom: insets.bottom + 16 }}
+                >
+                  {/* Dark mode toggle */}
+                  <View className="flex-row items-center justify-between py-3">
+                    <View className="flex-row items-center">
+                      <Ionicons
+                        name="moon-outline"
+                        size={22}
+                        color={isDark ? palette.slate[300] : palette.slate[600]}
+                      />
+                      <Text className="ms-4 text-base text-slate-800 dark:text-white">
+                        {t("dark_mode")}
+                      </Text>
+                    </View>
+                    <Switch
+                      value={isDark}
+                      onValueChange={toggleTheme}
+                      trackColor={{
+                        false: palette.slate[300],
+                        true: palette.nileGreen[500],
+                      }}
+                      thumbColor="white"
+                    />
+                  </View>
+
+                  {/* Logout */}
+                  <TouchableOpacity
+                    onPress={handleLogoutPress}
+                    className="flex-row items-center py-3"
+                  >
+                    <Ionicons
+                      name="log-out-outline"
+                      size={22}
+                      color={palette.red[400]}
+                    />
+                    <Text className="ms-4 text-base text-red-400">
+                      {t("logout")}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </Pressable>
+            </Animated.View>
           </Pressable>
-        </Animated.View>
-      </Pressable>
+        </>
+      )}
 
       {/* Sync failure warning modal (FR-013) */}
       <ConfirmationModal
@@ -380,9 +344,7 @@ export function AppDrawer({
         confirmLabel={t("proceed_anyway")}
         cancelLabel={tCommon("cancel")}
         onConfirm={() => {
-          handleForceLogout().catch(() => {
-            // TODO: Replace with structured logging (e.g., Sentry)
-          });
+          handleForceLogout();
         }}
         onCancel={() => setShowSyncWarning(false)}
       />

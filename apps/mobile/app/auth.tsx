@@ -20,6 +20,7 @@
 
 import { palette } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
+import { useLogout } from "@/context/LogoutContext";
 import { useTheme } from "@/context/ThemeContext";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useCallback, useState } from "react";
@@ -64,6 +65,7 @@ export default function AuthScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { isLoggingOut } = useLogout();
   const { showToast } = useToast();
   const { t } = useTranslation("auth");
   const { t: tCommon } = useTranslation("common");
@@ -77,7 +79,7 @@ export default function AuthScreen(): React.JSX.Element {
 
   // index.tsx handles the profile-driven routing decision.
   useDeferredRouterReplace({
-    enabled: !isAuthLoading && isAuthenticated,
+    enabled: !isLoggingOut && !isAuthLoading && isAuthenticated,
     href: "/",
   });
 

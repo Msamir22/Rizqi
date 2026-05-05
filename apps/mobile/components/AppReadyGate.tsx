@@ -21,55 +21,70 @@
  *     BEFORE the splash hides so the first visible render is in the
  *     correct language.
  *
- * Side note: must be rendered BELOW AuthProvider, SyncProvider, and
+ * Side note: the authenticated branch must be rendered below SyncProvider and
  * DatabaseProvider so the hooks resolve correctly.
  *
  * @module AppReadyGate
  */
 
 import { useAuth } from "@/context/AuthContext";
+import { useLogout } from "@/context/LogoutContext";
 import { useProfile } from "@/hooks/useProfile";
 import { useSync } from "@/providers/SyncProvider";
 import { changeLanguage, type SupportedLanguage } from "@/i18n/changeLanguage";
 import i18n from "@/i18n";
 import { logger } from "@/utils/logger";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type JSX } from "react";
 
 /**
  * Whether the app has enough state to render its first real screen without
  * a flash. Derived from the three provider hooks.
  */
-function computeReady(
-  authIsLoading: boolean,
-  isAuthenticated: boolean,
+function computeAuthenticatedReady(
   initialSyncState: "in-progress" | "success" | "failed" | "timeout",
   profileIsLoading: boolean
 ): boolean {
-  if (authIsLoading) return false;
-  // Unauthenticated path: AuthGuard will redirect to /auth; no sync/profile gate.
-  if (!isAuthenticated) return true;
-  // Authenticated path: wait for sync to settle + profile observation ready.
-  if (initialSyncState === "in-progress") return false;
-  if (profileIsLoading) return false;
-  return true;
+  return initialSyncState !== "in-progress" && !profileIsLoading;
 }
 
-export function AppReadyGate(): null {
+interface SplashReadyGateProps {
+  readonly preferredLanguage?: string;
+  readonly ready: boolean;
+}
+
+export function AppReadyGate(): JSX.Element | null {
   const { isLoading: authIsLoading, isAuthenticated } = useAuth();
+  const { isLoggingOut } = useLogout();
+
+  if (isLoggingOut || !isAuthenticated) {
+    return <SplashReadyGate ready={!authIsLoading} />;
+  }
+
+  return <AuthenticatedAppReadyGate />;
+}
+
+function AuthenticatedAppReadyGate(): JSX.Element | null {
   const { initialSyncState } = useSync();
   const { profile, isLoading: profileIsLoading } = useProfile();
+  const ready = computeAuthenticatedReady(initialSyncState, profileIsLoading);
+
+  return (
+    <SplashReadyGate
+      ready={ready}
+      preferredLanguage={profile?.preferredLanguage}
+    />
+  );
+}
+
+function SplashReadyGate({
+  preferredLanguage,
+  ready,
+}: SplashReadyGateProps): null {
   const hiddenRef = useRef(false);
   // Prevents concurrent hide attempts while an earlier one is in flight,
   // without permanently latching on a rejection (CR review on AppReadyGate.tsx:108).
   const hideInFlightRef = useRef(false);
-
-  const ready = computeReady(
-    authIsLoading,
-    isAuthenticated,
-    initialSyncState,
-    profileIsLoading
-  );
 
   useEffect(() => {
     // `hiddenRef` is only set AFTER `SplashScreen.hideAsync()` succeeds, so
@@ -79,9 +94,7 @@ export function AppReadyGate(): null {
     if (!ready || hiddenRef.current || hideInFlightRef.current) return;
     hideInFlightRef.current = true;
 
-    const storedLanguage = profile?.preferredLanguage as
-      | SupportedLanguage
-      | undefined;
+    const storedLanguage = preferredLanguage as SupportedLanguage | undefined;
 
     const finish = async (): Promise<void> => {
       // Sync the UI language with the user's stored preference BEFORE we
@@ -117,7 +130,7 @@ export function AppReadyGate(): null {
     };
 
     void finish();
-  }, [ready, profile?.preferredLanguage]);
+  }, [ready, preferredLanguage]);
 
   return null;
 }

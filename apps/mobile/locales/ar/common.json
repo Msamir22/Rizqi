@@ -13,6 +13,8 @@
   "open_settings": "فتح الإعدادات",
   "close": "إغلاق",
   "loading": "جاري التحميل...",
+  "logging_out": "جاري تسجيل خروجك...",
+  "logging_out_subtitle": "جاري تأمين جلستك",
   "error": "خطأ",
   "success": "نجح",
   "empty_state": "لا توجد بيانات",

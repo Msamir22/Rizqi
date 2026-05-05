@@ -13,6 +13,8 @@
   "open_settings": "Open Settings",
   "close": "Close",
   "loading": "Loading...",
+  "logging_out": "Logging you out...",
+  "logging_out_subtitle": "Securing your session",
   "error": "Error",
   "success": "Success",
   "empty_state": "No data available",

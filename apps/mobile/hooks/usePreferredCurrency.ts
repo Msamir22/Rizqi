@@ -3,6 +3,7 @@ import {
   DEFAULT_CURRENCY,
   detectCurrencyFromTimezone,
 } from "@/utils/currency-detection";
+import { logger } from "@/utils/logger";
 import { database, Profile, type CurrencyType } from "@monyvi/db";
 import { SUPPORTED_CURRENCIES } from "@monyvi/logic";
 import { Q } from "@nozbe/watermelondb";
@@ -41,7 +42,7 @@ export function usePreferredCurrency(): UsePreferredCurrencyResult {
           setIsLoading(false);
         },
         error: (err: unknown) => {
-          console.error("Error observing profile:", err);
+          logger.error("Error observing profile:", { error: err });
           setIsLoading(false);
         },
       });
@@ -74,11 +75,11 @@ export function usePreferredCurrency(): UsePreferredCurrencyResult {
         });
       });
     } catch (error) {
-      console.error("Failed to save currency preference:", error);
+      logger.error("Failed to set preferred currency", { error, currency });
       showToast({
         type: "error",
         title: "Error",
-        message: "Failed to save currency preference",
+        message: "Failed to set preferred currency. Please try again.",
       });
     }
   };
