@@ -25,6 +25,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   INTRO_LOCALE_OVERRIDE_KEY,
   INTRO_SEEN_KEY,
+  PENDING_SIGNUP_LOCALE_KEY,
 } from "@/constants/storage-keys";
 import { logger } from "@/utils/logger";
 
@@ -33,7 +34,13 @@ import { logger } from "@/utils/logger";
 // =============================================================================
 
 /** Valid locale override values stored in AsyncStorage. */
-type IntroLocale = "en" | "ar";
+export type IntroLocale = "en" | "ar";
+
+export interface PendingSignupLocale {
+  readonly email: string;
+  readonly language: IntroLocale;
+  readonly createdAt: string;
+}
 
 const VALID_LOCALES: ReadonlySet<IntroLocale> = new Set<IntroLocale>([
   "en",
@@ -47,6 +54,46 @@ const VALID_LOCALES: ReadonlySet<IntroLocale> = new Set<IntroLocale>([
 /** Convert the `unknown` caught value into a logger-ready payload. */
 function errorPayload(error: unknown): Record<string, unknown> {
   return error instanceof Error ? { message: error.message } : { error };
+}
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function parsePendingSignupLocale(raw: string): PendingSignupLocale | null {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!isRecord(parsed)) return null;
+
+    const email = parsed.email;
+    const language = parsed.language;
+    const createdAt = parsed.createdAt;
+
+    if (
+      typeof email !== "string" ||
+      !VALID_LOCALES.has(language as IntroLocale) ||
+      typeof createdAt !== "string"
+    ) {
+      return null;
+    }
+
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail || Number.isNaN(Date.parse(createdAt))) {
+      return null;
+    }
+
+    return {
+      email: normalizedEmail,
+      language: language as IntroLocale,
+      createdAt,
+    };
+  } catch {
+    return null;
+  }
 }
 
 // =============================================================================
@@ -122,6 +169,68 @@ export async function setIntroLocaleOverride(lang: IntroLocale): Promise<void> {
   } catch (error: unknown) {
     logger.warn(
       "[intro-flag] Failed to write intro-locale-override",
+      errorPayload(error)
+    );
+  }
+}
+
+/**
+ * Read the pending signup language marker.
+ *
+ * This is intentionally separate from the intro locale override. The override
+ * affects pre-auth UI; this marker is written only after a signup request and
+ * is the only value allowed to promote a pre-auth language into a new profile.
+ */
+export async function readPendingSignupLocale(): Promise<PendingSignupLocale | null> {
+  try {
+    const raw = await AsyncStorage.getItem(PENDING_SIGNUP_LOCALE_KEY);
+    return raw === null ? null : parsePendingSignupLocale(raw);
+  } catch (error: unknown) {
+    logger.warn(
+      "[intro-flag] Failed to read pending-signup-locale",
+      errorPayload(error)
+    );
+    return null;
+  }
+}
+
+/**
+ * Persist the one-shot language marker after a successful signup request.
+ */
+export async function setPendingSignupLocale(
+  email: string,
+  language: IntroLocale
+): Promise<void> {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) return;
+
+  try {
+    await AsyncStorage.setItem(
+      PENDING_SIGNUP_LOCALE_KEY,
+      JSON.stringify({
+        email: normalizedEmail,
+        language,
+        createdAt: new Date().toISOString(),
+      } satisfies PendingSignupLocale)
+    );
+  } catch (error: unknown) {
+    logger.warn(
+      "[intro-flag] Failed to write pending-signup-locale",
+      errorPayload(error)
+    );
+  }
+}
+
+/**
+ * Clear the pending signup language marker after the matching authenticated
+ * profile has either consumed it or proven it does not belong to a new profile.
+ */
+export async function clearPendingSignupLocale(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(PENDING_SIGNUP_LOCALE_KEY);
+  } catch (error: unknown) {
+    logger.warn(
+      "[intro-flag] Failed to clear pending-signup-locale",
       errorPayload(error)
     );
   }

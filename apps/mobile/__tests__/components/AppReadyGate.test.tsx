@@ -13,6 +13,7 @@
  */
 
 import React from "react";
+import type { PendingSignupLocale } from "@/services/intro-flag-service";
 
 // react-test-renderer has no TS types; minimal shape used by this test.
 interface ReactTestRendererInstance {
@@ -20,7 +21,10 @@ interface ReactTestRendererInstance {
   unmount: () => void;
 }
 interface ReactTestRendererModule {
-  act: (fn: () => void | Promise<void>) => void;
+  act: {
+    (fn: () => Promise<void>): Promise<void>;
+    (fn: () => void): void;
+  };
   create: (element: React.ReactElement) => ReactTestRendererInstance;
 }
 // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
@@ -56,7 +60,11 @@ jest.mock("@/utils/logger", () => ({
 const mockUseAuth = jest.fn();
 const mockUseSync = jest.fn();
 const mockUseProfile = jest.fn();
-const mockUseIntroLocaleOverride = jest.fn();
+const mockReadPendingSignupLocale = jest.fn<
+  Promise<PendingSignupLocale | null>,
+  []
+>();
+const mockClearPendingSignupLocale = jest.fn<Promise<void>, []>();
 
 jest.mock("@/context/AuthContext", () => ({
   useAuth: (): unknown => mockUseAuth(),
@@ -70,12 +78,14 @@ jest.mock("@/hooks/useProfile", () => ({
   useProfile: (): unknown => mockUseProfile(),
 }));
 
-jest.mock("@/hooks/useIntroLocaleOverride", () => ({
-  useIntroLocaleOverride: (): unknown => mockUseIntroLocaleOverride(),
-}));
-
 jest.mock("@/services/profile-service", () => ({
   setPreferredLanguage: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock("@/services/intro-flag-service", () => ({
+  readPendingSignupLocale: (): Promise<unknown> =>
+    mockReadPendingSignupLocale(),
+  clearPendingSignupLocale: (): Promise<void> => mockClearPendingSignupLocale(),
 }));
 
 // =============================================================================
@@ -93,14 +103,15 @@ const mockSetPreferredLanguage = setPreferredLanguage as jest.Mock;
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockUseIntroLocaleOverride.mockReturnValue({
-    override: null,
-    isLoading: false,
-  });
+  mockReadPendingSignupLocale.mockResolvedValue(null);
+  mockClearPendingSignupLocale.mockResolvedValue(undefined);
 });
 
 async function flushPromises(): Promise<void> {
-  await new Promise((r) => setImmediate(r));
+  await RTR.act(async () => {
+    await new Promise((r) => setImmediate(r));
+    await new Promise((r) => setImmediate(r));
+  });
 }
 
 // =============================================================================
@@ -110,6 +121,7 @@ async function flushPromises(): Promise<void> {
 function setState(opts: {
   authIsLoading: boolean;
   isAuthenticated: boolean;
+  user?: { readonly email?: string } | null;
   initialSyncState?: "in-progress" | "success" | "failed" | "timeout";
   profileIsLoading?: boolean;
   profile?: Record<string, unknown> | null;
@@ -117,6 +129,7 @@ function setState(opts: {
   mockUseAuth.mockReturnValue({
     isLoading: opts.authIsLoading,
     isAuthenticated: opts.isAuthenticated,
+    user: opts.user ?? null,
   });
   mockUseSync.mockReturnValue({
     initialSyncState: opts.initialSyncState ?? "in-progress",
@@ -271,19 +284,23 @@ describe("AppReadyGate", () => {
     expect(changeLanguageOrder).toBeLessThan(hideAsyncOrder);
   });
 
-  it("persists the pre-auth language override for a not-onboarded profile before hiding splash", async (): Promise<void> => {
-    mockUseIntroLocaleOverride.mockReturnValue({
-      override: "ar",
-      isLoading: false,
+  it("persists the pending signup language for a matching new profile before hiding splash", async (): Promise<void> => {
+    const signupCreatedAt = "2026-05-05T10:00:00.000Z";
+    mockReadPendingSignupLocale.mockResolvedValue({
+      email: "new@example.com",
+      language: "ar",
+      createdAt: signupCreatedAt,
     });
     setState({
       authIsLoading: false,
       isAuthenticated: true,
+      user: { email: "new@example.com" },
       initialSyncState: "success",
       profileIsLoading: false,
       profile: {
         preferredLanguage: "en",
         onboardingCompleted: false,
+        createdAt: new Date("2026-05-05T10:00:03.000Z"),
       },
     });
 
@@ -293,12 +310,43 @@ describe("AppReadyGate", () => {
     await flushPromises();
 
     expect(mockSetPreferredLanguage).toHaveBeenCalledWith("ar");
+    expect(mockClearPendingSignupLocale).toHaveBeenCalledTimes(1);
     expect(mockHideAsync).toHaveBeenCalledTimes(1);
 
     const setLanguageOrder =
       mockSetPreferredLanguage.mock.invocationCallOrder[0];
     const hideAsyncOrder = mockHideAsync.mock.invocationCallOrder[0];
     expect(setLanguageOrder).toBeLessThan(hideAsyncOrder);
+  });
+
+  it("keeps the stored profile language when an existing user signs in after changing auth-screen language", async (): Promise<void> => {
+    mockReadPendingSignupLocale.mockResolvedValue({
+      email: "returning@example.com",
+      language: "ar",
+      createdAt: "2026-05-05T10:00:00.000Z",
+    });
+    setState({
+      authIsLoading: false,
+      isAuthenticated: true,
+      user: { email: "returning@example.com" },
+      initialSyncState: "success",
+      profileIsLoading: false,
+      profile: {
+        preferredLanguage: "en",
+        onboardingCompleted: false,
+        createdAt: new Date("2026-04-01T10:00:00.000Z"),
+      },
+    });
+
+    RTR.act(() => {
+      RTR.create(React.createElement(AppReadyGate));
+    });
+    await flushPromises();
+
+    expect(mockSetPreferredLanguage).not.toHaveBeenCalled();
+    expect(mockChangeLanguage).not.toHaveBeenCalled();
+    expect(mockClearPendingSignupLocale).toHaveBeenCalledTimes(1);
+    expect(mockHideAsync).toHaveBeenCalledTimes(1);
   });
 
   it("does NOT call changeLanguage when stored language matches current i18n", async (): Promise<void> => {

@@ -30,6 +30,9 @@ export const INTRO_SEEN_KEY = "@monyvi/intro-seen";
 /** Explicit language preference selected on any pre-auth surface (pitch, auth, or Currency step). Device-scoped — persists across sign-up/sign-out. */
 export const INTRO_LOCALE_OVERRIDE_KEY = "@monyvi/intro-locale-override";
 
+/** One-shot marker written only after signup, used to promote pre-auth language for that new profile. */
+export const PENDING_SIGNUP_LOCALE_KEY = "@monyvi/pending-signup-locale";
+
 // =============================================================================
 // Logout Keys
 // =============================================================================

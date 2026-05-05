@@ -28,6 +28,7 @@ const mockSignUpWithEmail = jest.fn();
 const mockSignInWithEmailFn = jest.fn();
 const mockResetPasswordForEmail = jest.fn();
 const mockReadIntroLocaleOverride = jest.fn();
+const mockSetPendingSignupLocale = jest.fn();
 const mockGetCurrentLanguage = jest.fn();
 
 jest.mock("@/services/supabase", () => ({
@@ -56,6 +57,8 @@ jest.mock("@/constants/auth-constants", () => ({
 jest.mock("@/services/intro-flag-service", () => ({
   readIntroLocaleOverride: (): Promise<"en" | "ar" | null> =>
     mockReadIntroLocaleOverride() as Promise<"en" | "ar" | null>,
+  setPendingSignupLocale: (...args: unknown[]): Promise<void> =>
+    mockSetPendingSignupLocale(...args) as Promise<void>,
 }));
 
 jest.mock("@/i18n/changeLanguage", () => ({
@@ -286,10 +289,8 @@ describe("auth-service - signUpWithEmail", () => {
 
   it("delegates to supabase signUpWithEmail and returns result", async () => {
     mockSignUpWithEmail.mockResolvedValue({
-      user: { id: "user-1" },
-      session: null,
+      success: true,
       needsVerification: true,
-      error: null,
     });
 
     const result = await signUpWithEmail("test@example.com", "password123");
@@ -299,8 +300,12 @@ describe("auth-service - signUpWithEmail", () => {
       "password123",
       { preferredLanguage: "en" }
     );
+    expect(mockSetPendingSignupLocale).toHaveBeenCalledWith(
+      "test@example.com",
+      "en"
+    );
     expect(result.needsVerification).toBe(true);
-    expect(result.error).toBeNull();
+    expect(result.success).toBe(true);
   });
 
   it("passes the pre-auth Arabic language override into signup metadata", async () => {
@@ -316,6 +321,10 @@ describe("auth-service - signUpWithEmail", () => {
       "arabic@example.com",
       "password123",
       { preferredLanguage: "ar" }
+    );
+    expect(mockSetPendingSignupLocale).toHaveBeenCalledWith(
+      "arabic@example.com",
+      "ar"
     );
   });
 
@@ -336,6 +345,10 @@ describe("auth-service - signUpWithEmail", () => {
       "arabic-fallback@example.com",
       "password123",
       { preferredLanguage: "ar" }
+    );
+    expect(mockSetPendingSignupLocale).toHaveBeenCalledWith(
+      "arabic-fallback@example.com",
+      "ar"
     );
     expect(result.success).toBe(true);
   });
@@ -360,6 +373,7 @@ describe("auth-service - signUpWithEmail", () => {
       "password123",
       { preferredLanguage: "en" }
     );
+    expect(mockSetPendingSignupLocale).not.toHaveBeenCalled();
     expect(result.success).toBe(false);
     expect(result.error).toEqual(mockError);
   });
