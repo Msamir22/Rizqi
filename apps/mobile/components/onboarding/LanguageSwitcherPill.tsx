@@ -53,8 +53,7 @@ import { palette } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useIntroLocaleOverride } from "@/hooks/useIntroLocaleOverride";
-import { setIntroLocaleOverride } from "@/services/intro-flag-service";
-import { setPreferredLanguage } from "@/services/profile-service";
+import { applyLanguageSelection } from "@/services/language-selection-service";
 import { logger } from "@/utils/logger";
 
 type SupportedLocale = "en" | "ar";
@@ -206,27 +205,14 @@ export function LanguageSwitcherPill(): React.ReactElement {
         return;
       }
       setIsChanging(true);
-      // Always write the override first so a cold launch (after the RTL
-      // reload) starts in the right language. Then, when authenticated,
-      // also persist to the profile so `AppReadyGate` won't override it
-      // back. Order matters — if we wrote the profile first and the RTL
-      // reload happened before the override write committed, AsyncStorage
-      // would be one tick behind and the splash would show the old locale.
-      //
-      // Authenticated path uses `setIntroLocaleOverride` (raw service)
-      // followed by `setPreferredLanguage`, so `changeLanguage` runs
-      // exactly once (mirrors `app/settings.tsx`). Pre-auth path calls
-      // the `useIntroLocaleOverride` hook's `setOverride`, which writes
-      // the override AND calls `changeLanguage` itself — that's correct
-      // because there's no profile to persist into pre-auth.
+      // Delegate the storage/profile/RTL ordering to the service layer so
+      // auth bootstrap edge cases keep the visible language switch working.
       void (async (): Promise<void> => {
         try {
-          if (isAuthenticated) {
-            await setIntroLocaleOverride(lang);
-            await setPreferredLanguage(lang);
-          } else {
-            await setOverride(lang);
-          }
+          await applyLanguageSelection(lang, {
+            isAuthenticated,
+            setUnauthenticatedOverride: setOverride,
+          });
         } catch (error: unknown) {
           logger.warn(
             "LanguageSwitcherPill.setOverride.failed",
