@@ -17,17 +17,9 @@
  */
 
 import { useAuth } from "@/context/AuthContext";
-import {
-  useLocalSearchParams,
-  useRootNavigationState,
-  useRouter,
-} from "expo-router";
-import { useEffect } from "react";
+import { useDeferredRouterReplace } from "@/hooks/useDeferredRouterReplace";
+import { type Href, useLocalSearchParams } from "expo-router";
 import { View } from "react-native";
-
-interface RootNavigationStateSnapshot {
-  key?: string;
-}
 
 /**
  * Detect whether the current deep link is a password-recovery callback.
@@ -46,37 +38,27 @@ function isPasswordRecoveryLink(
 }
 
 export default function AuthCallbackScreen(): React.JSX.Element {
-  const router = useRouter();
-  const rootNavigationState = useRootNavigationState() as
-    | RootNavigationStateSnapshot
-    | undefined;
-  const rootNavigationKey = rootNavigationState?.key;
   const { isAuthenticated, isLoading } = useAuth();
   const params = useLocalSearchParams();
 
-  useEffect(() => {
-    const handleRedirect = (): void => {
-      if (isLoading || !rootNavigationKey) return;
+  let redirectHref: Href | null = null;
+  if (!isLoading) {
+    if (!isAuthenticated) {
+      redirectHref = "/auth";
+    } else if (isPasswordRecoveryLink(params)) {
+      // TODO: Create dedicated /reset-password route. For now, send to settings
+      // where the user can change their password.
+      redirectHref = "/settings";
+    } else {
+      // index.tsx handles the profile-driven routing decision.
+      redirectHref = "/";
+    }
+  }
 
-      if (!isAuthenticated) {
-        router.replace("/auth");
-        return;
-      }
-
-      // Check for password-recovery deep link before normal routing
-      if (isPasswordRecoveryLink(params)) {
-        // TODO: Create dedicated /reset-password route. For now, send to settings
-        // where the user can change their password.
-        router.replace("/settings");
-        return;
-      }
-
-      // index.tsx handles the profile-driven routing decision
-      router.replace("/");
-    };
-
-    handleRedirect();
-  }, [router, rootNavigationKey, isAuthenticated, isLoading, params]);
+  useDeferredRouterReplace({
+    enabled: redirectHref !== null,
+    href: redirectHref ?? "/",
+  });
 
   // Render nothing while redirecting
   return <View />;

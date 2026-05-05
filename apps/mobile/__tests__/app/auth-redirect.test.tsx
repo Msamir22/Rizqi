@@ -1,4 +1,4 @@
-import { render, waitFor } from "@testing-library/react-native";
+import { act, render } from "@testing-library/react-native";
 import React from "react";
 
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -8,20 +8,21 @@ interface MockAuthState {
   isLoading: boolean;
 }
 
-interface MockRootNavigationState {
-  key?: string;
+interface MockNavigationContainerRef {
+  isReady: () => boolean;
 }
 
 const mockReplace = jest.fn();
-let mockRootNavigationState: MockRootNavigationState | undefined;
+let mockIsNavigationReady: boolean;
 let mockAuthState: MockAuthState;
 
 jest.mock("expo-router", () => ({
   useRouter: (): { replace: typeof mockReplace } => ({
     replace: mockReplace,
   }),
-  useRootNavigationState: (): MockRootNavigationState | undefined =>
-    mockRootNavigationState,
+  useNavigationContainerRef: (): MockNavigationContainerRef => ({
+    isReady: (): boolean => mockIsNavigationReady,
+  }),
 }));
 
 jest.mock("@/context/AuthContext", () => ({
@@ -100,24 +101,29 @@ const AuthScreen = AuthModule.default;
 
 describe("AuthScreen redirect", () => {
   beforeEach(() => {
+    jest.useFakeTimers();
     mockReplace.mockClear();
-    mockRootNavigationState = undefined;
+    mockIsNavigationReady = false;
     mockAuthState = {
       isAuthenticated: true,
       isLoading: false,
     };
   });
 
-  it("waits for reactive root navigation state before redirecting authenticated users", async () => {
-    const screen = render(<AuthScreen />);
+  afterEach(() => {
+    jest.clearAllTimers();
+    jest.useRealTimers();
+  });
 
+  it("waits for the navigation container ref before redirecting authenticated users", () => {
+    render(<AuthScreen />);
     expect(mockReplace).not.toHaveBeenCalled();
 
-    mockRootNavigationState = { key: "root" };
-    screen.rerender(<AuthScreen />);
-
-    await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith("/");
+    mockIsNavigationReady = true;
+    act(() => {
+      jest.advanceTimersByTime(50);
     });
+
+    expect(mockReplace).toHaveBeenCalledWith("/");
   });
 });

@@ -22,8 +22,7 @@ import { palette } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRootNavigationState, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   KeyboardAvoidingView,
@@ -49,6 +48,7 @@ import {
   resendVerificationEmail,
   type OAuthProvider,
 } from "@/services/supabase";
+import { useDeferredRouterReplace } from "@/hooks/useDeferredRouterReplace";
 
 // =============================================================================
 // Types
@@ -56,20 +56,11 @@ import {
 
 type ScreenState = "form" | "verificationPending" | "resetSent";
 
-interface RootNavigationStateSnapshot {
-  key?: string;
-}
-
 // =============================================================================
 // Component
 // =============================================================================
 
 export default function AuthScreen(): React.JSX.Element {
-  const router = useRouter();
-  const rootNavigationState = useRootNavigationState() as
-    | RootNavigationStateSnapshot
-    | undefined;
-  const rootNavigationKey = rootNavigationState?.key;
   const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
@@ -84,14 +75,11 @@ export default function AuthScreen(): React.JSX.Element {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [networkError, setNetworkError] = useState<string | null>(null);
 
-  // Guard: If user becomes authenticated, navigate to the routing gate
-  useEffect(() => {
-    if (isAuthLoading || !rootNavigationKey) return;
-    if (isAuthenticated) {
-      // index.tsx handles the profile-driven routing decision
-      router.replace("/");
-    }
-  }, [isAuthenticated, isAuthLoading, rootNavigationKey, router]);
+  // index.tsx handles the profile-driven routing decision.
+  useDeferredRouterReplace({
+    enabled: !isAuthLoading && isAuthenticated,
+    href: "/",
+  });
 
   // \u2500\u2500\u2500 OAuth Handler \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
