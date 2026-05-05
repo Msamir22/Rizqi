@@ -7,8 +7,6 @@
 
 import { renderHook } from "@testing-library/react-native";
 
-let mockIsAuthenticated = true;
-
 let activeSubscriber: {
   next: (value: unknown[]) => void;
   error: (err: unknown) => void;
@@ -34,12 +32,6 @@ const mockObserve = jest.fn(() => ({ subscribe: mockSubscribe }));
 
 const mockQuery = jest.fn(() => ({ observe: mockObserve }));
 
-jest.mock("@/context/AuthContext", () => ({
-  useAuth: (): { isAuthenticated: boolean } => ({
-    isAuthenticated: mockIsAuthenticated,
-  }),
-}));
-
 jest.mock("@monyvi/db", () => ({
   database: {
     get: jest.fn(() => ({
@@ -58,7 +50,6 @@ import { useProfile } from "../../hooks/useProfile";
 beforeEach(() => {
   jest.clearAllMocks();
   activeSubscriber = null;
-  mockIsAuthenticated = true;
 });
 
 describe("useProfile", () => {
@@ -83,14 +74,5 @@ describe("useProfile", () => {
 
     expect(mockUnsubscribe).toHaveBeenCalledTimes(1);
     expect(activeSubscriber).toBeNull();
-  });
-
-  it("does not subscribe while signed out", () => {
-    mockIsAuthenticated = false;
-
-    const { result } = renderHook(() => useProfile());
-
-    expect(result.current).toEqual({ profile: null, isLoading: false });
-    expect(mockSubscribe).not.toHaveBeenCalled();
   });
 });

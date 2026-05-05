@@ -30,6 +30,7 @@ import { AppReadyGate } from "../components/AppReadyGate";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { ThemeProvider, useTheme } from "../context/ThemeContext";
 import { LocaleProvider } from "../context/LocaleContext";
+import { LogoutProvider, useLogout } from "../context/LogoutContext";
 import i18n, { initI18n } from "../i18n";
 
 import "../global.css";
@@ -41,7 +42,7 @@ import { CategoriesProvider } from "../context/CategoriesContext";
 
 import { SmsScanProvider } from "../context/SmsScanContext";
 import { FirstRunTooltipProvider } from "../context/FirstRunTooltipContext";
-import { DatabaseProvider } from "../providers/DatabaseProvider";
+import { DatabaseProvider, useDatabase } from "../providers/DatabaseProvider";
 import { QueryProvider } from "../providers/QueryProvider";
 import { MarketRatesRealtimeProvider } from "../providers/MarketRatesRealtimeProvider";
 import { PrivateDataBoundary } from "../providers/PrivateDataBoundary";
@@ -58,6 +59,7 @@ import {
   startSmsListener,
   stopSmsListener,
 } from "../services/sms-live-listener-service";
+import { completeInterruptedLogout } from "../services/logout-service";
 
 const SENTRY_DSN = String(process.env.EXPO_PUBLIC_SENTRY_DSN ?? "");
 
@@ -186,33 +188,22 @@ function RootLayout(): React.ReactNode {
           <QueryProvider>
             <DatabaseProvider>
               <AuthProvider>
-                <PrivateDataBoundary>
-                  <SyncProvider>
-                    <MarketRatesRealtimeProvider>
-                      <CategoriesProvider>
-                        <SmsScanProvider>
-                          <LocaleProvider>
-                            <ThemeProvider>
-                              <SafeAreaProvider
-                                initialMetrics={initialWindowMetrics}
-                              >
-                                <ToastProvider>
-                                  <FirstRunTooltipProvider>
-                                    <AuthGuard>
-                                      <RootLayoutNav />
-                                      <InitialSyncOverlay />
-                                      <AppReadyGate />
-                                    </AuthGuard>
-                                  </FirstRunTooltipProvider>
-                                </ToastProvider>
-                              </SafeAreaProvider>
-                            </ThemeProvider>
-                          </LocaleProvider>
-                        </SmsScanProvider>
-                      </CategoriesProvider>
-                    </MarketRatesRealtimeProvider>
-                  </SyncProvider>
-                </PrivateDataBoundary>
+                <LogoutRecoveryGate />
+                <LocaleProvider>
+                  <ThemeProvider>
+                    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+                      <ToastProvider>
+                        <FirstRunTooltipProvider>
+                          <LogoutProvider>
+                            <AuthGuard>
+                              <RuntimeNavigator />
+                            </AuthGuard>
+                          </LogoutProvider>
+                        </FirstRunTooltipProvider>
+                      </ToastProvider>
+                    </SafeAreaProvider>
+                  </ThemeProvider>
+                </LocaleProvider>
               </AuthProvider>
             </DatabaseProvider>
           </QueryProvider>
@@ -242,6 +233,61 @@ export default Sentry.wrap(RootLayout);
  * - "pitch"      — the pre-auth pitch carousel
  */
 const PUBLIC_ROUTES = new Set(["", "auth", "auth-callback", "pitch"]);
+
+function LogoutRecoveryGate(): null {
+  const database = useDatabase();
+  const hasCheckedRef = useRef(false);
+
+  useEffect(() => {
+    if (hasCheckedRef.current) return;
+    hasCheckedRef.current = true;
+
+    completeInterruptedLogout(database).catch((error: unknown) => {
+      logger.warn(
+        "logout.recovery.failed",
+        error instanceof Error ? { message: error.message } : { error }
+      );
+    });
+  }, [database]);
+
+  return null;
+}
+
+function RuntimeNavigator(): React.ReactNode {
+  const { isAuthenticated, isLoading } = useAuth();
+  const { isLoggingOut } = useLogout();
+  const segments = useSegments();
+  const isPublicRoute = PUBLIC_ROUTES.has(segments[0] ?? "");
+  const shouldMountPrivateRuntime =
+    !isLoading &&
+    (isAuthenticated || !isPublicRoute) &&
+    !(isLoggingOut && isPublicRoute);
+
+  if (!shouldMountPrivateRuntime) {
+    return (
+      <>
+        <RootLayoutNav />
+        <AppReadyGate />
+      </>
+    );
+  }
+
+  return (
+    <PrivateDataBoundary>
+      <SyncProvider>
+        <MarketRatesRealtimeProvider>
+          <CategoriesProvider>
+            <SmsScanProvider>
+              <RootLayoutNav />
+              <InitialSyncOverlay />
+              <AppReadyGate />
+            </SmsScanProvider>
+          </CategoriesProvider>
+        </MarketRatesRealtimeProvider>
+      </SyncProvider>
+    </PrivateDataBoundary>
+  );
+}
 
 function AuthGuard({
   children,

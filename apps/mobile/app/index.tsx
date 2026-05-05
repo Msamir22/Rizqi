@@ -65,6 +65,20 @@ const PROFILE_OBSERVATION_GRACE_MS = 4_000;
 export default function Index(): React.ReactNode {
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const { isSeen: introSeen, isLoading: isIntroLoading } = useIntroSeen();
+
+  if (isAuthLoading || isIntroLoading) {
+    return null;
+  }
+
+  if (!isAuthenticated) {
+    if (!introSeen) return <Redirect href="/pitch" />;
+    return <Redirect href="/auth" />;
+  }
+
+  return <AuthenticatedIndex />;
+}
+
+function AuthenticatedIndex(): React.ReactNode {
   const { initialSyncState, retryInitialSync } = useSync();
   const { profile, isLoading: isProfileLoading } = useProfile();
   const hasLoggedRef = useRef(false);
@@ -150,17 +164,6 @@ export default function Index(): React.ReactNode {
   // by <AppReadyGate /> (see _layout.tsx) until sync + profile resolve, so
   // users never see a blank/starry backdrop between splash and the real
   // screen.
-  if (isAuthLoading || isIntroLoading) {
-    return null;
-  }
-
-  // Pre-auth routing: first-time visitors see pitch, returning visitors go
-  // straight to auth. introSeen is device-scoped (FR-029/FR-030).
-  if (!isAuthenticated) {
-    if (!introSeen) return <Redirect href="/pitch" />;
-    return <Redirect href="/auth" />;
-  }
-
   // Mid-session auth → /index transition: when /auth calls router.replace("/")
   // after sign-up, the InitialSyncOverlay's 300ms fade-in is animating over
   // whatever this gate renders. Returning `null` here exposes a blank screen
@@ -196,7 +199,7 @@ export default function Index(): React.ReactNode {
   //     brand-new user. NEVER fall through to /onboarding — that
   //     would skip an already-onboarded returning user past their
   //     data on the next successful sync (user-report 2026-04-24).
-  if (isAuthenticated && profile === null) {
+  if (profile === null) {
     if (
       initialSyncState === "failed" ||
       initialSyncState === "timeout" ||

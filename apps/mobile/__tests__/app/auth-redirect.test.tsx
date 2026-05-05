@@ -15,6 +15,7 @@ interface MockNavigationContainerRef {
 const mockReplace = jest.fn();
 let mockIsNavigationReady: boolean;
 let mockAuthState: MockAuthState;
+let mockIsLoggingOut: boolean;
 
 jest.mock("expo-router", () => ({
   useRouter: (): { replace: typeof mockReplace } => ({
@@ -27,6 +28,12 @@ jest.mock("expo-router", () => ({
 
 jest.mock("@/context/AuthContext", () => ({
   useAuth: (): MockAuthState => mockAuthState,
+}));
+
+jest.mock("@/context/LogoutContext", () => ({
+  useLogout: (): { isLoggingOut: boolean } => ({
+    isLoggingOut: mockIsLoggingOut,
+  }),
 }));
 
 jest.mock("@/context/ThemeContext", () => ({
@@ -108,6 +115,7 @@ describe("AuthScreen redirect", () => {
       isAuthenticated: true,
       isLoading: false,
     };
+    mockIsLoggingOut = false;
   });
 
   afterEach(() => {
@@ -125,5 +133,17 @@ describe("AuthScreen redirect", () => {
     });
 
     expect(mockReplace).toHaveBeenCalledWith("/");
+  });
+
+  it("does not redirect authenticated users away from auth while logout is in progress", () => {
+    mockIsLoggingOut = true;
+    mockIsNavigationReady = true;
+
+    render(<AuthScreen />);
+    act(() => {
+      jest.advanceTimersByTime(50);
+    });
+
+    expect(mockReplace).not.toHaveBeenCalled();
   });
 });

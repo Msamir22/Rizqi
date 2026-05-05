@@ -32,13 +32,16 @@ function getAsyncStorageMocks(): AsyncStorageMocks {
 
 jest.mock("@/services/sync", () => {
   const resetSyncState = jest.fn((): Promise<void> => Promise.resolve());
+  const getActiveSyncPromise = jest.fn((): Promise<void> | null => null);
   return {
+    getActiveSyncPromise,
     resetSyncState,
-    __mocks: { resetSyncState },
+    __mocks: { getActiveSyncPromise, resetSyncState },
   };
 });
 
 interface SyncMocks {
+  getActiveSyncPromise: jest.Mock;
   resetSyncState: jest.Mock;
 }
 
@@ -115,6 +118,7 @@ describe("logout-service", () => {
     asyncMocks.setItem.mockResolvedValue(undefined);
     asyncMocks.removeItem.mockResolvedValue(undefined);
     asyncMocks.multiRemove.mockResolvedValue(undefined);
+    syncMocks.getActiveSyncPromise.mockReturnValue(null);
     syncMocks.resetSyncState.mockResolvedValue(undefined);
     supaMocks.signOut.mockResolvedValue({ error: null });
   });
@@ -219,6 +223,34 @@ describe("logout-service", () => {
     expect(asyncMocks.removeItem).toHaveBeenCalledWith(
       "@monyvi/logout-in-progress"
     );
+  });
+
+  it("waits for an active sync before resetting the local database", async () => {
+    const callOrder: string[] = [];
+    const syncMocks = getSyncMocks();
+    let resolveSync = (): void => {};
+    const activeSyncPromise = new Promise<void>((resolve) => {
+      resolveSync = resolve;
+    });
+
+    syncMocks.getActiveSyncPromise.mockReturnValue(activeSyncPromise);
+    syncMocks.resetSyncState.mockImplementation(() => {
+      callOrder.push("resetDB");
+      return Promise.resolve();
+    });
+
+    const result = await performLogout(db);
+    expect(result).toEqual({ success: true });
+
+    const cleanupPromise = flushLogoutCleanup();
+    await Promise.resolve();
+    expect(syncMocks.resetSyncState).not.toHaveBeenCalled();
+
+    callOrder.push("syncSettled");
+    resolveSync();
+    await cleanupPromise;
+
+    expect(callOrder).toEqual(["syncSettled", "resetDB"]);
   });
 
   describe("completeInterruptedLogout", () => {

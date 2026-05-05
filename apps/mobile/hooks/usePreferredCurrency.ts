@@ -3,11 +3,11 @@ import {
   DEFAULT_CURRENCY,
   detectCurrencyFromTimezone,
 } from "@/utils/currency-detection";
+import { logger } from "@/utils/logger";
 import { database, Profile, type CurrencyType } from "@monyvi/db";
 import { SUPPORTED_CURRENCIES } from "@monyvi/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
-import { useAuth } from "@/context/AuthContext";
 
 interface UsePreferredCurrencyResult {
   /** The user's preferred display currency */
@@ -26,20 +26,12 @@ interface UsePreferredCurrencyResult {
  * - `isLoading`: `true` while the initial Profile observation is pending, `false` otherwise.
  */
 export function usePreferredCurrency(): UsePreferredCurrencyResult {
-  const { isAuthenticated } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [isLoading, setIsLoading] = useState(isAuthenticated);
+  const [isLoading, setIsLoading] = useState(true);
   const { showToast } = useToast();
 
   // Observe the first profile record
   useEffect(() => {
-    if (!isAuthenticated) {
-      setProfile(null);
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
     const collection = database.get<Profile>("profiles");
     const subscription = collection
       .query(Q.where("deleted", false), Q.take(1))
@@ -50,13 +42,13 @@ export function usePreferredCurrency(): UsePreferredCurrencyResult {
           setIsLoading(false);
         },
         error: (err: unknown) => {
-          console.error("Error observing profile:", err);
+          logger.error("Error observing profile:", { error: err });
           setIsLoading(false);
         },
       });
 
     return () => subscription.unsubscribe();
-  }, [isAuthenticated]);
+  }, []);
 
   const preferredCurrency = useMemo<CurrencyType>(() => {
     if (profile?.preferredCurrency) {
@@ -83,11 +75,11 @@ export function usePreferredCurrency(): UsePreferredCurrencyResult {
         });
       });
     } catch (error) {
-      console.error("Failed to save currency preference:", error);
+      logger.error("Failed to set preferred currency", { error, currency });
       showToast({
         type: "error",
         title: "Error",
-        message: "Failed to save currency preference",
+        message: "Failed to set preferred currency. Please try again.",
       });
     }
   };

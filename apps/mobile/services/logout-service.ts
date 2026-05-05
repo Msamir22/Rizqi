@@ -15,7 +15,7 @@ import { logger } from "@/utils/logger";
 import type { Database } from "@nozbe/watermelondb";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "./supabase";
-import { resetSyncState } from "./sync";
+import { getActiveSyncPromise, resetSyncState } from "./sync";
 
 // =============================================================================
 // Types
@@ -93,6 +93,7 @@ export async function completeInterruptedLogout(
       return; // No interrupted logout to complete
     }
 
+    await destroySession();
     await executeLocalLogoutCleanup(database);
   } catch {
     // TODO: Replace with structured logging (e.g., Sentry)
@@ -116,6 +117,7 @@ export async function completeInterruptedLogout(
  */
 async function executeLocalLogoutCleanup(database: Database): Promise<void> {
   await waitForPrivateSubscribersToUnmount();
+  await waitForActiveSyncToSettle();
 
   // Reset local WatermelonDB database
   await resetSyncState(database);
@@ -140,6 +142,19 @@ function waitForPrivateSubscribersToUnmount(): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, PRIVATE_SUBSCRIBER_TEARDOWN_DELAY_MS);
   });
+}
+
+async function waitForActiveSyncToSettle(): Promise<void> {
+  const activeSyncPromise = getActiveSyncPromise();
+  if (!activeSyncPromise) {
+    return;
+  }
+
+  try {
+    await activeSyncPromise;
+  } catch {
+    // A failed in-flight sync should not block local logout cleanup.
+  }
 }
 
 /**

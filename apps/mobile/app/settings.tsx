@@ -6,14 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import React, { useCallback, useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  ScrollView,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ScrollView, Switch, Text, TouchableOpacity, View } from "react-native";
 import { useLocale } from "../context/LocaleContext";
 
 import { CurrencyPicker } from "../components/currency/CurrencyPicker";
@@ -21,8 +14,7 @@ import { GradientBackground } from "../components/ui/GradientBackground";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { usePreferredCurrency } from "../hooks/usePreferredCurrency";
-import { useDatabase } from "../providers/DatabaseProvider";
-import { performLogout } from "../services/logout-service";
+import { useLogout } from "../context/LogoutContext";
 import { setIntroLocaleOverride } from "@/services/intro-flag-service";
 import { setPreferredLanguage } from "@/services/profile-service";
 import { useSmsPermission } from "../hooks/useSmsPermission";
@@ -41,6 +33,7 @@ import {
 import { ConfirmationModal } from "@/components/modals/ConfirmationModal";
 import { Dropdown, type DropdownItem } from "@/components/ui/Dropdown";
 import { useToast } from "@/components/ui/Toast";
+import { logger } from "@/utils/logger";
 
 /**
  * Render the Settings screen for managing appearance, currency, and general preferences.
@@ -66,13 +59,11 @@ export default function SettingsScreen(): React.JSX.Element {
   const { hasSynced, lastSyncTimestamp } = useSmsSync();
   const { setScanMode } = useSmsScanContext();
   const [isFullRescanModalOpen, setIsFullRescanModalOpen] = useState(false);
-  const database = useDatabase();
   const { showToast } = useToast();
+  const { requestLogout } = useLogout();
 
   // Logout UI state
   const [showSyncWarning, setShowSyncWarning] = useState(false);
-  const [showForceLogoutError, setShowForceLogoutError] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Live detection preferences
   const [liveDetection, setLiveDetection] = useState(false);
@@ -154,47 +145,19 @@ export default function SettingsScreen(): React.JSX.Element {
 
   const handleCurrencySelect = useCallback(
     (currency: CurrencyType) => {
-      // TODO: Replace with structured logging (e.g., Sentry)
-      setPreferredCurrency(currency).catch(console.error);
+      setPreferredCurrency(currency);
     },
     [setPreferredCurrency]
   );
 
-  const handleLogoutPress = useCallback(async (): Promise<void> => {
-    setIsLoggingOut(true);
+  const handleLogoutPress = useCallback((): void => {
+    requestLogout();
+  }, [requestLogout]);
 
-    const result = await performLogout(database);
-
-    if (result.success) {
-      setIsLoggingOut(false);
-      router.replace("/auth");
-      return;
-    }
-
-    setIsLoggingOut(false);
-
-    showToast({
-      type: "error",
-      title: t("logout_error"),
-    });
-  }, [database, showToast, t]);
-
-  const handleForceLogout = useCallback(async (): Promise<void> => {
+  const handleForceLogout = useCallback((): void => {
     setShowSyncWarning(false);
-    setIsLoggingOut(true);
-
-    const result = await performLogout(database, true);
-
-    setIsLoggingOut(false);
-
-    if (result.success) {
-      router.replace("/auth");
-      return;
-    }
-
-    // Force logout failed — show retry modal
-    setShowForceLogoutError(true);
-  }, [database]);
+    requestLogout(true);
+  }, [requestLogout]);
 
   const [isChangingLanguage, setIsChangingLanguage] = useState(false);
 
@@ -223,8 +186,10 @@ export default function SettingsScreen(): React.JSX.Element {
         await setIntroLocaleOverride(lang);
         await setPreferredLanguage(lang);
       } catch (error) {
-        // TODO: Replace with structured logging (e.g., Sentry)
-        console.error("Failed to change language:", error);
+        logger.error(
+          "Failed to change language",
+          error instanceof Error ? { message: error.message } : undefined
+        );
         showToast({
           type: "error",
           title: tCommon("error"),
@@ -532,14 +497,10 @@ export default function SettingsScreen(): React.JSX.Element {
         >
           <View className="flex-row items-center gap-3">
             <View className="w-8 dark:bg-red-700 bg-red-600 h-8 rounded-lg justify-center items-center">
-              {isLoggingOut ? (
-                <ActivityIndicator size={16} color="#FFF" />
-              ) : (
-                <Ionicons name="log-out-outline" size={20} color="#FFF" />
-              )}
+              <Ionicons name="log-out-outline" size={20} color="#FFF" />
             </View>
             <Text className="text-base font-medium text-red-600 dark:text-red-400">
-              {isLoggingOut ? tCommon("loading") : t("logout")}
+              {t("logout")}
             </Text>
           </View>
           <Ionicons
@@ -553,8 +514,12 @@ export default function SettingsScreen(): React.JSX.Element {
       <ConfirmationModal
         visible={isFullRescanModalOpen}
         onConfirm={() => {
-          // TODO: Replace with structured logging (e.g., Sentry)
-          navigateToScan("full").catch(console.error);
+          navigateToScan("full").catch((error) => {
+            logger.error(
+              "Failed to start full SMS rescan",
+              error instanceof Error ? { message: error.message } : undefined
+            );
+          });
         }}
         onCancel={() => setIsFullRescanModalOpen(false)}
         title={t("rescan_title")}
@@ -573,25 +538,9 @@ export default function SettingsScreen(): React.JSX.Element {
         confirmLabel={t("proceed_anyway")}
         cancelLabel={tCommon("cancel")}
         onConfirm={() => {
-          // TODO: Replace with structured logging (e.g., Sentry)
-          handleForceLogout().catch(console.error);
+          handleForceLogout();
         }}
         onCancel={() => setShowSyncWarning(false)}
-      />
-      {/* Force Logout Error Modal */}
-      <ConfirmationModal
-        visible={showForceLogoutError}
-        variant="warning"
-        icon="alert-circle-outline"
-        title={t("logout_failed")}
-        message={t("logout_failed_message")}
-        confirmLabel={tCommon("retry")}
-        cancelLabel={tCommon("cancel")}
-        onConfirm={() => {
-          setShowForceLogoutError(false);
-          handleForceLogout().catch(console.error);
-        }}
-        onCancel={() => setShowForceLogoutError(false)}
       />
       {/* Currency Picker Modal */}
       <CurrencyPicker

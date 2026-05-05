@@ -581,6 +581,9 @@ export async function syncDatabase(
         );
         return;
       }
+      if (errorMessage.includes("Sync aborted because database was reset")) {
+        return;
+      }
       console.error("Sync failed:", error);
       throw error;
     } finally {

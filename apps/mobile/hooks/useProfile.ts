@@ -13,7 +13,6 @@
 import { database, Profile } from "@monyvi/db";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useState } from "react";
-import { useAuth } from "@/context/AuthContext";
 
 // =============================================================================
 // Types
@@ -41,21 +40,13 @@ interface UseProfileResult {
  * @returns An object with profile and isLoading.
  */
 export function useProfile(): UseProfileResult {
-  const { isAuthenticated } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [isLoading, setIsLoading] = useState(isAuthenticated);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Observe the first profile record
   // TODO: Scope this query by user_id when multi-account support is added.
   // Currently safe because Monyvi is single-user and login wipes local data.
   useEffect(() => {
-    if (!isAuthenticated) {
-      setProfile(null);
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
     const collection = database.get<Profile>("profiles");
     const subscription = collection
       .query(Q.where("deleted", false), Q.take(1))
@@ -72,7 +63,7 @@ export function useProfile(): UseProfileResult {
       });
 
     return () => subscription.unsubscribe();
-  }, [isAuthenticated]);
+  }, []);
 
   return {
     profile,
