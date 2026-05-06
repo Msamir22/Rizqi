@@ -26,10 +26,7 @@ import {
   getCurrentLanguage,
   type SupportedLanguage,
 } from "@/i18n/changeLanguage";
-import {
-  readIntroLocaleOverride,
-  setPendingSignupLocale,
-} from "@/services/intro-flag-service";
+import { readIntroLocaleOverride } from "@/services/intro-flag-service";
 import {
   signInWithOAuthProvider,
   supabase,
@@ -179,11 +176,7 @@ export async function signUpWithEmail(
   password: string
 ): Promise<EmailAuthResult> {
   const preferredLanguage = await resolveSignupPreferredLanguage();
-  const result = await supabaseSignUp(email, password, { preferredLanguage });
-  if (result.success) {
-    await setPendingSignupLocale(email, preferredLanguage);
-  }
-  return result;
+  return supabaseSignUp(email, password, { preferredLanguage });
 }
 
 /**

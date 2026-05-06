@@ -28,21 +28,15 @@
  */
 
 import { useAuth } from "@/context/AuthContext";
+import { useIntroLocaleOverride } from "@/hooks/useIntroLocaleOverride";
 import { useProfile } from "@/hooks/useProfile";
 import { useSync } from "@/providers/SyncProvider";
 import { changeLanguage, type SupportedLanguage } from "@/i18n/changeLanguage";
 import { setPreferredLanguage } from "@/services/profile-service";
-import {
-  clearPendingSignupLocale,
-  readPendingSignupLocale,
-  type PendingSignupLocale,
-} from "@/services/intro-flag-service";
 import i18n from "@/i18n";
 import { logger } from "@/utils/logger";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect, useRef, useState } from "react";
-
-const SIGNUP_PROFILE_MATCH_WINDOW_MS = 10 * 60 * 1000;
+import { useEffect, useRef } from "react";
 
 /**
  * Whether the app has enough state to render its first real screen without
@@ -53,7 +47,7 @@ function computeReady(
   isAuthenticated: boolean,
   initialSyncState: "in-progress" | "success" | "failed" | "timeout",
   profileIsLoading: boolean,
-  pendingSignupLocaleIsLoading: boolean,
+  introLocaleOverrideIsLoading: boolean,
   profileOnboardingCompleted: boolean | undefined
 ): boolean {
   if (authIsLoading) return false;
@@ -62,7 +56,7 @@ function computeReady(
   // Authenticated path: wait for sync to settle + profile observation ready.
   if (initialSyncState === "in-progress") return false;
   if (profileIsLoading) return false;
-  if (profileOnboardingCompleted === false && pendingSignupLocaleIsLoading) {
+  if (profileOnboardingCompleted === false && introLocaleOverrideIsLoading) {
     return false;
   }
   return true;
@@ -72,45 +66,14 @@ function isSupportedLanguage(value: unknown): value is SupportedLanguage {
   return value === "en" || value === "ar";
 }
 
-function normalizeEmail(email: string | undefined): string | null {
-  const normalized = email?.trim().toLowerCase();
-  return normalized ? normalized : null;
-}
-
-function isMatchingNewSignupProfile(
-  pendingSignupLocale: PendingSignupLocale | null,
-  userEmail: string | undefined,
-  profileCreatedAt: Date | undefined,
-  onboardingCompleted: boolean | undefined
-): boolean {
-  const normalizedUserEmail = normalizeEmail(userEmail);
-  if (
-    pendingSignupLocale === null ||
-    normalizedUserEmail === null ||
-    onboardingCompleted !== false ||
-    normalizedUserEmail !== pendingSignupLocale.email ||
-    !(profileCreatedAt instanceof Date)
-  ) {
-    return false;
-  }
-
-  const profileTime = profileCreatedAt.getTime();
-  const signupTime = Date.parse(pendingSignupLocale.createdAt);
-  return (
-    !Number.isNaN(profileTime) &&
-    !Number.isNaN(signupTime) &&
-    Math.abs(profileTime - signupTime) <= SIGNUP_PROFILE_MATCH_WINDOW_MS
-  );
-}
-
 export function AppReadyGate(): null {
-  const { user, isLoading: authIsLoading, isAuthenticated } = useAuth();
+  const { isLoading: authIsLoading, isAuthenticated } = useAuth();
   const { initialSyncState } = useSync();
   const { profile, isLoading: profileIsLoading } = useProfile();
-  const [pendingSignupLocale, setPendingSignupLocale] =
-    useState<PendingSignupLocale | null>(null);
-  const [pendingSignupLocaleIsLoading, setPendingSignupLocaleIsLoading] =
-    useState(true);
+  const {
+    override: introLocaleOverride,
+    isLoading: introLocaleOverrideIsLoading,
+  } = useIntroLocaleOverride();
   const hiddenRef = useRef(false);
   // Prevents concurrent hide attempts while an earlier one is in flight,
   // without permanently latching on a rejection (CR review on AppReadyGate.tsx:108).
@@ -121,26 +84,9 @@ export function AppReadyGate(): null {
     isAuthenticated,
     initialSyncState,
     profileIsLoading,
-    pendingSignupLocaleIsLoading,
+    introLocaleOverrideIsLoading,
     profile?.onboardingCompleted
   );
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadPendingSignupLocale = async (): Promise<void> => {
-      const marker = await readPendingSignupLocale();
-      if (!cancelled) {
-        setPendingSignupLocale(marker);
-        setPendingSignupLocaleIsLoading(false);
-      }
-    };
-
-    void loadPendingSignupLocale();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     // `hiddenRef` is only set AFTER `SplashScreen.hideAsync()` succeeds, so
@@ -153,35 +99,22 @@ export function AppReadyGate(): null {
     const storedLanguage = isSupportedLanguage(profile?.preferredLanguage)
       ? profile.preferredLanguage
       : undefined;
-    const shouldPromoteSignupLanguage = isMatchingNewSignupProfile(
-      pendingSignupLocale,
-      user?.email,
-      profile?.createdAt,
-      profile?.onboardingCompleted
-    );
-    const signupLanguage = shouldPromoteSignupLanguage
-      ? pendingSignupLocale?.language
-      : undefined;
-    const shouldClearSignupMarker =
-      pendingSignupLocale !== null &&
-      normalizeEmail(user?.email) === pendingSignupLocale.email;
-    const targetLanguage = signupLanguage ?? storedLanguage;
+    const preAuthLanguage =
+      !profile?.onboardingCompleted && isSupportedLanguage(introLocaleOverride)
+        ? introLocaleOverride
+        : undefined;
+    const targetLanguage = preAuthLanguage ?? storedLanguage;
 
     const finish = async (): Promise<void> => {
-      if (signupLanguage && profile?.preferredLanguage !== signupLanguage) {
+      if (preAuthLanguage && profile?.preferredLanguage !== preAuthLanguage) {
         try {
-          await setPreferredLanguage(signupLanguage);
+          await setPreferredLanguage(preAuthLanguage);
         } catch (error) {
           logger.warn(
-            "appReadyGate.signupLanguagePersist.failed",
+            "appReadyGate.preAuthLanguagePersist.failed",
             error instanceof Error ? { message: error.message } : { error }
           );
         }
-      }
-
-      if (shouldClearSignupMarker) {
-        await clearPendingSignupLocale();
-        setPendingSignupLocale(null);
       }
 
       // Sync the UI language with the user's stored preference BEFORE we
@@ -216,11 +149,9 @@ export function AppReadyGate(): null {
   }, [
     ready,
     profile,
-    user?.email,
     profile?.preferredLanguage,
-    profile?.createdAt,
     profile?.onboardingCompleted,
-    pendingSignupLocale,
+    introLocaleOverride,
   ]);
 
   return null;
