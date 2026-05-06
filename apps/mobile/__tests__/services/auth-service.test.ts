@@ -291,8 +291,6 @@ describe("auth-service - signUpWithEmail", () => {
     mockSignUpWithEmail.mockResolvedValue({
       success: true,
       needsVerification: true,
-      userId: "signup-user-1",
-      userCreatedAt: "2026-05-05T10:00:00.000Z",
     });
 
     const result = await signUpWithEmail("test@example.com", "password123");
@@ -304,9 +302,7 @@ describe("auth-service - signUpWithEmail", () => {
     );
     expect(mockSetPendingSignupLocale).toHaveBeenCalledWith(
       "test@example.com",
-      "en",
-      "signup-user-1",
-      "2026-05-05T10:00:00.000Z"
+      "en"
     );
     expect(result.needsVerification).toBe(true);
     expect(result.success).toBe(true);
@@ -317,8 +313,6 @@ describe("auth-service - signUpWithEmail", () => {
     mockSignUpWithEmail.mockResolvedValue({
       success: true,
       needsVerification: true,
-      userId: "signup-user-2",
-      userCreatedAt: "2026-05-05T10:00:00.000Z",
     });
 
     await signUpWithEmail("arabic@example.com", "password123");
@@ -330,9 +324,7 @@ describe("auth-service - signUpWithEmail", () => {
     );
     expect(mockSetPendingSignupLocale).toHaveBeenCalledWith(
       "arabic@example.com",
-      "ar",
-      "signup-user-2",
-      "2026-05-05T10:00:00.000Z"
+      "ar"
     );
   });
 
@@ -342,8 +334,6 @@ describe("auth-service - signUpWithEmail", () => {
     mockSignUpWithEmail.mockResolvedValue({
       success: true,
       needsVerification: true,
-      userId: "signup-user-3",
-      userCreatedAt: "2026-05-05T10:00:00.000Z",
     });
 
     const result = await signUpWithEmail(
@@ -358,9 +348,7 @@ describe("auth-service - signUpWithEmail", () => {
     );
     expect(mockSetPendingSignupLocale).toHaveBeenCalledWith(
       "arabic-fallback@example.com",
-      "ar",
-      "signup-user-3",
-      "2026-05-05T10:00:00.000Z"
+      "ar"
     );
     expect(result.success).toBe(true);
   });

@@ -180,13 +180,8 @@ export async function signUpWithEmail(
 ): Promise<EmailAuthResult> {
   const preferredLanguage = await resolveSignupPreferredLanguage();
   const result = await supabaseSignUp(email, password, { preferredLanguage });
-  if (result.success && result.userId && result.userCreatedAt) {
-    await setPendingSignupLocale(
-      email,
-      preferredLanguage,
-      result.userId,
-      result.userCreatedAt
-    );
+  if (result.success) {
+    await setPendingSignupLocale(email, preferredLanguage);
   }
   return result;
 }

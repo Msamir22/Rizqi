@@ -121,7 +121,7 @@ async function flushPromises(): Promise<void> {
 function setState(opts: {
   authIsLoading: boolean;
   isAuthenticated: boolean;
-  user?: { readonly id?: string; readonly email?: string } | null;
+  user?: { readonly email?: string } | null;
   initialSyncState?: "in-progress" | "success" | "failed" | "timeout";
   profileIsLoading?: boolean;
   profile?: Record<string, unknown> | null;
@@ -289,20 +289,17 @@ describe("AppReadyGate", () => {
     mockReadPendingSignupLocale.mockResolvedValue({
       email: "new@example.com",
       language: "ar",
-      userId: "new-user-1",
-      userCreatedAt: signupCreatedAt,
-      markerCreatedAt: "2026-05-05T11:00:00.000Z",
+      createdAt: signupCreatedAt,
     });
     setState({
       authIsLoading: false,
       isAuthenticated: true,
-      user: { id: "new-user-1", email: "new@example.com" },
+      user: { email: "new@example.com" },
       initialSyncState: "success",
       profileIsLoading: false,
       profile: {
         preferredLanguage: "en",
         onboardingCompleted: false,
-        userId: "new-user-1",
         createdAt: new Date("2026-05-05T10:00:03.000Z"),
       },
     });
@@ -326,20 +323,17 @@ describe("AppReadyGate", () => {
     mockReadPendingSignupLocale.mockResolvedValue({
       email: "returning@example.com",
       language: "ar",
-      userId: "signup-user-1",
-      userCreatedAt: "2026-05-05T10:00:00.000Z",
-      markerCreatedAt: "2026-05-05T10:00:00.000Z",
+      createdAt: "2026-05-05T10:00:00.000Z",
     });
     setState({
       authIsLoading: false,
       isAuthenticated: true,
-      user: { id: "returning-user-1", email: "returning@example.com" },
+      user: { email: "returning@example.com" },
       initialSyncState: "success",
       profileIsLoading: false,
       profile: {
         preferredLanguage: "en",
         onboardingCompleted: false,
-        userId: "returning-user-1",
         createdAt: new Date("2026-04-01T10:00:00.000Z"),
       },
     });

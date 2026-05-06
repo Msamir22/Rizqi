@@ -42,7 +42,7 @@ import { logger } from "@/utils/logger";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useRef, useState } from "react";
 
-const SIGNUP_PROFILE_CREATED_AT_TOLERANCE_MS = 60 * 1000;
+const SIGNUP_PROFILE_MATCH_WINDOW_MS = 10 * 60 * 1000;
 
 /**
  * Whether the app has enough state to render its first real screen without
@@ -79,21 +79,15 @@ function normalizeEmail(email: string | undefined): string | null {
 
 function isMatchingNewSignupProfile(
   pendingSignupLocale: PendingSignupLocale | null,
-  userId: string | undefined,
   userEmail: string | undefined,
-  profileUserId: string | undefined,
   profileCreatedAt: Date | undefined,
   onboardingCompleted: boolean | undefined
 ): boolean {
   const normalizedUserEmail = normalizeEmail(userEmail);
-  const normalizedUserId = userId?.trim();
   if (
     pendingSignupLocale === null ||
-    !normalizedUserId ||
     normalizedUserEmail === null ||
     onboardingCompleted !== false ||
-    normalizedUserId !== pendingSignupLocale.userId ||
-    profileUserId !== pendingSignupLocale.userId ||
     normalizedUserEmail !== pendingSignupLocale.email ||
     !(profileCreatedAt instanceof Date)
   ) {
@@ -101,11 +95,11 @@ function isMatchingNewSignupProfile(
   }
 
   const profileTime = profileCreatedAt.getTime();
-  const signupTime = Date.parse(pendingSignupLocale.userCreatedAt);
+  const signupTime = Date.parse(pendingSignupLocale.createdAt);
   return (
     !Number.isNaN(profileTime) &&
     !Number.isNaN(signupTime) &&
-    Math.abs(profileTime - signupTime) <= SIGNUP_PROFILE_CREATED_AT_TOLERANCE_MS
+    Math.abs(profileTime - signupTime) <= SIGNUP_PROFILE_MATCH_WINDOW_MS
   );
 }
 
@@ -161,9 +155,7 @@ export function AppReadyGate(): null {
       : undefined;
     const shouldPromoteSignupLanguage = isMatchingNewSignupProfile(
       pendingSignupLocale,
-      user?.id,
       user?.email,
-      profile?.userId,
       profile?.createdAt,
       profile?.onboardingCompleted
     );
@@ -172,8 +164,7 @@ export function AppReadyGate(): null {
       : undefined;
     const shouldClearSignupMarker =
       pendingSignupLocale !== null &&
-      (user?.id === pendingSignupLocale.userId ||
-        normalizeEmail(user?.email) === pendingSignupLocale.email);
+      normalizeEmail(user?.email) === pendingSignupLocale.email;
     const targetLanguage = signupLanguage ?? storedLanguage;
 
     const finish = async (): Promise<void> => {
@@ -225,9 +216,7 @@ export function AppReadyGate(): null {
   }, [
     ready,
     profile,
-    user?.id,
     user?.email,
-    profile?.userId,
     profile?.preferredLanguage,
     profile?.createdAt,
     profile?.onboardingCompleted,

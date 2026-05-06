@@ -39,9 +39,7 @@ export type IntroLocale = "en" | "ar";
 export interface PendingSignupLocale {
   readonly email: string;
   readonly language: IntroLocale;
-  readonly userId: string;
-  readonly userCreatedAt: string;
-  readonly markerCreatedAt: string;
+  readonly createdAt: string;
 }
 
 const VALID_LOCALES: ReadonlySet<IntroLocale> = new Set<IntroLocale>([
@@ -73,37 +71,25 @@ function parsePendingSignupLocale(raw: string): PendingSignupLocale | null {
 
     const email = parsed.email;
     const language = parsed.language;
-    const userId = parsed.userId;
-    const userCreatedAt = parsed.userCreatedAt;
-    const markerCreatedAt = parsed.markerCreatedAt;
+    const createdAt = parsed.createdAt;
 
     if (
       typeof email !== "string" ||
       !VALID_LOCALES.has(language as IntroLocale) ||
-      typeof userId !== "string" ||
-      typeof userCreatedAt !== "string" ||
-      typeof markerCreatedAt !== "string"
+      typeof createdAt !== "string"
     ) {
       return null;
     }
 
     const normalizedEmail = normalizeEmail(email);
-    const normalizedUserId = userId.trim();
-    if (
-      !normalizedEmail ||
-      !normalizedUserId ||
-      Number.isNaN(Date.parse(userCreatedAt)) ||
-      Number.isNaN(Date.parse(markerCreatedAt))
-    ) {
+    if (!normalizedEmail || Number.isNaN(Date.parse(createdAt))) {
       return null;
     }
 
     return {
       email: normalizedEmail,
       language: language as IntroLocale,
-      userId: normalizedUserId,
-      userCreatedAt,
-      markerCreatedAt,
+      createdAt,
     };
   } catch {
     return null;
@@ -213,19 +199,10 @@ export async function readPendingSignupLocale(): Promise<PendingSignupLocale | n
  */
 export async function setPendingSignupLocale(
   email: string,
-  language: IntroLocale,
-  userId: string,
-  userCreatedAt: string
+  language: IntroLocale
 ): Promise<void> {
   const normalizedEmail = normalizeEmail(email);
-  const normalizedUserId = userId.trim();
-  if (
-    !normalizedEmail ||
-    !normalizedUserId ||
-    Number.isNaN(Date.parse(userCreatedAt))
-  ) {
-    return;
-  }
+  if (!normalizedEmail) return;
 
   try {
     await AsyncStorage.setItem(
@@ -233,9 +210,7 @@ export async function setPendingSignupLocale(
       JSON.stringify({
         email: normalizedEmail,
         language,
-        userId: normalizedUserId,
-        userCreatedAt,
-        markerCreatedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
       } satisfies PendingSignupLocale)
     );
   } catch (error: unknown) {
