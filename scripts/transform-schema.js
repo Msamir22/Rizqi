@@ -696,9 +696,12 @@ function main() {
     });
     console.log("   ✅ Base models formatted");
 
-    execSync(`npx eslint "${BASE_MODELS_DIR}" --ext .ts --fix`, {
-      stdio: "inherit",
-    });
+    execSync(
+      `npx eslint "${BASE_MODELS_DIR}" --rulesdir scripts/eslint-rules --ext .ts --fix`,
+      {
+        stdio: "inherit",
+      }
+    );
     console.log("   ✅ Base models linted");
   } catch (error) {
     console.warn("   ⚠️  Prettier formatting failed:", error.message);
