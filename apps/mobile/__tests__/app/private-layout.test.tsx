@@ -1,19 +1,5 @@
 import React from "react";
-
-interface ReactTestRendererInstance {
-  readonly root: {
-    findAllByProps: (props: Record<string, unknown>) => unknown[];
-  };
-  readonly toJSON: () => unknown;
-}
-
-interface ReactTestRendererModule {
-  readonly create: (element: React.ReactElement) => ReactTestRendererInstance;
-  readonly act: (cb: () => void | Promise<void>) => void;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
-const RTR: ReactTestRendererModule = require("react-test-renderer");
+import { render, type RenderAPI } from "@testing-library/react-native";
 
 interface MockAuthState {
   readonly isAuthenticated: boolean;
@@ -126,8 +112,8 @@ const PrivateLayoutModule = require("../../app/(private)/_layout.tsx") as {
 };
 const PrivateLayout = PrivateLayoutModule.default;
 
-function renderLayout(): ReactTestRendererInstance {
-  return RTR.create(React.createElement(PrivateLayout));
+function renderLayout(): RenderAPI {
+  return render(React.createElement(PrivateLayout));
 }
 
 describe("private route layout", () => {
@@ -142,7 +128,9 @@ describe("private route layout", () => {
       isLoading: true,
     });
 
-    expect(renderLayout().toJSON()).toBeNull();
+    const { toJSON } = renderLayout();
+
+    expect(toJSON()).toBeNull();
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
@@ -152,12 +140,9 @@ describe("private route layout", () => {
       isLoading: false,
     });
 
-    let renderer: ReactTestRendererInstance | undefined;
-    RTR.act(() => {
-      renderer = renderLayout();
-    });
+    const { toJSON } = renderLayout();
 
-    expect(renderer?.toJSON()).toBeNull();
+    expect(toJSON()).toBeNull();
     expect(mockReplace).toHaveBeenCalledWith("/auth");
   });
 
@@ -167,20 +152,11 @@ describe("private route layout", () => {
       isLoading: false,
     });
 
-    let renderer: ReactTestRendererInstance | undefined;
-    RTR.act(() => {
-      renderer = renderLayout();
-    });
+    const { queryAllByTestId } = renderLayout();
 
-    expect(
-      renderer?.root.findAllByProps({ testID: "sync-provider" }).length
-    ).toBeGreaterThan(0);
-    expect(
-      renderer?.root.findAllByProps({ testID: "categories-provider" }).length
-    ).toBeGreaterThan(0);
-    expect(
-      renderer?.root.findAllByProps({ testID: "private-stack" }).length
-    ).toBeGreaterThan(0);
+    expect(queryAllByTestId("sync-provider").length).toBeGreaterThan(0);
+    expect(queryAllByTestId("categories-provider").length).toBeGreaterThan(0);
+    expect(queryAllByTestId("private-stack").length).toBeGreaterThan(0);
     expect(mockReplace).not.toHaveBeenCalled();
   });
 });

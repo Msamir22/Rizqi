@@ -1,9 +1,13 @@
 import type { Budget } from "@monyvi/db";
 import { useEffect, useState } from "react";
-import { getBudgetById } from "@/services/budget-service";
+import {
+  BUDGET_SERVICE_ERROR_CODES,
+  BudgetServiceError,
+  getBudgetById,
+} from "@/services/budget-service";
 import { logger } from "@/utils/logger";
 
-type BudgetLoadErrorKey = "load_budget_error";
+type BudgetLoadErrorKey = "budget_not_found" | "load_budget_error";
 
 interface UseEditableBudgetResult {
   readonly budget: Budget | undefined;
@@ -41,9 +45,10 @@ export function useEditableBudget(
           setBudget(found);
         }
       } catch (error: unknown) {
-        if (isNotFoundError(error)) {
+        if (isBudgetNotFoundError(error)) {
           if (!isCancelled) {
             setBudget(undefined);
+            setLoadErrorKey("budget_not_found");
           }
           return;
         }
@@ -69,7 +74,9 @@ export function useEditableBudget(
   return { budget, isLoading, loadErrorKey };
 }
 
-function isNotFoundError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  return message.includes("not found") || message.includes("Could not find");
+function isBudgetNotFoundError(error: unknown): boolean {
+  return (
+    error instanceof BudgetServiceError &&
+    error.code === BUDGET_SERVICE_ERROR_CODES.NOT_FOUND
+  );
 }

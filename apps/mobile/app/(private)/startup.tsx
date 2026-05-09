@@ -44,12 +44,20 @@ export default function Index(): React.ReactNode {
   });
 
   const handleSignOut = useCallback((): void => {
-    performLogout(database).catch((error: unknown) => {
-      logger.warn(
-        "onboarding.retryScreen.signOut.failed",
-        getSafeErrorLog(error)
-      );
-    });
+    void performLogout(database)
+      .then((result) => {
+        if (!result.success) {
+          logger.warn("onboarding.retryScreen.signOut.failed", {
+            reason: result.error ?? "unknown",
+          });
+        }
+      })
+      .catch((error: unknown) => {
+        logger.warn(
+          "onboarding.retryScreen.signOut.failed",
+          getSafeErrorLog(error)
+        );
+      });
   }, []);
 
   const handleRetry = useCallback((): void => {

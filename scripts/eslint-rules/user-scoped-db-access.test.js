@@ -96,14 +96,14 @@ ruleTester.run("user-scoped-db-access", rule, {
         const metals = database.get("asset_metals").query(Q.where("deleted", false));
       `,
       filename: "apps/mobile/hooks/useAssetBreakdown.ts",
-      errors: [{ message: /user-owned table 'asset_metals'/ }],
+      errors: [{ message: /child-owned table 'asset_metals'/ }],
     },
     {
       code: `
         const details = await database.get("bank_details").find(id);
       `,
       filename: "apps/mobile/hooks/useAccounts.ts",
-      errors: [{ message: /user-owned table 'bank_details'/ }],
+      errors: [{ message: /child-owned table 'bank_details'/ }],
     },
     {
       code: `

@@ -3,8 +3,6 @@
 const DIRECT_USER_OWNED_TABLES = new Set([
   "accounts",
   "assets",
-  "asset_metals",
-  "bank_details",
   "budgets",
   "daily_snapshot_assets",
   "daily_snapshot_balance",
@@ -16,6 +14,8 @@ const DIRECT_USER_OWNED_TABLES = new Set([
   "transfers",
   "user_category_settings",
 ]);
+
+const CHILD_USER_OWNED_TABLES = new Set(["asset_metals", "bank_details"]);
 
 const MIXED_VISIBILITY_TABLES = new Set(["categories"]);
 
@@ -129,11 +129,13 @@ function isScopedHelperCall(callExpression) {
 function isProtectedTable(tableName) {
   return (
     DIRECT_USER_OWNED_TABLES.has(tableName) ||
+    CHILD_USER_OWNED_TABLES.has(tableName) ||
     MIXED_VISIBILITY_TABLES.has(tableName)
   );
 }
 
 function getTableKind(tableName) {
+  if (CHILD_USER_OWNED_TABLES.has(tableName)) return "child";
   return MIXED_VISIBILITY_TABLES.has(tableName) ? "mixed" : "owned";
 }
 
@@ -155,6 +157,10 @@ function getMessage(tableName, accessKind) {
   const tableKind = getTableKind(tableName);
   if (tableKind === "mixed") {
     return `Avoid direct ${accessKind} access to mixed-visibility table '${tableName}'. Use user-data-access category helpers so system rows and current-user rows are handled together.`;
+  }
+
+  if (tableKind === "child") {
+    return `Avoid direct ${accessKind} access to child-owned table '${tableName}'. Use user-data-access child helpers with a verified owned parent instead.`;
   }
 
   return `Avoid direct ${accessKind} access to user-owned table '${tableName}'. Use getCurrentUserDataScope(), queryOwned(), findOwnedById(), or observeOwnedById() instead.`;

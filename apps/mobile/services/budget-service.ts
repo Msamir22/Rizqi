@@ -57,6 +57,20 @@ export interface UpdateBudgetInput {
   readonly categoryId?: string;
 }
 
+export const BUDGET_SERVICE_ERROR_CODES = {
+  NOT_FOUND: "BUDGET_NOT_FOUND",
+} as const;
+
+export type BudgetServiceErrorCode =
+  (typeof BUDGET_SERVICE_ERROR_CODES)[keyof typeof BUDGET_SERVICE_ERROR_CODES];
+
+export class BudgetServiceError extends Error {
+  constructor(readonly code: BudgetServiceErrorCode) {
+    super(code);
+    this.name = "BudgetServiceError";
+  }
+}
+
 // =============================================================================
 // COLLECTIONS
 // =============================================================================
@@ -77,7 +91,16 @@ async function getOwnedBudget(
   budgetId: string,
   scope: CurrentUserDataScope
 ): Promise<Budget> {
-  return scope.findOwned(budgetsCollection(), budgetId);
+  const budgets = await scope
+    .queryOwned(budgetsCollection(), Q.where("id", budgetId))
+    .fetch();
+
+  const budget = budgets[0];
+  if (!budget) {
+    throw new BudgetServiceError(BUDGET_SERVICE_ERROR_CODES.NOT_FOUND);
+  }
+
+  return budget;
 }
 
 export async function getBudgetById(budgetId: string): Promise<Budget> {
