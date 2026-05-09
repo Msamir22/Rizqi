@@ -94,7 +94,7 @@ jest.mock("@monyvi/logic", () => ({
 
 // Import AFTER mocks
 // eslint-disable-next-line import/first
-import Accounts from "../../app/(tabs)/accounts";
+import Accounts from "../../app/(private)/(tabs)/accounts";
 
 describe("Accounts tab", () => {
   it("reserves bottom space so the last account card scrolls above the tab bar", () => {

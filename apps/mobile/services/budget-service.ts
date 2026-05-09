@@ -7,7 +7,6 @@
  * @module budget-service
  */
 
-import { getCurrentUserId } from "./supabase";
 import {
   Budget,
   database,
@@ -26,6 +25,10 @@ import {
   buildPauseInterval,
   parsePauseIntervals,
 } from "@monyvi/logic";
+import {
+  getCurrentUserDataScope,
+  type CurrentUserDataScope,
+} from "@/services/user-data-access";
 
 // =============================================================================
 // TYPES
@@ -54,6 +57,20 @@ export interface UpdateBudgetInput {
   readonly categoryId?: string;
 }
 
+export const BUDGET_SERVICE_ERROR_CODES = {
+  NOT_FOUND: "BUDGET_NOT_FOUND",
+} as const;
+
+export type BudgetServiceErrorCode =
+  (typeof BUDGET_SERVICE_ERROR_CODES)[keyof typeof BUDGET_SERVICE_ERROR_CODES];
+
+export class BudgetServiceError extends Error {
+  constructor(readonly code: BudgetServiceErrorCode) {
+    super(code);
+    this.name = "BudgetServiceError";
+  }
+}
+
 // =============================================================================
 // COLLECTIONS
 // =============================================================================
@@ -70,6 +87,42 @@ function categoriesCollection(): Collection<Category> {
   return database.get<Category>("categories");
 }
 
+async function getOwnedBudget(
+  budgetId: string,
+  scope: CurrentUserDataScope
+): Promise<Budget> {
+  const budgets = await scope
+    .queryOwned(budgetsCollection(), Q.where("id", budgetId))
+    .fetch();
+
+  const budget = budgets[0];
+  if (!budget) {
+    throw new BudgetServiceError(BUDGET_SERVICE_ERROR_CODES.NOT_FOUND);
+  }
+
+  return budget;
+}
+
+async function resolveCategoryBudgetCategoryId(
+  categoryId: string | undefined,
+  scope: CurrentUserDataScope
+): Promise<string> {
+  if (!categoryId) {
+    throw new Error("Category budgets require a categoryId");
+  }
+
+  const category = await scope.findAccessibleCategory(
+    categoriesCollection(),
+    categoryId
+  );
+  return category.id;
+}
+
+export async function getBudgetById(budgetId: string): Promise<Budget> {
+  const scope = await getCurrentUserDataScope();
+  return getOwnedBudget(budgetId, scope);
+}
+
 // =============================================================================
 // CREATE
 // =============================================================================
@@ -81,20 +134,13 @@ function categoriesCollection(): Collection<Category> {
  * @throws Error if validation fails (uniqueness, required fields)
  */
 export async function createBudget(input: CreateBudgetInput): Promise<Budget> {
-  const userId = await getCurrentUserId();
-  if (!userId) {
-    // i18n-ignore — developer-facing error
-    throw new Error("User not authenticated");
-  }
+  const scope = await getCurrentUserDataScope();
 
   // Type-specific validation
   if (input.type === "CATEGORY" && !input.categoryId) {
-    // i18n-ignore — developer-facing error
     throw new Error("Category budgets require a categoryId");
   }
   if (input.period === "CUSTOM" && (!input.periodStart || !input.periodEnd)) {
-    // i18n-ignore — developer-facing error
-    // i18n-ignore — developer-facing error
     throw new Error(
       "Custom period budgets require both periodStart and periodEnd"
     );
@@ -102,13 +148,21 @@ export async function createBudget(input: CreateBudgetInput): Promise<Budget> {
 
   // F7 fix: Validate uniqueness inside database.write for atomicity
   return database.write(async () => {
-    await validateBudgetUniqueness(input.type, input.period, input.categoryId);
+    const categoryId =
+      input.type === "CATEGORY"
+        ? await resolveCategoryBudgetCategoryId(input.categoryId, scope)
+        : undefined;
+
+    await validateBudgetUniqueness(input.type, input.period, {
+      categoryId,
+      scope,
+    });
 
     const budget = await budgetsCollection().create((b) => {
-      b.userId = userId;
+      b.userId = scope.userId;
       b.name = input.name;
       b.type = input.type;
-      b.categoryId = input.categoryId ?? undefined;
+      b.categoryId = categoryId;
       b.amount = input.amount;
       b.currency = input.currency as CurrencyType;
       b.period = input.period;
@@ -133,7 +187,8 @@ export async function updateBudget(
   budgetId: string,
   input: UpdateBudgetInput
 ): Promise<Budget> {
-  const budget = await budgetsCollection().find(budgetId);
+  const scope = await getCurrentUserDataScope();
+  const budget = await getOwnedBudget(budgetId, scope);
 
   // Type-specific validation for period changes (C1 fix: correct operator precedence)
   const effectivePeriod = input.period ?? budget.period;
@@ -142,8 +197,6 @@ export async function updateBudget(
     (!(input.periodStart ?? budget.periodStart) ||
       !(input.periodEnd ?? budget.periodEnd))
   ) {
-    // i18n-ignore — developer-facing error
-    // i18n-ignore — developer-facing error
     throw new Error(
       "Custom period budgets require both periodStart and periodEnd"
     );
@@ -151,19 +204,29 @@ export async function updateBudget(
 
   // F6 fix: Prevent clearing categoryId on CATEGORY budgets
   if (budget.type === "CATEGORY" && input.categoryId === "") {
-    // i18n-ignore — developer-facing error
     throw new Error("Category budgets require a categoryId");
   }
 
   // F7 fix: Validate uniqueness and apply update inside the same write for atomicity
   return database.write(async () => {
+    const categoryId =
+      budget.type === "CATEGORY"
+        ? await resolveCategoryBudgetCategoryId(
+            input.categoryId ?? budget.categoryId,
+            scope
+          )
+        : undefined;
+
     // Re-validate uniqueness if period or categoryId changed (C2 fix)
     if (input.period !== undefined || input.categoryId !== undefined) {
       await validateBudgetUniqueness(
         budget.type,
         input.period ?? budget.period,
-        input.categoryId ?? budget.categoryId,
-        budgetId
+        {
+          categoryId,
+          excludeBudgetId: budgetId,
+          scope,
+        }
       );
     }
 
@@ -176,7 +239,7 @@ export async function updateBudget(
       if (input.periodEnd !== undefined) b.periodEnd = input.periodEnd;
       if (input.alertThreshold !== undefined)
         b.alertThreshold = input.alertThreshold;
-      if (input.categoryId !== undefined) b.categoryId = input.categoryId;
+      if (input.categoryId !== undefined) b.categoryId = categoryId;
     });
     return budget;
   });
@@ -191,7 +254,8 @@ export async function updateBudget(
  * Consistent with the existing project pattern (transaction-service, edit-account-service).
  */
 export async function deleteBudget(budgetId: string): Promise<void> {
-  const budget = await budgetsCollection().find(budgetId);
+  const scope = await getCurrentUserDataScope();
+  const budget = await getOwnedBudget(budgetId, scope);
 
   await database.write(async () => {
     await budget.update((b) => {
@@ -209,11 +273,11 @@ export async function deleteBudget(budgetId: string): Promise<void> {
  * Records `paused_at` timestamp for interval tracking.
  */
 export async function pauseBudget(budgetId: string): Promise<void> {
-  const budget = await budgetsCollection().find(budgetId);
+  const scope = await getCurrentUserDataScope();
+  const budget = await getOwnedBudget(budgetId, scope);
 
   // M2 fix: Guard against pausing an already-paused budget
   if (budget.status === "PAUSED") {
-    // i18n-ignore — developer-facing error
     throw new Error("Budget is already paused");
   }
 
@@ -231,11 +295,11 @@ export async function pauseBudget(budgetId: string): Promise<void> {
  * into `pause_intervals` and clears `paused_at`.
  */
 export async function resumeBudget(budgetId: string): Promise<void> {
-  const budget = await budgetsCollection().find(budgetId);
+  const scope = await getCurrentUserDataScope();
+  const budget = await getOwnedBudget(budgetId, scope);
 
   // M3 fix: Guard against resuming a non-paused budget
   if (budget.status !== "PAUSED") {
-    // i18n-ignore — developer-facing error
     throw new Error("Cannot resume a budget that is not paused");
   }
 
@@ -272,7 +336,8 @@ export async function setAlertFiredLevel(
   budgetId: string,
   level: AlertFiredLevel
 ): Promise<void> {
-  const budget = await budgetsCollection().find(budgetId);
+  const scope = await getCurrentUserDataScope();
+  const budget = await getOwnedBudget(budgetId, scope);
 
   await database.write(async () => {
     await budget.update((b) => {
@@ -285,7 +350,8 @@ export async function setAlertFiredLevel(
  * Reset the alert fired level (on period rollover).
  */
 export async function resetAlertFiredLevel(budgetId: string): Promise<void> {
-  const budget = await budgetsCollection().find(budgetId);
+  const scope = await getCurrentUserDataScope();
+  const budget = await getOwnedBudget(budgetId, scope);
 
   await database.write(async () => {
     await budget.update((b) => {
@@ -298,7 +364,8 @@ export async function resetAlertFiredLevel(budgetId: string): Promise<void> {
  * Auto-pause a custom budget whose period has expired.
  */
 export async function autoPauseBudget(budgetId: string): Promise<void> {
-  const budget = await budgetsCollection().find(budgetId);
+  const scope = await getCurrentUserDataScope();
+  const budget = await getOwnedBudget(budgetId, scope);
   if (budget.status !== "ACTIVE") return;
 
   await database.write(async () => {
@@ -323,6 +390,9 @@ export async function autoPauseBudget(budgetId: string): Promise<void> {
  * @returns Total spent amount
  */
 export async function getSpendingForBudget(budget: Budget): Promise<number> {
+  const scope = await getCurrentUserDataScope();
+  scope.assertOwned(budget);
+
   const bounds = getCurrentPeriodBounds(
     budget.period,
     budget.periodStart,
@@ -340,15 +410,19 @@ export async function getSpendingForBudget(budget: Budget): Promise<number> {
 
   if (budget.isGlobal) {
     // Global budget: all expenses in the period
-    transactions = await transactionsCollection()
-      .query(Q.and(...baseConditions))
+    transactions = await scope
+      .queryOwned(transactionsCollection(), Q.and(...baseConditions))
       .fetch();
   } else {
     // Category budget: need to include subcategories
-    const categoryIds = await getCategoryAndSubcategoryIds(budget.categoryId);
+    const categoryIds = await getCategoryAndSubcategoryIds(
+      budget.categoryId,
+      scope
+    );
 
-    transactions = await transactionsCollection()
-      .query(
+    transactions = await scope
+      .queryOwned(
+        transactionsCollection(),
         Q.and(...baseConditions, Q.where("category_id", Q.oneOf(categoryIds)))
       )
       .fetch();
@@ -369,13 +443,21 @@ export async function getSpendingForBudget(budget: Budget): Promise<number> {
  * Used for category budget spending aggregation (FR-015).
  */
 export async function getCategoryAndSubcategoryIds(
-  categoryId: string | undefined
+  categoryId: string | undefined,
+  scope?: CurrentUserDataScope
 ): Promise<string[]> {
   if (!categoryId) return [];
 
+  const currentScope = scope ?? (await getCurrentUserDataScope());
+  await currentScope.findAccessibleCategory(categoriesCollection(), categoryId);
+
   // Get direct children (L2)
-  const children = await categoriesCollection()
-    .query(Q.and(Q.where("parent_id", categoryId), Q.where("deleted", false)))
+  const children = await currentScope
+    .queryAccessibleCategories(
+      categoriesCollection(),
+      Q.where("parent_id", categoryId),
+      Q.where("deleted", false)
+    )
     .fetch();
 
   const childIds = children.map((c) => c.id);
@@ -383,12 +465,11 @@ export async function getCategoryAndSubcategoryIds(
   // Get grandchildren (L3)
   let grandchildIds: string[] = [];
   if (childIds.length > 0) {
-    const grandchildren = await categoriesCollection()
-      .query(
-        Q.and(
-          Q.where("parent_id", Q.oneOf(childIds)),
-          Q.where("deleted", false)
-        )
+    const grandchildren = await currentScope
+      .queryAccessibleCategories(
+        categoriesCollection(),
+        Q.where("parent_id", Q.oneOf(childIds)),
+        Q.where("deleted", false)
       )
       .fetch();
     grandchildIds = grandchildren.map((c) => c.id);
@@ -410,28 +491,35 @@ export async function getCategoryAndSubcategoryIds(
  *
  * @throws Error if a duplicate is found
  */
+interface ValidateBudgetUniquenessOptions {
+  readonly categoryId?: string;
+  readonly excludeBudgetId?: string;
+  readonly scope?: CurrentUserDataScope;
+}
+
 export async function validateBudgetUniqueness(
   type: BudgetType,
   period: BudgetPeriod,
-  categoryId?: string,
-  excludeBudgetId?: string
+  options: ValidateBudgetUniquenessOptions = {}
 ): Promise<void> {
+  const currentScope = options.scope ?? (await getCurrentUserDataScope());
+
   const conditions = [
     Q.where("deleted", false),
     Q.where("type", type),
     Q.where("period", period),
   ];
 
-  if (type === "CATEGORY" && categoryId) {
-    conditions.push(Q.where("category_id", categoryId));
+  if (type === "CATEGORY" && options.categoryId) {
+    conditions.push(Q.where("category_id", options.categoryId));
   }
 
-  if (excludeBudgetId) {
-    conditions.push(Q.where("id", Q.notEq(excludeBudgetId)));
+  if (options.excludeBudgetId) {
+    conditions.push(Q.where("id", Q.notEq(options.excludeBudgetId)));
   }
 
-  const existing = await budgetsCollection()
-    .query(Q.and(...conditions))
+  const existing = await currentScope
+    .queryOwned(budgetsCollection(), Q.and(...conditions))
     .fetchCount();
 
   if (existing > 0) {
@@ -439,7 +527,6 @@ export async function validateBudgetUniqueness(
       type === "GLOBAL"
         ? `A Global ${period.toLowerCase()} budget already exists`
         : `A budget for this category with ${period.toLowerCase()} period already exists`;
-    // i18n-ignore — developer-facing error
     throw new Error(label);
   }
 }

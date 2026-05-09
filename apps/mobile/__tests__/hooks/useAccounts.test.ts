@@ -53,6 +53,7 @@ interface MockCollection<T> {
 interface MockAccount {
   readonly id: string;
   readonly name: string;
+  readonly userId: string;
 }
 
 interface MockBankDetails {
@@ -276,7 +277,9 @@ describe("useBankAccounts", () => {
     expect(result.current.error?.message).toBe("accounts observer failed");
 
     RTR.act(() => {
-      mockAccountObservers[0].next([{ id: "acc-1", name: "Bank" }]);
+      mockAccountObservers[0].next([
+        { id: "acc-1", name: "Bank", userId: "user-1" },
+      ]);
     });
 
     expect(result.current.error).toBeNull();
@@ -286,7 +289,9 @@ describe("useBankAccounts", () => {
     const { result } = renderHook();
 
     RTR.act(() => {
-      mockAccountObservers[0].next([{ id: "acc-1", name: "Bank" }]);
+      mockAccountObservers[0].next([
+        { id: "acc-1", name: "Bank", userId: "user-1" },
+      ]);
     });
 
     RTR.act(() => {
@@ -307,7 +312,9 @@ describe("useBankAccounts", () => {
     renderHook();
 
     RTR.act(() => {
-      mockAccountObservers[0].next([{ id: "acc-1", name: "Bank" }]);
+      mockAccountObservers[0].next([
+        { id: "acc-1", name: "Bank", userId: "user-1" },
+      ]);
     });
 
     expect(mockBankDetailsCollection.query).toHaveBeenCalledWith(
@@ -326,7 +333,9 @@ describe("useBankAccounts", () => {
     const { result } = renderHook();
 
     RTR.act(() => {
-      mockAccountObservers[0].next([{ id: "acc-1", name: "Bank" }]);
+      mockAccountObservers[0].next([
+        { id: "acc-1", name: "Bank", userId: "user-1" },
+      ]);
     });
 
     RTR.act(() => {
@@ -336,7 +345,10 @@ describe("useBankAccounts", () => {
     });
 
     expect(result.current.bankAccounts).toEqual([
-      { account: { id: "acc-1", name: "Bank" }, bankDetails: undefined },
+      {
+        account: { id: "acc-1", name: "Bank", userId: "user-1" },
+        bankDetails: undefined,
+      },
     ]);
   });
 });

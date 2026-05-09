@@ -159,7 +159,7 @@ export function CurrencyStep(): React.ReactElement {
       // Success path: navigate and return WITHOUT flipping `isConfirming`
       // back. `router.replace` unmounts this screen; setting state after
       // unmount is wasted work at best and a React warning at worst.
-      router.replace("/(tabs)");
+      router.replace("/(private)/(tabs)");
       return;
     } catch (error: unknown) {
       logger.warn(

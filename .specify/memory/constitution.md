@@ -1,6 +1,6 @@
 <!--
 Sync Impact Report
-- Version change: 0.0.0 → 1.0.0 → 1.1.0 → 1.2.0
+- Version change: 0.0.0 → 1.0.0 → 1.1.0 → 1.2.0 → 1.3.0
 - Added principles:
   - I. Offline-First Data Architecture (NEW in 1.0.0, AMENDED in 1.2.0)
   - II. Documented Business Logic (NEW in 1.0.0)
@@ -9,12 +9,17 @@ Sync Impact Report
   - V. Premium UI with Consistent Theming (NEW in 1.0.0, AMENDED in 1.1.0)
   - VI. Monorepo Package Boundaries (NEW in 1.0.0)
   - VII. Local-First Migrations (NEW in 1.0.0)
+  - VIII. Authenticated User Scope & Sync Correctness (NEW in 1.3.0)
 - Amendments in 1.1.0:
   - Principle V: Added schema-driven UI rule (from mockup-implementation workflow)
   - Development Workflow: Added no-magic-numbers and TODO-for-debt rules (from architect-first.md)
 - Amendments in 1.2.0:
   - Principle I: Added exception for server-generated read-only tables (pull-only)
     that MAY omit updated_at and deleted columns (from 005-sync-snapshot-tables)
+- Amendments in 1.3.0:
+  - Principle IV: Clarified that components must not own raw WatermelonDB access
+  - Development Workflow: Added debug-before-fix, scoped tooling guardrails, and
+    sensitive logging constraints
 - Added sections:
   - Technology Constraints (NEW)
   - Development Workflow (NEW)
@@ -100,7 +105,9 @@ Business logic MUST be separated from UI and React lifecycle concerns.
   re-renders. Hooks MUST NOT contain database write logic or business
   calculations.
 - **Components**: Zero business logic. Components receive data via props or
-  hooks and render UI. Move all calculations to the service or logic layer.
+  hooks and render UI. Components MUST NOT import the raw `database` object or
+  construct WatermelonDB queries/subscriptions directly. Move all calculations
+  to the service or logic layer.
 - The `Alert.alert()` pattern and all UI-specific concerns MUST stay in the
   calling component or hook, never in the service layer.
 
@@ -179,6 +186,39 @@ All database schema changes (DDL) MUST go through local SQL migration files.
   columns remain in local SQLite but are ignored. No WatermelonDB migration is
   needed for column drops.
 
+### VIII. Authenticated User Scope & Sync Correctness
+
+Authenticated routing, local data access, and sync MUST be designed so one
+account can never observe, route from, calculate from, push, or pull another
+account's private data.
+
+- Private route UI MUST NOT be visible or interactable until the auth state is
+  resolved and the required startup account/profile state has settled.
+- Auth/session/profile gates are UX boundaries, not data security boundaries.
+  Every WatermelonDB read/write for user-owned data MUST still be scoped to the
+  current authenticated user through approved helper APIs or repositories.
+- Profile and onboarding routing decisions MUST be based only on the scoped
+  current-user profile. Missing current-user profile data during startup MUST
+  show account loading or recovery, never default to onboarding or a foreign
+  local profile.
+- Logout MAY preserve local offline data. Preserved rows from another account
+  MUST NOT influence routing, visible UI state, sync payloads, financial
+  calculations, or current-user queries.
+- User-owned child tables without direct `user_id` columns MUST be scoped
+  through an owned parent record for reads, writes, push, and delete sync.
+- Shared/system tables with mixed visibility MUST use explicit accessible-scope
+  helpers. Examples include system categories (`user_id IS NULL`) plus
+  current-user custom categories.
+- Sync pull and push queries MUST be scoped to the authenticated user and to
+  explicitly allowed shared/system data only. Supabase RLS is required, but
+  client-side sync must still avoid requesting or applying out-of-scope data.
+- Pull and push failures MUST fail the sync operation. Remote errors MUST NOT be
+  converted into empty successful changes, and failed sync MUST NOT advance
+  WatermelonDB sync metadata or mark local dirty changes as synced.
+- Startup UX may block only what is required for safe routing (auth plus scoped
+  account/profile state). Full cloud sync remains background work; after routing
+  is safe, screens should use local data and screen-level skeletons.
+
 ## Technology Constraints
 
 | Concern              | Technology                                | Notes                                       |
@@ -203,6 +243,9 @@ All database schema changes (DDL) MUST go through local SQL migration files.
 - **Always clarify before coding**. No assumptions about requirements, business
   rules, or user intent. Ask clarifying questions when information is
   incomplete.
+- **Debug before fixing**. For bugs and regressions, reproduce or observe the
+  exact failing branch, thrown error, invalid state, query result, or data
+  mismatch before changing production code.
 - **SOLID principles** enforced. Composition over inheritance. Dependency
   injection for decoupling.
 - **Single Responsibility**: Each file, function, and component has one clear
@@ -214,6 +257,10 @@ All database schema changes (DDL) MUST go through local SQL migration files.
   names. Never scatter unexplained literals through code.
 - **No untracked technical debt**. Do not leave shortcuts or known issues
   without a `// TODO:` comment explaining the debt and the intended resolution.
+- **Static-analysis guardrails**: Custom ESLint or static-analysis rules MUST
+  push developers toward approved scoped helper APIs and repositories. Wire
+  every lint entry point consistently, including package scripts, Nx targets,
+  lint-staged, IDE settings, CI, and scripts that invoke ESLint directly.
 
 ### Naming Conventions
 
@@ -232,7 +279,8 @@ All database schema changes (DDL) MUST go through local SQL migration files.
 ### Pre-Commit Checks
 
 - ESLint with custom rules (no hardcoded hex in JSX, no `isDark` ternary in
-  styles) runs via Husky + lint-staged on every commit.
+  styles, scoped local database access) runs via Husky + lint-staged on every
+  commit.
 - TypeScript compilation check MUST pass.
 - No `console.log` statements in committed code (use structured logging).
 
@@ -263,4 +311,4 @@ All database schema changes (DDL) MUST go through local SQL migration files.
   `/speckit.plan`, `/speckit.tasks`, `/speckit.implement`) MUST reference this
   constitution and verify compliance before producing output.
 
-**Version**: 1.2.0 | **Ratified**: 2026-02-14 | **Last Amended**: 2026-02-19
+**Version**: 1.3.0 | **Ratified**: 2026-02-14 | **Last Amended**: 2026-05-08

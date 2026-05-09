@@ -1,33 +1,15 @@
 /**
  * Unit tests for useProfile hook.
  *
- * Validates that the hook:
- * - Calls the WatermelonDB observe pipeline correctly
- * - Returns the expected interface shape
- * - Returns an object with profile and isLoading
- *
- * Note: Full subscription lifecycle testing is handled through
- * integration tests in the routing gate. These tests verify
- * the mock wiring and initial return shape.
+ * Validates that the hook scopes the local profile observation to the
+ * currently authenticated user. A foreign local profile row must never drive
+ * routing.
  */
 
-import React from "react";
-
-// ---------------------------------------------------------------------------
-// Test renderer utilities
-// ---------------------------------------------------------------------------
-
-interface ReactTestRendererInstance {
-  unmount: () => void;
-}
-
-interface ReactTestRendererModule {
-  act: (...args: unknown[]) => unknown;
-  create: (element: React.ReactElement) => ReactTestRendererInstance;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
-const RTR: ReactTestRendererModule = require("react-test-renderer");
+import {
+  act,
+  renderHook as renderTestingHook,
+} from "@testing-library/react-native";
 
 // ---------------------------------------------------------------------------
 // Mock: WatermelonDB observable
@@ -37,6 +19,7 @@ let activeSubscriber: {
   next: (value: unknown[]) => void;
   error: (err: unknown) => void;
 } | null = null;
+const mockUnsubscribes: jest.Mock[] = [];
 
 const mockSubscribe = jest.fn(
   (subscriber: {
@@ -44,10 +27,12 @@ const mockSubscribe = jest.fn(
     error: (err: unknown) => void;
   }) => {
     activeSubscriber = subscriber;
+    const unsubscribe = jest.fn(() => {
+      activeSubscriber = null;
+    });
+    mockUnsubscribes.push(unsubscribe);
     return {
-      unsubscribe: jest.fn(() => {
-        activeSubscriber = null;
-      }),
+      unsubscribe,
     };
   }
 );
@@ -55,6 +40,12 @@ const mockSubscribe = jest.fn(
 const mockObserve = jest.fn(() => ({ subscribe: mockSubscribe }));
 
 const mockQuery = jest.fn(() => ({ observe: mockObserve }));
+const mockWhere = jest.fn((column: string, value: unknown) => ({
+  column,
+  value,
+}));
+const mockTake = jest.fn((count: number) => ({ count }));
+const mockUseAuth = jest.fn();
 
 jest.mock("@monyvi/db", () => ({
   database: {
@@ -66,7 +57,23 @@ jest.mock("@monyvi/db", () => ({
 }));
 
 jest.mock("@nozbe/watermelondb", () => ({
-  Q: { where: jest.fn(() => "mock-where"), take: jest.fn(() => "mock-take") },
+  Q: {
+    where: (column: string, value: unknown): unknown =>
+      mockWhere(column, value),
+    take: (count: number): unknown => mockTake(count),
+  },
+}));
+
+jest.mock("@/context/AuthContext", () => ({
+  useAuth: (): unknown => mockUseAuth(),
+}));
+
+jest.mock("@/services/supabase", () => ({
+  getCurrentUserId: jest.fn(() => Promise.resolve("current-user")),
+}));
+
+jest.mock("@/utils/logger", () => ({
+  logger: { error: jest.fn(), warn: jest.fn(), info: jest.fn() },
 }));
 
 // Import after mocks
@@ -82,24 +89,19 @@ interface HookResult {
 }
 
 function renderHook(): {
-  result: React.MutableRefObject<HookResult>;
+  result: { current: HookResult };
   unmount: () => void;
+  update: () => void;
 } {
-  const resultRef: React.MutableRefObject<HookResult> =
-    React.createRef() as React.MutableRefObject<HookResult>;
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-  if (!resultRef.current) {
-    resultRef.current = { profile: null, isLoading: true };
-  }
+  const rendered = renderTestingHook(() => useProfile());
 
-  const HookWrapper = (): React.JSX.Element | null => {
-    const hookVal = useProfile();
-    resultRef.current = hookVal;
-    return null;
+  return {
+    result: rendered.result,
+    unmount: rendered.unmount,
+    update: () => {
+      rendered.rerender({});
+    },
   };
-
-  const renderer = RTR.create(React.createElement(HookWrapper));
-  return { result: resultRef, unmount: () => renderer.unmount() };
 }
 
 // ---------------------------------------------------------------------------
@@ -109,6 +111,11 @@ function renderHook(): {
 beforeEach(() => {
   jest.clearAllMocks();
   activeSubscriber = null;
+  mockUnsubscribes.length = 0;
+  mockUseAuth.mockReturnValue({
+    user: { id: "current-user" },
+    isLoading: false,
+  });
 });
 
 describe("useProfile", () => {
@@ -124,12 +131,69 @@ describe("useProfile", () => {
     expect(activeSubscriber).not.toBeNull();
   });
 
-  it("returns an unsubscribe function from the subscription (cleanup contract)", () => {
+  it("subscribes only to the current authenticated user's profile", () => {
     renderHook();
-    const subscription = mockSubscribe.mock.results[0].value as {
-      unsubscribe: () => void;
-    };
-    expect(subscription).toHaveProperty("unsubscribe");
-    expect(typeof subscription.unsubscribe).toBe("function");
+
+    expect(mockQuery).toHaveBeenCalledWith(
+      { column: "user_id", value: "current-user" },
+      { column: "deleted", value: false },
+      { count: 1 }
+    );
+  });
+
+  it("does not subscribe or emit a foreign row while auth is unresolved", () => {
+    mockUseAuth.mockReturnValue({ user: null, isLoading: true });
+
+    const { result } = renderHook();
+
+    expect(mockSubscribe).not.toHaveBeenCalled();
+    expect(result.current.profile).toBeNull();
+    expect(result.current.isLoading).toBe(true);
+  });
+
+  it("clears the profile and resubscribes when the authenticated user changes", () => {
+    const firstProfile = { id: "profile-1", userId: "current-user" };
+    const { result, update } = renderHook();
+
+    act(() => {
+      activeSubscriber?.next([firstProfile]);
+    });
+    expect(result.current.profile).toBe(firstProfile);
+    expect(result.current.isLoading).toBe(false);
+
+    mockUseAuth.mockReturnValue({
+      user: { id: "next-user" },
+      isLoading: false,
+    });
+
+    update();
+
+    expect(mockUnsubscribes[0]).toHaveBeenCalledTimes(1);
+    expect(result.current.profile).toBeNull();
+    expect(result.current.isLoading).toBe(true);
+    expect(mockQuery).toHaveBeenLastCalledWith(
+      { column: "user_id", value: "next-user" },
+      { column: "deleted", value: false },
+      { count: 1 }
+    );
+  });
+
+  it("does not emit foreign profile rows from the scoped observation", () => {
+    const { result } = renderHook();
+
+    act(() => {
+      activeSubscriber?.next([]);
+    });
+
+    expect(result.current.profile).toBeNull();
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it("unsubscribes on unmount", () => {
+    const { unmount } = renderHook();
+
+    unmount();
+
+    expect(mockUnsubscribes[0]).toHaveBeenCalledTimes(1);
   });
 });

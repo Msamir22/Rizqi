@@ -14,30 +14,30 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useLocale } from "../context/LocaleContext";
+import { useLocale } from "@/context/LocaleContext";
 
-import { CurrencyPicker } from "../components/currency/CurrencyPicker";
-import { GradientBackground } from "../components/ui/GradientBackground";
-import { useAuth } from "../context/AuthContext";
-import { useTheme } from "../context/ThemeContext";
-import { usePreferredCurrency } from "../hooks/usePreferredCurrency";
-import { useDatabase } from "../providers/DatabaseProvider";
-import { performLogout } from "../services/logout-service";
+import { CurrencyPicker } from "@/components/currency/CurrencyPicker";
+import { GradientBackground } from "@/components/ui/GradientBackground";
+import { useAuth } from "@/context/AuthContext";
+import { useTheme } from "@/context/ThemeContext";
+import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
+import { useDatabase } from "@/providers/DatabaseProvider";
+import { performLogout } from "@/services/logout-service";
 import { setIntroLocaleOverride } from "@/services/intro-flag-service";
 import { setPreferredLanguage } from "@/services/profile-service";
-import { useSmsPermission } from "../hooks/useSmsPermission";
-import { useSmsSync } from "../hooks/useSmsSync";
-import { useSmsScanContext } from "../context/SmsScanContext";
+import { useSmsPermission } from "@/hooks/useSmsPermission";
+import { useSmsSync } from "@/hooks/useSmsSync";
+import { useSmsScanContext } from "@/context/SmsScanContext";
 import {
   isLiveDetectionEnabled,
   setLiveDetectionEnabled,
   isAutoConfirmEnabled,
   setAutoConfirm,
-} from "../services/sms-live-detection-handler";
+} from "@/services/sms-live-detection-handler";
 import {
   startSmsListener,
   stopSmsListener,
-} from "../services/sms-live-listener-service";
+} from "@/services/sms-live-listener-service";
 import { ConfirmationModal } from "@/components/modals/ConfirmationModal";
 import { Dropdown, type DropdownItem } from "@/components/ui/Dropdown";
 import { useToast } from "@/components/ui/Toast";

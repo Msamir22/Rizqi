@@ -9,6 +9,10 @@ import {
   type TransactionType,
 } from "@monyvi/db";
 import { ensureCashAccount } from "./account-service";
+import {
+  getCurrentUserDataScope,
+  type CurrentUserDataScope,
+} from "@/services/user-data-access";
 
 export interface TransferData {
   amount: number;
@@ -21,6 +25,28 @@ export interface TransferData {
   exchangeRate?: number;
   /** SMS body hash for deduplication (persisted in DB) */
   smsBodyHash?: string;
+}
+
+function accountsCollection(): ReturnType<typeof database.get<Account>> {
+  return database.get<Account>("accounts");
+}
+
+function transfersCollection(): ReturnType<typeof database.get<Transfer>> {
+  return database.get<Transfer>("transfers");
+}
+
+async function getOwnedAccount(
+  accountId: string,
+  scope: CurrentUserDataScope
+): Promise<Account> {
+  return scope.findOwned(accountsCollection(), accountId);
+}
+
+async function getOwnedTransfer(
+  transferId: string,
+  scope: CurrentUserDataScope
+): Promise<Transfer> {
+  return scope.findOwned(transfersCollection(), transferId);
 }
 
 // ---------------------------------------------------------------------------
@@ -117,19 +143,17 @@ export async function createSmsAtmTransfer(
  * Atomically creates the Transfer record and updates both account balances.
  */
 export async function createTransfer(data: TransferData): Promise<void> {
-  const userId = await getCurrentUserId();
-  if (!userId) {
-    // i18n-ignore — developer-facing error
-    throw new Error("User not authenticated");
-  }
+  const scope = await getCurrentUserDataScope();
 
-  const transfersCollection = database.get<Transfer>("transfers");
-  const accountsCollection = database.get<Account>("accounts");
+  const transferCollection = transfersCollection();
 
   await database.write(async () => {
+    const fromAccount = await getOwnedAccount(data.fromAccountId, scope);
+    const toAccount = await getOwnedAccount(data.toAccountId, scope);
+
     // 1. Create Transfer Record
-    await transfersCollection.create((transfer: Transfer) => {
-      transfer.userId = userId;
+    await transferCollection.create((transfer: Transfer) => {
+      transfer.userId = scope.userId;
       transfer.fromAccountId = data.fromAccountId;
       transfer.toAccountId = data.toAccountId;
       transfer.amount = Math.abs(data.amount);
@@ -148,13 +172,11 @@ export async function createTransfer(data: TransferData): Promise<void> {
     });
 
     // 2. Update From Account (Decrease Balance)
-    const fromAccount = await accountsCollection.find(data.fromAccountId);
     await fromAccount.update((acc) => {
       acc.balance -= Math.abs(data.amount);
     });
 
     // 3. Update To Account (Increase Balance)
-    const toAccount = await accountsCollection.find(data.toAccountId);
     await toAccount.update((acc) => {
       // Use converted amount if available, otherwise original amount
       const depositAmount = data.convertedAmount
@@ -187,11 +209,10 @@ export async function updateTransfer(
     readonly toAccountId?: string;
   }
 ): Promise<void> {
-  const transfersCollection = database.get<Transfer>("transfers");
-  const accountsCollection = database.get<Account>("accounts");
+  const scope = await getCurrentUserDataScope();
 
   await database.write(async () => {
-    const transfer = await transfersCollection.find(transferId);
+    const transfer = await getOwnedTransfer(transferId, scope);
 
     const oldFromId = transfer.fromAccountId;
     const oldToId = transfer.toAccountId;
@@ -210,13 +231,13 @@ export async function updateTransfer(
     // Only adjust balances when amount or accounts change
     if (isFromChanging || isToChanging || isAmountChanging) {
       // --- Revert old from-account (add back withdrawn amount) ---
-      const oldFromAccount = await accountsCollection.find(oldFromId);
+      const oldFromAccount = await getOwnedAccount(oldFromId, scope);
       await oldFromAccount.update((acc) => {
         acc.balance += oldAmount;
       });
 
       // --- Revert old to-account (subtract deposited amount) ---
-      const oldToAccount = await accountsCollection.find(oldToId);
+      const oldToAccount = await getOwnedAccount(oldToId, scope);
       const oldDepositAmount = oldConvertedAmount ?? oldAmount;
       await oldToAccount.update((acc) => {
         acc.balance -= oldDepositAmount;
@@ -224,7 +245,7 @@ export async function updateTransfer(
 
       // --- Apply new from-account (withdraw new amount) ---
       const newFromAccount = isFromChanging
-        ? await accountsCollection.find(newFromId)
+        ? await getOwnedAccount(newFromId, scope)
         : oldFromAccount;
       await newFromAccount.update((acc) => {
         acc.balance -= newAmount;
@@ -234,7 +255,7 @@ export async function updateTransfer(
       // For same-currency transfers, deposit = withdrawal amount
       // For cross-currency, convertedAmount is preserved unless amount changed
       const newToAccount = isToChanging
-        ? await accountsCollection.find(newToId)
+        ? await getOwnedAccount(newToId, scope)
         : oldToAccount;
       const newDepositAmount =
         updates.convertedAmount !== undefined
@@ -270,20 +291,19 @@ export async function updateTransfer(
  * Atomically reverses both account balance changes and soft-deletes the record.
  */
 export async function deleteTransfer(transferId: string): Promise<void> {
-  const transfersCollection = database.get<Transfer>("transfers");
-  const accountsCollection = database.get<Account>("accounts");
+  const scope = await getCurrentUserDataScope();
 
   await database.write(async () => {
-    const transfer = await transfersCollection.find(transferId);
+    const transfer = await getOwnedTransfer(transferId, scope);
 
     // Revert from-account (add back withdrawn amount)
-    const fromAccount = await accountsCollection.find(transfer.fromAccountId);
+    const fromAccount = await getOwnedAccount(transfer.fromAccountId, scope);
     await fromAccount.update((acc) => {
       acc.balance += transfer.amount;
     });
 
     // Revert to-account (subtract deposited amount)
-    const toAccount = await accountsCollection.find(transfer.toAccountId);
+    const toAccount = await getOwnedAccount(transfer.toAccountId, scope);
     const depositAmount = transfer.convertedAmount ?? transfer.amount;
     await toAccount.update((acc) => {
       acc.balance -= depositAmount;
@@ -322,26 +342,21 @@ interface ConvertToTransactionPayload {
 export async function convertTransferToTransaction(
   payload: ConvertToTransactionPayload
 ): Promise<void> {
-  const userId = await getCurrentUserId();
-  if (!userId) {
-    // i18n-ignore — developer-facing error
-    throw new Error("User not authenticated");
-  }
+  const scope = await getCurrentUserDataScope();
 
-  const transfersCollection = database.get<Transfer>("transfers");
   const transactionsCollection = database.get<Transaction>("transactions");
-  const accountsCollection = database.get<Account>("accounts");
 
   await database.write(async () => {
-    const transfer = await transfersCollection.find(payload.transferId);
+    const transfer = await getOwnedTransfer(payload.transferId, scope);
+    const targetAccount = await getOwnedAccount(payload.accountId, scope);
 
     // 1. Revert transfer balance effects
-    const fromAccount = await accountsCollection.find(transfer.fromAccountId);
+    const fromAccount = await getOwnedAccount(transfer.fromAccountId, scope);
     await fromAccount.update((acc) => {
       acc.balance += transfer.amount; // was -amount, revert
     });
 
-    const toAccount = await accountsCollection.find(transfer.toAccountId);
+    const toAccount = await getOwnedAccount(transfer.toAccountId, scope);
     const depositAmount = transfer.convertedAmount ?? transfer.amount;
     await toAccount.update((acc) => {
       acc.balance -= depositAmount; // was +depositAmount, revert
@@ -354,7 +369,7 @@ export async function convertTransferToTransaction(
 
     // 3. Create the new transaction
     await transactionsCollection.create((tx: Transaction) => {
-      tx.userId = userId;
+      tx.userId = scope.userId;
       tx.accountId = payload.accountId;
       tx.amount = transfer.amount;
       tx.currency = transfer.currency;
@@ -369,7 +384,6 @@ export async function convertTransferToTransaction(
     });
 
     // 4. Apply transaction balance effect on the chosen account
-    const targetAccount = await accountsCollection.find(payload.accountId);
     await targetAccount.update((acc) => {
       if (payload.type === "EXPENSE") {
         acc.balance -= transfer.amount;

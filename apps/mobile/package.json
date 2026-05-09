@@ -16,6 +16,7 @@
     "doctor": "npx expo-doctor",
     "install-check": "npx expo install --check",
     "expo-install": "npx expo install",
+    "lint": "eslint app components constants context hooks providers services utils validation __tests__ --rulesdir ../../scripts/eslint-rules --ext .ts,.tsx --quiet",
     "test": "jest",
     "test:coverage": "jest --coverage",
     "i18n:check": "tsx scripts/check-i18n-coverage.ts",

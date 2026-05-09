@@ -64,6 +64,7 @@ const REQUIRED_SCALAR_KEYS: Record<string, readonly string[]> = {
     "onboarding_step_spending_budget",
     "new_badge",
     "setup_guide",
+    "all_categories",
     "go",
     "next",
     "dismiss",

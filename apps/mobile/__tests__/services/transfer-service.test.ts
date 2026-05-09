@@ -131,6 +131,7 @@ import {
   deleteTransfer,
   convertTransferToTransaction,
 } from "@/services/transfer-service";
+import { USER_DATA_ACCESS_ERROR_CODES } from "@/services/user-data-access";
 
 // ---------------------------------------------------------------------------
 // Grab mock helpers (typed via MockDbApi interface)
@@ -149,7 +150,13 @@ const {
 // ---------------------------------------------------------------------------
 
 function seedAccount(id: string, balance: number): MockModelRecord {
-  const acc = mockModel(id, { balance });
+  const acc = mockModel(id, { balance, userId: "test-user-id" });
+  mockSeed("accounts", acc);
+  return acc;
+}
+
+function seedForeignAccount(id: string, balance: number): MockModelRecord {
+  const acc = mockModel(id, { balance, userId: "foreign-user-id" });
   mockSeed("accounts", acc);
   return acc;
 }
@@ -262,7 +269,7 @@ describe("transfer-service", () => {
           fromAccountId: "acc-from",
           toAccountId: "acc-to",
         })
-      ).rejects.toThrow("User not authenticated");
+      ).rejects.toThrow(USER_DATA_ACCESS_ERROR_CODES.USER_REQUIRED);
     });
 
     it("should wrap everything in a single database.write", async () => {
@@ -277,6 +284,40 @@ describe("transfer-service", () => {
       });
 
       expect(mockDb.write).toHaveBeenCalledTimes(1);
+    });
+
+    it("rejects a foreign account without mutating balances", async () => {
+      const foreignFrom = seedForeignAccount("acc-foreign", 1000);
+      const to = seedAccount("acc-to", 500);
+
+      await expect(
+        createTransfer({
+          amount: 100,
+          currency: "EGP",
+          fromAccountId: "acc-foreign",
+          toAccountId: "acc-to",
+        })
+      ).rejects.toThrow(USER_DATA_ACCESS_ERROR_CODES.OWNERSHIP_FAILED);
+
+      expect(foreignFrom.balance).toBe(1000);
+      expect(to.balance).toBe(500);
+    });
+
+    it("rejects a foreign to-account without mutating balances", async () => {
+      const from = seedAccount("acc-from", 1000);
+      const foreignTo = seedForeignAccount("acc-foreign-to", 500);
+
+      await expect(
+        createTransfer({
+          amount: 100,
+          currency: "EGP",
+          fromAccountId: "acc-from",
+          toAccountId: "acc-foreign-to",
+        })
+      ).rejects.toThrow(USER_DATA_ACCESS_ERROR_CODES.OWNERSHIP_FAILED);
+
+      expect(from.balance).toBe(1000);
+      expect(foreignTo.balance).toBe(500);
     });
   });
 
@@ -368,6 +409,25 @@ describe("transfer-service", () => {
       expect(from.balance).toBe(800);
       expect(to.balance).toBe(504);
     });
+
+    it("rejects a foreign transfer without mutating balances", async () => {
+      const from = seedAccount("acc-from", 900);
+      const to = seedAccount("acc-to", 600);
+      const transfer = seedTransfer("tf-1", {
+        fromAccountId: "acc-from",
+        toAccountId: "acc-to",
+        amount: 100,
+        userId: "foreign-user-id",
+      });
+
+      await expect(updateTransfer("tf-1", { amount: 300 })).rejects.toThrow(
+        USER_DATA_ACCESS_ERROR_CODES.OWNERSHIP_FAILED
+      );
+
+      expect(from.balance).toBe(900);
+      expect(to.balance).toBe(600);
+      expect(transfer.amount).toBe(100);
+    });
   });
 
   // =========================================================================
@@ -405,6 +465,25 @@ describe("transfer-service", () => {
       expect(from.balance).toBe(1000);
       expect(to.balance).toBe(500);
       expect(tf.deleted).toBe(true);
+    });
+
+    it("rejects a foreign transfer delete without mutating balances", async () => {
+      const from = seedAccount("acc-from", 900);
+      const to = seedAccount("acc-to", 600);
+      const transfer = seedTransfer("tf-1", {
+        fromAccountId: "acc-from",
+        toAccountId: "acc-to",
+        amount: 100,
+        userId: "foreign-user-id",
+      });
+
+      await expect(deleteTransfer("tf-1")).rejects.toThrow(
+        USER_DATA_ACCESS_ERROR_CODES.OWNERSHIP_FAILED
+      );
+
+      expect(from.balance).toBe(900);
+      expect(to.balance).toBe(600);
+      expect(transfer.deleted).toBe(false);
     });
   });
 
@@ -475,7 +554,31 @@ describe("transfer-service", () => {
           type: "EXPENSE",
           categoryId: "cat-1",
         })
-      ).rejects.toThrow("User not authenticated");
+      ).rejects.toThrow(USER_DATA_ACCESS_ERROR_CODES.USER_REQUIRED);
+    });
+
+    it("rejects a foreign-owned transfer without mutating balances", async () => {
+      const from = seedAccount("acc-from", 800);
+      const to = seedAccount("acc-to", 700);
+      const transfer = seedTransfer("tf-1", {
+        fromAccountId: "acc-from",
+        toAccountId: "acc-to",
+        amount: 200,
+        userId: "foreign-user-id",
+      });
+
+      await expect(
+        convertTransferToTransaction({
+          transferId: "tf-1",
+          accountId: "acc-from",
+          type: "EXPENSE",
+          categoryId: "cat-1",
+        })
+      ).rejects.toThrow(USER_DATA_ACCESS_ERROR_CODES.OWNERSHIP_FAILED);
+
+      expect(from.balance).toBe(800);
+      expect(to.balance).toBe(700);
+      expect(transfer.deleted).toBe(false);
     });
 
     it("should wrap everything in a single atomic write", async () => {

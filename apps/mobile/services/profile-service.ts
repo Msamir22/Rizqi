@@ -30,7 +30,7 @@ import {
   getDefaultCashAccountName,
 } from "@/services/account-service";
 import { clearOnboardingStep } from "@/services/onboarding-cursor-service";
-import { getCurrentUserId } from "@/services/supabase";
+import { getCurrentUserDataScope } from "@/services/user-data-access";
 import { logger } from "@/utils/logger";
 
 /**
@@ -50,26 +50,19 @@ const SUPPORTED_CURRENCY_CODES: ReadonlySet<CurrencyType> = new Set(
 /**
  * Returns the authenticated user's profile row.
  *
- * Scoped by `user_id` to match the pattern used by other services (account,
- * budget, metal-holding, etc.) — even though the local DB typically contains
- * only one profile at a time (logout wipes it), querying by userId is the
- * correct long-term pattern and protects against future multi-account /
- * account-switching features from picking up the wrong row.
+ * Scoped by `user_id` because logout preserves local rows. Querying by userId
+ * prevents account switching on the same device from picking up another
+ * user's profile.
  *
  * Throws if either the auth session is missing or the profile row is absent
  * (both should not happen after a successful initial pull-sync).
  */
 async function getProfile(): Promise<Profile> {
-  const userId = await getCurrentUserId();
-  if (!userId) {
-    throw new Error(
-      "Cannot load profile: no authenticated user in the session."
-    );
-  }
+  const scope = await getCurrentUserDataScope();
 
   const collection = database.get<Profile>("profiles");
-  const profiles = await collection
-    .query(Q.where("user_id", userId), Q.where("deleted", Q.notEq(true)))
+  const profiles = await scope
+    .queryOwned(collection, Q.where("deleted", Q.notEq(true)))
     .fetch();
   const profile = profiles[0];
   if (!profile) {

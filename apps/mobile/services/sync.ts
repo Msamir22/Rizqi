@@ -6,7 +6,7 @@
  */
 
 import { schema, SupabaseDatabase } from "@monyvi/db";
-import type { Database } from "@nozbe/watermelondb";
+import { Q, type Database, type Model } from "@nozbe/watermelondb";
 import {
   SyncDatabaseChangeSet,
   synchronize,
@@ -15,6 +15,7 @@ import {
   SyncPushResult,
 } from "@nozbe/watermelondb/sync";
 import { getCurrentUserId, supabase } from "./supabase";
+import { logger } from "@/utils/logger";
 
 // Date columns that need conversion between WatermelonDB (timestamps) and Supabase (ISO strings)
 const DATE_ONLY_COLUMNS = [
@@ -80,6 +81,39 @@ const SYNCABLE_TABLES = Object.keys(schema.tables).filter(
 
 type SyncableTable = (typeof SYNCABLE_TABLES)[number];
 
+function getSyncErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof error.message === "string"
+  ) {
+    return error.message;
+  }
+
+  return String(error);
+}
+
+function createSyncTableError(
+  operation: "pull" | "insert" | "upsert" | "delete",
+  table: string,
+  error: unknown
+): Error {
+  return new Error(
+    `Supabase ${operation} failed for ${table}: ${getSyncErrorMessage(error)}`
+  );
+}
+
+function createForeignLocalChangeError(table: string): Error {
+  return new Error(
+    `Refusing to sync foreign local changes for ${table}; local row does not belong to the authenticated user`
+  );
+}
+
 /**
  * Pull market_rates (global data, last N days only)
  */
@@ -98,8 +132,7 @@ async function pullMarketRates(
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Error pulling market_rates:", error);
-      return { created: [], updated: [], deleted: [] };
+      throw createSyncTableError("pull", "market_rates", error);
     }
 
     if (!data || data.length === 0) {
@@ -115,8 +148,8 @@ async function pullMarketRates(
       deleted: [],
     };
   } catch (err) {
-    console.error("Exception pulling market_rates:", err);
-    return { created: [], updated: [], deleted: [] };
+    logger.error("sync.pull.marketRates.failed", err);
+    throw err;
   }
 }
 
@@ -151,8 +184,7 @@ async function pullSnapshotTable(
     const { data, error } = await query;
 
     if (error) {
-      console.error(`Error pulling ${table}:`, error);
-      return { created: [], updated: [], deleted: [] };
+      throw createSyncTableError("pull", table, error);
     }
 
     if (!data || data.length === 0) {
@@ -168,8 +200,8 @@ async function pullSnapshotTable(
       deleted: [],
     };
   } catch (err) {
-    console.error(`Exception pulling ${table}:`, err);
-    return { created: [], updated: [], deleted: [] };
+    logger.error("sync.pull.snapshot.failed", err, { table });
+    throw err;
   }
 }
 
@@ -190,8 +222,7 @@ async function pullUserTable(
   const { data, error } = await query;
 
   if (error) {
-    console.error(`Error pulling ${table}:`, error);
-    return { created: [], updated: [], deleted: [] };
+    throw createSyncTableError("pull", table, error);
   }
 
   if (!data || data.length === 0) {
@@ -226,16 +257,24 @@ async function pullChildTable(
   lastSyncDate: string | null
 ): Promise<SyncDatabaseChangeSet[WritableSupabaseTablesNames]> {
   // Get parent IDs for this user
-  const { data: parentIds } = await supabase
+  const parentResult = await supabase
     .from(childConfig.parentTable)
     .select("id")
     .eq("user_id", userId);
 
-  if (!parentIds || parentIds.length === 0) {
+  if (parentResult.error) {
+    throw createSyncTableError(
+      "pull",
+      childConfig.parentTable,
+      parentResult.error
+    );
+  }
+
+  if (!parentResult.data || parentResult.data.length === 0) {
     return { created: [], updated: [], deleted: [] };
   }
 
-  const ids = parentIds.map((p) => p.id);
+  const ids = parentResult.data.map((p) => p.id);
   let query = supabase.from(table).select("*").in(childConfig.foreignKey, ids);
 
   if (lastSyncDate) {
@@ -245,8 +284,7 @@ async function pullChildTable(
   const { data, error } = await query;
 
   if (error) {
-    console.error(`Error pulling ${table}:`, error);
-    return { created: [], updated: [], deleted: [] };
+    throw createSyncTableError("pull", table, error);
   }
 
   if (!data || data.length === 0) {
@@ -287,8 +325,7 @@ async function pullCategories(
   const { data, error } = await query;
 
   if (error) {
-    console.error("Error pulling categories:", error);
-    return { created: [], updated: [], deleted: [] };
+    throw createSyncTableError("pull", "categories", error);
   }
 
   if (!data || data.length === 0) {
@@ -319,7 +356,7 @@ async function pullChanges(
   const userId = await getCurrentUserId();
   // If no user is authenticated, return an empty changeset
   if (!userId) {
-    console.log("No user authenticated, skipping pull");
+    logger.debug("sync.pull.skippedUnauthenticated");
     return { changes: {}, timestamp: Date.now() };
   }
 
@@ -329,40 +366,35 @@ async function pullChanges(
     : null;
 
   for (const table of SYNCABLE_TABLES) {
-    try {
-      const childConfig = CHILD_TABLES_MAP[table];
-      const isSnapshotTable = SNAPSHOT_TABLES.includes(
-        table as SnapshotTableName
-      );
+    const childConfig = CHILD_TABLES_MAP[table];
+    const isSnapshotTable = SNAPSHOT_TABLES.includes(
+      table as SnapshotTableName
+    );
 
-      // Route to appropriate specialized pull function
-      if (table === "market_rates") {
-        changes[table] = await pullMarketRates();
-      } else if (isSnapshotTable) {
-        changes[table] = await pullSnapshotTable(
-          table as SnapshotTableName,
-          userId,
-          lastSyncDate
-        );
-      } else if (table === "categories") {
-        changes[table] = await pullCategories(userId, lastSyncDate);
-      } else if (childConfig) {
-        changes[table] = await pullChildTable(
-          table as WritableSupabaseTablesNames,
-          childConfig,
-          userId,
-          lastSyncDate
-        );
-      } else {
-        changes[table] = await pullUserTable(
-          table as WritableSupabaseTablesNames,
-          userId,
-          lastSyncDate
-        );
-      }
-    } catch (err) {
-      console.error(`Exception pulling ${table}:`, err);
-      changes[table] = { created: [], updated: [], deleted: [] };
+    // Route to appropriate specialized pull function.
+    if (table === "market_rates") {
+      changes[table] = await pullMarketRates();
+    } else if (isSnapshotTable) {
+      changes[table] = await pullSnapshotTable(
+        table as SnapshotTableName,
+        userId,
+        lastSyncDate
+      );
+    } else if (table === "categories") {
+      changes[table] = await pullCategories(userId, lastSyncDate);
+    } else if (childConfig) {
+      changes[table] = await pullChildTable(
+        table as WritableSupabaseTablesNames,
+        childConfig,
+        userId,
+        lastSyncDate
+      );
+    } else {
+      changes[table] = await pullUserTable(
+        table as WritableSupabaseTablesNames,
+        userId,
+        lastSyncDate
+      );
     }
   }
 
@@ -376,11 +408,12 @@ async function pullChanges(
  * Push local changes to Supabase
  */
 async function pushChanges(
+  database: Database,
   pushArgs: SyncPushArgs
 ): Promise<SyncPushResult | undefined | void> {
   const userId = await getCurrentUserId();
   if (!userId) {
-    console.log("No user authenticated, skipping push");
+    logger.debug("sync.push.skippedUnauthenticated");
     return;
   }
 
@@ -400,53 +433,141 @@ async function pushChanges(
     }
 
     // Check if this is a child table (no user_id column)
-    const isChildTable = table in CHILD_TABLES_MAP;
+    const childConfig = CHILD_TABLES_MAP[table];
+    const isChildTable = childConfig !== undefined;
 
     try {
+      const hasChildWrites =
+        isChildTable &&
+        (tableChanges.created.length > 0 || tableChanges.updated.length > 0);
+      const hasChildDeletes = isChildTable && tableChanges.deleted.length > 0;
+      const activeParentIds =
+        childConfig && hasChildWrites
+          ? await fetchOwnedParentIds(database, childConfig.parentTable, userId)
+          : null;
+      const deleteParentIds =
+        childConfig && hasChildDeletes
+          ? await fetchOwnedParentIds(
+              database,
+              childConfig.parentTable,
+              userId,
+              {
+                includeDeleted: true,
+              }
+            )
+          : null;
+
       // Handle created records
       if (tableChanges.created.length > 0) {
-        const records = tableChanges.created.map((record) =>
-          transformToSupabase(record, userId, isChildTable)
-        );
+        const records = tableChanges.created.map((record) => {
+          assertPushRecordBelongsToCurrentUser(
+            table,
+            record,
+            userId,
+            childConfig,
+            activeParentIds
+          );
+          return transformToSupabase(record, userId, isChildTable);
+        });
 
         const { error } = await supabase.from(table).insert(records);
         if (error) {
-          console.error(`Error inserting ${table}:`, error);
+          throw createSyncTableError("insert", table, error);
         }
       }
 
       // Handle updated records
       if (tableChanges.updated.length > 0) {
         for (const record of tableChanges.updated) {
+          assertPushRecordBelongsToCurrentUser(
+            table,
+            record,
+            userId,
+            childConfig,
+            activeParentIds
+          );
           const transformed = transformToSupabase(record, userId, isChildTable);
 
           const { error } = await supabase
             .from(table)
             .upsert(transformed, { onConflict: "id" });
           if (error) {
-            console.error(`Error upserting ${table}:`, error);
-            // Log the full record on error for debugging
-            console.error(
-              `Full record that caused error:`,
-              JSON.stringify(transformed, null, 2)
-            );
+            throw createSyncTableError("upsert", table, error);
           }
         }
       }
 
       // Handle deleted records (soft delete)
       if (tableChanges.deleted.length > 0) {
-        const { error } = await supabase
+        let query = supabase
           .from(table)
-          .update({ deleted: true, updated_at: new Date().toISOString() })
-          .in("id", tableChanges.deleted);
+          .update({ deleted: true, updated_at: new Date().toISOString() });
+
+        if (childConfig && deleteParentIds) {
+          query = query.in(childConfig.foreignKey, deleteParentIds);
+        } else if (!isChildTable) {
+          query = query.eq("user_id", userId);
+        }
+
+        const { error } = await query.in("id", tableChanges.deleted);
         if (error) {
-          console.error(`Error deleting ${table}:`, error);
+          throw createSyncTableError("delete", table, error);
         }
       }
     } catch (err) {
-      console.error(`Exception pushing ${table}:`, err);
+      logger.error("sync.push.table.failed", err, { table });
+      throw err;
     }
+  }
+}
+
+async function fetchOwnedParentIds(
+  database: Database,
+  parentTable: WritableSupabaseTablesNames,
+  userId: string,
+  options: { readonly includeDeleted?: boolean } = {}
+): Promise<readonly string[]> {
+  const conditions = [Q.where("user_id", userId)];
+  if (!options.includeDeleted) {
+    conditions.push(Q.where("deleted", false));
+  }
+
+  const records = await database
+    .get<Model>(parentTable)
+    .query(...conditions)
+    .fetch();
+
+  return records.map((record) => record.id);
+}
+
+function assertPushRecordBelongsToCurrentUser(
+  table: SyncableTable,
+  record: unknown,
+  userId: string,
+  childConfig:
+    | {
+        parentTable: WritableSupabaseTablesNames;
+        foreignKey: string;
+      }
+    | undefined,
+  ownedParentIds: readonly string[] | null
+): void {
+  const payload = record as Record<string, unknown>;
+
+  if (childConfig) {
+    const parentId = payload[childConfig.foreignKey];
+    if (
+      typeof parentId !== "string" ||
+      ownedParentIds === null ||
+      !ownedParentIds.includes(parentId)
+    ) {
+      throw createForeignLocalChangeError(table);
+    }
+    return;
+  }
+
+  if (payload.user_id !== userId) {
+    throw createForeignLocalChangeError(table);
   }
 }
 
@@ -534,88 +655,62 @@ export async function syncDatabase(
   database: Database,
   forceFullSync = false
 ): Promise<void> {
-  // If a sync is already in-flight, skip this call
   if (activeSyncPromise) {
-    console.log("Sync already in progress, skipping");
-    return;
+    logger.debug("sync.alreadyInProgress");
+    return activeSyncPromise;
   }
 
-  const userId = await getCurrentUserId();
-  if (!userId) {
-    console.log("Sync skipped: No authenticated user");
-    return;
-  }
-
-  if (forceFullSync) {
-    console.log("🔄 Force full sync requested - fetching all data from server");
-  }
-
-  const doSync = async (): Promise<void> => {
-    try {
-      await synchronize({
-        database,
-        pullChanges: async ({ lastPulledAt }): Promise<SyncPullResult> => {
-          // If forceFullSync is true, ignore the stored timestamp
-          const effectiveLastPulledAt = forceFullSync ? null : lastPulledAt;
-          const result: SyncPullResult = await pullChanges(
-            effectiveLastPulledAt ?? null
-          );
-          return result;
-        },
-        pushChanges: async ({ changes, lastPulledAt }) => {
-          await pushChanges({ changes, lastPulledAt });
-        },
-        // Server may return records that don't exist locally (e.g., first sync or after local data cleared)
-        // This flag tells WatermelonDB to create them instead of treating it as an error
-        sendCreatedAsUpdated: true,
-      });
-      console.log("Sync completed successfully");
-    } catch (error) {
-      // WatermelonDB throws a diagnostic error when concurrent synchronize() calls occur.
-      // This is benign — the later sync is aborted, no data corruption.
-      // This can happen during Metro hot reload (e.g. pre-commit hook updates schema files).
-      const errorMessage = String(error);
-      if (errorMessage.includes("Concurrent synchronization")) {
-        console.warn(
-          "⚠️ Concurrent sync detected (benign) — later sync was aborted"
-        );
-        return;
-      }
-      console.error("Sync failed:", error);
-      throw error;
-    } finally {
-      activeSyncPromise = null;
+  activeSyncPromise = (async (): Promise<void> => {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      logger.debug("sync.skippedUnauthenticated");
+      return;
     }
-  };
 
-  activeSyncPromise = doSync();
+    if (forceFullSync) {
+      logger.info("sync.forceFullSyncRequested");
+    }
+
+    const doSync = async (): Promise<void> => {
+      try {
+        await synchronize({
+          database,
+          pullChanges: async ({ lastPulledAt }): Promise<SyncPullResult> => {
+            // If forceFullSync is true, ignore the stored timestamp
+            const effectiveLastPulledAt = forceFullSync ? null : lastPulledAt;
+            const result: SyncPullResult = await pullChanges(
+              effectiveLastPulledAt ?? null
+            );
+            return result;
+          },
+          pushChanges: async ({ changes, lastPulledAt }) => {
+            await pushChanges(database, { changes, lastPulledAt });
+          },
+          // Server may return records that don't exist locally (e.g., first sync or after local data cleared)
+          // This flag tells WatermelonDB to create them instead of treating it as an error
+          sendCreatedAsUpdated: true,
+        });
+        logger.info("sync.completed");
+      } catch (error) {
+        // WatermelonDB throws a diagnostic error when concurrent synchronize() calls occur.
+        // This is benign — the later sync is aborted, no data corruption.
+        // This can happen during Metro hot reload (e.g. pre-commit hook updates schema files).
+        const errorMessage = String(error);
+        if (errorMessage.includes("Concurrent synchronization")) {
+          logger.warn("sync.concurrentSyncAborted");
+          return;
+        }
+        logger.error("sync.failed", error);
+        throw error;
+      }
+    };
+
+    await doSync();
+  })().finally(() => {
+    activeSyncPromise = null;
+  });
+
   return activeSyncPromise;
-}
-
-/**
- * Reset sync state to force a full re-sync
- * This clears all local data and sync metadata
- * Use this when local data is missing but sync timestamp is ahead
- *
- * WARNING: This will delete all local data! Only use for debugging
- * or when you need to force a complete re-sync from server.
- *
- * @param db - The WatermelonDB database instance
- */
-export async function resetSyncState(db: Database): Promise<void> {
-  try {
-    // WatermelonDB's unsafeResetDatabase clears all tables AND the sync metadata
-    // This forces the next sync to be a full sync with lastPulledAt = null
-    await db.write(async () => {
-      await db.unsafeResetDatabase();
-    });
-    console.log(
-      "🔄 Database reset complete. Next sync will be a full sync from server."
-    );
-  } catch (error) {
-    console.error("Failed to reset database:", error);
-    throw error;
-  }
 }
 
 /**

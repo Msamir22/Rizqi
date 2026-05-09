@@ -25,6 +25,7 @@ import {
   getSpendingForBudget,
   autoPauseBudget,
 } from "@/services/budget-service";
+import { queryOwned } from "@/services/user-data-access";
 import type { PeriodFilter } from "@/components/budget/PeriodFilterChips";
 import {
   SpendingMetrics,
@@ -34,6 +35,7 @@ import {
   getDaysLeft,
   computeSpendingMetrics,
 } from "@monyvi/logic";
+import { useCurrentUserId } from "./useCurrentUserId";
 
 // =============================================================================
 // TYPES
@@ -79,24 +81,37 @@ export function useBudgets(): UseBudgetsResult {
   const [isLoading, setIsLoading] = useState(true);
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("ALL");
   const [refreshCounter, setRefreshCounter] = useState(0);
+  const { userId, isResolvingUser } = useCurrentUserId();
 
   // ── Subscribe to active, non-deleted budgets ──
   useEffect(() => {
-    const subscription = database
-      .get<Budget>("budgets")
-      .query(
-        Q.and(
-          Q.where("deleted", false),
-          Q.where("status", Q.oneOf(["ACTIVE", "PAUSED"]))
-        )
+    if (isResolvingUser) {
+      setRawBudgets([]);
+      setIsLoading(true);
+      return;
+    }
+
+    if (!userId) {
+      setRawBudgets([]);
+      setIsLoading(false);
+      return;
+    }
+
+    const subscription = queryOwned(
+      database.get<Budget>("budgets"),
+      userId,
+      Q.and(
+        Q.where("deleted", false),
+        Q.where("status", Q.oneOf(["ACTIVE", "PAUSED"]))
       )
+    )
       .observe()
       .subscribe((budgets) => {
         setRawBudgets(budgets);
       });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [userId, isResolvingUser]);
 
   // ── Compute spending metrics when budgets change ──
   useEffect(() => {

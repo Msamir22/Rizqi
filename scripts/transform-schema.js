@@ -10,10 +10,16 @@
  * Usage: node scripts/transform-schema.js
  */
 
-const { execSync } = require("child_process");
+const { execFileSync, execSync } = require("child_process");
 
 const fs = require("fs");
 const path = require("path");
+
+const ESLINT_BIN = path.join(
+  path.dirname(require.resolve("eslint/package.json")),
+  "bin",
+  "eslint.js"
+);
 
 // =============================================================================
 // CONFIGURATION
@@ -688,20 +694,38 @@ function main() {
 
   // Format the generated base model files with Prettier
   console.log("\n🎨 Formatting base model files...");
-  console.log("\n🎨 Linting base model files...");
 
   try {
     execSync(`npx prettier --write "${BASE_MODELS_DIR}/**/*.ts"`, {
       stdio: "inherit",
     });
     console.log("   ✅ Base models formatted");
+  } catch (error) {
+    console.warn("Prettier formatting failed:", error.message);
+  }
 
-    execSync(`npx eslint "${BASE_MODELS_DIR}" --ext .ts --fix`, {
-      stdio: "inherit",
-    });
+  console.log("\nLinting base model files...");
+  try {
+    const eslintRulesDir = path.join(__dirname, "eslint-rules");
+    execFileSync(
+      process.execPath,
+      [
+        ESLINT_BIN,
+        BASE_MODELS_DIR,
+        "--rulesdir",
+        eslintRulesDir,
+        "--ext",
+        ".ts",
+        "--fix",
+      ],
+      {
+        stdio: "inherit",
+      }
+    );
     console.log("   ✅ Base models linted");
   } catch (error) {
-    console.warn("   ⚠️  Prettier formatting failed:", error.message);
+    console.error("ESLint failed:", error.message);
+    process.exit(1);
   }
 
   console.log("\n✨ Schema sync complete!");

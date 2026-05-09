@@ -96,6 +96,7 @@ interface CommonTranslations {
   readonly select: string;
   readonly coming_soon: string;
   readonly charts_subtitle: string;
+  readonly all_categories: string;
 
   // Sync / retry screen (feature 024). Declared here — NOT in
   // SettingsTranslations — because RetrySyncScreen + profile-service use

@@ -35,6 +35,7 @@ import {
 } from "./ai-sms-parser-service";
 import { database, type Category } from "@monyvi/db";
 import { Q } from "@nozbe/watermelondb";
+import { getCurrentUserDataScope } from "./user-data-access";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -123,9 +124,12 @@ async function processNativeSmsEvent(event: NativeSmsEvent): Promise<void> {
     };
 
     // Load categories from DB for AI context
-    const categories = await database
-      .get<Category>("categories")
-      .query(Q.where("deleted", Q.notEq(true)))
+    const scope = await getCurrentUserDataScope();
+    const categories = await scope
+      .queryAccessibleCategories(
+        database.get<Category>("categories"),
+        Q.where("deleted", Q.notEq(true))
+      )
       .fetch();
 
     const context: ParseSmsContext = {

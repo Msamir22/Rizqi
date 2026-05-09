@@ -7,6 +7,9 @@ import { database, Transaction } from "@monyvi/db";
 import { getMonthBoundaries } from "@monyvi/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useState } from "react";
+import { queryOwned } from "@/services/user-data-access";
+import { runUserScopedEffect, useCurrentUserId } from "./useCurrentUserId";
+import { logger } from "@/utils/logger";
 
 interface UseTransactionsResult {
   transactions: Transaction[];
@@ -34,53 +37,71 @@ export function useTransactions(
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const { userId, isResolvingUser } = useCurrentUserId();
 
   const refetch = (): void => {
     setRefreshKey((prev) => prev + 1);
   };
 
   useEffect(() => {
-    setIsLoading(true);
-    setError(null);
-
-    const transactionsCollection = database.get<Transaction>("transactions");
-
-    // Build query with filters
-    const conditions = [Q.where("deleted", false)];
-
-    if (accountId) {
-      conditions.push(Q.where("account_id", accountId));
-    }
-
-    if (categoryId) {
-      conditions.push(Q.where("category_id", categoryId));
-    }
-
-    if (type) {
-      conditions.push(Q.where("type", type));
-    }
-
-    const query = transactionsCollection.query(
-      ...conditions,
-      Q.sortBy("date", Q.desc),
-      Q.take(limit)
-    );
-
-    // Subscribe to changes
-    const subscription = query.observe().subscribe({
-      next: (result) => {
-        setTransactions(result);
+    return runUserScopedEffect({
+      userId,
+      isResolvingUser,
+      onResolving: () => {
+        setTransactions([]);
+        setIsLoading(true);
+      },
+      onSignedOut: () => {
+        setTransactions([]);
         setIsLoading(false);
       },
-      error: (err: unknown) => {
-        console.error("Error observing transactions:", err);
-        setError(err instanceof Error ? err : new Error(String(err)));
-        setIsLoading(false);
+      onAuthenticated: (currentUserId) => {
+        setIsLoading(true);
+        setError(null);
+
+        const transactionsCollection =
+          database.get<Transaction>("transactions");
+
+        // Build query with filters
+        const conditions = [Q.where("deleted", false)];
+
+        if (accountId) {
+          conditions.push(Q.where("account_id", accountId));
+        }
+
+        if (categoryId) {
+          conditions.push(Q.where("category_id", categoryId));
+        }
+
+        if (type) {
+          conditions.push(Q.where("type", type));
+        }
+
+        const query = queryOwned(
+          transactionsCollection,
+          currentUserId,
+          ...conditions,
+          Q.sortBy("date", Q.desc),
+          Q.take(limit)
+        );
+
+        // Subscribe to changes
+        const subscription = query.observe().subscribe({
+          next: (result) => {
+            setTransactions(result);
+            setIsLoading(false);
+          },
+          error: (err: unknown) => {
+            logger.error("transactions.observe.failed", err);
+            setError(err instanceof Error ? err : new Error(String(err)));
+            setIsLoading(false);
+          },
+        });
+
+        return () => subscription.unsubscribe();
       },
     });
-
-    return () => subscription.unsubscribe();
-  }, [limit, accountId, categoryId, type, refreshKey]);
+  }, [limit, accountId, categoryId, type, refreshKey, userId, isResolvingUser]);
 
   return {
     transactions,
@@ -108,41 +129,59 @@ export function useMonthlyTransactions(
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const { userId, isResolvingUser } = useCurrentUserId();
 
   const refetch = (): void => {
     setRefreshKey((prev) => prev + 1);
   };
 
   useEffect(() => {
-    setIsLoading(true);
-    setError(null);
-
-    const transactionsCollection = database.get<Transaction>("transactions");
-
-    // Calculate start and end of month
-    const { startDate, endDate } = getMonthBoundaries(year, month);
-
-    const query = transactionsCollection.query(
-      Q.where("deleted", false),
-      Q.where("date", Q.gte(startDate)),
-      Q.where("date", Q.lte(endDate)),
-      Q.sortBy("date", Q.desc)
-    );
-
-    const subscription = query.observe().subscribe({
-      next: (result) => {
-        setTransactions(result);
+    return runUserScopedEffect({
+      userId,
+      isResolvingUser,
+      onResolving: () => {
+        setTransactions([]);
+        setIsLoading(true);
+      },
+      onSignedOut: () => {
+        setTransactions([]);
         setIsLoading(false);
       },
-      error: (err: unknown) => {
-        console.error("Error observing monthly transactions:", err);
-        setError(err instanceof Error ? err : new Error(String(err)));
-        setIsLoading(false);
+      onAuthenticated: (currentUserId) => {
+        setIsLoading(true);
+        setError(null);
+
+        const transactionsCollection =
+          database.get<Transaction>("transactions");
+
+        // Calculate start and end of month
+        const { startDate, endDate } = getMonthBoundaries(year, month);
+
+        const query = queryOwned(
+          transactionsCollection,
+          currentUserId,
+          Q.where("deleted", false),
+          Q.where("date", Q.gte(startDate)),
+          Q.where("date", Q.lte(endDate)),
+          Q.sortBy("date", Q.desc)
+        );
+
+        const subscription = query.observe().subscribe({
+          next: (result) => {
+            setTransactions(result);
+            setIsLoading(false);
+          },
+          error: (err: unknown) => {
+            logger.error("monthlyTransactions.observe.failed", err);
+            setError(err instanceof Error ? err : new Error(String(err)));
+            setIsLoading(false);
+          },
+        });
+
+        return () => subscription.unsubscribe();
       },
     });
-
-    return () => subscription.unsubscribe();
-  }, [year, month, refreshKey]);
+  }, [year, month, refreshKey, userId, isResolvingUser]);
 
   // TODO : mvoe this to different function & file.
   // Use shared analytics for calculations

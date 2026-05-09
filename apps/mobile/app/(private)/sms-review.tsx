@@ -101,7 +101,7 @@ export default function SmsReviewScreen(): React.JSX.Element {
 
         markSyncComplete().catch(console.error);
         clearTransactions();
-        router.replace("/(tabs)/transactions");
+        router.replace("/(private)/(tabs)/transactions");
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         showToast({
@@ -124,7 +124,7 @@ export default function SmsReviewScreen(): React.JSX.Element {
 
   const handleConfirmDiscard = useCallback(() => {
     clearTransactions();
-    router.replace("/(tabs)");
+    router.replace("/(private)/(tabs)");
   }, [clearTransactions, router]);
 
   // ── No transactions guard ───────────────────────────────────────────
@@ -141,7 +141,7 @@ export default function SmsReviewScreen(): React.JSX.Element {
           {t("no_transactions_to_review")}
         </Text>
         <TouchableOpacity
-          onPress={() => router.replace("/(tabs)" as never)}
+          onPress={() => router.replace("/(private)/(tabs)")}
           className="mt-6 px-6 py-3 bg-slate-800 rounded-2xl"
         >
           <Text className="text-white font-semibold">

@@ -35,6 +35,7 @@ import {
   isKnownFinancialSender,
 } from "@monyvi/logic";
 import { Q } from "@nozbe/watermelondb";
+import { queryChildrenOfOwnedParents, queryOwned } from "./user-data-access";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -243,16 +244,17 @@ async function fetchAccountsWithDetails(
   userId: string,
   accountType?: AccountTypeFilter
 ): Promise<readonly AccountWithBankDetails[]> {
-  const clauses = [Q.where("user_id", userId), Q.where("deleted", false)];
+  const clauses = [Q.where("deleted", false)];
 
   if (accountType) {
     clauses.push(Q.where("type", accountType));
   }
 
-  const accounts = await database
-    .get<Account>("accounts")
-    .query(...clauses)
-    .fetch();
+  const accounts = await queryOwned(
+    database.get<Account>("accounts"),
+    userId,
+    ...clauses
+  ).fetch();
 
   const results: AccountWithBankDetails[] = [];
 
@@ -261,13 +263,13 @@ async function fetchAccountsWithDetails(
   const allBankDetails =
     accountIds.length === 0
       ? []
-      : await database
-          .get<BankDetails>("bank_details")
-          .query(
-            Q.where("account_id", Q.oneOf(accountIds)),
-            Q.where("deleted", false)
-          )
-          .fetch();
+      : await queryChildrenOfOwnedParents(
+          database.get<BankDetails>("bank_details"),
+          accounts,
+          userId,
+          "account_id",
+          Q.where("deleted", false)
+        ).fetch();
 
   // Build a lookup: accountId → first BankDetails row
   const bankDetailsByAccountId = new Map<string, BankDetails>();

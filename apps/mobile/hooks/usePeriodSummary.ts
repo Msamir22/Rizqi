@@ -13,6 +13,9 @@ import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useMarketRates } from "./useMarketRates";
 import { usePreferredCurrency } from "./usePreferredCurrency";
+import { queryOwned } from "@/services/user-data-access";
+import { useCurrentUserId } from "./useCurrentUserId";
+import { logger } from "@/utils/logger";
 
 // =============================================================================
 // Types
@@ -181,6 +184,7 @@ export function usePeriodSummary(
   const [refreshKey, setRefreshKey] = useState(0);
   const { latestRates } = useMarketRates();
   const { preferredCurrency } = usePreferredCurrency();
+  const { userId, isResolvingUser } = useCurrentUserId();
 
   const refetch = useCallback((): void => {
     setRefreshKey((prev) => prev + 1);
@@ -192,6 +196,18 @@ export function usePeriodSummary(
   );
 
   useEffect(() => {
+    if (isResolvingUser) {
+      setTransactions([]);
+      setIsLoading(true);
+      return;
+    }
+
+    if (!userId) {
+      setTransactions([]);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -203,12 +219,14 @@ export function usePeriodSummary(
       Q.where("date", Q.gte(startDate)),
       Q.where("date", Q.lte(endDate)),
     ];
+    const selectedAccountIds =
+      accountIdsString.length > 0 ? accountIdsString.split(",") : [];
 
-    if (accountIds && accountIds.length > 0) {
-      conditions.push(Q.where("account_id", Q.oneOf(accountIds)));
+    if (selectedAccountIds.length > 0) {
+      conditions.push(Q.where("account_id", Q.oneOf(selectedAccountIds)));
     }
 
-    const query = transactionsCollection.query(...conditions);
+    const query = queryOwned(transactionsCollection, userId, ...conditions);
 
     const subscription = query.observe().subscribe({
       next: (result) => {
@@ -216,14 +234,14 @@ export function usePeriodSummary(
         setIsLoading(false);
       },
       error: (err: unknown) => {
-        console.error("Error observing period summary:", err);
+        logger.error("periodSummary.observe.failed", err);
         setError(err instanceof Error ? err : new Error(String(err)));
         setIsLoading(false);
       },
     });
 
     return () => subscription.unsubscribe();
-  }, [period, accountIdsString, refreshKey, accountIds]);
+  }, [period, accountIdsString, refreshKey, userId, isResolvingUser]);
 
   // Calculate summary — convert each transaction to preferred currency first
   const data = useMemo((): PeriodSummary => {

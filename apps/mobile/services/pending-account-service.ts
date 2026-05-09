@@ -25,6 +25,7 @@ import {
 } from "@monyvi/db";
 import { Q } from "@nozbe/watermelondb";
 import { getCurrentUserId } from "./supabase";
+import { queryOwned } from "./user-data-access";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -109,14 +110,12 @@ async function persistPendingAccounts(
 
   try {
     // Pre-fetch existing active BANK accounts for dedup (name+currency)
-    const existingAccounts = await database
-      .get<Account>("accounts")
-      .query(
-        Q.where("user_id", userId),
-        Q.where("deleted", false),
-        Q.where("type", "BANK")
-      )
-      .fetch();
+    const existingAccounts = await queryOwned(
+      database.get<Account>("accounts"),
+      userId,
+      Q.where("deleted", false),
+      Q.where("type", "BANK")
+    ).fetch();
 
     // Track accounts mapped within this batch to avoid intra-batch duplicates
     const createdInBatch = new Map<string, string>(); // "name|currency" → realId

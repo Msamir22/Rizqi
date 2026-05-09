@@ -135,7 +135,9 @@ import {
   deleteTransaction,
   convertTransactionToTransfer,
   batchDeleteDisplayTransactions,
+  BALANCE_REVERSAL_ACCOUNT_NOT_FOUND_ERROR_CODE,
 } from "@/services/transaction-service";
+import { USER_DATA_ACCESS_ERROR_CODES } from "@/services/user-data-access";
 
 import type { DisplayTransaction } from "@/hooks/useTransactionsGrouping";
 
@@ -156,7 +158,13 @@ const {
 // ---------------------------------------------------------------------------
 
 function seedAccount(id: string, balance: number): MockModelRecord {
-  const acc = mockModel(id, { balance });
+  const acc = mockModel(id, { balance, userId: "test-user-id" });
+  mockSeed("accounts", acc);
+  return acc;
+}
+
+function seedForeignAccount(id: string, balance: number): MockModelRecord {
+  const acc = mockModel(id, { balance, userId: "foreign-user-id" });
   mockSeed("accounts", acc);
   return acc;
 }
@@ -263,7 +271,24 @@ describe("transaction-service", () => {
           type: "EXPENSE",
           source: "MANUAL",
         })
-      ).rejects.toThrow("User not authenticated");
+      ).rejects.toThrow(USER_DATA_ACCESS_ERROR_CODES.USER_REQUIRED);
+    });
+
+    it("rejects a foreign account without mutating its balance", async () => {
+      const foreignAccount = seedForeignAccount("acc-foreign", 1000);
+
+      await expect(
+        createTransaction({
+          amount: 100,
+          currency: "EGP",
+          categoryId: "cat-1",
+          accountId: "acc-foreign",
+          type: "EXPENSE",
+          source: "MANUAL",
+        })
+      ).rejects.toThrow(USER_DATA_ACCESS_ERROR_CODES.OWNERSHIP_FAILED);
+
+      expect(foreignAccount.balance).toBe(1000);
     });
   });
 
@@ -334,6 +359,23 @@ describe("transaction-service", () => {
       await updateTransaction("tx-1", { note: "just a note" });
       expect(acc.balance).toBe(900);
     });
+
+    it("rejects a foreign transaction without mutating the owned account", async () => {
+      const acc = seedAccount("acc-1", 900);
+      const tx = seedTx("tx-1", {
+        accountId: "acc-1",
+        amount: 100,
+        type: "EXPENSE",
+        userId: "foreign-user-id",
+      });
+
+      await expect(updateTransaction("tx-1", { amount: 300 })).rejects.toThrow(
+        USER_DATA_ACCESS_ERROR_CODES.OWNERSHIP_FAILED
+      );
+
+      expect(acc.balance).toBe(900);
+      expect(tx.amount).toBe(100);
+    });
   });
 
   // =========================================================================
@@ -362,6 +404,23 @@ describe("transaction-service", () => {
       await deleteTransaction("tx-1");
       expect(acc.balance).toBe(1000);
       expect(tx.deleted).toBe(true);
+    });
+
+    it("rejects a foreign transaction delete without mutating balances", async () => {
+      const acc = seedAccount("acc-1", 900);
+      const tx = seedTx("tx-1", {
+        accountId: "acc-1",
+        amount: 100,
+        type: "EXPENSE",
+        userId: "foreign-user-id",
+      });
+
+      await expect(deleteTransaction("tx-1")).rejects.toThrow(
+        USER_DATA_ACCESS_ERROR_CODES.OWNERSHIP_FAILED
+      );
+
+      expect(acc.balance).toBe(900);
+      expect(tx.deleted).toBe(false);
     });
   });
 
@@ -402,7 +461,29 @@ describe("transaction-service", () => {
           transactionId: "tx-1",
           toAccountId: "acc-to",
         })
-      ).rejects.toThrow("User not authenticated");
+      ).rejects.toThrow(USER_DATA_ACCESS_ERROR_CODES.USER_REQUIRED);
+    });
+
+    it("rejects a foreign-owned transaction without mutating balances", async () => {
+      const from = seedAccount("acc-from", 800);
+      const to = seedAccount("acc-to", 500);
+      const tx = seedTx("tx-1", {
+        accountId: "acc-from",
+        amount: 200,
+        type: "EXPENSE",
+        userId: "foreign-user-id",
+      });
+
+      await expect(
+        convertTransactionToTransfer({
+          transactionId: "tx-1",
+          toAccountId: "acc-to",
+        })
+      ).rejects.toThrow(USER_DATA_ACCESS_ERROR_CODES.OWNERSHIP_FAILED);
+
+      expect(tx.deleted).toBe(false);
+      expect(from.balance).toBe(800);
+      expect(to.balance).toBe(500);
     });
   });
 
@@ -419,6 +500,7 @@ describe("transaction-service", () => {
       seedAccount("acc-1", 800);
       const i1 = mockModel("tx-1", {
         _type: "transaction",
+        userId: "test-user-id",
         accountId: "acc-1",
         amount: 100,
         isExpense: true,
@@ -427,6 +509,7 @@ describe("transaction-service", () => {
       });
       const i2 = mockModel("tx-2", {
         _type: "transaction",
+        userId: "test-user-id",
         accountId: "acc-1",
         amount: 200,
         isExpense: true,
@@ -448,6 +531,7 @@ describe("transaction-service", () => {
       seedAccount("acc-2", 500);
       const txI = mockModel("tx-1", {
         _type: "transaction",
+        userId: "test-user-id",
         accountId: "acc-1",
         amount: 100,
         isExpense: true,
@@ -456,6 +540,7 @@ describe("transaction-service", () => {
       });
       const tfI = mockModel("tf-1", {
         _type: "transfer",
+        userId: "test-user-id",
         fromAccountId: "acc-1",
         toAccountId: "acc-2",
         amount: 200,
@@ -470,6 +555,50 @@ describe("transaction-service", () => {
       expect(txI.deleted).toBe(true);
       expect(tfI.deleted).toBe(true);
       expect(mockDb.batch).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not delete a transfer when a balance reversal account is missing", async () => {
+      seedAccount("acc-1", 900);
+      const tfI = mockModel("tf-1", {
+        _type: "transfer",
+        userId: "test-user-id",
+        fromAccountId: "acc-1",
+        toAccountId: "acc-missing",
+        amount: 200,
+        convertedAmount: undefined,
+        deleted: false,
+      });
+
+      await expect(
+        batchDeleteDisplayTransactions([
+          tfI,
+        ] as unknown as readonly DisplayTransaction[])
+      ).rejects.toThrow(BALANCE_REVERSAL_ACCOUNT_NOT_FOUND_ERROR_CODE);
+
+      expect(tfI.deleted).toBe(false);
+      expect(mockDb.batch).not.toHaveBeenCalled();
+    });
+
+    it("rejects foreign-owned display items before deleting anything", async () => {
+      seedAccount("acc-1", 900);
+      const foreignItem = mockModel("tx-foreign", {
+        _type: "transaction",
+        userId: "foreign-user-id",
+        accountId: "acc-1",
+        amount: 100,
+        isExpense: true,
+        isIncome: false,
+        deleted: false,
+      });
+
+      await expect(
+        batchDeleteDisplayTransactions([
+          foreignItem,
+        ] as unknown as readonly DisplayTransaction[])
+      ).rejects.toThrow(USER_DATA_ACCESS_ERROR_CODES.OWNERSHIP_FAILED);
+
+      expect(foreignItem.deleted).toBe(false);
+      expect(mockDb.batch).not.toHaveBeenCalled();
     });
   });
 });

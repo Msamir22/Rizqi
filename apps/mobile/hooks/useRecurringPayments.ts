@@ -20,6 +20,9 @@ import { Q } from "@nozbe/watermelondb";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMarketRates } from "./useMarketRates";
 import { usePreferredCurrency } from "./usePreferredCurrency";
+import { queryOwned } from "@/services/user-data-access";
+import { runUserScopedEffect, useCurrentUserId } from "./useCurrentUserId";
+import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -133,30 +136,47 @@ export function useRecurringPayments(
   );
   const { latestRates } = useMarketRates();
   const { preferredCurrency } = usePreferredCurrency();
+  const { userId, isResolvingUser } = useCurrentUserId();
 
   // -------------------------------------------------------------------------
   // Observe recurring payments
   // -------------------------------------------------------------------------
 
   useEffect(() => {
-    const collection = database.get<RecurringPayment>("recurring_payments");
+    return runUserScopedEffect({
+      userId,
+      isResolvingUser,
+      onResolving: () => {
+        setAllPayments([]);
+        setIsLoading(true);
+      },
+      onSignedOut: () => {
+        setAllPayments([]);
+        setIsLoading(false);
+      },
+      onAuthenticated: (currentUserId) => {
+        const subscription = queryOwned(
+          database.get<RecurringPayment>("recurring_payments"),
+          currentUserId,
+          Q.where("deleted", false),
+          Q.sortBy("next_due_date", Q.asc)
+        )
+          .observe()
+          .subscribe({
+            next: (result) => {
+              setAllPayments(result);
+              setIsLoading(false);
+            },
+            error: (err) => {
+              logger.error("recurringPayments.observe.failed", err);
+              setIsLoading(false);
+            },
+          });
 
-    const subscription = collection
-      .query(Q.where("deleted", false), Q.sortBy("next_due_date", Q.asc))
-      .observe()
-      .subscribe({
-        next: (result) => {
-          setAllPayments(result);
-          setIsLoading(false);
-        },
-        error: (err) => {
-          console.error("Error loading recurring payments:", err);
-          setIsLoading(false);
-        },
-      });
-
-    return () => subscription.unsubscribe();
-  }, []);
+        return () => subscription.unsubscribe();
+      },
+    });
+  }, [userId, isResolvingUser]);
 
   // -------------------------------------------------------------------------
   // Derived data

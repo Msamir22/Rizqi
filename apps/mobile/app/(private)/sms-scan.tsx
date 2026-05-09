@@ -288,7 +288,7 @@ export default function SmsScanScreen(): React.JSX.Element {
         return;
       }
 
-      router.replace("/(tabs)");
+      router.replace("/(private)/(tabs)");
     }
   }, [router]);
 

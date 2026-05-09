@@ -7,9 +7,6 @@
  * @module storage-keys
  */
 
-/** ISO timestamp when the user first launched the app. */
-export const FIRST_USE_DATE_KEY = "@monyvi/first-use-date";
-
 /**
  * Per-user onboarding-step cursor (feature 024).
  *
@@ -29,24 +26,3 @@ export const INTRO_SEEN_KEY = "@monyvi/intro-seen";
 
 /** Explicit language preference selected on any pre-auth surface (pitch, auth, or Currency step). Device-scoped — persists across sign-up/sign-out. */
 export const INTRO_LOCALE_OVERRIDE_KEY = "@monyvi/intro-locale-override";
-
-/** One-shot marker written only after signup, used to promote pre-auth language for that new profile. */
-export const PENDING_SIGNUP_LOCALE_KEY = "@monyvi/pending-signup-locale";
-
-// =============================================================================
-// Logout Keys
-// =============================================================================
-
-/** Set to `"true"` before logout begins; removed after completion. Used for force-close recovery. */
-export const LOGOUT_IN_PROGRESS_KEY = "@monyvi/logout-in-progress";
-
-/**
- * AsyncStorage keys that MUST be cleared on logout.
- * Device-level keys are intentionally excluded so the user is not forced
- * through onboarding again on the same device.
- */
-export const CLEARABLE_USER_KEYS: readonly string[] = [
-  FIRST_USE_DATE_KEY,
-  // Onboarding cursor is per-user; it persists across sign-out so a returning
-  // user resumes at the right step (FR-011 / clarifications 2026-04-18).
-] as const;

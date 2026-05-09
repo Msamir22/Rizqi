@@ -30,7 +30,9 @@ import {
   type ParseSmsContext,
   type SmsCandidate,
 } from "./ai-sms-parser-service";
+import { getCurrentUserDataScope } from "./user-data-access";
 import { readSmsInbox } from "./sms-reader-service";
+import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -158,42 +160,35 @@ function collectHashes(
  * Used for deduplication — prevents re-parsing SMS messages that
  * have already been saved as either a transaction or a transfer (e.g., ATM withdrawal).
  *
- * Uses Q.unsafeSqlQuery + unsafeFetchRaw to SELECT only the hash column,
- * avoiding both full-row fetch and model hydration overhead.
+ * Scoped to the current user so stale local rows from another account do not
+ * suppress valid SMS imports for the signed-in user.
  */
 export async function loadExistingSmsHashes(): Promise<ReadonlySet<string>> {
+  const scope = await getCurrentUserDataScope();
   const hashes = new Set<string>();
 
   // ── Transactions ──────────────────────────────────────────────────────
-  const txRows = await database
-    .get<Transaction>("transactions")
-    .query(
-      Q.unsafeSqlQuery(
-        `SELECT sms_body_hash FROM transactions
-         WHERE source = 'SMS'
-           AND sms_body_hash IS NOT NULL
-           AND deleted != 1
-           AND _status != 'deleted'`
-      )
+  const transactionRows = (await scope
+    .queryOwned(
+      database.get<Transaction>("transactions"),
+      Q.where("source", "SMS"),
+      Q.where("sms_body_hash", Q.notEq(null)),
+      Q.where("deleted", false)
     )
-    .unsafeFetchRaw();
+    .unsafeFetchRaw()) as ReadonlyArray<Record<string, unknown>>;
 
-  collectHashes(txRows as Array<Record<string, unknown>>, hashes);
+  collectHashes(transactionRows, hashes);
 
   // ── Transfers (ATM withdrawals, etc.) ─────────────────────────────────
-  const tfRows = await database
-    .get<Transfer>("transfers")
-    .query(
-      Q.unsafeSqlQuery(
-        `SELECT sms_body_hash FROM transfers
-         WHERE sms_body_hash IS NOT NULL
-           AND deleted != 1
-           AND _status != 'deleted'`
-      )
+  const transferRows = (await scope
+    .queryOwned(
+      database.get<Transfer>("transfers"),
+      Q.where("sms_body_hash", Q.notEq(null)),
+      Q.where("deleted", false)
     )
-    .unsafeFetchRaw();
+    .unsafeFetchRaw()) as ReadonlyArray<Record<string, unknown>>;
 
-  collectHashes(tfRows as Array<Record<string, unknown>>, hashes);
+  collectHashes(transferRows, hashes);
 
   return hashes;
 }
@@ -236,7 +231,7 @@ export async function cleanupStaleScanState(): Promise<boolean> {
   const inProgress = await AsyncStorage.getItem(SCAN_IN_PROGRESS_KEY);
   if (inProgress === "true") {
     await AsyncStorage.removeItem(SCAN_IN_PROGRESS_KEY);
-    console.log("[sms-sync] Cleaned up stale scan-in-progress flag");
+    logger.info("smsSync.staleScanState.cleaned");
     return true;
   }
   return false;
@@ -255,7 +250,8 @@ async function executeScanPipeline(
   const maxCount = options?.maxCount ?? DEFAULT_MAX_COUNT;
   const batchSize = options?.batchSize ?? DEFAULT_BATCH_SIZE;
   const yieldInterval = options?.yieldInterval ?? DEFAULT_YIELD_INTERVAL;
-  const existingHashes = options?.existingHashes ?? new Set<string>();
+  const existingHashes =
+    options?.existingHashes ?? (await loadExistingSmsHashes());
   // Default to 3 months ago when no minDate is provided
   const effectiveMinDate = options?.minDate ?? Date.now() - THREE_MONTHS_MS;
 
@@ -386,9 +382,11 @@ async function executeScanPipeline(
     scanStartedAt: startTime,
   });
 
-  console.log(
-    `[sms-sync] AI parsing: ${aiResult.transactions.length} transactions from ${candidates.length} candidates in ${durationMs}ms`
-  );
+  logger.info("smsSync.aiParsing.complete", {
+    transactionCount: aiResult.transactions.length,
+    candidateCount: candidates.length,
+    durationMs,
+  });
 
   return {
     transactions: aiResult.transactions,

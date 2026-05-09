@@ -23,6 +23,8 @@ import { useNetWorth } from "./useNetWorth";
 import { PeriodFilter } from "./usePeriodSummary";
 import { usePreferredCurrency } from "./usePreferredCurrency";
 import { buildAccountDisplayNames } from "@/utils/account-display";
+import { queryOwned } from "@/services/user-data-access";
+import { useCurrentUserId } from "./useCurrentUserId";
 
 export type TransactionTypeFilter = "All" | "Income" | "Expense" | "Transfer";
 
@@ -148,9 +150,24 @@ export function useTransactionsGrouping(
   const [isDataLoading, setIsDataLoading] = useState(true);
   const { preferredCurrency } = usePreferredCurrency();
   const [refetchTrigger, setRefetchTrigger] = useState(0);
+  const { userId, isResolvingUser } = useCurrentUserId();
 
   // 1. Fetch Transactions and Transfers
   useEffect(() => {
+    if (isResolvingUser) {
+      setAllTransactions([]);
+      setDisplayedItems([]);
+      setIsDataLoading(true);
+      return;
+    }
+
+    if (!userId) {
+      setAllTransactions([]);
+      setDisplayedItems([]);
+      setIsDataLoading(false);
+      return;
+    }
+
     setIsDataLoading(true);
     const { startDate, endDate } = getPeriodDateRange(period);
 
@@ -158,7 +175,9 @@ export function useTransactionsGrouping(
     const transfersCollection = database.get<Transfer>("transfers");
 
     // Query 1: Future Transactions > EndDate (for anchor calculation)
-    const futureTransactionsQuery = transactionsCollection.query(
+    const futureTransactionsQuery = queryOwned(
+      transactionsCollection,
+      userId,
       Q.where("deleted", false),
       Q.where("date", Q.gt(endDate)),
       Q.sortBy("date", Q.desc)
@@ -179,7 +198,9 @@ export function useTransactionsGrouping(
         Q.sortBy("date", Q.desc),
       ];
 
-      const transfersQuery = transfersCollection.query(
+      const transfersQuery = queryOwned(
+        transfersCollection,
+        userId,
         Q.where("deleted", false),
         Q.where("date", Q.gte(startDate)),
         Q.where("date", Q.lte(endDate)),
@@ -200,21 +221,27 @@ export function useTransactionsGrouping(
       // Fetch transactions based on Income/Expense selection
       if (includesAll || (includesIncome && includesExpense)) {
         // Fetch all transaction types
-        displayTransactions = await transactionsCollection
-          .query(...transactionConditions)
-          .fetch();
+        displayTransactions = await queryOwned(
+          transactionsCollection,
+          userId,
+          ...transactionConditions
+        ).fetch();
       } else if (includesIncome) {
         // Fetch only income
         transactionConditions.push(Q.where("type", "INCOME"));
-        displayTransactions = await transactionsCollection
-          .query(...transactionConditions)
-          .fetch();
+        displayTransactions = await queryOwned(
+          transactionsCollection,
+          userId,
+          ...transactionConditions
+        ).fetch();
       } else if (includesExpense) {
         // Fetch only expense
         transactionConditions.push(Q.where("type", "EXPENSE"));
-        displayTransactions = await transactionsCollection
-          .query(...transactionConditions)
-          .fetch();
+        displayTransactions = await queryOwned(
+          transactionsCollection,
+          userId,
+          ...transactionConditions
+        ).fetch();
       }
       // If only Transfer is selected, displayTransactions stays empty
       return { displayTransactions, displayTransfers };
@@ -247,11 +274,13 @@ export function useTransactionsGrouping(
       // currencies) get a "({currency})" suffix in the transaction list —
       // per spec 026-followup. The map is built once per fetch and reused
       // for every transaction/transfer row.
-      const allAccounts = await database
-        .get<Account>("accounts")
-        .query(Q.where("deleted", Q.notEq(true)))
-        .fetch();
-      const displayNames = buildAccountDisplayNames(allAccounts);
+      const allAccounts = database.get<Account>("accounts");
+      const ownedAccounts = await queryOwned(
+        allAccounts,
+        userId,
+        Q.where("deleted", Q.notEq(true))
+      ).fetch();
+      const displayNames = buildAccountDisplayNames(ownedAccounts);
       const resolveName = (account: { id?: string; name: string }): string =>
         (account.id !== undefined ? displayNames.get(account.id) : undefined) ??
         account.name;
@@ -326,8 +355,7 @@ export function useTransactionsGrouping(
     // because observe() only fires when the set of records matching the query
     // changes (inserts/deletes). observeWithColumns also fires when the
     // specified columns on existing records are updated (e.g. category_id).
-    const txSubscription = transactionsCollection
-      .query()
+    const txSubscription = queryOwned(transactionsCollection, userId)
       .observeWithColumns([
         "category_id",
         "amount",
@@ -341,8 +369,7 @@ export function useTransactionsGrouping(
         performFetch().catch(console.error);
       });
 
-    const transferSubscription = transfersCollection
-      .query()
+    const transferSubscription = queryOwned(transfersCollection, userId)
       .observeWithColumns([
         "amount",
         "from_account_id",
@@ -359,7 +386,14 @@ export function useTransactionsGrouping(
       transferSubscription.unsubscribe();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [period, selectedTypes, searchQuery, refetchTrigger]);
+  }, [
+    period,
+    selectedTypes,
+    searchQuery,
+    refetchTrigger,
+    userId,
+    isResolvingUser,
+  ]);
 
   // 2. Calculate Grouped Data
   const groupedData = useMemo(() => {

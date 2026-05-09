@@ -98,7 +98,7 @@ function RecentTransactionsComponent({
   const { t } = useTranslation("common");
 
   const handleSeeAll = useCallback((): void => {
-    router.push("/(tabs)/transactions");
+    router.push("/(private)/(tabs)/transactions");
   }, []);
 
   const handleAddTransaction = useCallback((): void => {

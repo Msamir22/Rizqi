@@ -7,6 +7,9 @@ import { database, Profile, type CurrencyType } from "@monyvi/db";
 import { SUPPORTED_CURRENCIES } from "@monyvi/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
+import { useCurrentUserId } from "./useCurrentUserId";
+import { queryOwned } from "@/services/user-data-access";
+import { logger } from "@/utils/logger";
 
 interface UsePreferredCurrencyResult {
   /** The user's preferred display currency */
@@ -28,12 +31,31 @@ export function usePreferredCurrency(): UsePreferredCurrencyResult {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { showToast } = useToast();
+  const { userId, isResolvingUser } = useCurrentUserId();
 
-  // Observe the first profile record
   useEffect(() => {
+    if (isResolvingUser) {
+      setProfile(null);
+      setIsLoading(true);
+      return;
+    }
+
+    if (!userId) {
+      setProfile(null);
+      setIsLoading(false);
+      return;
+    }
+
+    setProfile(null);
+    setIsLoading(true);
+
     const collection = database.get<Profile>("profiles");
-    const subscription = collection
-      .query(Q.where("deleted", false), Q.take(1))
+    const subscription = queryOwned(
+      collection,
+      userId,
+      Q.where("deleted", false),
+      Q.take(1)
+    )
       .observe()
       .subscribe({
         next: (profiles) => {
@@ -41,13 +63,15 @@ export function usePreferredCurrency(): UsePreferredCurrencyResult {
           setIsLoading(false);
         },
         error: (err: unknown) => {
-          console.error("Error observing profile:", err);
+          logger.error("preferredCurrency.profile.observe.failed", err, {
+            userId,
+          });
           setIsLoading(false);
         },
       });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [userId, isResolvingUser]);
 
   const preferredCurrency = useMemo<CurrencyType>(() => {
     if (profile?.preferredCurrency) {
@@ -74,7 +98,7 @@ export function usePreferredCurrency(): UsePreferredCurrencyResult {
         });
       });
     } catch (error) {
-      console.error("Failed to save currency preference:", error);
+      logger.error("preferredCurrency.save.failed", error);
       showToast({
         type: "error",
         title: "Error",

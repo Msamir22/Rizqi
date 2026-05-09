@@ -27,10 +27,6 @@ const mockExchangeCodeForSession = jest.fn();
 const mockSignUpWithEmail = jest.fn();
 const mockSignInWithEmailFn = jest.fn();
 const mockResetPasswordForEmail = jest.fn();
-const mockReadIntroLocaleOverride = jest.fn();
-const mockSetPendingSignupLocale = jest.fn();
-const mockSetPendingOAuthSignupLocale = jest.fn();
-const mockGetCurrentLanguage = jest.fn();
 
 jest.mock("@/services/supabase", () => ({
   signInWithOAuthProvider: (...args: unknown[]): Promise<unknown> =>
@@ -53,20 +49,6 @@ jest.mock("@/services/supabase", () => ({
 
 jest.mock("@/constants/auth-constants", () => ({
   AUTH_REDIRECT_URL: "monyvi://auth-callback",
-}));
-
-jest.mock("@/services/intro-flag-service", () => ({
-  readIntroLocaleOverride: (): Promise<"en" | "ar" | null> =>
-    mockReadIntroLocaleOverride() as Promise<"en" | "ar" | null>,
-  setPendingSignupLocale: (...args: unknown[]): Promise<void> =>
-    mockSetPendingSignupLocale(...args) as Promise<void>,
-  setPendingOAuthSignupLocale: (...args: unknown[]): Promise<void> =>
-    mockSetPendingOAuthSignupLocale(...args) as Promise<void>,
-}));
-
-jest.mock("@/i18n/changeLanguage", () => ({
-  getCurrentLanguage: (): "en" | "ar" =>
-    mockGetCurrentLanguage() as "en" | "ar",
 }));
 
 const mockOpenAuthSession = jest.fn<
@@ -125,8 +107,6 @@ describe("auth-service - signInWithOAuth", () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
-    mockReadIntroLocaleOverride.mockResolvedValue(null);
-    mockGetCurrentLanguage.mockReturnValue("en");
   });
 
   afterEach(() => {
@@ -146,7 +126,6 @@ describe("auth-service - signInWithOAuth", () => {
 
       const result = await signInWithOAuth("google");
 
-      expect(mockSetPendingOAuthSignupLocale).toHaveBeenCalledWith("en");
       expect(mockSignInWithOAuthProvider).toHaveBeenCalledWith("google");
       expect(mockOpenAuthSession).toHaveBeenCalledWith(
         "https://accounts.google.com/o/oauth2/auth?...",
@@ -170,7 +149,6 @@ describe("auth-service - signInWithOAuth", () => {
 
       const result = await signInWithOAuth("google");
 
-      expect(mockSetPendingOAuthSignupLocale).toHaveBeenCalledWith("en");
       expect(mockExchangeCodeForSession).toHaveBeenCalledWith("pkce-auth-code");
       expect(mockSetSession).not.toHaveBeenCalled();
       expect(result).toEqual({ success: true });
@@ -290,86 +268,24 @@ describe("auth-service - signInWithOAuth", () => {
 describe("auth-service - signUpWithEmail", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockReadIntroLocaleOverride.mockResolvedValue(null);
-    mockGetCurrentLanguage.mockReturnValue("en");
   });
 
   it("delegates to supabase signUpWithEmail and returns result", async () => {
     mockSignUpWithEmail.mockResolvedValue({
-      success: true,
+      user: { id: "user-1" },
+      session: null,
       needsVerification: true,
-      userId: "signup-user-1",
-      userCreatedAt: "2026-05-05T10:00:00.000Z",
+      error: null,
     });
 
     const result = await signUpWithEmail("test@example.com", "password123");
 
     expect(mockSignUpWithEmail).toHaveBeenCalledWith(
       "test@example.com",
-      "password123",
-      { preferredLanguage: "en" }
-    );
-    expect(mockSetPendingSignupLocale).toHaveBeenCalledWith(
-      "test@example.com",
-      "en",
-      "signup-user-1",
-      "2026-05-05T10:00:00.000Z"
-    );
-    expect(result.needsVerification).toBe(true);
-    expect(result.success).toBe(true);
-  });
-
-  it("passes the pre-auth Arabic language override into signup metadata", async () => {
-    mockReadIntroLocaleOverride.mockResolvedValueOnce("ar");
-    mockSignUpWithEmail.mockResolvedValue({
-      success: true,
-      needsVerification: true,
-      userId: "signup-user-2",
-      userCreatedAt: "2026-05-05T10:00:00.000Z",
-    });
-
-    await signUpWithEmail("arabic@example.com", "password123");
-
-    expect(mockSignUpWithEmail).toHaveBeenCalledWith(
-      "arabic@example.com",
-      "password123",
-      { preferredLanguage: "ar" }
-    );
-    expect(mockSetPendingSignupLocale).toHaveBeenCalledWith(
-      "arabic@example.com",
-      "ar",
-      "signup-user-2",
-      "2026-05-05T10:00:00.000Z"
-    );
-  });
-
-  it("falls back to the current Arabic app language for signup metadata", async () => {
-    mockReadIntroLocaleOverride.mockResolvedValueOnce(null);
-    mockGetCurrentLanguage.mockReturnValueOnce("ar");
-    mockSignUpWithEmail.mockResolvedValue({
-      success: true,
-      needsVerification: true,
-      userId: "signup-user-3",
-      userCreatedAt: "2026-05-05T10:00:00.000Z",
-    });
-
-    const result = await signUpWithEmail(
-      "arabic-fallback@example.com",
       "password123"
     );
-
-    expect(mockSignUpWithEmail).toHaveBeenCalledWith(
-      "arabic-fallback@example.com",
-      "password123",
-      { preferredLanguage: "ar" }
-    );
-    expect(mockSetPendingSignupLocale).toHaveBeenCalledWith(
-      "arabic-fallback@example.com",
-      "ar",
-      "signup-user-3",
-      "2026-05-05T10:00:00.000Z"
-    );
-    expect(result.success).toBe(true);
+    expect(result.needsVerification).toBe(true);
+    expect(result.error).toBeNull();
   });
 
   it("returns error result when supabase signUpWithEmail fails", async () => {
@@ -389,10 +305,8 @@ describe("auth-service - signUpWithEmail", () => {
 
     expect(mockSignUpWithEmail).toHaveBeenCalledWith(
       "existing@example.com",
-      "password123",
-      { preferredLanguage: "en" }
+      "password123"
     );
-    expect(mockSetPendingSignupLocale).not.toHaveBeenCalled();
     expect(result.success).toBe(false);
     expect(result.error).toEqual(mockError);
   });

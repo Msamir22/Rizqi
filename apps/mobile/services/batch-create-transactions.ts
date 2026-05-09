@@ -34,6 +34,7 @@ import type { ReviewableTransaction } from "@monyvi/logic";
 import { Q, type Model } from "@nozbe/watermelondb";
 import { ensureCashAccount } from "./account-service";
 import { getCurrentUserId } from "./supabase";
+import { queryOwned } from "./user-data-access";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -229,9 +230,11 @@ export async function batchCreateTransactions<T extends ReviewableTransaction>(
 
   const accountIds = Array.from(balanceDeltas.keys());
   if (accountIds.length > 0) {
-    const accounts = await accountsCollection
-      .query(Q.where("id", Q.oneOf(accountIds)))
-      .fetch();
+    const accounts = await queryOwned(
+      accountsCollection,
+      userId,
+      Q.where("id", Q.oneOf(accountIds))
+    ).fetch();
 
     const existingIds = new Set(accounts.map((a) => a.id));
     const missingIds = accountIds.filter((id) => !existingIds.has(id));

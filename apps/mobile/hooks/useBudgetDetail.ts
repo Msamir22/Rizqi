@@ -24,6 +24,13 @@ import {
   getSpendingForBudget,
   getCategoryAndSubcategoryIds,
 } from "@/services/budget-service";
+import {
+  observeOwnedById,
+  queryAccessibleCategories,
+  queryOwned,
+} from "@/services/user-data-access";
+import { logger } from "@/utils/logger";
+import { runUserScopedEffect, useCurrentUserId } from "./useCurrentUserId";
 
 // =============================================================================
 // TYPES
@@ -64,6 +71,7 @@ const RECENT_TRANSACTIONS_LIMIT = 6;
 
 export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
   const [budget, setBudget] = useState<Budget | null>(null);
+  const { userId, isResolvingUser } = useCurrentUserId();
   // F-04: Consolidated into a single state object to avoid cascading re-renders
   const [state, setState] = useState<{
     readonly metrics: SpendingMetrics | null;
@@ -87,28 +95,51 @@ export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
   useEffect(() => {
     if (!budgetId) return;
 
-    const subscription = database
-      .get<Budget>("budgets")
-      .findAndObserve(budgetId)
-      .subscribe(
-        (b) => setBudget(b),
-        () => {
-          // Budget not found or deleted
-          setBudget(null);
-          setState({
-            metrics: null,
-            daysLeft: 0,
-            daysElapsed: 1,
-            weeklySpending: [],
-            subcategoryBreakdown: [],
-            recentTransactions: [],
-            isLoading: false,
-          });
-        }
-      );
+    return runUserScopedEffect({
+      userId,
+      isResolvingUser,
+      onResolving: () => {
+        setBudget(null);
+        setState((prev) => ({ ...prev, isLoading: true }));
+      },
+      onSignedOut: () => {
+        setBudget(null);
+        setState({
+          metrics: null,
+          daysLeft: 0,
+          daysElapsed: 1,
+          weeklySpending: [],
+          subcategoryBreakdown: [],
+          recentTransactions: [],
+          isLoading: false,
+        });
+      },
+      onAuthenticated: (currentUserId) => {
+        const subscription = observeOwnedById<Budget>(
+          database.get<Budget>("budgets"),
+          budgetId,
+          currentUserId
+        ).subscribe({
+          next: (b) => setBudget(b),
+          error: (err: unknown) => {
+            logger.error("budgetDetail.budget.observe.failed", err);
+            setBudget(null);
+            setState({
+              metrics: null,
+              daysLeft: 0,
+              daysElapsed: 1,
+              weeklySpending: [],
+              subcategoryBreakdown: [],
+              recentTransactions: [],
+              isLoading: false,
+            });
+          },
+        });
 
-    return () => subscription.unsubscribe();
-  }, [budgetId]);
+        return () => subscription.unsubscribe();
+      },
+    });
+  }, [budgetId, userId, isResolvingUser]);
 
   // ── Compute all metrics when budget changes ──
   useEffect(() => {
@@ -119,83 +150,88 @@ export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
       if (!budget) return;
       setState((prev) => ({ ...prev, isLoading: true }));
 
-      const bounds = getCurrentPeriodBounds(
-        budget.period,
-        budget.periodStart,
-        budget.periodEnd
-      );
-
-      // Spending
-      const spent = await getSpendingForBudget(budget);
-      const elapsed = getDaysElapsed(bounds.start);
-      const left = getDaysLeft(bounds.end);
-      const computedMetrics = computeSpendingMetrics(
-        spent,
-        budget.amount,
-        elapsed,
-        budget.alertThreshold
-      );
-
-      // Weekly buckets
-      const buckets = getWeeklyBuckets(bounds);
-      const weeklyData: WeeklySpendingData[] = [];
-
-      // Resolve category IDs once for reuse in scoped queries
-      const categoryIds =
-        budget.isCategoryBudget && budget.categoryId
-          ? await getCategoryAndSubcategoryIds(budget.categoryId)
-          : null;
-
-      for (const bucket of buckets) {
-        const conditions = [
-          Q.where("deleted", false),
-          Q.where("type", "EXPENSE"),
-          Q.where("date", Q.gte(bucket.weekStart.getTime())),
-          Q.where("date", Q.lte(bucket.weekEnd.getTime())),
-        ];
-
-        // Scope to category tree for category budgets
-        if (categoryIds) {
-          conditions.push(Q.where("category_id", Q.oneOf(categoryIds)));
-        }
-
-        const allTxs = await database
-          .get<Transaction>("transactions")
-          .query(Q.and(...conditions))
-          .fetch();
-
-        // Exclude paused-window transactions
-        const activeTxs = filterExcludedTransactions(
-          allTxs,
-          budget.typedPauseIntervals,
-          budget.pausedAtMs
+      try {
+        const bounds = getCurrentPeriodBounds(
+          budget.period,
+          budget.periodStart,
+          budget.periodEnd
         );
 
-        weeklyData.push({
-          bucket,
-          amount: activeTxs.reduce((sum, tx) => sum + tx.amount, 0),
-        });
-      }
+        // Spending
+        const spent = await getSpendingForBudget(budget);
+        const elapsed = getDaysElapsed(bounds.start);
+        const left = getDaysLeft(bounds.end);
+        const computedMetrics = computeSpendingMetrics(
+          spent,
+          budget.amount,
+          elapsed,
+          budget.alertThreshold
+        );
 
-      // Subcategory breakdown (for category budgets)
-      let breakdown: SubcategorySpending[] = [];
-      if (budget.isCategoryBudget && budget.categoryId && spent > 0) {
-        const children = await database
-          .get<Category>("categories")
-          .query(
+        // Weekly buckets
+        const buckets = getWeeklyBuckets(bounds);
+        const weeklyData: WeeklySpendingData[] = [];
+
+        // Resolve category IDs once for reuse in scoped queries
+        const categoryIds =
+          budget.isCategoryBudget && budget.categoryId
+            ? await getCategoryAndSubcategoryIds(budget.categoryId)
+            : null;
+
+        for (const bucket of buckets) {
+          const conditions = [
+            Q.where("deleted", false),
+            Q.where("type", "EXPENSE"),
+            Q.where("date", Q.gte(bucket.weekStart.getTime())),
+            Q.where("date", Q.lte(bucket.weekEnd.getTime())),
+          ];
+
+          // Scope to category tree for category budgets
+          if (categoryIds) {
+            conditions.push(Q.where("category_id", Q.oneOf(categoryIds)));
+          }
+
+          const transactionsCollection =
+            database.get<Transaction>("transactions");
+          const weeklyTransactions = await queryOwned(
+            transactionsCollection,
+            budget.userId,
+            Q.and(...conditions)
+          ).fetch();
+
+          // Exclude paused-window transactions
+          const activeTxs = filterExcludedTransactions(
+            weeklyTransactions,
+            budget.typedPauseIntervals,
+            budget.pausedAtMs
+          );
+
+          weeklyData.push({
+            bucket,
+            amount: activeTxs.reduce((sum, tx) => sum + tx.amount, 0),
+          });
+        }
+
+        // Subcategory breakdown (for category budgets)
+        let breakdown: SubcategorySpending[] = [];
+        if (budget.isCategoryBudget && budget.categoryId && spent > 0) {
+          const children = await queryAccessibleCategories(
+            database.get<Category>("categories"),
+            budget.userId,
             Q.and(
               Q.where("parent_id", budget.categoryId),
               Q.where("deleted", false)
             )
-          )
-          .fetch();
+          ).fetch();
 
-        for (const child of children) {
-          // M1 fix: Include L3 (grandchild) transactions in subcategory breakdown
-          const childCategoryIds = await getCategoryAndSubcategoryIds(child.id);
-          const allChildTxs = await database
-            .get<Transaction>("transactions")
-            .query(
+          for (const child of children) {
+            // M1 fix: Include L3 (grandchild) transactions in subcategory breakdown
+            const childCategoryIds = await getCategoryAndSubcategoryIds(
+              child.id
+            );
+            const allChildTxs = await queryOwned(
+              database.get<Transaction>("transactions"),
+              budget.userId,
               Q.and(
                 Q.where("deleted", false),
                 Q.where("type", "EXPENSE"),
@@ -203,73 +239,85 @@ export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
                 Q.where("date", Q.gte(bounds.start.getTime())),
                 Q.where("date", Q.lte(bounds.end.getTime()))
               )
-            )
-            .fetch();
+            ).fetch();
 
-          // Exclude paused-window transactions
-          const activeChildTxs = filterExcludedTransactions(
-            allChildTxs,
-            budget.typedPauseIntervals,
-            budget.pausedAtMs
-          );
+            // Exclude paused-window transactions
+            const activeChildTxs = filterExcludedTransactions(
+              allChildTxs,
+              budget.typedPauseIntervals,
+              budget.pausedAtMs
+            );
 
-          const childAmount = activeChildTxs.reduce(
-            (sum, tx) => sum + tx.amount,
-            0
-          );
-          if (childAmount > 0) {
-            breakdown.push({
-              categoryId: child.id,
-              categoryName: child.displayName,
-              amount: childAmount,
-              percentage: (childAmount / spent) * 100,
-            });
+            const childAmount = activeChildTxs.reduce(
+              (sum, tx) => sum + tx.amount,
+              0
+            );
+            if (childAmount > 0) {
+              breakdown.push({
+                categoryId: child.id,
+                categoryName: child.displayName,
+                amount: childAmount,
+                percentage: (childAmount / spent) * 100,
+              });
+            }
           }
+
+          // Sort by amount descending
+          breakdown = breakdown.sort((a, b) => b.amount - a.amount);
         }
 
-        // Sort by amount descending
-        breakdown = breakdown.sort((a, b) => b.amount - a.amount);
-      }
+        // Recent transactions — over-fetch to compensate for pause-window filtering
+        const recentConditions = [
+          Q.where("deleted", false),
+          Q.where("type", "EXPENSE"),
+          Q.where("date", Q.gte(bounds.start.getTime())),
+          Q.where("date", Q.lte(bounds.end.getTime())),
+        ];
 
-      // Recent transactions — over-fetch to compensate for pause-window filtering
-      const recentConditions = [
-        Q.where("deleted", false),
-        Q.where("type", "EXPENSE"),
-        Q.where("date", Q.gte(bounds.start.getTime())),
-        Q.where("date", Q.lte(bounds.end.getTime())),
-      ];
+        // Scope to category tree for category budgets
+        if (categoryIds) {
+          recentConditions.push(Q.where("category_id", Q.oneOf(categoryIds)));
+        }
 
-      // Scope to category tree for category budgets
-      if (categoryIds) {
-        recentConditions.push(Q.where("category_id", Q.oneOf(categoryIds)));
-      }
-
-      const recentRaw = await database
-        .get<Transaction>("transactions")
-        .query(
+        const recentRaw = await queryOwned(
+          database.get<Transaction>("transactions"),
+          budget.userId,
           ...recentConditions,
           Q.sortBy("date", Q.desc),
           Q.take(RECENT_TRANSACTIONS_LIMIT * 2)
-        )
-        .fetch();
+        ).fetch();
 
-      // Exclude paused-window transactions, then trim to the desired limit
-      const recentFiltered = filterExcludedTransactions(
-        recentRaw,
-        budget.typedPauseIntervals,
-        budget.pausedAtMs
-      ).slice(0, RECENT_TRANSACTIONS_LIMIT);
+        // Exclude paused-window transactions, then trim to the desired limit
+        const recentFiltered = filterExcludedTransactions(
+          recentRaw,
+          budget.typedPauseIntervals,
+          budget.pausedAtMs
+        ).slice(0, RECENT_TRANSACTIONS_LIMIT);
 
-      if (!cancelled) {
-        setState({
-          metrics: computedMetrics,
-          daysLeft: left,
-          daysElapsed: elapsed,
-          weeklySpending: weeklyData,
-          subcategoryBreakdown: breakdown,
-          recentTransactions: recentFiltered,
-          isLoading: false,
-        });
+        if (!cancelled) {
+          setState({
+            metrics: computedMetrics,
+            daysLeft: left,
+            daysElapsed: elapsed,
+            weeklySpending: weeklyData,
+            subcategoryBreakdown: breakdown,
+            recentTransactions: recentFiltered,
+            isLoading: false,
+          });
+        }
+      } catch (error: unknown) {
+        logger.error("budgetDetail.compute.failed", error);
+        if (!cancelled) {
+          setState({
+            metrics: null,
+            daysLeft: 0,
+            daysElapsed: 1,
+            weeklySpending: [],
+            subcategoryBreakdown: [],
+            recentTransactions: [],
+            isLoading: false,
+          });
+        }
       }
     }
 

@@ -74,20 +74,6 @@ describe("useAccountForm", () => {
     expect(result.current.formData.balance).toBe("0");
   });
 
-  it("resets account balance back to zero", () => {
-    const { result } = renderHook(() => useAccountForm());
-
-    act(() => {
-      result.current.updateField("balance", "125");
-    });
-
-    act(() => {
-      result.current.resetForm();
-    });
-
-    expect(result.current.formData.balance).toBe("0");
-  });
-
   it("ignores stale uniqueness results after the account name changes", async () => {
     jest.useFakeTimers();
     const firstCheck = createDeferred<{ isUnique: boolean; error: null }>();

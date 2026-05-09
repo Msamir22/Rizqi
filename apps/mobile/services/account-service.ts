@@ -100,10 +100,14 @@ async function readPreferredLanguageForUser(
   userId: string
 ): Promise<PreferredLanguageCode | null> {
   try {
-    const profiles = await database
-      .get<Profile>("profiles")
-      .query(Q.where("user_id", userId), Q.where("deleted", Q.notEq(true)))
-      .fetch();
+    const profilesCollection = database.get<Profile>("profiles");
+
+    const profiles = await queryOwned(
+      profilesCollection,
+      userId,
+      Q.where("deleted", Q.notEq(true))
+    ).fetch();
+
     const language = profiles[0]?.preferredLanguage;
     return isSupportedLanguage(language) ? language : null;
   } catch (error: unknown) {
@@ -146,15 +150,14 @@ export async function createCashAccountWithinWriter(
 ): Promise<{ readonly accountId: string; readonly created: boolean }> {
   const normalizedUserId = userId.trim();
 
-  const existing = await accountsCollection
-    .query(
-      Q.where("type", CASH_ACCOUNT_TYPE),
-      Q.where("user_id", normalizedUserId),
-      Q.where("currency", currency),
-      Q.where("deleted", Q.notEq(true)),
-      Q.sortBy("created_at", Q.asc)
-    )
-    .fetch();
+  const existing = await queryOwned(
+    accountsCollection,
+    normalizedUserId,
+    Q.where("type", CASH_ACCOUNT_TYPE),
+    Q.where("currency", currency),
+    Q.where("deleted", Q.notEq(true)),
+    Q.sortBy("created_at", Q.asc)
+  ).fetch();
 
   if (existing.length > 0) {
     return { accountId: existing[0].id, created: false };
@@ -376,14 +379,13 @@ export async function findCashAccount(userId: string): Promise<string | null> {
     }
 
     const accountsCollection = database.get<Account>("accounts");
-    const existing = await accountsCollection
-      .query(
-        Q.where("type", CASH_ACCOUNT_TYPE),
-        Q.where("user_id", normalizedUserId),
-        Q.where("deleted", Q.notEq(true)),
-        Q.sortBy("created_at", Q.asc)
-      )
-      .fetch();
+    const existing = await queryOwned(
+      accountsCollection,
+      normalizedUserId,
+      Q.where("type", CASH_ACCOUNT_TYPE),
+      Q.where("deleted", Q.notEq(true)),
+      Q.sortBy("created_at", Q.asc)
+    ).fetch();
 
     return existing.length > 0 ? existing[0].id : null;
   } catch (error: unknown) {

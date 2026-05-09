@@ -13,14 +13,14 @@ import {
 } from "./drilldown";
 import { palette } from "@/constants/colors";
 import { useAllCategories } from "@/context/CategoriesContext";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { useCategoryDrilldownTransactions } from "@/hooks/useCategoryDrilldownTransactions";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import { useTheme } from "@/context/ThemeContext";
-import { database, Transaction } from "@monyvi/db";
-import { formatCurrency, getYearMonthBoundaries } from "@monyvi/logic";
+import { formatCurrency } from "@monyvi/logic";
 import { Ionicons } from "@expo/vector-icons";
-import { Q } from "@nozbe/watermelondb";
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { PieChart } from "react-native-gifted-charts";
 import { useTranslation } from "react-i18next";
 
@@ -36,42 +36,23 @@ export function CategoryDrilldownCard(): React.JSX.Element {
   const currentYear = new Date().getFullYear();
 
   // State
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const { categories, isLoading: categoriesLoading } = useAllCategories();
-  const [transactionsLoading, setTransactionsLoading] = useState(true);
+  const { transactions, isLoading: transactionsLoading } =
+    useCategoryDrilldownTransactions(currentYear, currentMonth);
   const [currentParentId, setCurrentParentId] = useState<string | null>(null);
+  const rootBreadcrumb = useMemo<BreadcrumbItem>(
+    () => ({ id: null, name: t("all_categories"), level: 0 }),
+    [t]
+  );
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([
-    { id: null, name: "All Categories", level: 0 },
+    rootBreadcrumb,
   ]);
 
   const isLoading = transactionsLoading || categoriesLoading;
 
-  // Load transactions only (categories come from context)
   useEffect(() => {
-    const { startDate, endDate } = getYearMonthBoundaries(
-      currentYear,
-      currentMonth
-    );
-
-    const subscription = database
-      .get<Transaction>("transactions")
-      .query(
-        Q.where("deleted", false),
-        Q.where("date", Q.gte(startDate)),
-        Q.where("date", Q.lte(endDate)),
-        Q.where("type", "EXPENSE")
-      )
-      .observe()
-      .subscribe({
-        next: (result) => {
-          setTransactions(result);
-          setTransactionsLoading(false);
-        },
-        error: (err) => console.error("Error loading transactions:", err),
-      });
-
-    return () => subscription.unsubscribe();
-  }, [currentYear, currentMonth]);
+    setBreadcrumbs((prev) => [rootBreadcrumb, ...prev.slice(1)]);
+  }, [rootBreadcrumb]);
 
   // Build category map with children info
   const categoryMap = useMemo(() => {
@@ -226,7 +207,19 @@ export function CategoryDrilldownCard(): React.JSX.Element {
       {/* Content */}
       {isLoading ? (
         <View className="h-[250px] items-center justify-center">
-          <ActivityIndicator size="small" color={palette.nileGreen[500]} />
+          <Skeleton width={176} height={176} borderRadius={88} />
+          <Skeleton
+            width="72%"
+            height={16}
+            borderRadius={6}
+            style={{ marginTop: 20 }}
+          />
+          <Skeleton
+            width="56%"
+            height={14}
+            borderRadius={6}
+            style={{ marginTop: 10 }}
+          />
         </View>
       ) : currentLevelData.length === 0 ? (
         <View className="py-8 items-center">
