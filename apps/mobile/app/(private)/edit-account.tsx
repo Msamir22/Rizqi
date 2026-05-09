@@ -51,6 +51,14 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { EditAccountSkeleton } from "@/components/edit-account/EditAccountSkeleton";
 
+const PRIMARY_BUTTON_SHADOW_STYLE = {
+  shadowColor: "rgba(5, 150, 105, 0.2)",
+  shadowOffset: { width: 0, height: 8 },
+  shadowOpacity: 1,
+  shadowRadius: 12,
+  elevation: 8,
+} as const;
+
 // =============================================================================
 // Component
 // =============================================================================
@@ -162,9 +170,13 @@ function EditAccountForm({
   const [showDeleteSheet, setShowDeleteSheet] = useState(false);
 
   const { performUpdate, isSubmitting } = useUpdateAccount();
-  const { performDelete, isDeleting, linkedCounts } = useDeleteAccount(
-    account.id
-  );
+  const {
+    performDelete,
+    isDeleting,
+    linkedCounts,
+    isLoadingCounts,
+    loadCounts,
+  } = useDeleteAccount(account.id);
 
   // Look up display values for read-only fields
   const accountTypeLabel = useMemo(() => {
@@ -454,7 +466,10 @@ function EditAccountForm({
               {t("delete_account_warning")}
             </Text>
             <TouchableOpacity
-              onPress={() => setShowDeleteSheet(true)}
+              onPress={() => {
+                setShowDeleteSheet(true);
+                loadCounts();
+              }}
               activeOpacity={0.7}
               className="flex-row items-center justify-center py-3 rounded-xl border border-red-300 dark:border-red-700"
             >
@@ -486,7 +501,7 @@ function EditAccountForm({
             disabled={!isDirty || !isValid || isCheckingUniqueness}
             variant="primary"
             size="lg"
-            className="shadow-xl shadow-nileGreen-600/20"
+            style={PRIMARY_BUTTON_SHADOW_STYLE}
           />
         </View>
       )}
@@ -513,6 +528,7 @@ function EditAccountForm({
         accountBalance={account.balance}
         currencyCode={currency}
         linkedRecords={linkedCounts}
+        isLoadingCounts={isLoadingCounts}
         isDeleting={isDeleting}
       />
     </KeyboardAvoidingView>
