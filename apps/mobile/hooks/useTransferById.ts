@@ -5,6 +5,9 @@
 
 import { database, Transfer } from "@monyvi/db";
 import { useEffect, useState } from "react";
+import { observeOwnedById } from "@/services/user-data-access";
+import { runUserScopedEffect, useCurrentUserId } from "./useCurrentUserId";
+import { logger } from "@/utils/logger";
 
 interface UseTransferByIdResult {
   readonly transfer: Transfer | null;
@@ -21,6 +24,7 @@ interface UseTransferByIdResult {
 export function useTransferById(id: string): UseTransferByIdResult {
   const [transfer, setTransfer] = useState<Transfer | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const { userId, isResolvingUser } = useCurrentUserId();
 
   useEffect(() => {
     if (!id) {
@@ -29,25 +33,41 @@ export function useTransferById(id: string): UseTransferByIdResult {
       return;
     }
 
-    setIsLoading(true);
-
-    const collection = database.get<Transfer>("transfers");
-    const subscription = collection.findAndObserve(id).subscribe({
-      next: (record) => {
-        setTransfer(record);
-        setIsLoading(false);
+    return runUserScopedEffect({
+      userId,
+      isResolvingUser,
+      onResolving: () => {
+        setTransfer(null);
+        setIsLoading(true);
       },
-      error: (err) => {
-        console.error("[useTransferById] Observation error:", err);
+      onSignedOut: () => {
         setTransfer(null);
         setIsLoading(false);
       },
-    });
+      onAuthenticated: (currentUserId) => {
+        setIsLoading(true);
 
-    return (): void => {
-      subscription.unsubscribe();
-    };
-  }, [id]);
+        const collection = database.get<Transfer>("transfers");
+        const subscription = observeOwnedById<Transfer>(
+          collection,
+          id,
+          currentUserId
+        ).subscribe({
+          next: (record) => {
+            setTransfer(record);
+            setIsLoading(false);
+          },
+          error: (err) => {
+            logger.error("transferById.observe.failed", err);
+            setTransfer(null);
+            setIsLoading(false);
+          },
+        });
+
+        return () => subscription.unsubscribe();
+      },
+    });
+  }, [id, userId, isResolvingUser]);
 
   return { transfer, isLoading };
 }

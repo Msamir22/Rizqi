@@ -27,6 +27,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Platform } from "react-native";
 import { useMicTooltip } from "@/context/MicTooltipContext";
 import { setSetupGuideCompleted as persistSetupGuideCompleted } from "@/services/profile-service";
+import { queryOwned } from "@/services/user-data-access";
+import { useCurrentUserId } from "./useCurrentUserId";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -78,6 +80,7 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
   const [voiceLoaded, setVoiceLoaded] = useState(false);
   const [budgetLoaded, setBudgetLoaded] = useState(false);
   const [smsLoaded, setSmsLoaded] = useState(Platform.OS !== "android");
+  const { userId, isResolvingUser } = useCurrentUserId();
 
   // Mic tooltip state lives in `MicTooltipContext` (mounted at
   // `(tabs)/_layout.tsx`) so the tooltip overlay can render at the
@@ -105,9 +108,30 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
 
   // ── Observe profile for setupGuideCompleted ──
   useEffect(() => {
-    const subscription = database
-      .get<Profile>("profiles")
-      .query(Q.where("deleted", false), Q.take(1))
+    if (isResolvingUser) {
+      setProfile(null);
+      setSetupGuideCompleted(null);
+      setProfileLoaded(false);
+      return;
+    }
+
+    if (!userId) {
+      setProfile(null);
+      setSetupGuideCompleted(null);
+      setProfileLoaded(true);
+      return;
+    }
+
+    setProfile(null);
+    setSetupGuideCompleted(null);
+    setProfileLoaded(false);
+
+    const subscription = queryOwned(
+      database.get<Profile>("profiles"),
+      userId,
+      Q.where("deleted", false),
+      Q.take(1)
+    )
       .observeWithColumns(["setup_guide_completed"])
       .subscribe({
         next: (profiles) => {
@@ -123,7 +147,7 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [userId, isResolvingUser]);
 
   // Default to `true` (dismissed) while the profile observer is still
   // settling — `setupGuideCompleted` is `null` until the first
@@ -135,9 +159,27 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
 
   // ── Observe bank accounts ──
   useEffect(() => {
-    const subscription = database
-      .get<Account>("accounts")
-      .query(Q.where("deleted", false), Q.where("type", "BANK"))
+    if (isResolvingUser) {
+      setHasBankAccount(false);
+      setBankLoaded(false);
+      return;
+    }
+
+    if (!userId) {
+      setHasBankAccount(false);
+      setBankLoaded(true);
+      return;
+    }
+
+    setHasBankAccount(false);
+    setBankLoaded(false);
+
+    const subscription = queryOwned(
+      database.get<Account>("accounts"),
+      userId,
+      Q.where("deleted", false),
+      Q.where("type", "BANK")
+    )
       .observeCount()
       .subscribe({
         next: (count) => {
@@ -151,13 +193,31 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [userId, isResolvingUser]);
 
   // ── Observe voice transactions (source = "VOICE") ──
   useEffect(() => {
-    const subscription = database
-      .get<Transaction>("transactions")
-      .query(Q.where("deleted", Q.notEq(true)), Q.where("source", "VOICE"))
+    if (isResolvingUser) {
+      setHasVoiceTransaction(false);
+      setVoiceLoaded(false);
+      return;
+    }
+
+    if (!userId) {
+      setHasVoiceTransaction(false);
+      setVoiceLoaded(true);
+      return;
+    }
+
+    setHasVoiceTransaction(false);
+    setVoiceLoaded(false);
+
+    const subscription = queryOwned(
+      database.get<Transaction>("transactions"),
+      userId,
+      Q.where("deleted", false),
+      Q.where("source", "VOICE")
+    )
       .observeCount()
       .subscribe({
         next: (count) => {
@@ -171,13 +231,31 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [userId, isResolvingUser]);
 
   // ── Observe active budgets ──
   useEffect(() => {
-    const subscription = database
-      .get<Budget>("budgets")
-      .query(Q.where("deleted", false), Q.where("status", "ACTIVE"))
+    if (isResolvingUser) {
+      setHasBudget(false);
+      setBudgetLoaded(false);
+      return;
+    }
+
+    if (!userId) {
+      setHasBudget(false);
+      setBudgetLoaded(true);
+      return;
+    }
+
+    setHasBudget(false);
+    setBudgetLoaded(false);
+
+    const subscription = queryOwned(
+      database.get<Budget>("budgets"),
+      userId,
+      Q.where("deleted", false),
+      Q.where("status", "ACTIVE")
+    )
       .observeCount()
       .subscribe({
         next: (count) => {
@@ -191,7 +269,7 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [userId, isResolvingUser]);
 
   // ── Observe SMS-imported transactions (Android only) ──
   useEffect(() => {
@@ -200,9 +278,27 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       return;
     }
 
-    const subscription = database
-      .get<Transaction>("transactions")
-      .query(Q.where("deleted", false), Q.where("sms_body_hash", Q.notEq(null)))
+    if (isResolvingUser) {
+      setHasSmsImported(false);
+      setSmsLoaded(false);
+      return;
+    }
+
+    if (!userId) {
+      setHasSmsImported(false);
+      setSmsLoaded(true);
+      return;
+    }
+
+    setHasSmsImported(false);
+    setSmsLoaded(false);
+
+    const subscription = queryOwned(
+      database.get<Transaction>("transactions"),
+      userId,
+      Q.where("deleted", false),
+      Q.where("sms_body_hash", Q.notEq(null))
+    )
       .observeCount()
       .subscribe({
         next: (count) => {
@@ -216,7 +312,7 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [userId, isResolvingUser]);
 
   // ── Build steps array (no cash_account — always complete) ──
   const steps: readonly OnboardingStep[] = useMemo(() => {

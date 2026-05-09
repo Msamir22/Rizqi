@@ -74,8 +74,17 @@ temp/
 
 .codex
 
-.agents
+# Codex generated/local skills, ignored by default
 
-AGENTS.md
+.agents/*
+!.agents/skills/
+.agents/skills/*
+!.agents/skills/source-command-code-review/
+!.agents/skills/source-command-code-review/**
+!.agents/skills/gpt-taste/
+!.agents/skills/gpt-taste/**
+
+
+
 
 skills-lock.json

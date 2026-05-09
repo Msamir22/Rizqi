@@ -7,7 +7,7 @@ import {
   RecurringPayment,
   TransactionType,
 } from "@monyvi/db";
-import { getCurrentUserId } from "./supabase";
+import { getCurrentUserDataScope } from "@/services/user-data-access";
 import { createTransaction } from "./transaction-service";
 
 export interface RecurringPaymentData {
@@ -29,18 +29,14 @@ export interface RecurringPaymentData {
 export async function createRecurringPayment(
   data: RecurringPaymentData
 ): Promise<RecurringPayment> {
-  const userId = await getCurrentUserId();
-  if (!userId) {
-    // i18n-ignore — developer-facing error
-    throw new Error("User not authenticated");
-  }
+  const scope = await getCurrentUserDataScope();
 
   const recurringCollection =
     database.get<RecurringPayment>("recurring_payments");
 
   return await database.write(async () => {
     return await recurringCollection.create((rec) => {
-      rec.userId = userId;
+      rec.userId = scope.userId;
       rec.name = data.name;
       rec.amount = Math.abs(data.amount);
       rec.currency = data.currency;
@@ -67,11 +63,12 @@ export async function updateRecurringPaymentNextDueDate(
   currentDueDate: Date,
   frequency: string
 ): Promise<void> {
+  const scope = await getCurrentUserDataScope();
   const recurringCollection =
     database.get<RecurringPayment>("recurring_payments");
 
   await database.write(async () => {
-    const payment = await recurringCollection.find(paymentId);
+    const payment = await scope.findOwned(recurringCollection, paymentId);
     await payment.update((record) => {
       record.nextDueDate = calculateNextDueDate(currentDueDate, frequency);
     });

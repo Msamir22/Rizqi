@@ -7,7 +7,11 @@ import { Account, BankDetails, database } from "@monyvi/db";
 import { calculateAccountsTotalBalance, convertCurrency } from "@monyvi/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
-import { observeOwnedById, queryOwned } from "@/services/user-data-access";
+import {
+  observeOwnedById,
+  queryChildrenOfOwnedParents,
+  queryOwned,
+} from "@/services/user-data-access";
 import { useCurrentUserId } from "./useCurrentUserId";
 import { logger } from "../utils/logger";
 import { useMarketRates } from "./useMarketRates";
@@ -220,12 +224,13 @@ export function useBankAccounts(): UseBankAccountsResult {
     setIsLoadingDetails(true);
     setDetailsError(null);
 
-    const bankDetailsCollection = database.get<BankDetails>("bank_details");
-    const subscription = bankDetailsCollection
-      .query(
-        Q.where("account_id", Q.oneOf(accountIds)),
-        Q.where("deleted", false)
-      )
+    const subscription = queryChildrenOfOwnedParents(
+      database.get<BankDetails>("bank_details"),
+      accounts,
+      userId,
+      "account_id",
+      Q.where("deleted", false)
+    )
       .observe()
       .subscribe({
         next: (result) => {

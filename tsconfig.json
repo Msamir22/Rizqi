@@ -1,3 +1,27 @@
 {
-  "extends": "./tsconfig.base.json"
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "jsx": "react-jsx",
+    "paths": {
+      "@/*": ["apps/mobile/*"],
+      "@monyvi/logic": ["packages/logic/src/index.ts"],
+      "@monyvi/db": ["packages/db/src/index.ts"]
+    }
+  },
+  "include": [
+    "apps/mobile/**/*.ts",
+    "apps/mobile/**/*.tsx",
+    "packages/**/*.ts",
+    "specs/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "tmp",
+    "dist",
+    "apps/mobile/.expo",
+    "apps/mobile/android",
+    "apps/mobile/ios",
+    "supabase/functions"
+  ]
 }

@@ -19,8 +19,8 @@
     "mobile-prebuild": "npm run prebuild -w @monyvi/mobile",
     "mobile:doctor": "npm run doctor -w @monyvi/mobile",
     "mobile:install-check": "npm run install-check -w @monyvi/mobile",
-    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
-    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
+    "lint": "eslint . --rulesdir scripts/eslint-rules --ext .ts,.tsx,.js,.jsx",
+    "lint:fix": "eslint . --rulesdir scripts/eslint-rules --ext .ts,.tsx,.js,.jsx --fix",
     "android": "expo run:android",
     "start:android": "npm run start -w @monyvi/mobile",
     "ios": "expo run:ios",
@@ -47,18 +47,19 @@
     "@nozbe/watermelondb": "^0.28.0"
   },
   "devDependencies": {
-    "nx": "22.3.3",
-    "prettier": "^3.2.5",
-    "typescript": "^5.4.0",
-    "eslint": "^8.57.0",
-    "@typescript-eslint/parser": "^8.0.0",
+    "@nx/eslint": "22.3.3",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
-    "eslint-plugin-import": "^2.29.1",
-    "eslint-import-resolver-typescript": "^3.6.1",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
+    "eslint-import-resolver-typescript": "^3.6.1",
+    "eslint-plugin-import": "^2.29.1",
     "eslint-plugin-prettier": "^5.1.3",
     "husky": "^9.0.11",
     "lint-staged": "^15.5.2",
-    "supabase": "^2.71.1"
+    "nx": "22.3.3",
+    "prettier": "^3.2.5",
+    "supabase": "^2.71.1",
+    "typescript": "^5.4.0"
   }
 }

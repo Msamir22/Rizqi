@@ -1,0 +1,7 @@
+interface:
+  display_name: "Code Review"
+  short_description: "Review Monyvi branches and fix findings"
+  default_prompt: "Use $source-command-code-review to review the current branch, report blocking findings, and implement the necessary fixes."
+
+policy:
+  allow_implicit_invocation: true

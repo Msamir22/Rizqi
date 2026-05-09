@@ -1,6 +1,7 @@
 import { Account, database, Transaction } from "@monyvi/db";
 import { ParsedVoiceTransaction } from "@monyvi/logic";
-import { getCurrentUserId } from "../services/supabase";
+import { Q } from "@nozbe/watermelondb";
+import { getCurrentUserDataScope } from "../services/user-data-access";
 
 /**
  * Format a transaction date for display.
@@ -44,19 +45,18 @@ export async function createTransactionFromVoice(
   parsed: ParsedVoiceTransaction,
   accountId: string
 ): Promise<Transaction> {
-  const userId = await getCurrentUserId();
-  if (!userId) {
-    // i18n-ignore — developer-facing error
-    throw new Error("User not authenticated");
-  }
-
+  const scope = await getCurrentUserDataScope();
   const transactionsCollection = database.get<Transaction>("transactions");
+  const account = await scope.findOwned(
+    database.get<Account>("accounts"),
+    accountId
+  );
 
   const newTransaction = await database.write(async () => {
     return await transactionsCollection.create((tx) => {
-      tx.userId = userId;
+      tx.userId = scope.userId;
       tx.accountId = accountId;
-      tx.amount = Math.abs(parsed.amount); // Amount is always positive
+      tx.amount = Math.abs(parsed.amount);
       tx.currency = parsed.currency;
       tx.type = parsed.type;
       tx.categoryId = parsed.categoryId;
@@ -64,32 +64,27 @@ export async function createTransactionFromVoice(
       tx.note = parsed.note || undefined;
       tx.date = parsed.date;
       tx.source = "VOICE";
-      tx.isDraft = false; // Voice transactions are confirmed
+      tx.isDraft = false;
       tx.deleted = false;
     });
   });
 
-  // Update account balance — use Math.abs to match the stored amount (line 58).
-  // Without this, a negative AI amount (e.g. -50) would invert the balance direction.
   const isExpense = parsed.type === "EXPENSE";
-  await updateAccountBalance(accountId, Math.abs(parsed.amount), isExpense);
+  await updateAccountBalance(account, Math.abs(parsed.amount), isExpense);
 
   return newTransaction;
 }
 
 /**
- * Update account balance after transaction
+ * Update account balance after transaction.
  */
 async function updateAccountBalance(
-  accountId: string,
+  account: Account,
   amount: number,
   isExpense: boolean
 ): Promise<void> {
-  const accountsCollection = database.get<Account>("accounts");
-
   await database.write(async () => {
     try {
-      const account = await accountsCollection.find(accountId);
       await account.update((acc) => {
         if (isExpense) {
           acc.balance -= amount;
@@ -104,23 +99,16 @@ async function updateAccountBalance(
 }
 
 /**
- * Get default account (first cash account or create one)
+ * Get default account (first cash account or create one).
  */
 // TODO : Remove or update
 export async function getOrCreateDefaultAccount(): Promise<Account> {
-  const userId = await getCurrentUserId();
-  if (!userId) {
-    // i18n-ignore — developer-facing error
-    throw new Error("User not authenticated");
-  }
-
+  const scope = await getCurrentUserDataScope();
   const accountsCollection = database.get<Account>("accounts");
-  const { Q } = await import("@nozbe/watermelondb");
 
-  // Try to find existing cash account for this user
-  const cashAccounts = await accountsCollection
-    .query(
-      Q.where("user_id", userId),
+  const cashAccounts = await scope
+    .queryOwned(
+      accountsCollection,
       Q.where("type", "CASH"),
       Q.where("deleted", false)
     )
@@ -130,10 +118,9 @@ export async function getOrCreateDefaultAccount(): Promise<Account> {
     return cashAccounts[0];
   }
 
-  // Create default cash account
   return await database.write(async () => {
     return await accountsCollection.create((acc) => {
-      acc.userId = userId;
+      acc.userId = scope.userId;
       acc.name = "Cash";
       acc.type = "CASH";
       acc.currency = "EGP";

@@ -79,7 +79,7 @@ export function useCreateAccount(): UseCreateAccountResult {
           return;
         }
 
-        router.replace("/(tabs)/accounts");
+        router.replace("/(private)/(tabs)/accounts");
       } catch (err) {
         const error = err instanceof Error ? err : new Error("Unknown error");
         logger.error("createAccount_flow_failed", error);

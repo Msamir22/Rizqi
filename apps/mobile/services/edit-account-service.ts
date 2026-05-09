@@ -32,6 +32,7 @@ import { logger } from "@/utils/logger";
 import {
   USER_DATA_ACCESS_ERROR_CODES,
   findOwnedById,
+  queryChildrenOfOwnedParent,
   queryOwned,
 } from "./user-data-access";
 
@@ -255,14 +256,13 @@ export async function updateAccountWithinWriter(
 
   // If setting as default, unset any current default for this user
   if (data.isDefault && !existingAccount.isDefault) {
-    const currentDefaults = await accountsCollection
-      .query(
-        Q.where("user_id", existingAccount.userId),
-        Q.where("is_default", true),
-        Q.where("deleted", Q.notEq(true)),
-        Q.where("id", Q.notEq(accountId))
-      )
-      .fetch();
+    const currentDefaults = await queryOwned(
+      accountsCollection,
+      existingAccount.userId,
+      Q.where("is_default", true),
+      Q.where("deleted", Q.notEq(true)),
+      Q.where("id", Q.notEq(accountId))
+    ).fetch();
 
     for (const defaultAccount of currentDefaults) {
       await defaultAccount.update((acc) => {
@@ -372,32 +372,43 @@ export async function deleteAccountWithCascade(
         debtRecords,
         recurringPaymentRecords,
       ] = await Promise.all([
-        database
-          .get<BankDetails>("bank_details")
-          .query(Q.where("account_id", accountId), Q.where("deleted", false))
-          .fetch(),
-        database
-          .get<Transaction>("transactions")
-          .query(Q.where("account_id", accountId), Q.where("deleted", false))
-          .fetch(),
-        database
-          .get<Transfer>("transfers")
-          .query(
-            Q.where("from_account_id", accountId),
-            Q.where("deleted", false)
-          )
-          .fetch(),
-        transfersCollection
-          .query(Q.where("to_account_id", accountId), Q.where("deleted", false))
-          .fetch(),
-        database
-          .get<Debt>("debts")
-          .query(Q.where("account_id", accountId), Q.where("deleted", false))
-          .fetch(),
-        database
-          .get<RecurringPayment>("recurring_payments")
-          .query(Q.where("account_id", accountId), Q.where("deleted", false))
-          .fetch(),
+        queryChildrenOfOwnedParent(
+          database.get<BankDetails>("bank_details"),
+          account,
+          currentUserId,
+          "account_id",
+          Q.where("deleted", false)
+        ).fetch(),
+        queryOwned(
+          database.get<Transaction>("transactions"),
+          currentUserId,
+          Q.where("account_id", accountId),
+          Q.where("deleted", false)
+        ).fetch(),
+        queryOwned(
+          database.get<Transfer>("transfers"),
+          currentUserId,
+          Q.where("from_account_id", accountId),
+          Q.where("deleted", false)
+        ).fetch(),
+        queryOwned(
+          transfersCollection,
+          currentUserId,
+          Q.where("to_account_id", accountId),
+          Q.where("deleted", false)
+        ).fetch(),
+        queryOwned(
+          database.get<Debt>("debts"),
+          currentUserId,
+          Q.where("account_id", accountId),
+          Q.where("deleted", false)
+        ).fetch(),
+        queryOwned(
+          database.get<RecurringPayment>("recurring_payments"),
+          currentUserId,
+          Q.where("account_id", accountId),
+          Q.where("deleted", false)
+        ).fetch(),
       ]);
 
       // Batch all domain soft-deletes into a single write for performance.
@@ -559,7 +570,7 @@ export async function updateAccountWithBalanceAdjustment(
       error instanceof Error
         ? error.message
         : "Unknown error creating balance adjustment transaction";
-    logger.error("createBalanceAdjustmentTransaction_failed", error);
+    logger.error("updateAccountWithBalanceAdjustment_failed", error);
     return { success: false, error: message };
   }
 }

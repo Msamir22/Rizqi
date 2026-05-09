@@ -144,6 +144,25 @@ jest.mock("@monyvi/db", () => ({
   Transaction: {},
 }));
 
+jest.mock("@/services/user-data-access", () => ({
+  getCurrentUserDataScope: jest.fn(() =>
+    Promise.resolve({
+      queryOwned: (
+        collection: {
+          query: (...conditions: readonly unknown[]) => {
+            unsafeFetchRaw: jest.Mock<Promise<readonly unknown[]>, []>;
+            fetch: jest.Mock<Promise<readonly unknown[]>, []>;
+          };
+        },
+        ...conditions: unknown[]
+      ): {
+        unsafeFetchRaw: jest.Mock<Promise<readonly unknown[]>, []>;
+        fetch: jest.Mock<Promise<readonly unknown[]>, []>;
+      } => collection.query(...conditions),
+    })
+  ),
+}));
+
 // ---------------------------------------------------------------------------
 // Import module under test (after mocks)
 // ---------------------------------------------------------------------------
@@ -313,6 +332,19 @@ describe("sms-sync-service", () => {
       expect(mockParseSmsWithAi).toHaveBeenCalledTimes(1);
       expect(result.totalFound).toBe(1);
       expect(result.transactions).toHaveLength(1);
+    });
+
+    it("loads current-user hashes when existing hashes are not supplied", async () => {
+      const userDataAccessMock = jest.requireMock<{
+        getCurrentUserDataScope: jest.Mock;
+      }>("@/services/user-data-access");
+      mockReadSmsInbox.mockResolvedValue([]);
+
+      await scanAndParseSms(defaultOptions());
+
+      expect(userDataAccessMock.getCurrentUserDataScope).toHaveBeenCalledTimes(
+        1
+      );
     });
 
     it("should pass maxCount and minDate to readSmsInbox", async () => {

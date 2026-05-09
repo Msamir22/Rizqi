@@ -12,7 +12,13 @@
  * @module useDeleteAccount
  */
 
-import { database, type Transaction, type Transfer } from "@monyvi/db";
+import {
+  database,
+  type Debt,
+  type RecurringPayment,
+  type Transaction,
+  type Transfer,
+} from "@monyvi/db";
 import { Q } from "@nozbe/watermelondb";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
@@ -24,6 +30,7 @@ import {
   type ServiceResult,
 } from "../services/edit-account-service";
 import { getCurrentUserId } from "../services/supabase";
+import { queryOwned } from "../services/user-data-access";
 import { safeNotificationHaptic } from "../utils/haptics";
 import { logger } from "../utils/logger";
 
@@ -92,41 +99,42 @@ export function useDeleteAccount(accountId: string): UseDeleteAccountResult {
 
     const fetchCounts = async (): Promise<void> => {
       try {
+        const userId = await getCurrentUserId();
+        if (!userId || cancelled) {
+          return;
+        }
+
         const [transactions, transfers, debts, recurringPayments] =
           await Promise.all([
-            database
-              .get<Transaction>("transactions")
-              .query(
-                Q.where("account_id", accountId),
+            queryOwned(
+              database.get<Transaction>("transactions"),
+              userId,
+              Q.where("account_id", accountId),
+              Q.where("deleted", false)
+            ).fetchCount(),
+            queryOwned(
+              database.get<Transfer>("transfers"),
+              userId,
+              Q.and(
+                Q.or(
+                  Q.where("from_account_id", accountId),
+                  Q.where("to_account_id", accountId)
+                ),
                 Q.where("deleted", false)
               )
-              .fetchCount(),
-            database
-              .get<Transfer>("transfers")
-              .query(
-                Q.and(
-                  Q.or(
-                    Q.where("from_account_id", accountId),
-                    Q.where("to_account_id", accountId)
-                  ),
-                  Q.where("deleted", false)
-                )
-              )
-              .fetchCount(),
-            database
-              .get("debts")
-              .query(
-                Q.where("account_id", accountId),
-                Q.where("deleted", false)
-              )
-              .fetchCount(),
-            database
-              .get("recurring_payments")
-              .query(
-                Q.where("account_id", accountId),
-                Q.where("deleted", false)
-              )
-              .fetchCount(),
+            ).fetchCount(),
+            queryOwned(
+              database.get<Debt>("debts"),
+              userId,
+              Q.where("account_id", accountId),
+              Q.where("deleted", false)
+            ).fetchCount(),
+            queryOwned(
+              database.get<RecurringPayment>("recurring_payments"),
+              userId,
+              Q.where("account_id", accountId),
+              Q.where("deleted", false)
+            ).fetchCount(),
           ]);
 
         if (!cancelled) {

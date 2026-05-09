@@ -3,7 +3,8 @@
  * Provides sync status and functions to the app with smart sync intervals
  */
 
-import { database } from "@monyvi/db";
+import { database, type Profile } from "@monyvi/db";
+import { Q } from "@nozbe/watermelondb";
 import {
   createContext,
   ReactNode,
@@ -17,8 +18,8 @@ import {
 import { AppState, AppStateStatus } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import { isAuthenticated as checkIsAuthenticated } from "../services/supabase";
-import { completeInterruptedLogout } from "../services/logout-service";
 import { syncDatabase } from "../services/sync";
+import { queryOwned } from "../services/user-data-access";
 import { logger } from "../utils/logger";
 
 // Sync intervals in milliseconds
@@ -30,6 +31,8 @@ const INITIAL_SYNC_TIMEOUT_MS = 20_000;
 
 /** State machine for the initial pull-sync that gates post-sign-in routing. */
 export type InitialSyncState = "in-progress" | "success" | "failed" | "timeout";
+
+type ShouldApplyState = () => boolean;
 
 interface SyncContextValue {
   isSyncing: boolean;
@@ -45,12 +48,14 @@ interface SyncContextValue {
 
 const SyncContext = createContext<SyncContextValue | null>(null);
 
+const shouldAlwaysApplyState = (): boolean => true;
+
 interface SyncProviderProps {
   children: ReactNode;
 }
 
 export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [isSyncing, setIsSyncing] = useState(false);
   const [isInitialSync, setIsInitialSync] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
@@ -62,67 +67,91 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
     useState<InitialSyncState>("in-progress");
 
   const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const bootRunIdRef = useRef(0);
 
-  const sync = useCallback(async (forceFullSync = false): Promise<void> => {
-    // Check if authenticated before syncing
-    const authenticated = await checkIsAuthenticated();
-    if (!authenticated) {
-      return;
-    }
+  const sync = useCallback(
+    async (
+      forceFullSync = false,
+      shouldApplyState: ShouldApplyState = shouldAlwaysApplyState
+    ): Promise<void> => {
+      // Check if authenticated before syncing
+      const authenticated = await checkIsAuthenticated();
+      if (!authenticated || !shouldApplyState()) {
+        return;
+      }
 
-    setIsSyncing(true);
-    setSyncError(null);
+      setIsSyncing(true);
+      setSyncError(null);
 
-    try {
-      // Concurrency guard is handled inside syncDatabase (module-level lock in sync.ts)
-      await syncDatabase(database, forceFullSync);
-      setLastSyncedAt(new Date());
-    } catch (error) {
-      const syncErr = error instanceof Error ? error : new Error("Sync failed");
-      setSyncError(syncErr);
-      throw syncErr;
-    } finally {
-      setIsSyncing(false);
-    }
-  }, []);
+      try {
+        // Concurrency guard is handled inside syncDatabase (module-level lock in sync.ts)
+        await syncDatabase(database, forceFullSync);
+        if (!shouldApplyState()) {
+          return;
+        }
+        setLastSyncedAt(new Date());
+      } catch (error) {
+        const syncErr =
+          error instanceof Error ? error : new Error("Sync failed");
+        if (shouldApplyState()) {
+          setSyncError(syncErr);
+        }
+        throw syncErr;
+      } finally {
+        if (shouldApplyState()) {
+          setIsSyncing(false);
+        }
+      }
+    },
+    []
+  );
 
   /**
    * Runs the initial sync with a 20-second timeout race.
    * Returns the final InitialSyncState.
    */
-  const runInitialSync = useCallback(async (): Promise<InitialSyncState> => {
-    setInitialSyncState("in-progress");
-
-    let syncResult: InitialSyncState = "success";
-    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
-
-    try {
-      await Promise.race([
-        sync(true),
-        new Promise<never>((_resolve, reject) => {
-          timeoutHandle = setTimeout(
-            () => reject(new Error("initial-sync-timeout")),
-            INITIAL_SYNC_TIMEOUT_MS
-          );
-        }),
-      ]);
-    } catch (error) {
-      syncResult =
-        error instanceof Error && error.message === "initial-sync-timeout"
-          ? "timeout"
-          : "failed";
-    } finally {
-      // Always clear the timer — otherwise the losing branch of Promise.race
-      // leaks a pending timer that fires 20s later with an unhandled rejection
-      // on the detached Promise (fires after Android/iOS wake-ups too).
-      if (timeoutHandle !== null) {
-        clearTimeout(timeoutHandle);
+  const runInitialSync = useCallback(
+    async (
+      shouldApplyState: ShouldApplyState = shouldAlwaysApplyState
+    ): Promise<InitialSyncState> => {
+      if (shouldApplyState()) {
+        setInitialSyncState("in-progress");
       }
-    }
 
-    setInitialSyncState(syncResult);
-    return syncResult;
-  }, [sync]);
+      let syncResult: InitialSyncState = "success";
+      let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+
+      try {
+        await Promise.race([
+          sync(true, shouldApplyState),
+          new Promise<never>((_resolve, reject) => {
+            timeoutHandle = setTimeout(
+              () => reject(new Error("initial-sync-timeout")),
+              INITIAL_SYNC_TIMEOUT_MS
+            );
+          }),
+        ]);
+      } catch (error) {
+        syncResult =
+          error instanceof Error && error.message === "initial-sync-timeout"
+            ? "timeout"
+            : "failed";
+      } finally {
+        // Always clear the timer — otherwise the losing branch of Promise.race
+        // leaks a pending timer that fires 20s later with an unhandled rejection
+        // on the detached Promise (fires after Android/iOS wake-ups too).
+        if (timeoutHandle !== null) {
+          clearTimeout(timeoutHandle);
+        }
+      }
+
+      if (shouldApplyState()) {
+        setInitialSyncState(syncResult);
+      }
+      return syncResult;
+    },
+    [sync]
+  );
 
   /** Re-trigger the initial sync from the retry screen. */
   const retryInitialSync = useCallback(async (): Promise<InitialSyncState> => {
@@ -204,59 +233,87 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
 
   // Initial sync on mount + data cleared detection
   useEffect(() => {
-    const initialSync = async (): Promise<void> => {
-      // FR-012: Complete any interrupted logout from a force-close
-      await completeInterruptedLogout(database);
+    const bootRunId = bootRunIdRef.current + 1;
+    bootRunIdRef.current = bootRunId;
+    const bootUserId = user?.id;
+    let isMounted = true;
+    const shouldContinue = (): boolean =>
+      isMounted && bootRunIdRef.current === bootRunId;
 
+    const initialSync = async (): Promise<void> => {
       // Check user is authenticated before syncing
       if (!isAuthenticated) {
-        setupSyncInterval(true);
-        setInitialSyncState("success");
+        if (shouldContinue()) {
+          setupSyncInterval(true);
+          setInitialSyncState("success");
+        }
         return;
       }
 
       // Check if data was cleared (empty local DB but authenticated)
-      const accountsCollection = database.get("accounts");
-      const count = await accountsCollection.query().fetchCount();
+      const userId = bootUserId;
+      if (!userId) {
+        if (shouldContinue()) {
+          setInitialSyncState("failed");
+        }
+        return;
+      }
 
-      if (count === 0) {
+      const profilesCollection = database.get<Profile>("profiles");
+      const currentUserProfileCount = await queryOwned(
+        profilesCollection,
+        userId,
+        Q.where("deleted", false)
+      ).fetchCount();
+
+      if (!shouldContinue()) {
+        return;
+      }
+
+      if (currentUserProfileCount === 0) {
         setIsInitialSync(true);
-        await runInitialSync();
-        setIsInitialSync(false);
+        await runInitialSync(shouldContinue);
+        if (shouldContinue()) {
+          setIsInitialSync(false);
+        }
       } else {
-        // Non-empty DB — data already exists, so the app is fully usable
-        // offline. Mark the initial-sync gate as "success" immediately so
-        // the routing gate unblocks, then run the background sync
-        // non-awaited. Previously this path `await`ed `sync()`, which on a
-        // slow network could leave `initialSyncState === "in-progress"`
-        // well past the 20s timeout and violate FR-006 for returning users.
+        // Current-user profile exists locally, so the route gate can decide
+        // offline. Mark the initial-sync gate as "success" immediately and
+        // refresh the rest of the user's data in the background.
         setInitialSyncState("success");
-        sync().catch((error: unknown) => {
+        sync(false, shouldContinue).catch((error: unknown) => {
+          if (!shouldContinue()) {
+            return;
+          }
           // Background sync failure is non-fatal; regular sync-interval retries
           // will recover. Log so it is diagnosable but don't flip the gate.
           logger.warn(
             "sync.backgroundRefreshOnBoot.failed",
-            error instanceof Error ? { message: error.message } : { error }
+            getSafeThrownLog(error)
           );
         });
       }
 
       // Set up initial interval (app starts active)
-      setupSyncInterval(true);
+      if (shouldContinue()) {
+        setupSyncInterval(true);
+      }
     };
 
     initialSync().catch(() => {
-      setInitialSyncState("failed");
+      if (shouldContinue()) {
+        setInitialSyncState("failed");
+      }
     });
 
     // Cleanup interval on unmount
     return () => {
+      isMounted = false;
       if (syncIntervalRef.current) {
         clearInterval(syncIntervalRef.current);
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated]);
+  }, [isAuthenticated, runInitialSync, setupSyncInterval, sync, user?.id]);
 
   const value = useMemo<SyncContextValue>(
     () => ({
@@ -291,4 +348,27 @@ export function useSync(): SyncContextValue {
     throw new Error("useSync must be used within a SyncProvider");
   }
   return context;
+}
+
+function getSafeThrownLog(error: unknown): {
+  readonly message: string;
+  readonly type?: string;
+  readonly preview?: string;
+} {
+  if (error instanceof Error) {
+    return { message: error.message };
+  }
+
+  if (typeof error === "string") {
+    return {
+      message: "non-error thrown",
+      type: "string",
+      preview: error.slice(0, 120),
+    };
+  }
+
+  return {
+    message: "non-error thrown",
+    type: typeof error,
+  };
 }

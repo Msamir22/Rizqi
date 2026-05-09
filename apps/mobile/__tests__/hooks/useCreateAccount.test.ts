@@ -173,7 +173,9 @@ describe("useCreateAccount", () => {
     });
 
     expect(mockRouterBack).not.toHaveBeenCalled();
-    expect(mockRouterReplace).toHaveBeenCalledWith("/(tabs)/accounts");
+    expect(mockRouterReplace).toHaveBeenCalledWith(
+      "/(private)/(tabs)/accounts"
+    );
   });
 
   it("uses localized success toast text without emojis", async () => {

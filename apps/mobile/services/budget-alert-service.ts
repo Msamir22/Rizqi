@@ -26,6 +26,7 @@ import {
   resetAlertFiredLevel,
   getCategoryAndSubcategoryIds,
 } from "./budget-service";
+import { queryOwned } from "./user-data-access";
 
 // =============================================================================
 // TYPES
@@ -67,10 +68,12 @@ export async function checkBudgetAlerts(
   if (transaction.type !== "EXPENSE") return null;
 
   // Find all active budgets that match this transaction
-  const budgets = await database
-    .get<Budget>("budgets")
-    .query(Q.and(Q.where("deleted", false), Q.where("status", "ACTIVE")))
-    .fetch();
+  const budgets = await queryOwned(
+    database.get<Budget>("budgets"),
+    transaction.userId,
+    Q.where("deleted", false),
+    Q.where("status", "ACTIVE")
+  ).fetch();
 
   // Filter to budgets that match the transaction's category (including descendants)
   const matchingBudgets: Budget[] = [];

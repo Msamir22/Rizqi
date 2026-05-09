@@ -18,6 +18,10 @@ jest.mock("@monyvi/db", () => ({
   },
 }));
 
+jest.mock("../../services/supabase", () => ({
+  getCurrentUserId: (): Promise<string> => Promise.resolve("user-1"),
+}));
+
 describe("sms-account-matcher - matchAccountCore", () => {
   const baseDate = new Date("2026-01-01T00:00:00Z");
 

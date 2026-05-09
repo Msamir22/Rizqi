@@ -1,46 +1,29 @@
 /**
  * @file SyncProvider.test.tsx
- * @description Unit tests for SyncProvider's new initialSyncState and retryInitialSync.
- *
- * Tests the state machine: in-progress → success | failed | timeout,
- * the 20-second timeout race, and retryInitialSync().
+ * @description Unit tests for SyncProvider's initialSyncState and retryInitialSync.
  */
 
+import { act, render, waitFor } from "@testing-library/react-native";
 import React from "react";
-
-// ---------------------------------------------------------------------------
-// Test renderer utilities
-// ---------------------------------------------------------------------------
-
-interface ReactTestRendererInstance {
-  unmount: () => void;
-}
-
-interface ReactTestRendererModule {
-  act: (...args: unknown[]) => unknown;
-  create: (element: React.ReactElement) => ReactTestRendererInstance;
-}
-
-// Lazy-load react-test-renderer so it doesn't drag `react-native` into the
-// module cache before our AppState mock (from __tests__/setup.ts) is applied.
-// Without this, `AppState.addEventListener` comes out as undefined when
-// SyncProvider's useEffect runs and the test crashes.
-function getRTR(): ReactTestRendererModule {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-return
-  return require("react-test-renderer");
-}
-
-const actSync = ((fn: () => void) => getRTR().act(fn)) as (
-  fn: () => void
-) => void;
-
-// ---------------------------------------------------------------------------
-// Mocks
-// ---------------------------------------------------------------------------
 
 const mockSyncDatabase = jest.fn();
 const mockCheckIsAuthenticated = jest.fn();
-const mockCompleteInterruptedLogout = jest.fn();
+const mockFetchProfileCount = jest.fn();
+const mockDbGet = jest.fn();
+
+interface MockAuthState {
+  readonly isAuthenticated: boolean;
+  readonly user?: { readonly id?: string };
+}
+
+const mockUseAuth = jest.fn<MockAuthState, []>(() => ({
+  isAuthenticated: true,
+  user: { id: "current-user" },
+}));
+const mockWhere = jest.fn((column: string, value: unknown) => ({
+  column,
+  value,
+}));
 
 jest.mock("@/services/sync", () => ({
   syncDatabase: (...args: unknown[]): Promise<unknown> =>
@@ -52,29 +35,24 @@ jest.mock("@/services/supabase", () => ({
     mockCheckIsAuthenticated() as Promise<boolean>,
 }));
 
-jest.mock("@/services/logout-service", () => ({
-  completeInterruptedLogout: (...args: unknown[]): Promise<void> =>
-    mockCompleteInterruptedLogout(...args) as Promise<void>,
-}));
-
 jest.mock("@monyvi/db", () => ({
   database: {
-    get: jest.fn(() => ({
-      query: () => ({ fetchCount: jest.fn().mockResolvedValue(0) }),
-    })),
+    get: (table: string): unknown => mockDbGet(table),
   },
 }));
 
 jest.mock("@/context/AuthContext", () => ({
-  useAuth: () => ({ isAuthenticated: true }),
+  useAuth: () => mockUseAuth(),
 }));
 
-// Import after mocks
-import { SyncProvider, useSync } from "../../providers/SyncProvider";
+jest.mock("@nozbe/watermelondb", () => ({
+  Q: {
+    where: (column: string, value: unknown): unknown =>
+      mockWhere(column, value),
+  },
+}));
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+import { SyncProvider, useSync } from "../../providers/SyncProvider";
 
 interface SyncContextSnapshot {
   initialSyncState: string;
@@ -88,13 +66,13 @@ function renderAndCapture(): {
   const resultRef =
     React.createRef() as React.MutableRefObject<SyncContextSnapshot>;
 
-  const CaptureComponent = (): React.JSX.Element | null => {
+  function CaptureComponent(): null {
     const { initialSyncState, retryInitialSync } = useSync();
     resultRef.current = { initialSyncState, retryInitialSync };
     return null;
-  };
+  }
 
-  const renderer = getRTR().create(
+  const renderer = render(
     React.createElement(
       SyncProvider,
       null,
@@ -102,97 +80,119 @@ function renderAndCapture(): {
     )
   );
 
-  return { result: resultRef, unmount: () => renderer.unmount() };
+  return { result: resultRef, unmount: renderer.unmount };
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
 describe("SyncProvider initialSyncState", () => {
-  beforeEach(() => {
+  let lastUnmount: (() => void) | null = null;
+
+  beforeEach((): void => {
     jest.clearAllMocks();
     jest.useFakeTimers();
     mockCheckIsAuthenticated.mockResolvedValue(true);
-    mockCompleteInterruptedLogout.mockResolvedValue(undefined);
+    mockFetchProfileCount.mockResolvedValue(0);
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      user: { id: "current-user" },
+    });
+    mockDbGet.mockReturnValue({
+      query: jest.fn(() => ({ fetchCount: mockFetchProfileCount })),
+    });
   });
 
-  afterEach(() => {
+  afterEach((): void => {
+    lastUnmount?.();
+    lastUnmount = null;
     jest.clearAllTimers();
     jest.useRealTimers();
   });
 
-  it('starts with initialSyncState "in-progress"', () => {
-    mockSyncDatabase.mockReturnValue(new Promise(() => {})); // never resolves
-    const { result } = renderAndCapture();
+  async function advancePastInitialSyncTimeout(): Promise<void> {
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(20_500);
+    });
+  }
+
+  async function waitForInitialSyncState(
+    result: React.MutableRefObject<SyncContextSnapshot>,
+    expectedState: string
+  ): Promise<void> {
+    await waitFor(() =>
+      expect(result.current?.initialSyncState).toBe(expectedState)
+    );
+  }
+
+  it('starts with initialSyncState "in-progress"', (): void => {
+    mockFetchProfileCount.mockReturnValue(new Promise(() => {}));
+    mockSyncDatabase.mockReturnValue(new Promise(() => {}));
+    const { result, unmount } = renderAndCapture();
+    lastUnmount = unmount;
     expect(result.current.initialSyncState).toBe("in-progress");
   });
 
-  // Helper — flush pending microtasks without running every timer. We can't
-  // use `jest.runAllTimersAsync()` here: SyncProvider's effect also schedules
-  // a 15-minute setInterval, and runAllTimers re-fires it forever (test
-  // hangs). Instead we advance past the 20s sync-timeout boundary only.
-  async function flushInitialSync(): Promise<void> {
-    // Advance just past the 20s race — enough to settle both resolve and
-    // reject branches of Promise.race without triggering the 15-min interval.
-    await jest.advanceTimersByTimeAsync(20_500);
-    // Flush any remaining microtask continuations after the race settles
-    // (e.g. the `.catch` handler in runInitialSync that sets the final state).
-    for (let i = 0; i < 5; i++) {
-      await Promise.resolve();
-    }
-  }
-
-  it('transitions to "success" when sync completes within timeout', async () => {
+  it('transitions to "success" when sync completes within timeout', async (): Promise<void> => {
     mockSyncDatabase.mockResolvedValue(undefined);
     const { result } = renderAndCapture();
 
-    await flushInitialSync();
-    actSync(() => {
-      // No-op - just trigger a React update
-    });
+    await waitForInitialSyncState(result, "success");
 
     expect(result.current.initialSyncState).toBe("success");
   });
 
-  // TODO(024): this test is order-dependent in fake-timer mode — passes
-  // alone, fails after the "success" case runs first because a tick of the
-  // 15-min setInterval leaks microtasks that prevent the failure handler
-  // from settling in time. Revisit with a dedicated test-utility that
-  // isolates SyncProvider's effect from its interval.
-  it.skip('transitions to "failed" when sync throws before timeout', async () => {
+  it("checks the current user's profile instead of accounts before trusting local startup data", async (): Promise<void> => {
+    mockFetchProfileCount.mockResolvedValue(1);
+    mockSyncDatabase.mockResolvedValue(undefined);
+    const { result } = renderAndCapture();
+
+    await waitForInitialSyncState(result, "success");
+
+    expect(mockDbGet).toHaveBeenCalledWith("profiles");
+    expect(mockWhere).toHaveBeenCalledWith("user_id", "current-user");
+    expect(mockWhere).toHaveBeenCalledWith("deleted", false);
+    expect(mockSyncDatabase).toHaveBeenCalledWith(expect.anything(), false);
+    expect(result.current.initialSyncState).toBe("success");
+  });
+
+  it('transitions to "failed" when auth is true but the user id is missing', async (): Promise<void> => {
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      user: {},
+    });
+    mockSyncDatabase.mockResolvedValue(undefined);
+    const { result } = renderAndCapture();
+
+    await waitForInitialSyncState(result, "failed");
+
+    expect(mockDbGet).not.toHaveBeenCalledWith("profiles");
+    expect(mockSyncDatabase).not.toHaveBeenCalled();
+    expect(result.current.initialSyncState).toBe("failed");
+  });
+
+  it('transitions to "failed" when sync throws before timeout', async (): Promise<void> => {
     mockSyncDatabase.mockRejectedValue(new Error("Network error"));
     const { result } = renderAndCapture();
 
-    for (let i = 0; i < 10; i++) {
-      if (result.current?.initialSyncState === "failed") break;
-      await flushInitialSync();
-    }
-    actSync(() => {
-      // No-op - just trigger a React update
-    });
+    await waitForInitialSyncState(result, "failed");
 
     expect(result.current.initialSyncState).toBe("failed");
   });
 
-  // TODO(024): Like the "failed" case above, this test is order-dependent
-  // in fake-timer mode. Revisit with a test-utility that isolates
-  // SyncProvider's initial-sync Promise.race from its 15-min setInterval.
-  it.skip('transitions to "timeout" when sync takes longer than 20 seconds', async () => {
+  it('transitions to "timeout" when sync takes longer than 20 seconds', async (): Promise<void> => {
     mockSyncDatabase.mockReturnValue(new Promise(() => {}));
-    const { result } = renderAndCapture();
+    const { result, unmount } = renderAndCapture();
+    lastUnmount = unmount;
 
-    await flushInitialSync();
-    actSync(() => {
-      // Trigger a React update so the captured ref sees the latest state.
-    });
+    await advancePastInitialSyncTimeout();
+    await waitForInitialSyncState(result, "timeout");
 
     expect(result.current.initialSyncState).toBe("timeout");
   });
 
-  it("provides retryInitialSync as a callable function", () => {
+  it("provides retryInitialSync as a callable function", (): void => {
+    mockFetchProfileCount.mockReturnValue(new Promise(() => {}));
     mockSyncDatabase.mockReturnValue(new Promise(() => {}));
-    const { result } = renderAndCapture();
+    const { result, unmount } = renderAndCapture();
+    lastUnmount = unmount;
     expect(typeof result.current.retryInitialSync).toBe("function");
   });
 });

@@ -35,6 +35,7 @@
   "rules": {
     // TypeScript
     "@typescript-eslint/no-non-null-assertion": "warn",
+    "user-scoped-db-access": "error",
 
     // React
     "react/react-in-jsx-scope": "off",

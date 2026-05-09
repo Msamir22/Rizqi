@@ -36,7 +36,9 @@ import {
   assertChildRecordParentOwned,
   assertOwnedRecord,
   findOwnedById,
+  getCurrentUserDataScope,
   getRequiredCurrentUserId,
+  queryChildrenOfOwnedParent,
 } from "@/services/user-data-access";
 
 describe("user-data-access", () => {
@@ -76,6 +78,57 @@ describe("user-data-access", () => {
     await expect(
       findOwnedById(collection, "acc-1", "attacker-user")
     ).rejects.toThrow(USER_DATA_ACCESS_ERROR_CODES.OWNERSHIP_FAILED);
+  });
+
+  it("creates a bound current-user scope for repeated owned reads", async () => {
+    mockGetCurrentUserId.mockResolvedValueOnce(" user-1 ");
+    const collection: MockCollection<MockUserOwnedRecord> = {
+      find: jest.fn((id: string) => Promise.resolve({ id, userId: "user-1" })),
+    };
+
+    const scope = await getCurrentUserDataScope();
+    const record = await scope.findOwned(collection, "acc-1");
+    const secondRecord = await scope.findOwned(collection, "acc-2");
+
+    expect(scope.userId).toBe("user-1");
+    expect(record.id).toBe("acc-1");
+    expect(secondRecord.id).toBe("acc-2");
+    expect(collection.find).toHaveBeenCalledTimes(2);
+    expect(mockGetCurrentUserId).toHaveBeenCalledTimes(1);
+  });
+
+  it("scope denies foreign owned records", async () => {
+    mockGetCurrentUserId.mockResolvedValueOnce("attacker-user");
+    const collection: MockCollection<MockUserOwnedRecord> = {
+      find: jest.fn((_id: string) =>
+        Promise.resolve({ id: "acc-1", userId: "owner-user" })
+      ),
+    };
+
+    const scope = await getCurrentUserDataScope();
+
+    await expect(scope.findOwned(collection, "acc-1")).rejects.toThrow(
+      USER_DATA_ACCESS_ERROR_CODES.OWNERSHIP_FAILED
+    );
+  });
+
+  it("queries children through a verified owned parent", () => {
+    const query = jest.fn();
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+    const collection = { query } as never;
+    const parent = { id: "acc-1", userId: "user-1" };
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+    const condition = { column: "deleted", value: false } as never;
+
+    queryChildrenOfOwnedParent(
+      collection,
+      parent,
+      "user-1",
+      "account_id",
+      condition
+    );
+
+    expect(query).toHaveBeenCalledTimes(1);
   });
 
   it("allows system categories for any signed-in user", () => {
