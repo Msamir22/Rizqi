@@ -144,8 +144,69 @@ function isBrandTextException(value: string): boolean {
   return BRAND_TEXT_EXCEPTIONS.has(value.trim());
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const SOURCE_IGNORE_MARKER_RE = new RegExp(
+  SOURCE_IGNORE_MARKERS.map(escapeRegExp).join("|")
+);
+
 function hasSourceIgnoreMarker(text: string): boolean {
-  return SOURCE_IGNORE_MARKERS.some((marker) => text.includes(marker));
+  let isInsideBlockComment = false;
+
+  for (const line of text.split("\n")) {
+    let remaining = line;
+
+    while (remaining.length > 0) {
+      if (isInsideBlockComment) {
+        const blockEndIndex = remaining.indexOf("*/");
+        const commentText =
+          blockEndIndex === -1 ? remaining : remaining.slice(0, blockEndIndex);
+        if (SOURCE_IGNORE_MARKER_RE.test(commentText)) return true;
+        if (blockEndIndex === -1) break;
+
+        remaining = remaining.slice(blockEndIndex + 2);
+        isInsideBlockComment = false;
+        continue;
+      }
+
+      const lineCommentIndex = remaining.indexOf("//");
+      const hashCommentIndex = remaining.indexOf("#");
+      const blockStartIndex = remaining.indexOf("/*");
+      const commentStartIndexes = [
+        lineCommentIndex,
+        hashCommentIndex,
+        blockStartIndex,
+      ].filter((index) => index >= 0);
+
+      if (commentStartIndexes.length === 0) break;
+
+      const commentStartIndex = Math.min(...commentStartIndexes);
+      if (
+        commentStartIndex === lineCommentIndex ||
+        commentStartIndex === hashCommentIndex
+      ) {
+        return SOURCE_IGNORE_MARKER_RE.test(remaining.slice(commentStartIndex));
+      }
+
+      const afterBlockStart = remaining.slice(blockStartIndex + 2);
+      const blockEndIndex = afterBlockStart.indexOf("*/");
+      const commentText =
+        blockEndIndex === -1
+          ? afterBlockStart
+          : afterBlockStart.slice(0, blockEndIndex);
+      if (SOURCE_IGNORE_MARKER_RE.test(commentText)) return true;
+      if (blockEndIndex === -1) {
+        isInsideBlockComment = true;
+        break;
+      }
+
+      remaining = afterBlockStart.slice(blockEndIndex + 2);
+    }
+  }
+
+  return false;
 }
 
 // ---------------------------------------------------------------------------

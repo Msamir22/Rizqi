@@ -124,7 +124,7 @@ export default function VoiceReviewScreen(): React.JSX.Element {
         });
 
         // Navigate back to origin tab (FR-024: post-save navigation)
-        router.replace(originTabRoute as never);
+        router.replace(originTabRoute);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         showToast({
@@ -163,7 +163,7 @@ export default function VoiceReviewScreen(): React.JSX.Element {
           {t("no_transactions_to_review")}
         </Text>
         <TouchableOpacity
-          onPress={() => router.replace(originTabRoute as never)}
+          onPress={() => router.replace(originTabRoute)}
           className="mt-6 px-6 py-3 rounded-2xl"
           style={{ backgroundColor: palette.slate[800] }}
         >
@@ -188,7 +188,7 @@ export default function VoiceReviewScreen(): React.JSX.Element {
           label: t("voice_retry"),
           onPress: () => {
             router.replace({
-              pathname: originTabRoute as never,
+              pathname: originTabRoute,
               params: { retry: "true" },
             });
           },

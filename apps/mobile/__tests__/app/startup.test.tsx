@@ -13,22 +13,14 @@
  * - sync=failed  + onboardingCompleted=true  → dashboard (offline-first).
  */
 
+import {
+  act,
+  render,
+  waitFor,
+  type RenderAPI,
+} from "@testing-library/react-native";
 import React from "react";
-
-interface ReactTestRendererInstance {
-  root: {
-    findAllByProps: (m: Record<string, unknown>) => unknown[];
-    findAllByType: (t: unknown) => unknown[];
-  };
-  toJSON: () => unknown;
-  unmount: () => void;
-}
-interface ReactTestRendererModule {
-  create: (el: React.ReactElement) => ReactTestRendererInstance;
-  act: (cb: () => void | Promise<void>) => void;
-}
-// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
-const RTR: ReactTestRendererModule = require("react-test-renderer");
+import { ActivityIndicator } from "react-native";
 
 // =============================================================================
 // Mocks
@@ -173,25 +165,20 @@ function setState(opts: {
   });
 }
 
-function renderGate(): ReactTestRendererInstance {
-  return RTR.create(React.createElement(Index));
+function renderGate(): RenderAPI {
+  return render(React.createElement(Index));
 }
 
-function renderGateWithEffects(): ReactTestRendererInstance {
-  let renderer: ReactTestRendererInstance | undefined;
-  RTR.act(() => {
-    renderer = renderGate();
-  });
-  if (!renderer) throw new Error("renderer not initialised");
-  return renderer;
+function renderGateWithEffects(): RenderAPI {
+  return renderGate();
 }
 
-function findRedirectHref(
-  renderer: ReactTestRendererInstance
-): string | undefined {
-  const hits = renderer.root.findAllByProps({ testID: "redirect" });
-  const node = hits[0] as { props?: { [key: string]: unknown } } | undefined;
-  return node?.props?.["data-href"] as string | undefined;
+function findRedirectHref(renderResult: RenderAPI): string | undefined {
+  const redirect = renderResult.queryByTestId("redirect") as {
+    readonly props: Record<string, unknown>;
+  } | null;
+  const href = redirect?.props["data-href"];
+  return typeof href === "string" ? href : undefined;
 }
 
 // =============================================================================
@@ -220,9 +207,7 @@ describe("(private)/startup.tsx routing gate", () => {
     const renderer = renderGate();
     // No redirect, no retry — just the StartupLoadingView.
     expect(findRedirectHref(renderer)).toBeUndefined();
-    expect(
-      renderer.root.findAllByProps({ testID: "retry-screen" })
-    ).toHaveLength(0);
+    expect(renderer.queryAllByTestId("retry-screen")).toHaveLength(0);
     expect(renderer.toJSON()).not.toBeNull();
   });
 
@@ -230,9 +215,7 @@ describe("(private)/startup.tsx routing gate", () => {
     setState({ syncState: "success", isProfileLoading: true });
     const renderer = renderGate();
     expect(findRedirectHref(renderer)).toBeUndefined();
-    expect(
-      renderer.root.findAllByProps({ testID: "retry-screen" })
-    ).toHaveLength(0);
+    expect(renderer.queryAllByTestId("retry-screen")).toHaveLength(0);
     expect(renderer.toJSON()).not.toBeNull();
   });
 
@@ -243,9 +226,7 @@ describe("(private)/startup.tsx routing gate", () => {
     });
     const renderer = renderGateWithEffects();
     expect(findRedirectHref(renderer)).toBeUndefined();
-    expect(
-      renderer.root.findAllByProps({ testID: "startup-loading" })
-    ).not.toHaveLength(0);
+    expect(renderer.queryAllByTestId("startup-loading")).not.toHaveLength(0);
     expect(mockRouterReplace).toHaveBeenCalledWith("/(private)/(tabs)");
   });
 
@@ -256,9 +237,7 @@ describe("(private)/startup.tsx routing gate", () => {
     });
     const renderer = renderGateWithEffects();
     expect(findRedirectHref(renderer)).toBeUndefined();
-    expect(
-      renderer.root.findAllByProps({ testID: "startup-loading" })
-    ).not.toHaveLength(0);
+    expect(renderer.queryAllByTestId("startup-loading")).not.toHaveLength(0);
     expect(mockRouterReplace).toHaveBeenCalledWith("/onboarding");
   });
 
@@ -268,7 +247,7 @@ describe("(private)/startup.tsx routing gate", () => {
       onboardingCompleted: false,
     });
     const renderer = renderGate();
-    const hits = renderer.root.findAllByProps({ testID: "retry-screen" });
+    const hits = renderer.queryAllByTestId("retry-screen");
     expect(hits.length).toBeGreaterThan(0);
   });
 
@@ -306,16 +285,9 @@ describe("(private)/startup.tsx routing gate", () => {
     // so a `null` here would surface a blank screen — see
     // StartupLoadingView in app/(private)/startup.tsx).
     expect(findRedirectHref(renderer)).toBeUndefined();
+    expect(renderer.queryAllByTestId("retry-screen")).toHaveLength(0);
     expect(
-      renderer.root.findAllByProps({ testID: "retry-screen" })
-    ).toHaveLength(0);
-    // Loader present (ActivityIndicator is rendered).
-    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-    const ActivityIndicator = require("react-native").ActivityIndicator;
-    expect(
-      renderer.root.findAllByType(
-        ActivityIndicator as unknown as React.ComponentType
-      ).length
+      renderer.UNSAFE_getAllByType(ActivityIndicator).length
     ).toBeGreaterThan(0);
   });
 
@@ -323,16 +295,14 @@ describe("(private)/startup.tsx routing gate", () => {
     setState({ syncState: "in-progress", profileNull: true });
     const renderer = renderGate();
     expect(findRedirectHref(renderer)).toBeUndefined();
-    expect(
-      renderer.root.findAllByProps({ testID: "retry-screen" })
-    ).toHaveLength(0);
+    expect(renderer.queryAllByTestId("retry-screen")).toHaveLength(0);
     expect(renderer.toJSON()).not.toBeNull();
   });
 
   it("falls back to retry screen when sync FAILED AND the profile is still null (escape hatch from the race-guard wait)", () => {
     setState({ syncState: "failed", profileNull: true });
     const renderer = renderGate();
-    const hits = renderer.root.findAllByProps({ testID: "retry-screen" });
+    const hits = renderer.queryAllByTestId("retry-screen");
     expect(hits.length).toBeGreaterThan(0);
     expect(findRedirectHref(renderer)).toBeUndefined();
   });
@@ -340,7 +310,7 @@ describe("(private)/startup.tsx routing gate", () => {
   it("falls back to retry screen when sync TIMED OUT AND the profile is still null", () => {
     setState({ syncState: "timeout", profileNull: true });
     const renderer = renderGate();
-    const hits = renderer.root.findAllByProps({ testID: "retry-screen" });
+    const hits = renderer.queryAllByTestId("retry-screen");
     expect(hits.length).toBeGreaterThan(0);
   });
 
@@ -361,29 +331,22 @@ describe("(private)/startup.tsx routing gate", () => {
     setState({ syncState: "success", profileNull: true });
 
     // Wrap initial render in act() so the useEffect that schedules the
-    // grace timer actually runs (in legacy react-test-renderer mode the
-    // effect would otherwise not commit until the next external trigger).
-    let renderer: ReactTestRendererInstance | undefined;
-    RTR.act(() => {
-      renderer = renderGate();
-    });
-    if (!renderer) throw new Error("renderer not initialised");
+    // grace timer is committed before the fake timer advances.
+    const renderer = renderGate();
 
     // Before grace elapses → StartupLoadingView, NO redirect, NO retry.
     expect(findRedirectHref(renderer)).toBeUndefined();
-    expect(
-      renderer.root.findAllByProps({ testID: "retry-screen" })
-    ).toHaveLength(0);
+    expect(renderer.queryAllByTestId("retry-screen")).toHaveLength(0);
 
     // Advance past the 4s grace window so the bounded timer fires AND
     // flush the resulting setState through act() so the tree re-renders.
-    RTR.act(() => {
+    act(() => {
       jest.advanceTimersByTime(5_000);
     });
 
     // After grace → retry screen. NEVER /onboarding — that would skip
     // an already-onboarded user past their data on the next sync.
-    const hits = renderer.root.findAllByProps({ testID: "retry-screen" });
+    const hits = renderer.queryAllByTestId("retry-screen");
     expect(hits.length).toBeGreaterThan(0);
     expect(findRedirectHref(renderer)).toBeUndefined();
   });
@@ -392,7 +355,7 @@ describe("(private)/startup.tsx routing gate", () => {
     setState({ syncState: "failed", onboardingCompleted: false });
     const renderer = renderGate();
 
-    const nodes = renderer.root.findAllByProps({ testID: "retry-screen" });
+    const nodes = renderer.getAllByTestId("retry-screen");
     const node = nodes[0] as { props: { onSignOut?: () => void } } | undefined;
     expect(node).toBeDefined();
 
@@ -408,17 +371,15 @@ describe("(private)/startup.tsx routing gate", () => {
     setState({ syncState: "failed", onboardingCompleted: false });
     const renderer = renderGate();
 
-    const nodes = renderer.root.findAllByProps({ testID: "retry-screen" });
+    const nodes = renderer.getAllByTestId("retry-screen");
     const node = nodes[0] as { props: { onSignOut?: () => void } } | undefined;
     expect(node).toBeDefined();
 
-    RTR.act(() => {
+    act(() => {
       node?.props.onSignOut?.();
     });
-    await Promise.resolve();
-    await Promise.resolve();
 
-    expect(mockPerformLogout).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(mockPerformLogout).toHaveBeenCalledTimes(2));
     expect(mockPerformLogout).toHaveBeenNthCalledWith(
       2,
       expect.anything(),
@@ -438,7 +399,7 @@ describe("(private)/startup.tsx routing gate", () => {
     });
     const renderer = renderGate();
 
-    const nodes = renderer.root.findAllByProps({ testID: "retry-screen" });
+    const nodes = renderer.getAllByTestId("retry-screen");
     const node = nodes[0] as { props: { onRetry?: () => void } } | undefined;
     expect(node).toBeDefined();
 

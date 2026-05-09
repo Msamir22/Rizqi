@@ -14,7 +14,7 @@ import {
   type CurrentUserDataScope,
 } from "@/services/user-data-access";
 
-const INVALID_ACCOUNT_BALANCE_ERROR_CODE = "INVALID_ACCOUNT_BALANCE";
+export const INVALID_ACCOUNT_BALANCE_ERROR_CODE = "INVALID_ACCOUNT_BALANCE";
 export const BALANCE_REVERSAL_ACCOUNT_NOT_FOUND_ERROR_CODE =
   "BALANCE_REVERSAL_ACCOUNT_NOT_FOUND";
 
@@ -355,8 +355,8 @@ export async function batchDeleteDisplayTransactions(
     const batches: Model[] = [];
 
     for (const account of accounts) {
-      const delta = balanceDeltas.get(account.id);
-      if (delta && delta !== 0) {
+      const delta = balanceDeltas.get(account.id) ?? 0;
+      if (delta !== 0) {
         batches.push(
           account.prepareUpdate((a) => {
             const nextBalance = a.balance + delta;
@@ -370,15 +370,23 @@ export async function batchDeleteDisplayTransactions(
     }
 
     for (const item of items) {
-      batches.push(
-        item.prepareUpdate((record) => {
-          record.deleted = true;
-        })
-      );
+      batches.push(prepareSoftDeleteDisplayTransaction(item));
     }
 
     // Execute everything in a single atomic batch
     await database.batch(batches);
+  });
+}
+
+function prepareSoftDeleteDisplayTransaction(item: DisplayTransaction): Model {
+  if (item._type === "transaction") {
+    return item.prepareUpdate((record: Transaction) => {
+      record.deleted = true;
+    });
+  }
+
+  return item.prepareUpdate((record: Transfer) => {
+    record.deleted = true;
   });
 }
 
