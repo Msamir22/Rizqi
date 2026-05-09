@@ -134,8 +134,14 @@ export default function AddAccount(): React.ReactNode {
             accessibilityRole="radiogroup"
           >
             {ACCOUNT_TYPES.map((type) => {
+              const ACCOUNT_TYPE_LABEL_KEYS = {
+                CASH: "type_cash",
+                BANK: "type_bank",
+                DIGITAL_WALLET: "type_digital_wallet",
+              } as const;
+
               const isSelected = formData.accountType === type.id;
-              const accountTypeLabel = t(`type_${type.id.toLowerCase()}`);
+              const accountTypeLabel = t(ACCOUNT_TYPE_LABEL_KEYS[type.id]);
               return (
                 <TouchableOpacity
                   key={type.id}

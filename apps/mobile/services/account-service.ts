@@ -100,10 +100,14 @@ async function readPreferredLanguageForUser(
   userId: string
 ): Promise<PreferredLanguageCode | null> {
   try {
-    const profiles = await database
-      .get<Profile>("profiles")
-      .query(Q.where("user_id", userId), Q.where("deleted", Q.notEq(true)))
-      .fetch();
+    const profilesCollection = database.get<Profile>("profiles");
+
+    const profiles = await queryOwned(
+      profilesCollection,
+      userId,
+      Q.where("deleted", Q.notEq(true))
+    ).fetch();
+
     const language = profiles[0]?.preferredLanguage;
     return isSupportedLanguage(language) ? language : null;
   } catch (error: unknown) {
