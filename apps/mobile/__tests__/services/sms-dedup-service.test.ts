@@ -3,11 +3,11 @@ interface MockQuery {
 }
 
 interface MockCollection {
-  readonly query: jest.Mock<MockQuery, unknown[]>;
+  readonly tableName: string;
 }
 
 let mockFetchCounts: number[] = [];
-const mockQuery = jest.fn<MockQuery, unknown[]>();
+const mockQueryOwned = jest.fn<MockQuery, unknown[]>();
 const mockGet = jest.fn<MockCollection, [string]>();
 
 jest.mock("@monyvi/db", () => ({
@@ -23,19 +23,25 @@ jest.mock("@nozbe/watermelondb", () => ({
   },
 }));
 
+jest.mock("@/services/user-data-access", () => ({
+  getCurrentUserDataScope: jest.fn(() =>
+    Promise.resolve({
+      queryOwned: mockQueryOwned,
+    })
+  ),
+}));
+
 import { hasExistingSmsBodyHash } from "@/services/sms-dedup-service";
 
 describe("sms-dedup-service", () => {
   beforeEach(() => {
     mockFetchCounts = [];
-    mockQuery.mockReset();
-    mockQuery.mockImplementation(() => ({
+    mockQueryOwned.mockReset();
+    mockQueryOwned.mockImplementation(() => ({
       fetchCount: jest.fn(() => Promise.resolve(mockFetchCounts.shift() ?? 0)),
     }));
     mockGet.mockReset();
-    mockGet.mockImplementation(() => ({
-      query: mockQuery,
-    }));
+    mockGet.mockImplementation((tableName: string) => ({ tableName }));
   });
 
   it("returns false when the SMS hash is not found in transactions or transfers", async () => {
