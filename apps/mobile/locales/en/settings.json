@@ -29,6 +29,7 @@
   "no_network_logout": "No internet connection. Please check your network and try again.",
   "logout_error": "Something went wrong while logging out. Please try again.",
   "auto_detect_description": "Automatically detect transactions from new SMS",
+  "notification_permission_required": "Please Enable notifications in device settings to use live SMS detection.",
   "auto_confirm_description": "Skip review and auto-add detected transactions",
   "rescan_title": "Full Re-scan",
   "rescan_message": "This will scan all SMS messages from scratch. Previously scanned messages will be automatically skipped.",

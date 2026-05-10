@@ -203,7 +203,7 @@ async function handleNotificationActionResponse(
 
   const notificationId = response.notification.request.identifier;
   const notificationKey =
-    data.transactionData.smsBodyHash ||
+    data.transactionData.smsBodyHash ??
     response.notification.request.identifier;
 
   if (!markNotificationKeyHandled(notificationKey)) {

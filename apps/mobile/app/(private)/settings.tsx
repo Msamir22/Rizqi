@@ -117,7 +117,7 @@ export default function SettingsScreen(): React.JSX.Element {
         showToast({
           type: "warning",
           title: t("notifications"),
-          message: t("auto_detect_description"),
+          message: t("notification_permission_required"),
         });
         return;
       }
