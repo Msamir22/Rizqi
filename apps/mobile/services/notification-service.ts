@@ -17,8 +17,9 @@
  */
 
 import * as Notifications from "expo-notifications";
-import { Platform } from "react-native";
+import { Linking, Platform } from "react-native";
 import type { ParsedSmsTransaction } from "@monyvi/logic";
+import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -46,11 +47,23 @@ export interface TransactionNotificationPayload {
   readonly resolvedAccountName: string;
 }
 
+interface TransactionInfoNotificationPayload {
+  readonly type: "sms_transaction_created" | "sms_transaction_info";
+  readonly transactionData: ParsedSmsTransaction;
+  readonly resolvedAccountName: string;
+}
+
 /** Callback for handling notification action responses */
 type NotificationActionHandler = (
   actionId: string,
   payload: TransactionNotificationPayload
 ) => Promise<void>;
+
+export type NotificationPermissionStatus =
+  | "undetermined"
+  | "granted"
+  | "denied"
+  | "blocked";
 
 // ---------------------------------------------------------------------------
 // Module state
@@ -76,17 +89,60 @@ export async function hasNotificationPermission(): Promise<boolean> {
 }
 
 /**
+ * Check notification permission without showing the native permission prompt.
+ */
+export async function getNotificationPermissionStatus(): Promise<NotificationPermissionStatus> {
+  const permissions = await Notifications.getPermissionsAsync();
+
+  if (permissions.granted) {
+    return "granted";
+  }
+
+  if (!permissions.canAskAgain) {
+    return "blocked";
+  }
+
+  return permissions.status === Notifications.PermissionStatus.UNDETERMINED
+    ? "undetermined"
+    : "denied";
+}
+
+/**
  * Request notification permission when enabling notification-backed features.
  */
 export async function requestNotificationPermission(): Promise<boolean> {
+  const status = await requestNotificationPermissionStatus();
+  return status === "granted";
+}
+
+/**
+ * Request notification permission and preserve whether the user can recover
+ * through the native prompt or must open app settings.
+ */
+export async function requestNotificationPermissionStatus(): Promise<NotificationPermissionStatus> {
   const existing = await Notifications.getPermissionsAsync();
 
   if (existing.granted) {
-    return true;
+    return "granted";
+  }
+
+  if (!existing.canAskAgain) {
+    return "blocked";
   }
 
   const requested = await Notifications.requestPermissionsAsync();
-  return requested.granted;
+  if (requested.granted) {
+    return "granted";
+  }
+
+  return requested.canAskAgain ? "denied" : "blocked";
+}
+
+/**
+ * Open app settings so users can manually enable notification permission.
+ */
+export async function openNotificationSettings(): Promise<void> {
+  await Linking.openSettings();
 }
 
 /**
@@ -286,7 +342,7 @@ export async function showTransactionNotification(
 
   const canShowNotification = await hasNotificationPermission();
   if (!canShowNotification) {
-    console.warn(
+    logger.warn(
       "[notification-service] Notification permission denied; SMS notification skipped"
     );
     return;
@@ -318,6 +374,87 @@ export async function showTransactionNotification(
       title,
       body,
       categoryIdentifier: SMS_TRANSACTION_CATEGORY,
+      data: payload as unknown as Record<string, unknown>,
+      sound: "default",
+    },
+    trigger: Platform.OS === "android" ? { channelId: SMS_CHANNEL_ID } : null,
+  });
+}
+
+/**
+ * Show an info-only notification after auto-confirm creates a transaction.
+ */
+export async function showTransactionCreatedNotification(
+  parsed: ParsedSmsTransaction,
+  resolvedAccountName: string
+): Promise<void> {
+  await showInfoOnlySmsTransactionNotification({
+    parsed,
+    resolvedAccountName,
+    identifierPrefix: "sms-transaction-created",
+    title: "Transaction created",
+    type: "sms_transaction_created",
+  });
+}
+
+/**
+ * Show an info-only notification when an SMS was detected but no account could
+ * be matched safely.
+ */
+export async function showTransactionNeedsAccountNotification(
+  parsed: ParsedSmsTransaction
+): Promise<void> {
+  await showInfoOnlySmsTransactionNotification({
+    parsed,
+    resolvedAccountName: "No Account Configured",
+    identifierPrefix: "sms-transaction-info",
+    title: "Transaction needs an account",
+    type: "sms_transaction_info",
+  });
+}
+
+async function showInfoOnlySmsTransactionNotification({
+  parsed,
+  resolvedAccountName,
+  identifierPrefix,
+  title,
+  type,
+}: {
+  readonly parsed: ParsedSmsTransaction;
+  readonly resolvedAccountName: string;
+  readonly identifierPrefix: string;
+  readonly title: string;
+  readonly type: TransactionInfoNotificationPayload["type"];
+}): Promise<void> {
+  await initializeNotifications();
+
+  const canShowNotification = await hasNotificationPermission();
+  if (!canShowNotification) {
+    logger.warn(
+      "[notification-service] Notification permission denied; SMS notification skipped"
+    );
+    return;
+  }
+
+  const body = [
+    `${formatAmount(parsed.amount, parsed.currency)} from ${parsed.senderDisplayName}`,
+    parsed.counterparty ? `To: ${parsed.counterparty}` : undefined,
+    `Account: ${resolvedAccountName}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+  const payload: TransactionInfoNotificationPayload = {
+    type,
+    transactionData: parsed,
+    resolvedAccountName,
+  };
+
+  await Notifications.scheduleNotificationAsync({
+    identifier: `${identifierPrefix}-${parsed.smsBodyHash}`,
+    content: {
+      title,
+      body,
+      categoryIdentifier: undefined,
       data: payload as unknown as Record<string, unknown>,
       sound: "default",
     },

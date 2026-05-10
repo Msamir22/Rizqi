@@ -1,7 +1,7 @@
 /**
  * useSmsPermission Hook
  *
- * Manages READ_SMS permission state for Android.
+ * Manages SMS read and live detection permission state for Android.
  * Returns `denied` + `isAndroid: false` on iOS.
  *
  * Architecture & Design Rationale:
@@ -14,8 +14,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   type AppStateStatus,
+  type Permission,
   AppState,
   Linking,
+  NativeModules,
   PermissionsAndroid,
   Platform,
 } from "react-native";
@@ -26,20 +28,125 @@ import { logger } from "@/utils/logger";
 // ---------------------------------------------------------------------------
 
 type SmsPermissionStatus = "undetermined" | "granted" | "denied" | "blocked";
+type NativeSmsPermissionStatus = "granted" | "requestable" | "blocked";
+
+const READ_SMS_PERMISSION = PermissionsAndroid.PERMISSIONS.READ_SMS;
+
+const LIVE_SMS_PERMISSIONS = [
+  PermissionsAndroid.PERMISSIONS.READ_SMS,
+  PermissionsAndroid.PERMISSIONS.RECEIVE_SMS,
+] as const;
+
+interface NativeSmsModules {
+  readonly SmsEventModule?: {
+    readonly getPermissionStatus?: (
+      permission: Permission
+    ) => Promise<NativeSmsPermissionStatus>;
+    readonly markPermissionRequested?: (
+      permission: Permission
+    ) => Promise<void>;
+  };
+}
 
 interface UseSmsPermissionResult {
   /** Current permission status */
   readonly status: SmsPermissionStatus;
+  /** Whether live SMS detection has the SMS permissions it needs */
+  readonly liveDetectionStatus: SmsPermissionStatus;
   /** Whether the device is Android (SMS reading only available on Android) */
   readonly isAndroid: boolean;
   /** Whether permission check is still loading */
   readonly isLoading: boolean;
   /** Request READ_SMS permission from user */
   readonly requestPermission: () => Promise<SmsPermissionStatus>;
+  /** Request READ_SMS + RECEIVE_SMS permissions for live SMS detection */
+  readonly requestLiveDetectionPermission: () => Promise<SmsPermissionStatus>;
   /** Open app settings (for when permission is blocked) */
   readonly openSettings: () => Promise<void>;
   /** Re-check the current permission state */
   readonly recheckPermission: () => Promise<void>;
+}
+
+function statusFromRequestResult(result: string): SmsPermissionStatus {
+  if (result === PermissionsAndroid.RESULTS.GRANTED) {
+    return "granted";
+  }
+
+  if (result === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
+    return "blocked";
+  }
+
+  return "denied";
+}
+
+function statusFromNativePermissionStatus(
+  status: NativeSmsPermissionStatus
+): SmsPermissionStatus {
+  if (status === "granted") return "granted";
+  if (status === "blocked") return "blocked";
+  return "undetermined";
+}
+
+function statusFromCombinedRequestResults(
+  results: readonly string[]
+): SmsPermissionStatus {
+  if (
+    results.every((result) => result === PermissionsAndroid.RESULTS.GRANTED)
+  ) {
+    return "granted";
+  }
+
+  if (
+    results.some(
+      (result) => result === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN
+    )
+  ) {
+    return "blocked";
+  }
+
+  return "denied";
+}
+
+async function getNativeSmsPermissionStatus(
+  permission: Permission
+): Promise<SmsPermissionStatus> {
+  const { SmsEventModule } = NativeModules as NativeSmsModules;
+
+  if (SmsEventModule?.getPermissionStatus) {
+    const status = await SmsEventModule.getPermissionStatus(permission);
+    return statusFromNativePermissionStatus(status);
+  }
+
+  const isGranted = await PermissionsAndroid.check(permission);
+  return isGranted ? "granted" : "undetermined";
+}
+
+async function markNativeSmsPermissionRequested(
+  permission: Permission
+): Promise<void> {
+  const { SmsEventModule } = NativeModules as NativeSmsModules;
+
+  try {
+    await SmsEventModule?.markPermissionRequested?.(permission);
+  } catch (error: unknown) {
+    logger.warn("SmsEventModule.markPermissionRequested threw", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+function combinePermissionStatuses(
+  statuses: readonly SmsPermissionStatus[]
+): SmsPermissionStatus {
+  if (statuses.every((status) => status === "granted")) {
+    return "granted";
+  }
+
+  if (statuses.some((status) => status === "blocked")) {
+    return "blocked";
+  }
+
+  return "undetermined";
 }
 
 // ---------------------------------------------------------------------------
@@ -47,7 +154,7 @@ interface UseSmsPermissionResult {
 // ---------------------------------------------------------------------------
 
 /**
- * Hook to manage READ_SMS permission lifecycle.
+ * Hook to manage SMS permission lifecycle.
  *
  * - On mount, checks current permission status
  * - Provides `requestPermission()` to trigger native dialog
@@ -56,6 +163,8 @@ interface UseSmsPermissionResult {
  */
 export function useSmsPermission(): UseSmsPermissionResult {
   const [status, setStatus] = useState<SmsPermissionStatus>("undetermined");
+  const [liveDetectionStatus, setLiveDetectionStatus] =
+    useState<SmsPermissionStatus>("undetermined");
   const [isLoading, setIsLoading] = useState(true);
   const isAndroid = Platform.OS === "android";
 
@@ -73,26 +182,26 @@ export function useSmsPermission(): UseSmsPermissionResult {
   const checkPermission = useCallback(async (): Promise<void> => {
     if (!isAndroid) {
       setStatus("denied");
+      setLiveDetectionStatus("denied");
       setIsLoading(false);
       return;
     }
 
     try {
-      const granted = await PermissionsAndroid.check(
-        PermissionsAndroid.PERMISSIONS.READ_SMS
+      const [readStatus, receiveStatus] = await Promise.all(
+        LIVE_SMS_PERMISSIONS.map((permission) =>
+          getNativeSmsPermissionStatus(permission)
+        )
       );
-      setStatus((current) => {
-        if (granted) return "granted";
-        // If previously "granted" but now not, user revoked in Settings.
-        if (current === "granted") return "denied";
-        // Otherwise preserve current state (undetermined/denied/blocked).
-        return current;
-      });
+      setStatus(readStatus);
+      setLiveDetectionStatus(
+        combinePermissionStatuses([readStatus, receiveStatus])
+      );
     } catch (error: unknown) {
       // Preserve the current status (don't clobber denied/blocked) but make
       // the failure observable — otherwise permission regressions on
       // Android updates would be silent and hard to diagnose.
-      logger.warn("PermissionsAndroid.check(READ_SMS) threw", {
+      logger.warn("PermissionsAndroid.check(SMS permissions) threw", {
         error: error instanceof Error ? error.message : String(error),
       });
     } finally {
@@ -110,37 +219,62 @@ export function useSmsPermission(): UseSmsPermissionResult {
       }
 
       try {
-        const result = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.READ_SMS,
-          {
-            title: "SMS Access",
-            message:
-              "Monyvi would like to read your financial SMS messages to automatically track your transactions.",
-            buttonPositive: "Allow",
-            buttonNegative: "Not Now",
-          }
-        );
-
-        let newStatus: SmsPermissionStatus;
-        switch (result) {
-          case PermissionsAndroid.RESULTS.GRANTED:
-            newStatus = "granted";
-            break;
-          case PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN:
-            newStatus = "blocked";
-            break;
-          default:
-            newStatus = "denied";
-            break;
-        }
+        await markNativeSmsPermissionRequested(READ_SMS_PERMISSION);
+        const result = await PermissionsAndroid.request(READ_SMS_PERMISSION);
+        const newStatus = statusFromRequestResult(result);
 
         setStatus(newStatus);
+        if (newStatus !== "granted") {
+          setLiveDetectionStatus(newStatus);
+        }
         return newStatus;
       } catch (error: unknown) {
         logger.warn("PermissionsAndroid.request(READ_SMS) threw", {
           error: error instanceof Error ? error.message : String(error),
         });
         setStatus("denied");
+        setLiveDetectionStatus("denied");
+        return "denied";
+      }
+    }, [isAndroid]);
+
+  /**
+   * Request the permissions needed for live SMS detection.
+   */
+  const requestLiveDetectionPermission =
+    useCallback(async (): Promise<SmsPermissionStatus> => {
+      if (!isAndroid) {
+        return "denied";
+      }
+
+      try {
+        await Promise.all(
+          LIVE_SMS_PERMISSIONS.map((permission) =>
+            markNativeSmsPermissionRequested(permission)
+          )
+        );
+        const results = await PermissionsAndroid.requestMultiple([
+          ...LIVE_SMS_PERMISSIONS,
+        ]);
+        const readStatus = statusFromRequestResult(
+          results[READ_SMS_PERMISSION] ?? PermissionsAndroid.RESULTS.DENIED
+        );
+        const liveStatus = statusFromCombinedRequestResults(
+          Object.values(results)
+        );
+
+        setStatus(readStatus);
+        setLiveDetectionStatus(liveStatus);
+        return liveStatus;
+      } catch (error: unknown) {
+        logger.warn(
+          "PermissionsAndroid.request(SMS live detection permissions) threw",
+          {
+            error: error instanceof Error ? error.message : String(error),
+          }
+        );
+        setStatus("denied");
+        setLiveDetectionStatus("denied");
         return "denied";
       }
     }, [isAndroid]);
@@ -199,9 +333,11 @@ export function useSmsPermission(): UseSmsPermissionResult {
 
   return {
     status,
+    liveDetectionStatus,
     isAndroid,
     isLoading,
     requestPermission,
+    requestLiveDetectionPermission,
     openSettings,
     recheckPermission,
   };

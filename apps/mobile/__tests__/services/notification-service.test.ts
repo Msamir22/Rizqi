@@ -1,18 +1,27 @@
 import type { ParsedSmsTransaction } from "@monyvi/logic";
-import { Platform } from "react-native";
+import { Linking, Platform } from "react-native";
 import * as Notifications from "expo-notifications";
 import {
   ACTION_CONFIRM,
   ACTION_DISCARD,
+  getNotificationPermissionStatus,
   hasNotificationPermission,
+  openNotificationSettings,
   registerNotificationActionHandler,
+  showTransactionCreatedNotification,
   requestNotificationPermission,
+  requestNotificationPermissionStatus,
   showTransactionNotification,
 } from "@/services/notification-service";
 
 jest.mock("expo-notifications", () => ({
   AndroidImportance: { HIGH: "high" },
   DEFAULT_ACTION_IDENTIFIER: "expo.modules.notifications.actions.DEFAULT",
+  PermissionStatus: {
+    DENIED: "denied",
+    GRANTED: "granted",
+    UNDETERMINED: "undetermined",
+  },
   addNotificationResponseReceivedListener: jest.fn(() => ({
     remove: jest.fn(),
   })),
@@ -24,6 +33,8 @@ jest.mock("expo-notifications", () => ({
   setNotificationChannelAsync: jest.fn(() => Promise.resolve()),
   setNotificationHandler: jest.fn(),
 }));
+
+const mockOpenSettings = jest.fn<Promise<void>, []>(() => Promise.resolve());
 
 const mockGetPermissionsAsync =
   Notifications.getPermissionsAsync as jest.MockedFunction<
@@ -45,6 +56,18 @@ const mockAddNotificationResponseReceivedListener =
   Notifications.addNotificationResponseReceivedListener as jest.MockedFunction<
     typeof Notifications.addNotificationResponseReceivedListener
   >;
+
+function getScheduledNotificationInput(): Parameters<
+  typeof Notifications.scheduleNotificationAsync
+>[0] {
+  const scheduledNotification =
+    mockScheduleNotificationAsync.mock.calls[0]?.[0];
+  if (!scheduledNotification) {
+    throw new Error("Expected notification to be scheduled");
+  }
+
+  return scheduledNotification;
+}
 
 function createParsedSmsTransaction(): ParsedSmsTransaction {
   return {
@@ -95,30 +118,73 @@ async function flushPromises(): Promise<void> {
   await Promise.resolve();
 }
 
-function createPermissionStatus(
-  granted: boolean
-): Notifications.NotificationPermissionsStatus {
-  const status = { granted };
-  return status as Notifications.NotificationPermissionsStatus;
+function createPermissionStatus({
+  granted,
+  canAskAgain = true,
+  status,
+}: {
+  readonly granted: boolean;
+  readonly canAskAgain?: boolean;
+  readonly status?: Notifications.PermissionStatus;
+}): Notifications.NotificationPermissionsStatus {
+  const permissionStatus = {
+    granted,
+    canAskAgain,
+    status:
+      status ??
+      (granted
+        ? Notifications.PermissionStatus.GRANTED
+        : Notifications.PermissionStatus.DENIED),
+  };
+  return permissionStatus as Notifications.NotificationPermissionsStatus;
 }
 
 describe("notification-service", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.spyOn(Linking, "openSettings").mockImplementation(mockOpenSettings);
   });
 
   it("reports whether notification permission is granted", async () => {
-    mockGetPermissionsAsync.mockResolvedValueOnce(createPermissionStatus(true));
+    mockGetPermissionsAsync.mockResolvedValueOnce(
+      createPermissionStatus({ granted: true })
+    );
 
     await expect(hasNotificationPermission()).resolves.toBe(true);
   });
 
+  it("reports undetermined notification permission without requesting", async () => {
+    mockGetPermissionsAsync.mockResolvedValueOnce(
+      createPermissionStatus({
+        granted: false,
+        status: Notifications.PermissionStatus.UNDETERMINED,
+      })
+    );
+
+    await expect(getNotificationPermissionStatus()).resolves.toBe(
+      "undetermined"
+    );
+    expect(mockRequestPermissionsAsync).not.toHaveBeenCalled();
+  });
+
+  it("reports denied notification permission without requesting", async () => {
+    mockGetPermissionsAsync.mockResolvedValueOnce(
+      createPermissionStatus({
+        granted: false,
+        status: Notifications.PermissionStatus.DENIED,
+      })
+    );
+
+    await expect(getNotificationPermissionStatus()).resolves.toBe("denied");
+    expect(mockRequestPermissionsAsync).not.toHaveBeenCalled();
+  });
+
   it("requests notification permission when it is not already granted", async () => {
     mockGetPermissionsAsync.mockResolvedValueOnce(
-      createPermissionStatus(false)
+      createPermissionStatus({ granted: false })
     );
     mockRequestPermissionsAsync.mockResolvedValueOnce(
-      createPermissionStatus(true)
+      createPermissionStatus({ granted: true })
     );
 
     await expect(requestNotificationPermission()).resolves.toBe(true);
@@ -126,9 +192,37 @@ describe("notification-service", () => {
     expect(mockRequestPermissionsAsync).toHaveBeenCalledTimes(1);
   });
 
+  it("returns blocked when notification permission cannot be requested again", async () => {
+    mockGetPermissionsAsync.mockResolvedValueOnce(
+      createPermissionStatus({ granted: false, canAskAgain: false })
+    );
+
+    await expect(requestNotificationPermissionStatus()).resolves.toBe(
+      "blocked"
+    );
+    expect(mockRequestPermissionsAsync).not.toHaveBeenCalled();
+  });
+
+  it("returns denied when notification permission is denied but can be requested again", async () => {
+    mockGetPermissionsAsync.mockResolvedValueOnce(
+      createPermissionStatus({ granted: false, canAskAgain: true })
+    );
+    mockRequestPermissionsAsync.mockResolvedValueOnce(
+      createPermissionStatus({ granted: false, canAskAgain: true })
+    );
+
+    await expect(requestNotificationPermissionStatus()).resolves.toBe("denied");
+  });
+
+  it("opens app settings for notification permission recovery", async () => {
+    await openNotificationSettings();
+
+    expect(mockOpenSettings).toHaveBeenCalledTimes(1);
+  });
+
   it("does not schedule an SMS notification when permission is denied", async () => {
     mockGetPermissionsAsync.mockResolvedValueOnce(
-      createPermissionStatus(false)
+      createPermissionStatus({ granted: false })
     );
 
     await showTransactionNotification(
@@ -145,7 +239,9 @@ describe("notification-service", () => {
       configurable: true,
       value: "android",
     });
-    mockGetPermissionsAsync.mockResolvedValueOnce(createPermissionStatus(true));
+    mockGetPermissionsAsync.mockResolvedValueOnce(
+      createPermissionStatus({ granted: true })
+    );
 
     await showTransactionNotification(
       createParsedSmsTransaction(),
@@ -159,6 +255,33 @@ describe("notification-service", () => {
         trigger: { channelId: "sms-transactions" },
       })
     );
+  });
+
+  it("schedules an info-only notification for auto-confirmed SMS transactions", async () => {
+    Object.defineProperty(Platform, "OS", {
+      configurable: true,
+      value: "android",
+    });
+    mockGetPermissionsAsync.mockResolvedValueOnce(
+      createPermissionStatus({ granted: true })
+    );
+
+    await showTransactionCreatedNotification(
+      createParsedSmsTransaction(),
+      "MainCIBAccount"
+    );
+
+    const scheduledNotification = getScheduledNotificationInput();
+    expect(scheduledNotification.identifier).toBe(
+      "sms-transaction-created-hash-1"
+    );
+    expect(scheduledNotification.content.categoryIdentifier).toBeUndefined();
+    expect(scheduledNotification.content.data).toMatchObject({
+      type: "sms_transaction_created",
+    });
+    expect(scheduledNotification.trigger).toEqual({
+      channelId: "sms-transactions",
+    });
   });
 
   it("dismisses a notification before handling a confirm action", async () => {

@@ -17,26 +17,14 @@
  * @module sms-live-listener-service
  */
 
-import {
-  type ParsedSmsTransaction,
-  computeSmsHash,
-  isLikelyFinancialSms,
-  SUPPORTED_CURRENCIES,
-} from "@monyvi/logic";
+import { type ParsedSmsTransaction } from "@monyvi/logic";
 import {
   DeviceEventEmitter,
   type EmitterSubscription,
   NativeModules,
   Platform,
 } from "react-native";
-import {
-  parseSmsWithAi,
-  type SmsCandidate,
-  type ParseSmsContext,
-} from "./ai-sms-parser-service";
-import { database, type Category } from "@monyvi/db";
-import { Q } from "@nozbe/watermelondb";
-import { getCurrentUserDataScope } from "./user-data-access";
+import { processLiveSmsEvent } from "./sms-live-processor";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -107,62 +95,16 @@ function ensureSmsEventModuleInitialized(): void {
  */
 async function processNativeSmsEvent(event: NativeSmsEvent): Promise<void> {
   try {
-    // Step 1: Fast on-device keyword filter
-    if (!isLikelyFinancialSms(event.body)) {
-      return;
-    }
-
-    // Step 2: Compute hash for deduplication
-    const hash = await computeSmsHash(event.body);
-
-    // Check against recent hashes to avoid duplicate processing
-    if (recentHashes.has(hash)) {
-      console.log("[sms-live-listener] Duplicate SMS detected, skipping");
-      return;
-    }
-
-    // Track this hash
-    recentHashes.add(hash);
-
-    // Prevent unbounded growth
-    if (recentHashes.size > MAX_RECENT_HASHES) {
-      const iterator = recentHashes.values();
-      const firstValue = iterator.next().value;
-      if (firstValue !== undefined) {
-        recentHashes.delete(firstValue);
+    const result = await processLiveSmsEvent(
+      { ...event, deliveryMode: "foreground" },
+      {
+        isRecentlyProcessed: (smsBodyHash) => recentHashes.has(smsBodyHash),
+        markRecentlyProcessed,
       }
-    }
-
-    // Step 3: Send to AI Edge Function for structured parsing
-    const candidate: SmsCandidate = {
-      message: {
-        id: `live-${event.timestamp}`,
-        address: event.sender,
-        body: event.body,
-        date: event.timestamp,
-        read: false,
-      },
-      smsBodyHash: hash,
-    };
-
-    // Load categories from DB for AI context
-    const scope = await getCurrentUserDataScope();
-    const categories = await scope
-      .queryAccessibleCategories(
-        database.get<Category>("categories"),
-        Q.where("deleted", Q.notEq(true))
-      )
-      .fetch();
-
-    const context: ParseSmsContext = {
-      categories,
-      supportedCurrencies: SUPPORTED_CURRENCIES.map((c) => c.code),
-    };
-
-    const aiResult = await parseSmsWithAi([candidate], context);
+    );
 
     // Step 4: Emit parsed transactions to all registered handlers
-    for (const parsed of aiResult.transactions) {
+    for (const parsed of result.transactions) {
       for (const handler of handlers) {
         handler(parsed);
       }
@@ -172,6 +114,18 @@ async function processNativeSmsEvent(event: NativeSmsEvent): Promise<void> {
       "[sms-live-listener] Failed to process SMS:",
       err instanceof Error ? err.message : String(err)
     );
+  }
+}
+
+function markRecentlyProcessed(smsBodyHash: string): void {
+  recentHashes.add(smsBodyHash);
+
+  if (recentHashes.size > MAX_RECENT_HASHES) {
+    const iterator = recentHashes.values();
+    const firstValue = iterator.next().value;
+    if (firstValue !== undefined) {
+      recentHashes.delete(firstValue);
+    }
   }
 }
 

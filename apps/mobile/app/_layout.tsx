@@ -36,7 +36,7 @@ import { initializeNotifications } from "../services/notification-service";
 import {
   handleDetectedSms,
   initializeDetectionActionHandler,
-  isLiveDetectionEnabled,
+  reconcileLiveDetectionPreference,
 } from "../services/sms-live-detection-handler";
 import {
   onTransactionDetected,
@@ -101,10 +101,13 @@ function RootLayout(): React.ReactNode {
     if (Platform.OS !== "android") {
       return;
     }
-    const enabled = await isLiveDetectionEnabled();
+    const enabled = await reconcileLiveDetectionPreference();
     if (enabled) {
       startSmsListener();
+      return;
     }
+
+    stopSmsListener();
   }, []);
 
   useEffect(() => {

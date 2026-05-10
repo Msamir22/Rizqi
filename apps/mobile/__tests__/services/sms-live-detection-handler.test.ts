@@ -1,4 +1,6 @@
 import type { ParsedSmsTransaction } from "@monyvi/logic";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { PermissionsAndroid, Platform } from "react-native";
 
 let mockRegisteredHandler:
   | ((
@@ -29,6 +31,16 @@ const mockCreateSmsAtmTransfer = jest.fn<
   [unknown]
 >();
 const mockHasExistingSmsBodyHash = jest.fn<Promise<boolean>, [string]>();
+const mockGetNotificationPermissionStatus = jest.fn<
+  Promise<"undetermined" | "granted" | "denied" | "blocked">,
+  []
+>();
+const mockResolveAccountForSms = jest.fn<Promise<unknown>, unknown[]>();
+const mockShowTransactionNotification = jest.fn<Promise<void>, unknown[]>();
+const mockShowTransactionCreatedNotification = jest.fn<
+  Promise<void>,
+  unknown[]
+>();
 
 jest.mock("@/services/notification-service", () => ({
   ACTION_CONFIRM: "CONFIRM",
@@ -38,11 +50,16 @@ jest.mock("@/services/notification-service", () => ({
       return jest.fn();
     }
   ),
-  showTransactionNotification: jest.fn(),
+  getNotificationPermissionStatus: () => mockGetNotificationPermissionStatus(),
+  showTransactionNotification: (...args: unknown[]) =>
+    mockShowTransactionNotification(...args),
+  showTransactionCreatedNotification: (...args: unknown[]) =>
+    mockShowTransactionCreatedNotification(...args),
 }));
 
 jest.mock("@/services/sms-account-resolver", () => ({
-  resolveAccountForSms: jest.fn(),
+  resolveAccountForSms: (...args: unknown[]) =>
+    mockResolveAccountForSms(...args),
 }));
 
 jest.mock("@/services/sms-dedup-service", () => ({
@@ -60,7 +77,15 @@ jest.mock("@/services/transfer-service", () => ({
     mockCreateSmsAtmTransfer(input),
 }));
 
-import { initializeDetectionActionHandler } from "@/services/sms-live-detection-handler";
+import {
+  handleDetectedSms,
+  initializeDetectionActionHandler,
+  isAutoConfirmEnabled,
+  isLiveDetectionEnabled,
+  reconcileLiveDetectionPreference,
+  setAutoConfirm,
+  setLiveDetectionEnabled,
+} from "@/services/sms-live-detection-handler";
 
 function createParsedSmsTransaction(): ParsedSmsTransaction {
   return {
@@ -94,6 +119,27 @@ function createPayload(
 describe("sms-live-detection-handler notification actions", () => {
   beforeEach(() => {
     mockRegisteredHandler = null;
+    void AsyncStorage.clear();
+    Object.defineProperty(Platform, "OS", {
+      configurable: true,
+      value: "android",
+    });
+    jest
+      .spyOn(PermissionsAndroid, "check")
+      .mockImplementation((permission) =>
+        Promise.resolve(permission === PermissionsAndroid.PERMISSIONS.READ_SMS)
+      );
+    mockGetNotificationPermissionStatus.mockReset();
+    mockGetNotificationPermissionStatus.mockResolvedValue("granted");
+    mockResolveAccountForSms.mockReset();
+    mockResolveAccountForSms.mockResolvedValue({
+      accountId: "account-1",
+      accountName: "MainCIBAccount",
+    });
+    mockShowTransactionNotification.mockReset();
+    mockShowTransactionNotification.mockResolvedValue();
+    mockShowTransactionCreatedNotification.mockReset();
+    mockShowTransactionCreatedNotification.mockResolvedValue();
     mockHasExistingSmsBodyHash.mockReset();
     mockHasExistingSmsBodyHash.mockResolvedValue(false);
     mockCreateTransaction.mockReset();
@@ -123,5 +169,50 @@ describe("sms-live-detection-handler notification actions", () => {
 
     expect(mockCreateTransaction).not.toHaveBeenCalled();
     expect(mockCreateSmsAtmTransfer).not.toHaveBeenCalled();
+  });
+
+  it("auto-confirms and notifies the user that the transaction was created", async () => {
+    await setAutoConfirm(true);
+    const parsed = createParsedSmsTransaction();
+
+    await handleDetectedSms(parsed);
+
+    expect(mockCreateTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({ smsBodyHash: "hash-1" })
+    );
+    expect(mockShowTransactionCreatedNotification).toHaveBeenCalledWith(
+      parsed,
+      "MainCIBAccount"
+    );
+    expect(mockShowTransactionNotification).not.toHaveBeenCalled();
+  });
+
+  it("auto-disables stored live detection when required SMS permission is missing", async () => {
+    await setLiveDetectionEnabled(true);
+    await setAutoConfirm(true);
+
+    await expect(reconcileLiveDetectionPreference()).resolves.toBe(false);
+
+    await expect(isLiveDetectionEnabled()).resolves.toBe(false);
+    await expect(isAutoConfirmEnabled()).resolves.toBe(false);
+  });
+
+  it("keeps stored live detection enabled when SMS and notification permissions are granted", async () => {
+    jest.spyOn(PermissionsAndroid, "check").mockResolvedValue(true);
+    await setLiveDetectionEnabled(true);
+
+    await expect(reconcileLiveDetectionPreference()).resolves.toBe(true);
+
+    await expect(isLiveDetectionEnabled()).resolves.toBe(true);
+  });
+
+  it("auto-disables stored live detection when notification permission is missing", async () => {
+    jest.spyOn(PermissionsAndroid, "check").mockResolvedValue(true);
+    mockGetNotificationPermissionStatus.mockResolvedValue("denied");
+    await setLiveDetectionEnabled(true);
+
+    await expect(reconcileLiveDetectionPreference()).resolves.toBe(false);
+
+    await expect(isLiveDetectionEnabled()).resolves.toBe(false);
   });
 });

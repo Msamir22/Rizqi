@@ -50,6 +50,7 @@ type AiSmsTransaction = z.infer<typeof AiSmsTransactionSchema>;
 /** Result from AI parsing */
 export interface AiParseResult {
   readonly transactions: readonly ParsedSmsTransaction[];
+  readonly hasError?: boolean;
 }
 
 /** Context sent alongside SMS messages to the Edge Function. */
@@ -348,14 +349,14 @@ export async function parseSmsWithAi(
   context: ParseSmsContext,
   onProgress?: (progress: AiParseProgress) => void
 ): Promise<AiParseResult> {
-  const emptyResult: AiParseResult = { transactions: [] };
+  const emptyResult: AiParseResult = { transactions: [], hasError: false };
   if (candidates.length === 0) return emptyResult;
 
   if (USE_MOCK_DATA) {
     logger.info(
       "[ai-sms-parser] Using MOCK parsed transactions to save AI tokens"
     );
-    return { transactions: [...MOCK_PARSED_TRANSACTIONS] };
+    return { transactions: [...MOCK_PARSED_TRANSACTIONS], hasError: false };
   }
 
   // Build validation set once for the entire parse session
@@ -388,6 +389,7 @@ export async function parseSmsWithAi(
 
     let totalChunks = chunkQueue.length;
     let chunksCompleted = 0;
+    let hasError = false;
     const allResults: ParsedSmsTransaction[] = [];
 
     let chunkIndex = 0;
@@ -443,6 +445,10 @@ export async function parseSmsWithAi(
         continue;
       }
 
+      if (chunkResult.hasError) {
+        hasError = true;
+      }
+
       // Chunk succeeded (or it's a retry that returned no results — we accept that)
       const mapped = mapAiTransactions(
         chunkResult.transactions,
@@ -463,13 +469,13 @@ export async function parseSmsWithAi(
       chunkIndex++;
     }
 
-    return { transactions: allResults };
+    return { transactions: allResults, hasError };
   } catch (err: unknown) {
     logger.error(
       "[ai-sms-parser] Unexpected error during parseSmsWithAi",
       err,
       { candidateCount: candidates.length }
     );
-    return emptyResult;
+    return { transactions: [], hasError: true };
   }
 }

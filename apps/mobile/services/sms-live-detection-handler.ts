@@ -19,9 +19,13 @@
 
 import type { ParsedSmsTransaction } from "@monyvi/logic";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { PermissionsAndroid, Platform } from "react-native";
 import {
   ACTION_CONFIRM,
+  getNotificationPermissionStatus,
   registerNotificationActionHandler,
+  showTransactionCreatedNotification,
+  showTransactionNeedsAccountNotification,
   showTransactionNotification,
 } from "./notification-service";
 import { resolveAccountForSms } from "./sms-account-resolver";
@@ -38,6 +42,11 @@ const AUTO_CONFIRM_KEY = "@monyvi/sms_auto_confirm";
 
 /** AsyncStorage key for the live detection enabled preference */
 const LIVE_DETECTION_KEY = "@monyvi/sms_live_detection_enabled";
+
+const LIVE_SMS_PERMISSIONS = [
+  PermissionsAndroid.PERMISSIONS.READ_SMS,
+  PermissionsAndroid.PERMISSIONS.RECEIVE_SMS,
+] as const;
 
 // ---------------------------------------------------------------------------
 // T046: Review page conflict — queue management
@@ -86,6 +95,51 @@ export async function setLiveDetectionEnabled(enabled: boolean): Promise<void> {
   await AsyncStorage.setItem(LIVE_DETECTION_KEY, String(enabled));
 }
 
+/**
+ * Check whether all runtime permissions needed by live detection are present.
+ */
+export async function canLiveDetectionRun(): Promise<boolean> {
+  if (Platform.OS !== "android") {
+    return false;
+  }
+
+  const [hasSmsPermissions, notificationStatus] = await Promise.all([
+    Promise.all(
+      LIVE_SMS_PERMISSIONS.map((permission) =>
+        PermissionsAndroid.check(permission)
+      )
+    ).then((statuses) => statuses.every(Boolean)),
+    getNotificationPermissionStatus(),
+  ]);
+
+  return hasSmsPermissions && notificationStatus === "granted";
+}
+
+/**
+ * Keep the stored live detection preference honest.
+ *
+ * If the user revoked SMS or notification permission outside this screen, the
+ * stored toggle is turned off so startup/resume never leaves a dead listener
+ * state behind.
+ */
+export async function reconcileLiveDetectionPreference(): Promise<boolean> {
+  const enabled = await isLiveDetectionEnabled();
+
+  if (!enabled) {
+    return false;
+  }
+
+  const canRun = await canLiveDetectionRun();
+
+  if (canRun) {
+    return true;
+  }
+
+  await setLiveDetectionEnabled(false);
+  await setAutoConfirm(false);
+  return false;
+}
+
 // ---------------------------------------------------------------------------
 // Transaction saving
 // ---------------------------------------------------------------------------
@@ -96,12 +150,12 @@ export async function setLiveDetectionEnabled(enabled: boolean): Promise<void> {
 async function saveDetectedTransaction(
   parsed: ParsedSmsTransaction,
   accountId: string
-): Promise<void> {
+): Promise<boolean> {
   if (await hasExistingSmsBodyHash(parsed.smsBodyHash)) {
     console.info(
       `[sms-detection] Skipped duplicate SMS transaction: ${parsed.smsBodyHash}`
     );
-    return;
+    return false;
   }
 
   // ATM withdrawals: route as bank → cash transfer
@@ -124,7 +178,7 @@ async function saveDetectedTransaction(
     console.info(
       `[sms-detection] Saved ATM transfer: ${parsed.amount} ${parsed.currency}`
     );
-    return;
+    return true;
   }
 
   // Regular transactions
@@ -144,6 +198,7 @@ async function saveDetectedTransaction(
   console.log(
     `[sms-detection] Saved transaction: ${parsed.type} ${parsed.amount} ${parsed.currency}`
   );
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -189,7 +244,7 @@ export async function handleDetectedSms(
       console.warn(
         "[sms-detection] No account resolved for SMS — prompting user"
       );
-      await showTransactionNotification(parsed, "", "No Account Configured");
+      await showTransactionNeedsAccountNotification(parsed);
       return;
     }
 
@@ -198,7 +253,10 @@ export async function handleDetectedSms(
 
     if (autoConfirm) {
       // Step 3: Auto-confirm — save directly
-      await saveDetectedTransaction(parsed, resolved.accountId);
+      const didSave = await saveDetectedTransaction(parsed, resolved.accountId);
+      if (didSave) {
+        await showTransactionCreatedNotification(parsed, resolved.accountName);
+      }
     } else {
       // Step 4: Ask me — show notification
       await showTransactionNotification(
