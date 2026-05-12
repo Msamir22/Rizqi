@@ -1,4 +1,4 @@
-import type { ParsedSmsTransaction } from "@monyvi/logic";
+import type { ParsedSmsTransaction, SmsFingerprintInput } from "@monyvi/logic";
 import type {
   AiParseResult,
   ParseSmsContext,
@@ -6,16 +6,20 @@ import type {
 } from "@/services/ai-sms-parser-service";
 
 const mockReconcileLiveDetectionPreference = jest.fn<Promise<boolean>, []>();
-const mockHasExistingSmsBodyHash = jest.fn<Promise<boolean>, [string]>();
+const mockHasExistingSmsFingerprint = jest.fn<Promise<boolean>, [string]>();
 const mockParseSmsWithAi = jest.fn<
   Promise<AiParseResult>,
   [readonly SmsCandidate[], ParseSmsContext]
 >();
-const mockComputeSmsHash = jest.fn<Promise<string>, [string]>();
+const mockComputeSmsFingerprint = jest.fn<
+  Promise<string>,
+  [SmsFingerprintInput]
+>();
 const mockIsLikelyFinancialSms = jest.fn<boolean, [string]>();
 
 jest.mock("@monyvi/logic", () => ({
-  computeSmsHash: (body: string): Promise<string> => mockComputeSmsHash(body),
+  computeSmsFingerprint: (input: SmsFingerprintInput): Promise<string> =>
+    mockComputeSmsFingerprint(input),
   isLikelyFinancialSms: (body: string): boolean =>
     mockIsLikelyFinancialSms(body),
   SUPPORTED_CURRENCIES: [{ code: "EGP" }],
@@ -27,8 +31,8 @@ jest.mock("@/services/sms-live-detection-handler", () => ({
 }));
 
 jest.mock("@/services/sms-dedup-service", () => ({
-  hasExistingSmsBodyHash: (smsBodyHash: string): Promise<boolean> =>
-    mockHasExistingSmsBodyHash(smsBodyHash),
+  hasExistingSmsFingerprint: (smsFingerprint: string): Promise<boolean> =>
+    mockHasExistingSmsFingerprint(smsFingerprint),
 }));
 
 jest.mock("@/services/ai-sms-parser-service", () => ({
@@ -63,7 +67,7 @@ jest.mock("@/services/user-data-access", () => ({
 import { processLiveSmsEvent } from "@/services/sms-live-processor";
 
 function createParsedTransaction(
-  smsBodyHash = "hash-live"
+  smsFingerprint = "hash-live"
 ): ParsedSmsTransaction {
   return {
     amount: 850,
@@ -76,7 +80,7 @@ function createParsedTransaction(
     confidence: 0.94,
     originLabel: "QNB",
     source: "SMS",
-    smsBodyHash,
+    smsFingerprint,
     senderDisplayName: "QNB",
     rawSmsBody: "Purchase EGP 850 at Hyper Market using card ending 1234",
   };
@@ -86,8 +90,8 @@ describe("sms-live-processor", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockReconcileLiveDetectionPreference.mockResolvedValue(true);
-    mockHasExistingSmsBodyHash.mockResolvedValue(false);
-    mockComputeSmsHash.mockResolvedValue("hash-live");
+    mockHasExistingSmsFingerprint.mockResolvedValue(false);
+    mockComputeSmsFingerprint.mockResolvedValue("hash-live");
     mockIsLikelyFinancialSms.mockReturnValue(true);
     mockParseSmsWithAi.mockResolvedValue({
       transactions: [createParsedTransaction()],
@@ -95,7 +99,7 @@ describe("sms-live-processor", () => {
     });
   });
 
-  it("uses AI parsing and preserves the computed SMS body hash", async () => {
+  it("uses AI parsing and preserves the computed SMS fingerprint", async () => {
     const result = await processLiveSmsEvent({
       sender: "QNB",
       body: "Purchase EGP 850 at Hyper Market using card ending 1234",
@@ -104,17 +108,22 @@ describe("sms-live-processor", () => {
     });
 
     expect(result.status).toBe("parsed");
-    expect(result.smsBodyHash).toBe("hash-live");
+    expect(result.smsFingerprint).toBe("hash-live");
     expect(result.transactions).toEqual([
-      expect.objectContaining({ smsBodyHash: "hash-live" }),
+      expect.objectContaining({ smsFingerprint: "hash-live" }),
     ]);
+    expect(mockComputeSmsFingerprint).toHaveBeenCalledWith({
+      sender: "QNB",
+      body: "Purchase EGP 850 at Hyper Market using card ending 1234",
+      receivedAtMs: 1778414400000,
+    });
     const parseCall = mockParseSmsWithAi.mock.calls[0];
     expect(parseCall).toBeDefined();
 
     const [candidates, context] = parseCall;
     expect(candidates).toHaveLength(1);
     expect(candidates[0]).toMatchObject({
-      smsBodyHash: "hash-live",
+      smsFingerprint: "hash-live",
       message: {
         address: "QNB",
         body: "Purchase EGP 850 at Hyper Market using card ending 1234",
@@ -123,8 +132,8 @@ describe("sms-live-processor", () => {
     expect(context.supportedCurrencies).toEqual(["EGP"]);
   });
 
-  it("skips AI when the SMS hash already exists locally", async () => {
-    mockHasExistingSmsBodyHash.mockResolvedValue(true);
+  it("skips AI when the SMS fingerprint already exists locally", async () => {
+    mockHasExistingSmsFingerprint.mockResolvedValue(true);
 
     const result = await processLiveSmsEvent({
       sender: "QNB",
@@ -154,7 +163,9 @@ describe("sms-live-processor", () => {
   });
 
   it("returns infrastructure_error when local deduplication fails", async () => {
-    mockHasExistingSmsBodyHash.mockRejectedValue(new Error("database failed"));
+    mockHasExistingSmsFingerprint.mockRejectedValue(
+      new Error("database failed")
+    );
 
     const result = await processLiveSmsEvent({
       sender: "QNB",
@@ -178,7 +189,7 @@ describe("sms-live-processor", () => {
     });
 
     expect(result.status).toBe("disabled");
-    expect(mockComputeSmsHash).not.toHaveBeenCalled();
+    expect(mockComputeSmsFingerprint).not.toHaveBeenCalled();
     expect(mockParseSmsWithAi).not.toHaveBeenCalled();
   });
 });

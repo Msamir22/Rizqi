@@ -6,19 +6,17 @@
  * @module BudgetRecentTransactions
  */
 
-import React from "react";
-import { Text, View } from "react-native";
-import type { Transaction } from "@monyvi/db";
-import { formatCurrency } from "@monyvi/logic";
+import { CategoryIcon } from "@/components/common/CategoryIcon";
 import { palette } from "@/constants/colors";
 import { useCategoryLookup } from "@/context/CategoriesContext";
-import {
-  CategoryIcon,
-  type IconLibrary,
-} from "@/components/common/CategoryIcon";
 import { useTheme } from "@/context/ThemeContext";
+import { getCategoryIconConfig } from "@/utils/category-icon-config";
 import { Ionicons } from "@expo/vector-icons";
+import type { Transaction } from "@monyvi/db";
+import { formatCurrency } from "@monyvi/logic";
+import React from "react";
 import { useTranslation } from "react-i18next";
+import { Text, View } from "react-native";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -49,6 +47,9 @@ export function BudgetRecentTransactions({
       <View className="rounded-3xl border p-5 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
         {transactions.map((tx, index) => {
           const category = categoryMap.get(tx.categoryId);
+          const iconConfig = category
+            ? getCategoryIconConfig(category)
+            : undefined;
           return (
             <View
               key={tx.id}
@@ -62,10 +63,10 @@ export function BudgetRecentTransactions({
               <View className="w-10 h-10 rounded-xl items-center justify-center me-3 bg-slate-100 dark:bg-slate-700/50">
                 {category ? (
                   <CategoryIcon
-                    iconName={category.iconConfig.iconName}
-                    iconLibrary={category.iconConfig.iconLibrary as IconLibrary}
+                    iconName={iconConfig?.iconName ?? "receipt-outline"}
+                    iconLibrary={iconConfig?.iconLibrary ?? "Ionicons"}
                     size={18}
-                    color={category.iconConfig.iconColor}
+                    color={iconConfig?.iconColor}
                   />
                 ) : (
                   <Ionicons

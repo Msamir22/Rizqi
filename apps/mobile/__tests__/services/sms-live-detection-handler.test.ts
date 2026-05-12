@@ -30,7 +30,7 @@ const mockCreateSmsAtmTransfer = jest.fn<
   Promise<SmsAtmTransferResult>,
   [unknown]
 >();
-const mockHasExistingSmsBodyHash = jest.fn<Promise<boolean>, [string]>();
+const mockHasExistingSmsFingerprint = jest.fn<Promise<boolean>, [string]>();
 const mockGetNotificationPermissionStatus = jest.fn<
   Promise<"undetermined" | "granted" | "denied" | "blocked">,
   []
@@ -64,8 +64,8 @@ jest.mock("@/services/sms-account-resolver", () => ({
 }));
 
 jest.mock("@/services/sms-dedup-service", () => ({
-  hasExistingSmsBodyHash: (smsBodyHash: string): Promise<boolean> =>
-    mockHasExistingSmsBodyHash(smsBodyHash),
+  hasExistingSmsFingerprint: (smsFingerprint: string): Promise<boolean> =>
+    mockHasExistingSmsFingerprint(smsFingerprint),
 }));
 
 jest.mock("@/services/transaction-service", () => ({
@@ -104,7 +104,7 @@ function createParsedSmsTransaction(): ParsedSmsTransaction {
     confidence: 0.95,
     originLabel: "NBE",
     source: "SMS",
-    smsBodyHash: "hash-1",
+    smsFingerprint: "hash-1",
     senderDisplayName: "NBE",
     rawSmsBody: "Purchase EGP 413.00 at LIVE TEST MARKET",
   };
@@ -155,15 +155,15 @@ describe("sms-live-detection-handler notification actions", () => {
     mockShowTransactionCreatedNotification.mockResolvedValue();
     mockGetCurrentUserId.mockReset();
     mockGetCurrentUserId.mockResolvedValue("user-1");
-    mockHasExistingSmsBodyHash.mockReset();
-    mockHasExistingSmsBodyHash.mockResolvedValue(false);
+    mockHasExistingSmsFingerprint.mockReset();
+    mockHasExistingSmsFingerprint.mockResolvedValue(false);
     mockCreateTransaction.mockReset();
     mockCreateTransaction.mockResolvedValue({});
     mockCreateSmsAtmTransfer.mockReset();
     mockCreateSmsAtmTransfer.mockResolvedValue({ success: true });
   });
 
-  it("passes the SMS body hash when confirming a regular SMS transaction", async () => {
+  it("passes the SMS fingerprint when confirming a regular SMS transaction", async () => {
     initializeDetectionActionHandler();
 
     await getRegisteredHandler()("CONFIRM", createPayload());
@@ -171,13 +171,13 @@ describe("sms-live-detection-handler notification actions", () => {
     expect(mockCreateTransaction).toHaveBeenCalledWith(
       expect.objectContaining({
         source: "SMS",
-        smsBodyHash: "hash-1",
+        smsFingerprint: "hash-1",
       })
     );
   });
 
-  it("does not save again when an SMS hash already exists", async () => {
-    mockHasExistingSmsBodyHash.mockResolvedValueOnce(true);
+  it("does not save again when an SMS fingerprint already exists", async () => {
+    mockHasExistingSmsFingerprint.mockResolvedValueOnce(true);
     initializeDetectionActionHandler();
 
     await getRegisteredHandler()("CONFIRM", createPayload());
@@ -186,8 +186,8 @@ describe("sms-live-detection-handler notification actions", () => {
     expect(mockCreateSmsAtmTransfer).not.toHaveBeenCalled();
   });
 
-  it("serializes concurrent saves for the same SMS hash", async () => {
-    mockHasExistingSmsBodyHash.mockImplementation(() =>
+  it("serializes concurrent saves for the same SMS fingerprint", async () => {
+    mockHasExistingSmsFingerprint.mockImplementation(() =>
       Promise.resolve(mockCreateTransaction.mock.calls.length > 0)
     );
     initializeDetectionActionHandler();
@@ -198,7 +198,7 @@ describe("sms-live-detection-handler notification actions", () => {
       handler("CONFIRM", createPayload()),
     ]);
 
-    expect(mockHasExistingSmsBodyHash).toHaveBeenCalledTimes(2);
+    expect(mockHasExistingSmsFingerprint).toHaveBeenCalledTimes(2);
     expect(mockCreateTransaction).toHaveBeenCalledTimes(1);
   });
 
@@ -209,7 +209,7 @@ describe("sms-live-detection-handler notification actions", () => {
     await handleDetectedSms(parsed);
 
     expect(mockCreateTransaction).toHaveBeenCalledWith(
-      expect.objectContaining({ smsBodyHash: "hash-1" })
+      expect.objectContaining({ smsFingerprint: "hash-1" })
     );
     expect(mockShowTransactionCreatedNotification).toHaveBeenCalledWith(
       parsed,

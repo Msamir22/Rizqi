@@ -29,7 +29,7 @@ import {
   showTransactionNotification,
 } from "./notification-service";
 import { resolveAccountForSms } from "./sms-account-resolver";
-import { hasExistingSmsBodyHash } from "./sms-dedup-service";
+import { hasExistingSmsFingerprint } from "./sms-dedup-service";
 import { getCurrentUserId } from "./supabase";
 import { createTransaction } from "./transaction-service";
 import { createSmsAtmTransfer } from "./transfer-service";
@@ -70,10 +70,10 @@ async function getUserScopedPreferenceKey(
 }
 
 async function withSmsSaveLock(
-  smsBodyHash: string,
+  smsFingerprint: string,
   operation: () => Promise<boolean>
 ): Promise<boolean> {
-  const previous = smsSaveLocks.get(smsBodyHash) ?? Promise.resolve();
+  const previous = smsSaveLocks.get(smsFingerprint) ?? Promise.resolve();
   let releaseCurrentLock: () => void = () => {};
   const current = previous
     .catch(() => undefined)
@@ -84,15 +84,15 @@ async function withSmsSaveLock(
         })
     );
 
-  smsSaveLocks.set(smsBodyHash, current);
+  smsSaveLocks.set(smsFingerprint, current);
   await previous.catch(() => undefined);
 
   try {
     return await operation();
   } finally {
     releaseCurrentLock();
-    if (smsSaveLocks.get(smsBodyHash) === current) {
-      smsSaveLocks.delete(smsBodyHash);
+    if (smsSaveLocks.get(smsFingerprint) === current) {
+      smsSaveLocks.delete(smsFingerprint);
     }
   }
 }
@@ -209,7 +209,7 @@ async function saveDetectedTransaction(
   parsed: ParsedSmsTransaction,
   accountId: string
 ): Promise<boolean> {
-  return withSmsSaveLock(parsed.smsBodyHash, () =>
+  return withSmsSaveLock(parsed.smsFingerprint, () =>
     saveDetectedTransactionWithoutLock(parsed, accountId)
   );
 }
@@ -218,9 +218,9 @@ async function saveDetectedTransactionWithoutLock(
   parsed: ParsedSmsTransaction,
   accountId: string
 ): Promise<boolean> {
-  if (await hasExistingSmsBodyHash(parsed.smsBodyHash)) {
+  if (await hasExistingSmsFingerprint(parsed.smsFingerprint)) {
     logger.info("smsDetection.duplicateSkipped", {
-      smsBodyHash: parsed.smsBodyHash,
+      smsFingerprint: parsed.smsFingerprint,
     });
     return false;
   }
@@ -232,7 +232,7 @@ async function saveDetectedTransactionWithoutLock(
       amount: parsed.amount,
       currency: parsed.currency,
       date: parsed.date,
-      smsBodyHash: parsed.smsBodyHash,
+      smsFingerprint: parsed.smsFingerprint,
       senderDisplayName: parsed.senderDisplayName,
     });
 
@@ -245,7 +245,7 @@ async function saveDetectedTransactionWithoutLock(
     logger.info("smsDetection.atmTransferSaved", {
       amount: parsed.amount,
       currency: parsed.currency,
-      smsBodyHash: parsed.smsBodyHash,
+      smsFingerprint: parsed.smsFingerprint,
     });
     return true;
   }
@@ -261,14 +261,14 @@ async function saveDetectedTransactionWithoutLock(
     type: parsed.type,
     date: parsed.date,
     source: "SMS",
-    smsBodyHash: parsed.smsBodyHash,
+    smsFingerprint: parsed.smsFingerprint,
   });
 
   logger.info("smsDetection.transactionSaved", {
     amount: parsed.amount,
     currency: parsed.currency,
     type: parsed.type,
-    smsBodyHash: parsed.smsBodyHash,
+    smsFingerprint: parsed.smsFingerprint,
   });
   return true;
 }
@@ -300,7 +300,7 @@ export async function handleDetectedSms(
     logger.info("smsDetection.transactionQueued", {
       amount: parsed.amount,
       type: parsed.type,
-      smsBodyHash: parsed.smsBodyHash,
+      smsFingerprint: parsed.smsFingerprint,
     });
     return;
   }
@@ -318,7 +318,7 @@ export async function handleDetectedSms(
       logger.warn("smsDetection.accountResolutionMissing", {
         senderDisplayName: parsed.senderDisplayName,
         currency: parsed.currency,
-        smsBodyHash: parsed.smsBodyHash,
+        smsFingerprint: parsed.smsFingerprint,
       });
       await showTransactionNeedsAccountNotification(parsed);
       return;
@@ -343,7 +343,7 @@ export async function handleDetectedSms(
     }
   } catch (err) {
     logger.error("smsDetection.handleFailed", err, {
-      smsBodyHash: parsed.smsBodyHash,
+      smsFingerprint: parsed.smsFingerprint,
     });
   }
 }

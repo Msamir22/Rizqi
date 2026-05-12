@@ -55,8 +55,8 @@ interface NativeSmsModules {
 /** Event name matching SmsEventModule.EVENT_NAME in Kotlin */
 const NATIVE_SMS_EVENT = "onSmsReceived";
 
-/** Max recent hashes to track (prevents memory leak) */
-const MAX_RECENT_HASHES = 200;
+/** Max recent fingerprints to track (prevents memory leak) */
+const MAX_RECENT_FINGERPRINTS = 200;
 
 // ---------------------------------------------------------------------------
 // Module state
@@ -66,8 +66,8 @@ let isListening = false;
 let nativeSubscription: EmitterSubscription | null = null;
 const handlers = new Set<LiveSmsEventHandler>();
 
-/** Track recently processed hashes to avoid duplicates within a session */
-const recentHashes = new Set<string>();
+/** Track recently processed fingerprints to avoid duplicates within a session */
+const recentFingerprints = new Set<string>();
 
 // ---------------------------------------------------------------------------
 // Internal processing
@@ -114,7 +114,8 @@ async function processNativeSmsEvent(event: NativeSmsEvent): Promise<void> {
     const result = await processLiveSmsEvent(
       { ...event, deliveryMode: "foreground" },
       {
-        isRecentlyProcessed: (smsBodyHash) => recentHashes.has(smsBodyHash),
+        isRecentlyProcessed: (smsFingerprint) =>
+          recentFingerprints.has(smsFingerprint),
         markRecentlyProcessed,
       }
     );
@@ -130,14 +131,14 @@ async function processNativeSmsEvent(event: NativeSmsEvent): Promise<void> {
   }
 }
 
-function markRecentlyProcessed(smsBodyHash: string): void {
-  recentHashes.add(smsBodyHash);
+function markRecentlyProcessed(smsFingerprint: string): void {
+  recentFingerprints.add(smsFingerprint);
 
-  if (recentHashes.size > MAX_RECENT_HASHES) {
-    const iterator = recentHashes.values();
+  if (recentFingerprints.size > MAX_RECENT_FINGERPRINTS) {
+    const iterator = recentFingerprints.values();
     const firstValue = iterator.next().value;
     if (firstValue !== undefined) {
-      recentHashes.delete(firstValue);
+      recentFingerprints.delete(firstValue);
     }
   }
 }
@@ -230,9 +231,9 @@ export function onTransactionDetected(
 }
 
 /**
- * Clear the recent hashes cache.
+ * Clear the recent fingerprints cache.
  * Useful for testing or when the user performs a full re-scan.
  */
-export function clearRecentHashes(): void {
-  recentHashes.clear();
+export function clearRecentFingerprints(): void {
+  recentFingerprints.clear();
 }

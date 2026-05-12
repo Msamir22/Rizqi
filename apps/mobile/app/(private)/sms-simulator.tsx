@@ -91,7 +91,7 @@ export default function SmsSimulatorScreen(): React.JSX.Element | null {
       (tx: ParsedSmsTransaction): void => {
         setLog((prev) => {
           const entry: LogEntry = {
-            id: `${tx.smsBodyHash}-${Date.now()}`,
+            id: `${tx.smsFingerprint}-${Date.now()}`,
             receivedAt: Date.now(),
             tx,
           };

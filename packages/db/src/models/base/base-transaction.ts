@@ -48,7 +48,7 @@ export abstract class BaseTransaction extends Model {
   @field("linked_debt_id") linkedDebtId?: string;
   @field("linked_recurring_id") linkedRecurringId?: string;
   @field("note") note?: string;
-  @field("sms_body_hash") smsBodyHash?: string;
+  @field("sms_fingerprint") smsFingerprint?: string;
   @field("source") source!: TransactionSource;
   @field("type") type!: TransactionType;
   @date("updated_at") updatedAt!: Date;

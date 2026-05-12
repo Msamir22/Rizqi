@@ -4,7 +4,7 @@
  * Re-emits the same `onSmsReceived` DeviceEventEmitter event the native
  * SmsBroadcastReceiver emits in production. Because the live listener
  * subscribes to that exact event name (see `sms-live-listener-service.ts`),
- * the entire pipeline (keyword filter → hash dedup → AI parse → account
+ * the entire pipeline (keyword filter → fingerprint dedup → AI parse → account
  * resolve → persist) runs unchanged from a fake injection.
  *
  * All entry points are guarded by `__DEV__` so the module is tree-shaken
@@ -14,7 +14,7 @@
  */
 
 import { DeviceEventEmitter } from "react-native";
-import { clearRecentHashes as clearLiveListenerHashes } from "../sms-live-listener-service";
+import { clearRecentFingerprints } from "../sms-live-listener-service";
 import { getFixtureById, type SmsFixture } from "./sms-fixtures";
 
 /** Must match `NATIVE_SMS_EVENT` in sms-live-listener-service.ts */
@@ -56,7 +56,7 @@ export function injectFixture(fixtureId: string): SmsFixture | null {
 
 /**
  * Inject the same fixture multiple times in rapid succession to verify the
- * dedup cache (`recentHashes` in sms-live-listener-service).
+ * dedup cache (`recentFingerprints` in sms-live-listener-service).
  */
 export function injectBurst(fixtureId: string, count: number = 3): number {
   if (!__DEV__) return 0;
@@ -76,5 +76,5 @@ export function injectBurst(fixtureId: string, count: number = 3): number {
  */
 export function resetSimulatorState(): void {
   if (!__DEV__) return;
-  clearLiveListenerHashes();
+  clearRecentFingerprints();
 }

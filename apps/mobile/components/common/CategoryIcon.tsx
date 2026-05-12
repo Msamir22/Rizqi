@@ -6,6 +6,7 @@
  */
 
 import type { Category } from "@monyvi/db";
+import { getCategoryIconConfig } from "@/utils/category-icon-config";
 import {
   FontAwesome5,
   Ionicons,
@@ -69,7 +70,6 @@ export function CategoryIcon({
 
 /**
  * Renders an icon from a Category model instance.
- * Convenience wrapper that uses the category's iconConfig getter.
  */
 export function CategoryIconFromModel({
   category,
@@ -78,7 +78,7 @@ export function CategoryIconFromModel({
   category: Category;
   size?: number;
 }): React.JSX.Element {
-  const { iconName, iconLibrary, iconColor } = category.iconConfig;
+  const { iconName, iconLibrary, iconColor } = getCategoryIconConfig(category);
 
   return (
     <CategoryIcon

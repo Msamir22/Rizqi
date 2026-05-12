@@ -41,7 +41,7 @@ function createParsedTransaction(): ParsedSmsTransaction {
     confidence: 0.94,
     originLabel: "NBE",
     source: "SMS",
-    smsBodyHash: "hash-headless",
+    smsFingerprint: "hash-headless",
     senderDisplayName: "NBE",
     rawSmsBody:
       "Purchase EGP 7.25 at DOUBLE CONFIRM TEST using card ending 1234",
@@ -66,7 +66,7 @@ describe("sms-headless-task", () => {
     const parsed = createParsedTransaction();
     mockProcessLiveSmsEvent.mockResolvedValue({
       status: "parsed",
-      smsBodyHash: "hash-headless",
+      smsFingerprint: "hash-headless",
       transactions: [parsed],
     });
     const task = getRegisteredTask();
@@ -89,7 +89,7 @@ describe("sms-headless-task", () => {
   it("throws a HeadlessJsTaskError when AI parsing should be retried", async () => {
     mockProcessLiveSmsEvent.mockResolvedValue({
       status: "ai_failed",
-      smsBodyHash: "hash-headless",
+      smsFingerprint: "hash-headless",
       transactions: [],
     });
     const task = getRegisteredTask();
@@ -107,7 +107,7 @@ describe("sms-headless-task", () => {
   it("does not retry permanent AI parsing failures", async () => {
     mockProcessLiveSmsEvent.mockResolvedValue({
       status: "ai_failed",
-      smsBodyHash: "hash-headless",
+      smsFingerprint: "hash-headless",
       isRetryable: false,
       transactions: [],
     });

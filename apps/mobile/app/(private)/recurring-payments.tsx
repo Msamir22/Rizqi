@@ -12,6 +12,7 @@ import { useCategoryLookup } from "@/context/CategoriesContext";
 import { useTheme } from "@/context/ThemeContext";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import { useRecurringPayments } from "@/hooks/useRecurringPayments";
+import { getCategoryIconConfig } from "@/utils/category-icon-config";
 import { getDueText } from "@/utils/dateHelpers";
 import { getPaymentIcon } from "@/utils/recurring-helpers";
 import type {
@@ -158,6 +159,7 @@ function PaymentCard({
   const { t } = useTranslation("transactions");
   const categoryMap = useCategoryLookup();
   const category = categoryMap.get(payment.categoryId);
+  const iconConfig = category ? getCategoryIconConfig(category) : undefined;
 
   return (
     <TouchableOpacity
@@ -182,9 +184,9 @@ function PaymentCard({
       >
         {category ? (
           <CategoryIcon
-            iconName={category.iconConfig.iconName}
-            iconLibrary={category.iconConfig.iconLibrary}
-            color={category.iconConfig.iconColor}
+            iconName={iconConfig?.iconName ?? "repeat-outline"}
+            iconLibrary={iconConfig?.iconLibrary ?? "Ionicons"}
+            color={iconConfig?.iconColor}
             size={20}
           />
         ) : (

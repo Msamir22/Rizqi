@@ -1,7 +1,7 @@
 import { database, type Category } from "@monyvi/db";
 import {
   type ParsedSmsTransaction,
-  computeSmsHash,
+  computeSmsFingerprint,
   isLikelyFinancialSms,
   SUPPORTED_CURRENCIES,
 } from "@monyvi/logic";
@@ -13,7 +13,7 @@ import {
   type SmsCandidate,
 } from "./ai-sms-parser-service";
 import { reconcileLiveDetectionPreference } from "./sms-live-detection-handler";
-import { hasExistingSmsBodyHash } from "./sms-dedup-service";
+import { hasExistingSmsFingerprint } from "./sms-dedup-service";
 import { getCurrentUserDataScope } from "./user-data-access";
 import { logger } from "@/utils/logger";
 
@@ -36,26 +36,26 @@ export interface LiveSmsEvent {
 
 export interface LiveSmsProcessingResult {
   readonly status: LiveSmsProcessingStatus;
-  readonly smsBodyHash?: string;
+  readonly smsFingerprint?: string;
   readonly isRetryable?: boolean;
   readonly transactions: readonly ParsedSmsTransaction[];
 }
 
 interface LiveSmsProcessingOptions {
-  readonly isRecentlyProcessed?: (smsBodyHash: string) => boolean;
-  readonly markRecentlyProcessed?: (smsBodyHash: string) => void;
+  readonly isRecentlyProcessed?: (smsFingerprint: string) => boolean;
+  readonly markRecentlyProcessed?: (smsFingerprint: string) => void;
 }
 
 const EMPTY_TRANSACTIONS: readonly ParsedSmsTransaction[] = [];
-const inFlightSmsBodyHashes = new Set<string>();
+const inFlightSmsFingerprints = new Set<string>();
 
 function createResult(
   status: LiveSmsProcessingStatus,
-  smsBodyHash?: string,
+  smsFingerprint?: string,
   transactions: readonly ParsedSmsTransaction[] = EMPTY_TRANSACTIONS,
   isRetryable?: boolean
 ): LiveSmsProcessingResult {
-  return { status, smsBodyHash, isRetryable, transactions };
+  return { status, smsFingerprint, isRetryable, transactions };
 }
 
 async function loadAiContext(): Promise<ParseSmsContext> {
@@ -86,20 +86,24 @@ export async function processLiveSmsEvent(
     return createResult("disabled");
   }
 
-  let smsBodyHash: string;
+  let smsFingerprint: string;
   try {
-    smsBodyHash = await computeSmsHash(event.body);
+    smsFingerprint = await computeSmsFingerprint({
+      sender: event.sender,
+      body: event.body,
+      receivedAtMs: event.timestamp,
+    });
 
-    if (inFlightSmsBodyHashes.has(smsBodyHash)) {
-      return createResult("duplicate", smsBodyHash);
+    if (inFlightSmsFingerprints.has(smsFingerprint)) {
+      return createResult("duplicate", smsFingerprint);
     }
 
-    if (options.isRecentlyProcessed?.(smsBodyHash)) {
-      return createResult("duplicate", smsBodyHash);
+    if (options.isRecentlyProcessed?.(smsFingerprint)) {
+      return createResult("duplicate", smsFingerprint);
     }
 
-    if (await hasExistingSmsBodyHash(smsBodyHash)) {
-      return createResult("duplicate", smsBodyHash);
+    if (await hasExistingSmsFingerprint(smsFingerprint)) {
+      return createResult("duplicate", smsFingerprint);
     }
   } catch (error: unknown) {
     logger.error("liveSms.infrastructure.failed", error, {
@@ -108,7 +112,7 @@ export async function processLiveSmsEvent(
     return createResult("infrastructure_error", undefined);
   }
 
-  inFlightSmsBodyHashes.add(smsBodyHash);
+  inFlightSmsFingerprints.add(smsFingerprint);
   try {
     let context: ParseSmsContext;
     try {
@@ -117,7 +121,7 @@ export async function processLiveSmsEvent(
       logger.error("liveSms.context.failed", error, {
         deliveryMode: event.deliveryMode,
       });
-      return createResult("infrastructure_error", smsBodyHash);
+      return createResult("infrastructure_error", smsFingerprint);
     }
 
     const candidate: SmsCandidate = {
@@ -128,7 +132,7 @@ export async function processLiveSmsEvent(
         date: event.timestamp,
         read: false,
       },
-      smsBodyHash,
+      smsFingerprint,
     };
 
     let aiResult: AiParseResult;
@@ -138,26 +142,31 @@ export async function processLiveSmsEvent(
       logger.error("liveSms.aiParse.failed", error, {
         deliveryMode: event.deliveryMode,
       });
-      return createResult("ai_failed", smsBodyHash, EMPTY_TRANSACTIONS, true);
+      return createResult(
+        "ai_failed",
+        smsFingerprint,
+        EMPTY_TRANSACTIONS,
+        true
+      );
     }
 
     if (aiResult.hasError === true) {
       return createResult(
         "ai_failed",
-        smsBodyHash,
+        smsFingerprint,
         EMPTY_TRANSACTIONS,
         aiResult.isRetryable !== false
       );
     }
 
-    options.markRecentlyProcessed?.(smsBodyHash);
+    options.markRecentlyProcessed?.(smsFingerprint);
 
     if (aiResult.transactions.length === 0) {
-      return createResult("ignored", smsBodyHash);
+      return createResult("ignored", smsFingerprint);
     }
 
-    return createResult("parsed", smsBodyHash, aiResult.transactions);
+    return createResult("parsed", smsFingerprint, aiResult.transactions);
   } finally {
-    inFlightSmsBodyHashes.delete(smsBodyHash);
+    inFlightSmsFingerprints.delete(smsFingerprint);
   }
 }

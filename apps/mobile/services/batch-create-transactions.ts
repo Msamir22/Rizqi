@@ -35,6 +35,7 @@ import { Q, type Model } from "@nozbe/watermelondb";
 import { ensureCashAccount } from "./account-service";
 import { getCurrentUserId } from "./supabase";
 import { queryOwned } from "./user-data-access";
+import { hasExistingSmsFingerprint } from "./sms-dedup-service";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -62,6 +63,27 @@ function accumulateBalanceDelta(
 ): void {
   const existing = deltas.get(accountId) ?? 0;
   deltas.set(accountId, existing + delta);
+}
+
+async function shouldSkipSmsTransaction(
+  tx: ReviewableTransaction,
+  seenSmsFingerprints: Set<string>
+): Promise<boolean> {
+  if (tx.source !== "SMS" || !tx.deduplicationHash) {
+    return false;
+  }
+
+  if (seenSmsFingerprints.has(tx.deduplicationHash)) {
+    return true;
+  }
+
+  if (await hasExistingSmsFingerprint(tx.deduplicationHash)) {
+    seenSmsFingerprints.add(tx.deduplicationHash);
+    return true;
+  }
+
+  seenSmsFingerprints.add(tx.deduplicationHash);
+  return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -144,11 +166,17 @@ export async function batchCreateTransactions<T extends ReviewableTransaction>(
 
   const preparedOps: Model[] = [];
   const balanceDeltas = new Map<string, number>();
+  const seenSmsFingerprints = new Set<string>();
   let savedCount = 0;
   let failedCount = 0;
 
   for (let i = 0; i < transactions.length; i++) {
     const tx = transactions[i];
+
+    if (await shouldSkipSmsTransaction(tx, seenSmsFingerprints)) {
+      continue;
+    }
+
     const accountId = transactionAccountMap.get(i);
 
     if (!accountId) {
@@ -182,7 +210,7 @@ export async function batchCreateTransactions<T extends ReviewableTransaction>(
           t.currency = tx.currency;
           t.date = new Date(tx.date);
           t.notes = `ATM Withdrawal`;
-          t.smsBodyHash = tx.deduplicationHash;
+          t.smsFingerprint = tx.deduplicationHash;
           t.deleted = false;
         })
       );
@@ -209,7 +237,7 @@ export async function batchCreateTransactions<T extends ReviewableTransaction>(
         record.note = "";
         record.date = tx.date;
         record.source = tx.source;
-        record.smsBodyHash = tx.deduplicationHash;
+        record.smsFingerprint = tx.deduplicationHash;
         record.isDraft = false;
         record.deleted = false;
       })

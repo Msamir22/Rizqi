@@ -5,8 +5,8 @@ import { getCurrentUserDataScope } from "./user-data-access";
 /**
  * Check whether an SMS has already produced a transaction or transfer.
  */
-export async function hasExistingSmsBodyHash(
-  smsBodyHash: string
+export async function hasExistingSmsFingerprint(
+  smsFingerprint: string
 ): Promise<boolean> {
   const scope = await getCurrentUserDataScope();
 
@@ -14,14 +14,14 @@ export async function hasExistingSmsBodyHash(
     scope
       .queryOwned(
         database.get<Transaction>("transactions"),
-        Q.where("sms_body_hash", smsBodyHash),
+        Q.where("sms_fingerprint", smsFingerprint),
         Q.where("deleted", Q.notEq(true))
       )
       .fetchCount(),
     scope
       .queryOwned(
         database.get<Transfer>("transfers"),
-        Q.where("sms_body_hash", smsBodyHash),
+        Q.where("sms_fingerprint", smsFingerprint),
         Q.where("deleted", Q.notEq(true))
       )
       .fetchCount(),

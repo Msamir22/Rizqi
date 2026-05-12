@@ -7,7 +7,11 @@
  * @module parsers/index
  */
 
-export { computeSmsHash, normalizeSmsBody } from "./sms-hash";
+export {
+  computeSmsFingerprint,
+  normalizeSmsBody,
+  type SmsFingerprintInput,
+} from "./sms-hash";
 export { isLikelyFinancialSms } from "./sms-keyword-filter";
 export { isKnownFinancialSender } from "./egyptian-bank-registry";
 export type { BankInfo } from "./egyptian-bank-registry";

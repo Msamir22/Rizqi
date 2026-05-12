@@ -31,7 +31,7 @@ jest.mock("@/services/user-data-access", () => ({
   ),
 }));
 
-import { hasExistingSmsBodyHash } from "@/services/sms-dedup-service";
+import { hasExistingSmsFingerprint } from "@/services/sms-dedup-service";
 
 describe("sms-dedup-service", () => {
   beforeEach(() => {
@@ -44,21 +44,21 @@ describe("sms-dedup-service", () => {
     mockGet.mockImplementation((tableName: string) => ({ tableName }));
   });
 
-  it("returns false when the SMS hash is not found in transactions or transfers", async () => {
+  it("returns false when the SMS fingerprint is not found in transactions or transfers", async () => {
     mockFetchCounts = [0, 0];
 
-    await expect(hasExistingSmsBodyHash("hash-1")).resolves.toBe(false);
+    await expect(hasExistingSmsFingerprint("hash-1")).resolves.toBe(false);
   });
 
-  it("returns true when the SMS hash already exists in transactions", async () => {
+  it("returns true when the SMS fingerprint already exists in transactions", async () => {
     mockFetchCounts = [1, 0];
 
-    await expect(hasExistingSmsBodyHash("hash-1")).resolves.toBe(true);
+    await expect(hasExistingSmsFingerprint("hash-1")).resolves.toBe(true);
   });
 
-  it("returns true when the SMS hash already exists in transfers", async () => {
+  it("returns true when the SMS fingerprint already exists in transfers", async () => {
     mockFetchCounts = [0, 1];
 
-    await expect(hasExistingSmsBodyHash("hash-1")).resolves.toBe(true);
+    await expect(hasExistingSmsFingerprint("hash-1")).resolves.toBe(true);
   });
 });

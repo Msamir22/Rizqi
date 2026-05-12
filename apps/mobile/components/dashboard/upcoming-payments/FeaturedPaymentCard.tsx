@@ -6,6 +6,7 @@
  */
 
 import { palette } from "@/constants/colors";
+import { getDueText } from "@/utils/dateHelpers";
 import { getPaymentIcon } from "@/utils/recurring-helpers";
 import { formatCurrency } from "@monyvi/logic";
 import { Ionicons } from "@expo/vector-icons";
@@ -54,7 +55,7 @@ function FeaturedPaymentCardComponent({
 
       {/* Days until due */}
       <Text className={`text-sm font-medium mb-4 ${dueClass}`}>
-        {payment.dueText}
+        {getDueText(payment.nextDueDate)}
       </Text>
 
       {/* Pay Now Button */}

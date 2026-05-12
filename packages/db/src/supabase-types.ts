@@ -782,7 +782,7 @@ export type Database = {
           linked_debt_id: string | null;
           linked_recurring_id: string | null;
           note: string | null;
-          sms_body_hash: string | null;
+          sms_fingerprint: string | null;
           source: Database["public"]["Enums"]["transaction_source"];
           type: Database["public"]["Enums"]["transaction_type"];
           updated_at: string;
@@ -803,7 +803,7 @@ export type Database = {
           linked_debt_id?: string | null;
           linked_recurring_id?: string | null;
           note?: string | null;
-          sms_body_hash?: string | null;
+          sms_fingerprint?: string | null;
           source?: Database["public"]["Enums"]["transaction_source"];
           type: Database["public"]["Enums"]["transaction_type"];
           updated_at?: string;
@@ -824,7 +824,7 @@ export type Database = {
           linked_debt_id?: string | null;
           linked_recurring_id?: string | null;
           note?: string | null;
-          sms_body_hash?: string | null;
+          sms_fingerprint?: string | null;
           source?: Database["public"]["Enums"]["transaction_source"];
           type?: Database["public"]["Enums"]["transaction_type"];
           updated_at?: string;
@@ -880,7 +880,7 @@ export type Database = {
           from_account_id: string;
           id: string;
           notes: string | null;
-          sms_body_hash: string | null;
+          sms_fingerprint: string | null;
           to_account_id: string;
           updated_at: string;
           user_id: string;
@@ -896,7 +896,7 @@ export type Database = {
           from_account_id: string;
           id?: string;
           notes?: string | null;
-          sms_body_hash?: string | null;
+          sms_fingerprint?: string | null;
           to_account_id: string;
           updated_at?: string;
           user_id: string;
@@ -912,7 +912,7 @@ export type Database = {
           from_account_id?: string;
           id?: string;
           notes?: string | null;
-          sms_body_hash?: string | null;
+          sms_fingerprint?: string | null;
           to_account_id?: string;
           updated_at?: string;
           user_id?: string;

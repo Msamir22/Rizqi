@@ -1,4 +1,3 @@
-import { palette } from "../../../../apps/mobile/constants/colors";
 import { BaseCategory } from "./base/base-category";
 
 /** Supported icon libraries from @expo/vector-icons */
@@ -11,7 +10,6 @@ type IconLibrary =
 interface IconConfig {
   iconName: string;
   iconLibrary: IconLibrary;
-  iconColor: string;
 }
 
 export class Category extends BaseCategory {
@@ -32,10 +30,6 @@ export class Category extends BaseCategory {
     return {
       iconName: this.icon,
       iconLibrary: this.iconLibrary as IconLibrary,
-      iconColor:
-        this.color || this.isExpense
-          ? palette.red[500]
-          : palette.nileGreen[500],
     };
   }
 }

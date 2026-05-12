@@ -68,8 +68,8 @@ export interface ParseSmsContext {
 export interface SmsCandidate {
   /** The original SMS message */
   readonly message: SmsMessage;
-  /** Pre-computed body hash for deduplication */
-  readonly smsBodyHash: string;
+  /** Pre-computed sender/body/time fingerprint for deduplication */
+  readonly smsFingerprint: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -239,8 +239,8 @@ function mapAiTransactions(
       date: parseDate(aiTx.date, candidate.message.date),
       source: "SMS",
       originLabel: candidate.message.address,
-      deduplicationHash: candidate.smsBodyHash,
-      smsBodyHash: candidate.smsBodyHash,
+      deduplicationHash: candidate.smsFingerprint,
+      smsFingerprint: candidate.smsFingerprint,
       senderDisplayName: candidate.message.address,
       categoryId: category.id,
       categoryDisplayName: category.displayName,

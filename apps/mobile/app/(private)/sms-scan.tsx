@@ -25,7 +25,7 @@ import { useSmsScanContext } from "@/context/SmsScanContext";
 import { useSmsScan } from "@/hooks/useSmsScan";
 import { useSmsPermission } from "@/hooks/useSmsPermission";
 import { useSmsSync } from "@/hooks/useSmsSync";
-import { loadExistingSmsHashes } from "@/services/sms-sync-service";
+import { loadExistingSmsFingerprints } from "@/services/sms-sync-service";
 import { palette } from "@/constants/colors";
 import { logger } from "@/utils/logger";
 import type { ParseSmsContext } from "@/services/ai-sms-parser-service";
@@ -209,17 +209,20 @@ export default function SmsScanScreen(): React.JSX.Element {
         ? lastSyncTimestamp
         : undefined;
 
-    let existingHashes: ReadonlySet<string> = new Set();
+    let existingFingerprints: ReadonlySet<string> = new Set();
     try {
-      existingHashes = await loadExistingSmsHashes();
+      existingFingerprints = await loadExistingSmsFingerprints();
     } catch (err: unknown) {
-      console.warn(
-        "[sms-scan] Failed to load existing hashes, continuing with empty set:",
-        err instanceof Error ? err.message : String(err)
-      );
+      logger.warn("smsScan.loadExistingFingerprintsFailed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
 
-    startScan({ minDate, existingHashes, aiContext }).catch(console.error);
+    startScan({ minDate, existingFingerprints, aiContext }).catch(
+      (err: unknown) => {
+        logger.error("smsScan.startFailed", err);
+      }
+    );
   }, [startScan, scanMode, lastSyncTimestamp, aiContext]);
 
   // Track whether scan has been initiated to prevent double-start
@@ -231,7 +234,9 @@ export default function SmsScanScreen(): React.JSX.Element {
     if (!isAiContextReady) return;
     if (!scanInitiated.current) {
       scanInitiated.current = true;
-      initiateScan().catch(console.error);
+      initiateScan().catch((err: unknown) => {
+        logger.error("smsScan.autoStartFailed", err);
+      });
     }
   }, [initiateScan, isAiContextReady, permissionStatus]);
 
@@ -247,7 +252,9 @@ export default function SmsScanScreen(): React.JSX.Element {
   };
 
   const handleRetryPress = (): void => {
-    initiateScan().catch(console.error);
+    initiateScan().catch((err: unknown) => {
+      logger.error("smsScan.retryFailed", err);
+    });
   };
 
   // Compute top unique category system names from parsed transactions

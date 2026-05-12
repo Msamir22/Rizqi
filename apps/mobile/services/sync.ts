@@ -690,7 +690,7 @@ export async function syncDatabase(
           // This flag tells WatermelonDB to create them instead of treating it as an error
           sendCreatedAsUpdated: true,
         });
-        logger.info("sync.completed");
+        logger.debug("sync.completed");
       } catch (error) {
         // WatermelonDB throws a diagnostic error when concurrent synchronize() calls occur.
         // This is benign — the later sync is aborted, no data corruption.

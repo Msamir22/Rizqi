@@ -10,7 +10,7 @@ export const MOCK_PARSED_TRANSACTIONS: ParsedSmsTransaction[] = [
     type: "EXPENSE",
     counterparty: "Uber Egypt",
     date: new Date(),
-    smsBodyHash: "mock-hash-1",
+    smsFingerprint: "mock-hash-1",
     senderDisplayName: "CIB",
     categoryId: "00000000-0000-0000-0001-000000000002",
     categoryDisplayName: "Transportation",
@@ -26,7 +26,7 @@ export const MOCK_PARSED_TRANSACTIONS: ParsedSmsTransaction[] = [
     type: "EXPENSE",
     counterparty: "Carrefour",
     date: new Date(Date.now() - ONE_HOUR_MS), // 1 hour ago
-    smsBodyHash: "mock-hash-2",
+    smsFingerprint: "mock-hash-2",
     senderDisplayName: "NBE",
     categoryId: "f915b9f5-cc8e-45f4-91ff-c34ef8583807",
     categoryDisplayName: "Groceries",
@@ -41,7 +41,7 @@ export const MOCK_PARSED_TRANSACTIONS: ParsedSmsTransaction[] = [
     type: "INCOME",
     counterparty: "Upwork Global",
     date: new Date(Date.now() - ONE_DAY_MS), // 1 day ago
-    smsBodyHash: "mock-hash-3",
+    smsFingerprint: "mock-hash-3",
     senderDisplayName: "QNB",
     categoryId: "00000000-0000-0000-0001-000000000011",
     categoryDisplayName: "Salary & Income",
@@ -57,7 +57,7 @@ export const MOCK_PARSED_TRANSACTIONS: ParsedSmsTransaction[] = [
     isAtmWithdrawal: true,
     counterparty: "ATM Withdrawal",
     date: new Date(Date.now() - TWO_DAYS_MS), // 2 days ago
-    smsBodyHash: "mock-hash-4",
+    smsFingerprint: "mock-hash-4",
     senderDisplayName: "Banque Misr",
     categoryId: "cash-id",
     categoryDisplayName: "Cash Withdrawal",

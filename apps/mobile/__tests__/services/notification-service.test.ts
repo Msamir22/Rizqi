@@ -83,7 +83,7 @@ function createParsedSmsTransaction(): ParsedSmsTransaction {
     confidence: 0.95,
     originLabel: "NBE",
     source: "SMS",
-    smsBodyHash: "hash-1",
+    smsFingerprint: "hash-1",
     senderDisplayName: "NBE",
     rawSmsBody: "Purchase EGP 413.00 at LIVE TEST MARKET",
   };
@@ -92,7 +92,7 @@ function createParsedSmsTransaction(): ParsedSmsTransaction {
 function createNotificationResponse(
   actionIdentifier: string,
   identifier: string,
-  smsBodyHash = "hash-1"
+  smsFingerprint = "hash-1"
 ): Notifications.NotificationResponse {
   return {
     actionIdentifier,
@@ -104,7 +104,7 @@ function createNotificationResponse(
             type: "sms_transaction",
             transactionData: {
               ...createParsedSmsTransaction(),
-              smsBodyHash,
+              smsFingerprint,
             },
             resolvedAccountId: "account-1",
             resolvedAccountName: "MainCIBAccount",

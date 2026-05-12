@@ -259,7 +259,7 @@ async function handleNotificationActionResponse(
 
   const notificationId = response.notification.request.identifier;
   const notificationKey =
-    data.transactionData.smsBodyHash ??
+    data.transactionData.smsFingerprint ??
     response.notification.request.identifier;
 
   if (!markNotificationKeyHandled(notificationKey)) {
@@ -275,7 +275,7 @@ async function handleNotificationActionResponse(
     logger.error("[notification-service] Action handler failed", err, {
       actionId,
       notificationId,
-      smsBodyHash: data.transactionData.smsBodyHash,
+      smsFingerprint: data.transactionData.smsFingerprint,
     });
   }
 }
@@ -377,7 +377,7 @@ export async function showTransactionNotification(
   };
 
   await Notifications.scheduleNotificationAsync({
-    identifier: `sms-transaction-${parsed.smsBodyHash}`,
+    identifier: `sms-transaction-${parsed.smsFingerprint}`,
     content: {
       title,
       body,
@@ -458,7 +458,7 @@ async function showInfoOnlySmsTransactionNotification({
   };
 
   await Notifications.scheduleNotificationAsync({
-    identifier: `${identifierPrefix}-${parsed.smsBodyHash}`,
+    identifier: `${identifierPrefix}-${parsed.smsFingerprint}`,
     content: {
       title,
       body,

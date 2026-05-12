@@ -35,13 +35,17 @@ import { schema } from "./schema";
  * Generate UUID v4 strings for database IDs
  * Supabase requires UUID format, so we override WatermelonDB's default
  */
+function getHighResolutionTime(): number {
+  const performanceLike = globalThis as {
+    readonly performance?: { readonly now?: () => number };
+  };
+
+  return performanceLike.performance?.now?.() ?? 0;
+}
+
 function generateUUID(): string {
   let d = new Date().getTime();
-  let d2 =
-    (typeof performance !== "undefined" &&
-      performance.now &&
-      performance.now() * 1000) ||
-    0;
+  let d2 = getHighResolutionTime() * 1000;
 
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
     let r = Math.random() * 16;
