@@ -98,6 +98,24 @@ jest.mock("@/services/supabase", () => {
   };
 });
 
+jest.mock("@/services/sms-live-detection-handler", () => {
+  const setAutoConfirm = jest.fn(() => Promise.resolve());
+  const setLiveDetectionEnabled = jest.fn(() => Promise.resolve());
+  return {
+    setAutoConfirm,
+    setLiveDetectionEnabled,
+    __mocks: { setAutoConfirm, setLiveDetectionEnabled },
+  };
+});
+
+jest.mock("@/services/sms-live-listener-service", () => {
+  const stopSmsListener = jest.fn();
+  return {
+    stopSmsListener,
+    __mocks: { stopSmsListener },
+  };
+});
+
 interface SupabaseMocks {
   signOut: jest.Mock;
 }
@@ -105,6 +123,27 @@ interface SupabaseMocks {
 function getSupabaseMocks(): SupabaseMocks {
   return jest.requireMock<{ __mocks: SupabaseMocks }>("@/services/supabase")
     .__mocks;
+}
+
+interface SmsLiveDetectionMocks {
+  setAutoConfirm: jest.Mock;
+  setLiveDetectionEnabled: jest.Mock;
+}
+
+function getSmsLiveDetectionMocks(): SmsLiveDetectionMocks {
+  return jest.requireMock<{ __mocks: SmsLiveDetectionMocks }>(
+    "@/services/sms-live-detection-handler"
+  ).__mocks;
+}
+
+interface SmsLiveListenerMocks {
+  stopSmsListener: jest.Mock;
+}
+
+function getSmsLiveListenerMocks(): SmsLiveListenerMocks {
+  return jest.requireMock<{ __mocks: SmsLiveListenerMocks }>(
+    "@/services/sms-live-listener-service"
+  ).__mocks;
 }
 
 // =============================================================================
@@ -138,6 +177,8 @@ describe("logout-service", () => {
     const netInfoMocks = getNetInfoMocks();
     const syncMocks = getSyncMocks();
     const supaMocks = getSupabaseMocks();
+    const smsDetectionMocks = getSmsLiveDetectionMocks();
+    const smsListenerMocks = getSmsLiveListenerMocks();
 
     asyncMocks.getItem.mockResolvedValue(null);
     asyncMocks.setItem.mockResolvedValue(undefined);
@@ -148,6 +189,9 @@ describe("logout-service", () => {
     syncMocks.resetSyncState.mockResolvedValue(undefined);
     syncMocks.getActiveSyncPromise.mockReturnValue(null);
     supaMocks.signOut.mockResolvedValue({ error: null });
+    smsDetectionMocks.setLiveDetectionEnabled.mockResolvedValue(undefined);
+    smsDetectionMocks.setAutoConfirm.mockResolvedValue(undefined);
+    smsListenerMocks.stopSmsListener.mockReturnValue(undefined);
   });
 
   // =========================================================================
@@ -159,6 +203,8 @@ describe("logout-service", () => {
     const netInfoMocks = getNetInfoMocks();
     const syncMocks = getSyncMocks();
     const supaMocks = getSupabaseMocks();
+    const smsDetectionMocks = getSmsLiveDetectionMocks();
+    const smsListenerMocks = getSmsLiveListenerMocks();
 
     netInfoMocks.fetch.mockImplementation(() => {
       callOrder.push("networkCheck");
@@ -166,6 +212,17 @@ describe("logout-service", () => {
     });
     syncMocks.syncDatabase.mockImplementation(() => {
       callOrder.push("sync");
+      return Promise.resolve();
+    });
+    smsListenerMocks.stopSmsListener.mockImplementation(() => {
+      callOrder.push("stopSmsListener");
+    });
+    smsDetectionMocks.setLiveDetectionEnabled.mockImplementation(() => {
+      callOrder.push("setLiveDetectionEnabled");
+      return Promise.resolve();
+    });
+    smsDetectionMocks.setAutoConfirm.mockImplementation(() => {
+      callOrder.push("setAutoConfirm");
       return Promise.resolve();
     });
     supaMocks.signOut.mockImplementation(() => {
@@ -176,9 +233,37 @@ describe("logout-service", () => {
     const result = await performLogout(db);
 
     expect(result).toEqual({ success: true });
-    expect(callOrder).toEqual(["networkCheck", "sync", "signOut"]);
+    expect(callOrder).toEqual([
+      "networkCheck",
+      "sync",
+      "stopSmsListener",
+      "setLiveDetectionEnabled",
+      "setAutoConfirm",
+      "signOut",
+    ]);
+    expect(smsDetectionMocks.setLiveDetectionEnabled).toHaveBeenCalledWith(
+      false
+    );
+    expect(smsDetectionMocks.setAutoConfirm).toHaveBeenCalledWith(false);
+    expect(callOrder.indexOf("stopSmsListener")).toBeLessThan(
+      callOrder.indexOf("signOut")
+    );
     expect(asyncMocks.setItem).not.toHaveBeenCalled();
     expect(asyncMocks.removeItem).not.toHaveBeenCalled();
+  });
+
+  it("should continue logout when disabling live SMS automation fails", async () => {
+    const smsDetectionMocks = getSmsLiveDetectionMocks();
+    const supaMocks = getSupabaseMocks();
+
+    smsDetectionMocks.setLiveDetectionEnabled.mockRejectedValue(
+      new Error("AsyncStorage failed")
+    );
+
+    const result = await performLogout(db, true);
+
+    expect(result).toEqual({ success: true });
+    expect(supaMocks.signOut).toHaveBeenCalledTimes(1);
   });
 
   // =========================================================================

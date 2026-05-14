@@ -225,26 +225,6 @@ export default function SmsScanScreen(): React.JSX.Element {
   // Track whether scan has been initiated to prevent double-start
   const scanInitiated = useRef(false);
 
-  // Auto-request permission on first mount when status is "undetermined".
-  // This preserves the pre-gate UX where tapping "Enable SMS auto-import"
-  // surfaced the native permission dialog directly, with no extra screen.
-  // The visible gate UI only appears if the user has already denied/blocked.
-  // Skipped on iOS — SMS import is Android-only (see non-Android short-circuit
-  // in the render body below).
-  const autoRequestedRef = useRef(false);
-  useEffect(() => {
-    if (Platform.OS !== "android") return;
-    if (isPermissionLoading) return;
-    if (permissionStatus !== "undetermined") return;
-    if (autoRequestedRef.current) return;
-    autoRequestedRef.current = true;
-    requestPermission().catch((err: unknown) => {
-      logger.warn("Auto-request SMS permission failed on mount", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-    });
-  }, [permissionStatus, isPermissionLoading, requestPermission]);
-
   // Auto-start scan on mount — waits until permission is granted and categories loaded
   useEffect(() => {
     if (permissionStatus !== "granted") return;

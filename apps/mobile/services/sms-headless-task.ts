@@ -5,24 +5,13 @@
  * is killed/terminated. The native `SmsBroadcastReceiver` starts a
  * `HeadlessJsTaskService` which invokes this task with the SMS data.
  *
- * Architecture & Design Rationale:
- * - Pattern: Bridge Pattern (native ↔ JS boundary)
- * - Why: Android's BroadcastReceiver catches SMS even when the app
- *   process is dead. Headless JS lets us run identical parsing logic
- *   (RegexSmsParser) without a UI.
- * - SOLID: SRP — this module only registers and bootstraps the headless
- *   task. All business logic delegates to sms-live-detection-handler.
- *
  * @module sms-headless-task
  */
 
 import { AppRegistry } from "react-native";
-import { RegexSmsParser, computeSmsHash } from "@monyvi/logic";
+import HeadlessJsTaskError from "react-native/Libraries/ReactNative/HeadlessJsTaskError";
 import { handleDetectedSms } from "./sms-live-detection-handler";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+import { processLiveSmsEvent } from "./sms-live-processor";
 
 /** Payload from the native SmsBroadcastReceiver */
 interface SmsTaskData {
@@ -31,59 +20,34 @@ interface SmsTaskData {
   readonly timestamp: number;
 }
 
-// ---------------------------------------------------------------------------
-// Task name constant — must match the native SmsHeadlessTaskService
-// ---------------------------------------------------------------------------
-
-/** Name used in both AppRegistry.registerHeadlessTask and the native service */
+/** Name used in both AppRegistry.registerHeadlessTask and the native service. */
 const SMS_DETECTION_TASK = "SmsDetectionTask";
-
-// ---------------------------------------------------------------------------
-// Task handler
-// ---------------------------------------------------------------------------
 
 /**
  * Headless JS task handler.
  *
  * Runs without UI when the native BroadcastReceiver starts the service.
- * Parses the incoming SMS via RegexSmsParser, checks dedup, then delegates
- * to the shared detection handler.
  */
 async function smsDetectionTask(taskData: SmsTaskData): Promise<void> {
-  try {
-    console.log(
-      `[sms-headless] Received SMS from ${taskData.sender} at ${taskData.timestamp}`
-    );
+  const result = await processLiveSmsEvent({
+    sender: taskData.sender,
+    body: taskData.body,
+    timestamp: taskData.timestamp,
+    deliveryMode: "headless",
+  });
 
-    const parser = new RegexSmsParser();
-    const parsed = parser.parse(taskData.body, taskData.sender);
+  if (result.status === "ai_failed" && result.isRetryable !== false) {
+    throw new HeadlessJsTaskError();
+  }
 
-    if (!parsed) {
-      // Not a financial SMS — exit silently
-      console.log("[sms-headless] Non-financial SMS, ignoring");
-      return;
-    }
+  if (result.status !== "parsed") {
+    return;
+  }
 
-    // Compute hash for dedup (same logic as Tier 1)
-    const _hash = await computeSmsHash(taskData.body);
-    // Note: In headless mode we can't check the in-memory hash set
-    // from Tier 1. WatermelonDB dedup (sms_body_hash) handles this.
-
-    // Delegate to shared detection handler
+  for (const parsed of result.transactions) {
     await handleDetectedSms(parsed);
-
-    console.log("[sms-headless] Successfully processed SMS transaction");
-  } catch (err) {
-    console.error(
-      "[sms-headless] Task failed:",
-      err instanceof Error ? err.message : String(err)
-    );
   }
 }
-
-// ---------------------------------------------------------------------------
-// Registration
-// ---------------------------------------------------------------------------
 
 /**
  * Register the headless JS task.

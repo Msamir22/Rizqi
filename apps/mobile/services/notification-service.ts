@@ -17,8 +17,9 @@
  */
 
 import * as Notifications from "expo-notifications";
-import { Platform } from "react-native";
+import { Linking, Platform } from "react-native";
 import type { ParsedSmsTransaction } from "@monyvi/logic";
+import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -46,11 +47,23 @@ export interface TransactionNotificationPayload {
   readonly resolvedAccountName: string;
 }
 
+interface TransactionInfoNotificationPayload {
+  readonly type: "sms_transaction_created" | "sms_transaction_info";
+  readonly transactionData: ParsedSmsTransaction;
+  readonly resolvedAccountName: string;
+}
+
 /** Callback for handling notification action responses */
 type NotificationActionHandler = (
   actionId: string,
   payload: TransactionNotificationPayload
 ) => Promise<void>;
+
+export type NotificationPermissionStatus =
+  | "undetermined"
+  | "granted"
+  | "denied"
+  | "blocked";
 
 // ---------------------------------------------------------------------------
 // Module state
@@ -59,10 +72,78 @@ type NotificationActionHandler = (
 let isInitialized = false;
 let actionHandler: NotificationActionHandler | null = null;
 let responseSubscription: Notifications.Subscription | null = null;
+const handledNotificationKeys = new Set<string>();
+
+const MAX_HANDLED_NOTIFICATION_KEYS = 200;
 
 // ---------------------------------------------------------------------------
 // Initialization
 // ---------------------------------------------------------------------------
+
+/**
+ * Check whether the app can show local notifications.
+ */
+export async function hasNotificationPermission(): Promise<boolean> {
+  const permissions = await Notifications.getPermissionsAsync();
+  return permissions.granted;
+}
+
+/**
+ * Check notification permission without showing the native permission prompt.
+ */
+export async function getNotificationPermissionStatus(): Promise<NotificationPermissionStatus> {
+  const permissions = await Notifications.getPermissionsAsync();
+
+  if (permissions.granted) {
+    return "granted";
+  }
+
+  if (!permissions.canAskAgain) {
+    return "blocked";
+  }
+
+  return permissions.status === Notifications.PermissionStatus.UNDETERMINED
+    ? "undetermined"
+    : "denied";
+}
+
+/**
+ * Request notification permission when enabling notification-backed features.
+ */
+export async function requestNotificationPermission(): Promise<boolean> {
+  const status = await requestNotificationPermissionStatus();
+  return status === "granted";
+}
+
+/**
+ * Request notification permission and preserve whether the user can recover
+ * through the native prompt or must open app settings.
+ */
+export async function requestNotificationPermissionStatus(): Promise<NotificationPermissionStatus> {
+  const existing = await Notifications.getPermissionsAsync();
+
+  if (existing.granted) {
+    return "granted";
+  }
+
+  if (!existing.canAskAgain) {
+    return "blocked";
+  }
+
+  const requested = await Notifications.requestPermissionsAsync();
+  if (requested.granted) {
+    return "granted";
+  }
+
+  return requested.canAskAgain ? "denied" : "blocked";
+}
+
+/**
+ * Open app settings so users can manually enable notification permission.
+ */
+export async function openNotificationSettings(): Promise<void> {
+  await Linking.openSettings();
+}
 
 /**
  * Initialize the notification service.
@@ -146,29 +227,7 @@ export function registerNotificationActionHandler(
 
   responseSubscription = Notifications.addNotificationResponseReceivedListener(
     (response) => {
-      const actionId = response.actionIdentifier;
-      const data = response.notification.request.content
-        .data as unknown as TransactionNotificationPayload;
-
-      // Only handle our SMS transaction notifications
-      if (data?.type !== "sms_transaction") {
-        return;
-      }
-
-      // Ignore default tap (no action button pressed)
-      if (
-        actionId === Notifications.DEFAULT_ACTION_IDENTIFIER ||
-        !actionHandler
-      ) {
-        return;
-      }
-
-      actionHandler(actionId, data).catch((err: unknown) => {
-        console.error(
-          "[notification-service] Action handler failed:",
-          err instanceof Error ? err.message : String(err)
-        );
-      });
+      void handleNotificationActionResponse(response);
     }
   );
 
@@ -179,6 +238,83 @@ export function registerNotificationActionHandler(
     }
     actionHandler = null;
   };
+}
+
+async function handleNotificationActionResponse(
+  response: Notifications.NotificationResponse
+): Promise<void> {
+  const actionId = response.actionIdentifier;
+  const data = response.notification.request.content
+    .data as unknown as TransactionNotificationPayload;
+
+  // Only handle our SMS transaction notifications
+  if (data?.type !== "sms_transaction") {
+    return;
+  }
+
+  // Ignore default tap (no action button pressed)
+  if (actionId === Notifications.DEFAULT_ACTION_IDENTIFIER || !actionHandler) {
+    return;
+  }
+
+  const notificationId = response.notification.request.identifier;
+  const notificationKey =
+    data.transactionData.smsBodyHash ??
+    response.notification.request.identifier;
+
+  if (!markNotificationKeyHandled(notificationKey)) {
+    await dismissDeliveredNotification(notificationId);
+    return;
+  }
+
+  try {
+    await actionHandler(actionId, data);
+    await dismissDeliveredNotification(notificationId);
+  } catch (err: unknown) {
+    handledNotificationKeys.delete(notificationKey);
+    logger.error("[notification-service] Action handler failed", err, {
+      actionId,
+      notificationId,
+      smsBodyHash: data.transactionData.smsBodyHash,
+    });
+  }
+}
+
+function markNotificationKeyHandled(notificationKey: string): boolean {
+  if (handledNotificationKeys.has(notificationKey)) {
+    return false;
+  }
+
+  handledNotificationKeys.add(notificationKey);
+
+  if (handledNotificationKeys.size > MAX_HANDLED_NOTIFICATION_KEYS) {
+    const oldestKey = handledNotificationKeys.values().next().value;
+    if (typeof oldestKey === "string") {
+      handledNotificationKeys.delete(oldestKey);
+    }
+  }
+
+  return true;
+}
+
+export function clearHandledNotificationKeysForTests(): void {
+  if (!__DEV__) {
+    return;
+  }
+
+  handledNotificationKeys.clear();
+}
+
+async function dismissDeliveredNotification(
+  notificationId: string
+): Promise<void> {
+  try {
+    await Notifications.dismissNotificationAsync(notificationId);
+  } catch (err: unknown) {
+    logger.error("[notification-service] Failed to dismiss notification", err, {
+      notificationId,
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -210,6 +346,16 @@ export async function showTransactionNotification(
   resolvedAccountId: string,
   resolvedAccountName: string
 ): Promise<void> {
+  await initializeNotifications();
+
+  const canShowNotification = await hasNotificationPermission();
+  if (!canShowNotification) {
+    logger.warn(
+      "[notification-service] Notification permission denied; SMS notification skipped"
+    );
+    return;
+  }
+
   const isExpense = parsed.type === "EXPENSE";
   const typeEmoji = isExpense ? "💸" : "💰";
   const typeLabel = isExpense ? "Expense" : "Income";
@@ -231,18 +377,96 @@ export async function showTransactionNotification(
   };
 
   await Notifications.scheduleNotificationAsync({
+    identifier: `sms-transaction-${parsed.smsBodyHash}`,
     content: {
       title,
       body,
       categoryIdentifier: SMS_TRANSACTION_CATEGORY,
       data: payload as unknown as Record<string, unknown>,
       sound: "default",
-      ...(Platform.OS === "android" && {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        _channelId: SMS_CHANNEL_ID,
-      }),
     },
-    trigger: null, // Immediate
+    trigger: Platform.OS === "android" ? { channelId: SMS_CHANNEL_ID } : null,
+  });
+}
+
+/**
+ * Show an info-only notification after auto-confirm creates a transaction.
+ */
+export async function showTransactionCreatedNotification(
+  parsed: ParsedSmsTransaction,
+  resolvedAccountName: string
+): Promise<void> {
+  await showInfoOnlySmsTransactionNotification({
+    parsed,
+    resolvedAccountName,
+    identifierPrefix: "sms-transaction-created",
+    title: "Transaction created",
+    type: "sms_transaction_created",
+  });
+}
+
+/**
+ * Show an info-only notification when an SMS was detected but no account could
+ * be matched safely.
+ */
+export async function showTransactionNeedsAccountNotification(
+  parsed: ParsedSmsTransaction
+): Promise<void> {
+  await showInfoOnlySmsTransactionNotification({
+    parsed,
+    resolvedAccountName: "No Account Configured",
+    identifierPrefix: "sms-transaction-info",
+    title: "Transaction needs an account",
+    type: "sms_transaction_info",
+  });
+}
+
+async function showInfoOnlySmsTransactionNotification({
+  parsed,
+  resolvedAccountName,
+  identifierPrefix,
+  title,
+  type,
+}: {
+  readonly parsed: ParsedSmsTransaction;
+  readonly resolvedAccountName: string;
+  readonly identifierPrefix: string;
+  readonly title: string;
+  readonly type: TransactionInfoNotificationPayload["type"];
+}): Promise<void> {
+  await initializeNotifications();
+
+  const canShowNotification = await hasNotificationPermission();
+  if (!canShowNotification) {
+    logger.warn(
+      "[notification-service] Notification permission denied; SMS notification skipped"
+    );
+    return;
+  }
+
+  const body = [
+    `${formatAmount(parsed.amount, parsed.currency)} from ${parsed.senderDisplayName}`,
+    parsed.counterparty ? `To: ${parsed.counterparty}` : undefined,
+    `Account: ${resolvedAccountName}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+  const payload: TransactionInfoNotificationPayload = {
+    type,
+    transactionData: parsed,
+    resolvedAccountName,
+  };
+
+  await Notifications.scheduleNotificationAsync({
+    identifier: `${identifierPrefix}-${parsed.smsBodyHash}`,
+    content: {
+      title,
+      body,
+      categoryIdentifier: undefined,
+      data: payload as unknown as Record<string, unknown>,
+      sound: "default",
+    },
+    trigger: Platform.OS === "android" ? { channelId: SMS_CHANNEL_ID } : null,
   });
 }
 

@@ -5,9 +5,11 @@ import { CURRENCY_INFO_MAP } from "@monyvi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  AppState,
+  type AppStateStatus,
   ScrollView,
   Switch,
   Text,
@@ -29,7 +31,7 @@ import { useSmsPermission } from "@/hooks/useSmsPermission";
 import { useSmsSync } from "@/hooks/useSmsSync";
 import { useSmsScanContext } from "@/context/SmsScanContext";
 import {
-  isLiveDetectionEnabled,
+  reconcileLiveDetectionPreference,
   setLiveDetectionEnabled,
   isAutoConfirmEnabled,
   setAutoConfirm,
@@ -39,8 +41,124 @@ import {
   stopSmsListener,
 } from "@/services/sms-live-listener-service";
 import { ConfirmationModal } from "@/components/modals/ConfirmationModal";
+import {
+  PermissionRecoveryModal,
+  type PermissionRecoveryMode,
+} from "@/components/permissions/PermissionRecoveryModal";
 import { Dropdown, type DropdownItem } from "@/components/ui/Dropdown";
 import { useToast } from "@/components/ui/Toast";
+import {
+  getNotificationPermissionStatus,
+  openNotificationSettings,
+  requestNotificationPermissionStatus,
+} from "@/services/notification-service";
+import { logger } from "@/utils/logger";
+
+type PermissionRecoveryKind = "sms-sync" | "sms-live" | "notification";
+
+interface PermissionRecoveryState {
+  readonly kind: PermissionRecoveryKind;
+  readonly mode: PermissionRecoveryMode;
+}
+
+interface PermissionRecoveryContent {
+  readonly icon: keyof typeof Ionicons.glyphMap;
+  readonly title: string;
+  readonly message: string;
+  readonly primaryLabel: string;
+}
+
+interface PermissionRecoveryContentOption {
+  readonly icon: keyof typeof Ionicons.glyphMap;
+  readonly titleKey: string;
+  readonly messageKey: string;
+  readonly primaryLabelKey: string;
+}
+
+interface PermissionRecoveryContentConfig {
+  readonly blocked: PermissionRecoveryContentOption;
+  readonly request: PermissionRecoveryContentOption;
+}
+
+const PERMISSION_RECOVERY_CONTENT_CONFIG: Record<
+  PermissionRecoveryKind,
+  PermissionRecoveryContentConfig
+> = {
+  notification: {
+    blocked: {
+      icon: "notifications-outline",
+      titleKey: "notification_permission_blocked_title",
+      messageKey: "notification_permission_blocked_message",
+      primaryLabelKey: "permission_open_settings",
+    },
+    request: {
+      icon: "notifications-outline",
+      titleKey: "notification_permission_request_title",
+      messageKey: "notification_permission_request_message",
+      primaryLabelKey: "notification_permission_allow",
+    },
+  },
+  "sms-sync": {
+    blocked: {
+      icon: "settings-outline",
+      titleKey: "sms_sync_permission_blocked_title",
+      messageKey: "sms_sync_permission_blocked_message",
+      primaryLabelKey: "permission_open_settings",
+    },
+    request: {
+      icon: "chatbubble-ellipses-outline",
+      titleKey: "sms_sync_permission_request_title",
+      messageKey: "sms_sync_permission_request_message",
+      primaryLabelKey: "sms_permission_allow",
+    },
+  },
+  "sms-live": {
+    blocked: {
+      icon: "settings-outline",
+      titleKey: "sms_permission_blocked_title",
+      messageKey: "sms_permission_blocked_message",
+      primaryLabelKey: "permission_open_settings",
+    },
+    request: {
+      icon: "chatbubble-ellipses-outline",
+      titleKey: "sms_permission_request_title",
+      messageKey: "sms_permission_request_message",
+      primaryLabelKey: "sms_permission_allow",
+    },
+  },
+};
+
+function getRecoveryModeForPermissionStatus(
+  status: "undetermined" | "granted" | "denied" | "blocked"
+): PermissionRecoveryMode {
+  return status === "blocked" ? "blocked" : "request";
+}
+
+function buildPermissionRecoveryContent(
+  mode: PermissionRecoveryMode,
+  translate: (key: string) => string,
+  config: PermissionRecoveryContentConfig
+): PermissionRecoveryContent {
+  const option = mode === "blocked" ? config.blocked : config.request;
+
+  return {
+    icon: option.icon,
+    title: translate(option.titleKey),
+    message: translate(option.messageKey),
+    primaryLabel: translate(option.primaryLabelKey),
+  };
+}
+
+function getPermissionRecoveryContent(
+  recovery: PermissionRecoveryState,
+  translate: (key: string) => string
+): PermissionRecoveryContent {
+  return buildPermissionRecoveryContent(
+    recovery.mode,
+    translate,
+    PERMISSION_RECOVERY_CONTENT_CONFIG[recovery.kind]
+  );
+}
 
 /**
  * Render the Settings screen for managing appearance, currency, and general preferences.
@@ -60,8 +178,11 @@ export default function SettingsScreen(): React.JSX.Element {
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const {
     status: smsPermissionStatus,
+    liveDetectionStatus,
     isAndroid,
     requestPermission,
+    requestLiveDetectionPermission,
+    openSettings,
   } = useSmsPermission();
   const { hasSynced, lastSyncTimestamp } = useSmsSync();
   const { setScanMode } = useSmsScanContext();
@@ -76,31 +197,304 @@ export default function SettingsScreen(): React.JSX.Element {
 
   // Live detection preferences
   const [liveDetection, setLiveDetection] = useState(false);
+  const [isLiveDetectionEnabling, setIsLiveDetectionEnabling] = useState(false);
   const [autoConfirmSms, setAutoConfirmSms] = useState(false);
+  const [permissionRecovery, setPermissionRecovery] =
+    useState<PermissionRecoveryState | null>(null);
+  const [hasPendingLiveDetectionEnable, setHasPendingLiveDetectionEnable] =
+    useState(false);
+  const [hasPendingNotificationEnable, setHasPendingNotificationEnable] =
+    useState(false);
+  const [pendingSmsScanMode, setPendingSmsScanMode] = useState<
+    "incremental" | "full" | null
+  >(null);
+  const previousNotificationAppState = useRef<AppStateStatus>(
+    AppState.currentState
+  );
+  const previousSettingsAppState = useRef<AppStateStatus>(
+    AppState.currentState
+  );
+
+  const reconcileStoredLiveDetection = useCallback(async (): Promise<void> => {
+    if (!isAndroid) {
+      return;
+    }
+
+    const enabled = await reconcileLiveDetectionPreference();
+    setLiveDetection(enabled);
+
+    if (!enabled) {
+      stopSmsListener();
+      setAutoConfirmSms(false);
+      return;
+    }
+
+    const autoConfirmEnabled = await isAutoConfirmEnabled();
+    setAutoConfirmSms(autoConfirmEnabled);
+  }, [isAndroid]);
 
   useEffect(() => {
     if (!isAndroid) {
       return;
     }
-    // TODO: Replace with structured logging (e.g., Sentry)
-    isLiveDetectionEnabled().then(setLiveDetection).catch(console.error);
-    isAutoConfirmEnabled().then(setAutoConfirmSms).catch(console.error);
-  }, [isAndroid]);
+    reconcileStoredLiveDetection().catch((error: unknown) => {
+      logger.error("settings.reconcileLiveDetection.failed", error);
+    });
+  }, [isAndroid, reconcileStoredLiveDetection]);
+
+  useEffect(() => {
+    if (!isAndroid) {
+      return;
+    }
+
+    const subscription = AppState.addEventListener(
+      "change",
+      (nextState: AppStateStatus) => {
+        if (
+          previousSettingsAppState.current.match(/inactive|background/) &&
+          nextState === "active"
+        ) {
+          reconcileStoredLiveDetection().catch((error: unknown) => {
+            logger.error("settings.reconcileLiveDetection.failed", error);
+          });
+        }
+
+        previousSettingsAppState.current = nextState;
+      }
+    );
+
+    return () => {
+      subscription.remove();
+    };
+  }, [isAndroid, reconcileStoredLiveDetection]);
+
+  const persistLiveDetectionEnabled = useCallback(async (): Promise<void> => {
+    await setLiveDetectionEnabled(true);
+    setLiveDetection(true);
+    startSmsListener();
+  }, []);
+
+  const enableLiveDetectionWithGrantedSms =
+    useCallback(async (): Promise<void> => {
+      setIsLiveDetectionEnabling(true);
+      try {
+        const notificationStatus = await getNotificationPermissionStatus();
+
+        if (notificationStatus !== "granted") {
+          setPermissionRecovery({
+            kind: "notification",
+            mode: getRecoveryModeForPermissionStatus(notificationStatus),
+          });
+          return;
+        }
+
+        await persistLiveDetectionEnabled();
+      } catch {
+        showToast({
+          type: "error",
+          title: tCommon("error"),
+        });
+      } finally {
+        setIsLiveDetectionEnabling(false);
+      }
+    }, [persistLiveDetectionEnabled, showToast, tCommon]);
+
+  useEffect(() => {
+    if (!hasPendingLiveDetectionEnable) return;
+    if (liveDetectionStatus !== "granted") return;
+
+    setHasPendingLiveDetectionEnable(false);
+    setPermissionRecovery(null);
+    enableLiveDetectionWithGrantedSms().catch(() => {
+      showToast({
+        type: "error",
+        title: tCommon("error"),
+      });
+    });
+  }, [
+    enableLiveDetectionWithGrantedSms,
+    hasPendingLiveDetectionEnable,
+    showToast,
+    liveDetectionStatus,
+    tCommon,
+  ]);
+
+  useEffect(() => {
+    if (pendingSmsScanMode === null) return;
+    if (smsPermissionStatus !== "granted") return;
+
+    setPendingSmsScanMode(null);
+    setPermissionRecovery(null);
+    setScanMode(pendingSmsScanMode);
+    router.push("/sms-scan");
+  }, [pendingSmsScanMode, setScanMode, smsPermissionStatus]);
 
   const handleToggleLiveDetection = useCallback(
     async (value: boolean): Promise<void> => {
-      setLiveDetection(value);
-      await setLiveDetectionEnabled(value);
-      if (value) {
-        startSmsListener();
-      } else {
+      if (!value) {
+        setIsLiveDetectionEnabling(false);
+        setHasPendingLiveDetectionEnable(false);
+        setHasPendingNotificationEnable(false);
+        setPermissionRecovery(null);
+        setLiveDetection(false);
+        await setLiveDetectionEnabled(false);
         stopSmsListener();
         setAutoConfirmSms(false);
         await setAutoConfirm(false);
+        return;
       }
+
+      if (liveDetectionStatus !== "granted") {
+        setPermissionRecovery({
+          kind: "sms-live",
+          mode: getRecoveryModeForPermissionStatus(liveDetectionStatus),
+        });
+        return;
+      }
+
+      await enableLiveDetectionWithGrantedSms();
     },
-    []
+    [enableLiveDetectionWithGrantedSms, liveDetectionStatus]
   );
+
+  const handlePermissionModalCancel = useCallback((): void => {
+    setIsLiveDetectionEnabling(false);
+    setHasPendingLiveDetectionEnable(false);
+    setHasPendingNotificationEnable(false);
+    setPendingSmsScanMode(null);
+    setPermissionRecovery(null);
+  }, []);
+
+  const handlePermissionModalPrimaryPress =
+    useCallback(async (): Promise<void> => {
+      if (!permissionRecovery) {
+        return;
+      }
+
+      if (permissionRecovery.kind === "notification") {
+        if (permissionRecovery.mode === "blocked") {
+          setHasPendingNotificationEnable(true);
+          setPermissionRecovery(null);
+          await openNotificationSettings();
+          return;
+        }
+
+        const result = await requestNotificationPermissionStatus();
+        if (result === "granted") {
+          setPermissionRecovery(null);
+          await persistLiveDetectionEnabled();
+          return;
+        }
+
+        setPermissionRecovery({
+          kind: "notification",
+          mode: getRecoveryModeForPermissionStatus(result),
+        });
+        return;
+      }
+
+      if (permissionRecovery.kind === "sms-sync") {
+        if (permissionRecovery.mode === "blocked") {
+          setPermissionRecovery(null);
+          await openSettings();
+          return;
+        }
+
+        const result = await requestPermission();
+        if (result === "granted") {
+          const mode = pendingSmsScanMode ?? "incremental";
+          setPendingSmsScanMode(null);
+          setPermissionRecovery(null);
+          setScanMode(mode);
+          router.push("/sms-scan");
+          return;
+        }
+
+        setPermissionRecovery({
+          kind: "sms-sync",
+          mode: getRecoveryModeForPermissionStatus(result),
+        });
+        return;
+      }
+
+      if (permissionRecovery.mode === "blocked") {
+        setHasPendingLiveDetectionEnable(true);
+        setPermissionRecovery(null);
+        await openSettings();
+        return;
+      }
+
+      const result = await requestLiveDetectionPermission();
+
+      if (result === "granted") {
+        setHasPendingLiveDetectionEnable(false);
+        setPermissionRecovery(null);
+        await enableLiveDetectionWithGrantedSms();
+        return;
+      }
+
+      setPermissionRecovery({
+        kind: "sms-live",
+        mode: getRecoveryModeForPermissionStatus(result),
+      });
+    }, [
+      enableLiveDetectionWithGrantedSms,
+      openSettings,
+      pendingSmsScanMode,
+      permissionRecovery,
+      persistLiveDetectionEnabled,
+      requestLiveDetectionPermission,
+      requestPermission,
+      setScanMode,
+    ]);
+
+  useEffect(() => {
+    if (!hasPendingNotificationEnable) {
+      return;
+    }
+
+    const subscription = AppState.addEventListener(
+      "change",
+      (nextState: AppStateStatus) => {
+        if (
+          previousNotificationAppState.current.match(/inactive|background/) &&
+          nextState === "active"
+        ) {
+          getNotificationPermissionStatus()
+            .then((notificationStatus) => {
+              if (notificationStatus !== "granted") {
+                setHasPendingNotificationEnable(false);
+                setPermissionRecovery({
+                  kind: "notification",
+                  mode: getRecoveryModeForPermissionStatus(notificationStatus),
+                });
+                return;
+              }
+
+              setHasPendingNotificationEnable(false);
+              return enableLiveDetectionWithGrantedSms();
+            })
+            .catch(() => {
+              showToast({
+                type: "error",
+                title: tCommon("error"),
+              });
+            });
+        }
+
+        previousNotificationAppState.current = nextState;
+      }
+    );
+
+    return () => {
+      subscription.remove();
+    };
+  }, [
+    enableLiveDetectionWithGrantedSms,
+    hasPendingNotificationEnable,
+    showToast,
+    tCommon,
+  ]);
 
   const handleToggleAutoConfirm = useCallback(
     async (value: boolean): Promise<void> => {
@@ -111,13 +505,17 @@ export default function SettingsScreen(): React.JSX.Element {
   );
 
   const currencyInfo = CURRENCY_INFO_MAP[preferredCurrency];
+  const permissionRecoveryContent =
+    permissionRecovery === null
+      ? null
+      : getPermissionRecoveryContent(permissionRecovery, t);
 
   /**
-   * Navigate to the scan page, requesting permission if needed.
+   * Navigate to the scan page, showing permission recovery if needed.
    * Sets the scan mode before navigation.
    */
   const navigateToScan = useCallback(
-    async (mode: "incremental" | "full"): Promise<void> => {
+    (mode: "incremental" | "full"): void => {
       if (!isAndroid) {
         showToast({
           type: "info",
@@ -133,23 +531,17 @@ export default function SettingsScreen(): React.JSX.Element {
         return;
       }
 
-      const result = await requestPermission();
-      if (result === "granted") {
-        router.push("/sms-scan");
-      }
+      setPendingSmsScanMode(mode);
+      setPermissionRecovery({
+        kind: "sms-sync",
+        mode: getRecoveryModeForPermissionStatus(smsPermissionStatus),
+      });
     },
-    [
-      isAndroid,
-      smsPermissionStatus,
-      requestPermission,
-      setScanMode,
-      showToast,
-      t,
-    ]
+    [isAndroid, smsPermissionStatus, setScanMode, showToast, t]
   );
 
-  const handleIncrementalSync = useCallback(async (): Promise<void> => {
-    await navigateToScan("incremental");
+  const handleIncrementalSync = useCallback((): void => {
+    navigateToScan("incremental");
   }, [navigateToScan]);
 
   const handleCurrencySelect = useCallback(
@@ -273,7 +665,7 @@ export default function SettingsScreen(): React.JSX.Element {
           <View className="p-4 rounded-2xl bg-white dark:bg-slate-800">
             <View className="flex-row items-center gap-3">
               <View className="w-8 bg-blue-600 dark:bg-blue-500 h-8 rounded-lg justify-center items-center">
-                <Ionicons name="language" size={20} color="#FFF" />
+                <Ionicons name="language" size={20} color={palette.slate[25]} />
               </View>
               <View className="flex-1">
                 <Dropdown<string>
@@ -305,11 +697,11 @@ export default function SettingsScreen(): React.JSX.Element {
 
           <View className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800">
             <View className="flex-row items-center gap-3">
-              <View className="w-8 dark:bg-[#6366f1] bg-[#fb923c] h-8 rounded-lg justify-center items-center">
+              <View className="w-8 dark:bg-indigo-500 bg-orange-400 h-8 rounded-lg justify-center items-center">
                 <Ionicons
                   name={isDark ? "moon" : "sunny"}
                   size={20}
-                  color="#FFF"
+                  color={palette.slate[25]}
                 />
               </View>
               <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
@@ -319,8 +711,11 @@ export default function SettingsScreen(): React.JSX.Element {
             <Switch
               value={isDark}
               onValueChange={toggleTheme}
-              trackColor={{ false: "#767577", true: palette.nileGreen[500] }}
-              thumbColor={isDark ? "#FFF" : "#f4f3f4"}
+              trackColor={{
+                false: palette.slate[400],
+                true: palette.nileGreen[500],
+              }}
+              thumbColor={isDark ? palette.slate[25] : palette.slate[100]}
             />
           </View>
         </View>
@@ -371,7 +766,7 @@ export default function SettingsScreen(): React.JSX.Element {
             {/* Sync New Messages (incremental) */}
             <TouchableOpacity
               onPress={() => {
-                handleIncrementalSync().catch(() => {});
+                handleIncrementalSync();
               }}
               className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800"
             >
@@ -417,7 +812,11 @@ export default function SettingsScreen(): React.JSX.Element {
               >
                 <View className="flex-row items-center gap-3">
                   <View className="w-8 bg-orange-600 dark:bg-orange-500 h-8 rounded-lg justify-center items-center">
-                    <Ionicons name="refresh" size={20} color="#FFF" />
+                    <Ionicons
+                      name="refresh"
+                      size={20}
+                      color={palette.slate[25]}
+                    />
                   </View>
                   <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
                     {t("full_rescan")}
@@ -456,10 +855,17 @@ export default function SettingsScreen(): React.JSX.Element {
                 </View>
               </View>
               <Switch
+                testID="live-sms-detection-switch"
                 value={liveDetection}
                 onValueChange={handleToggleLiveDetection}
-                trackColor={{ false: "#767577", true: palette.nileGreen[500] }}
-                thumbColor={liveDetection ? "#FFF" : "#f4f3f4"}
+                disabled={isLiveDetectionEnabling}
+                trackColor={{
+                  false: palette.slate[400],
+                  true: palette.nileGreen[500],
+                }}
+                thumbColor={
+                  liveDetection ? palette.slate[25] : palette.slate[100]
+                }
               />
             </View>
 
@@ -469,7 +875,11 @@ export default function SettingsScreen(): React.JSX.Element {
             >
               <View className="flex-row items-center gap-3 flex-1">
                 <View className="w-8 bg-indigo-600 dark:bg-indigo-500 h-8 rounded-lg justify-center items-center">
-                  <Ionicons name="checkmark-circle" size={20} color="#FFF" />
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={20}
+                    color={palette.slate[25]}
+                  />
                 </View>
                 <View className="flex-1">
                   <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
@@ -484,8 +894,13 @@ export default function SettingsScreen(): React.JSX.Element {
                 value={autoConfirmSms}
                 onValueChange={handleToggleAutoConfirm}
                 disabled={!liveDetection}
-                trackColor={{ false: "#767577", true: palette.nileGreen[500] }}
-                thumbColor={autoConfirmSms ? "#FFF" : "#f4f3f4"}
+                trackColor={{
+                  false: palette.slate[400],
+                  true: palette.nileGreen[500],
+                }}
+                thumbColor={
+                  autoConfirmSms ? palette.slate[25] : palette.slate[100]
+                }
               />
             </View>
           </View>
@@ -496,8 +911,8 @@ export default function SettingsScreen(): React.JSX.Element {
           {/* Profile */}
           <TouchableOpacity className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800">
             <View className="flex-row items-center gap-3">
-              <View className="w-8 dark:bg-[#3b82f6] bg-[#fb923c] h-8 rounded-lg justify-center items-center">
-                <Ionicons name="person" size={20} color="#FFF" />
+              <View className="w-8 dark:bg-blue-500 bg-orange-400 h-8 rounded-lg justify-center items-center">
+                <Ionicons name="person" size={20} color={palette.slate[25]} />
               </View>
               <View className="flex-1">
                 <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
@@ -524,8 +939,12 @@ export default function SettingsScreen(): React.JSX.Element {
           {/* Notifications */}
           <TouchableOpacity className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800 mt-0.5">
             <View className="flex-row items-center gap-3">
-              <View className="w-8 dark:bg-[#f43f5e] bg-[#fb923c] h-8 rounded-lg justify-center items-center">
-                <Ionicons name="notifications" size={20} color="#FFF" />
+              <View className="w-8 dark:bg-rose-500 bg-orange-400 h-8 rounded-lg justify-center items-center">
+                <Ionicons
+                  name="notifications"
+                  size={20}
+                  color={palette.slate[25]}
+                />
               </View>
               <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
                 {t("notifications")}
@@ -547,9 +966,13 @@ export default function SettingsScreen(): React.JSX.Element {
           <View className="flex-row items-center gap-3">
             <View className="w-8 dark:bg-red-700 bg-red-600 h-8 rounded-lg justify-center items-center">
               {isLoggingOut ? (
-                <ActivityIndicator size={16} color="#FFF" />
+                <ActivityIndicator size={16} color={palette.slate[25]} />
               ) : (
-                <Ionicons name="log-out-outline" size={20} color="#FFF" />
+                <Ionicons
+                  name="log-out-outline"
+                  size={20}
+                  color={palette.slate[25]}
+                />
               )}
             </View>
             <Text className="text-base font-medium text-red-600 dark:text-red-400">
@@ -567,8 +990,7 @@ export default function SettingsScreen(): React.JSX.Element {
       <ConfirmationModal
         visible={isFullRescanModalOpen}
         onConfirm={() => {
-          // TODO: Replace with structured logging (e.g., Sentry)
-          navigateToScan("full").catch(console.error);
+          navigateToScan("full");
         }}
         onCancel={() => setIsFullRescanModalOpen(false)}
         title={t("rescan_title")}
@@ -606,6 +1028,23 @@ export default function SettingsScreen(): React.JSX.Element {
           handleForceLogout().catch(console.error);
         }}
         onCancel={() => setShowForceLogoutError(false)}
+      />
+      <PermissionRecoveryModal
+        visible={permissionRecovery !== null}
+        icon={permissionRecoveryContent?.icon ?? "chatbubble-ellipses-outline"}
+        onPrimaryPress={() => {
+          handlePermissionModalPrimaryPress().catch(() => {
+            showToast({
+              type: "error",
+              title: tCommon("error"),
+            });
+          });
+        }}
+        onCancel={handlePermissionModalCancel}
+        title={permissionRecoveryContent?.title ?? ""}
+        message={permissionRecoveryContent?.message ?? ""}
+        primaryLabel={permissionRecoveryContent?.primaryLabel ?? ""}
+        cancelLabel={t("permission_not_now")}
       />
       {/* Currency Picker Modal */}
       <CurrencyPicker

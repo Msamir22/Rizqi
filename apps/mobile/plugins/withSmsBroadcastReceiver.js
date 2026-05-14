@@ -42,8 +42,13 @@ const SMS_EVENT_MODULE_KT = `package {{PACKAGE_NAME}}
 
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
+import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.Arguments
+import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.modules.core.DeviceEventManagerModule
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 
 /**
  * Native module that emits SMS events to JavaScript via DeviceEventEmitter.
@@ -56,11 +61,70 @@ class SmsEventModule(reactContext: ReactApplicationContext) :
 
     override fun getName(): String = MODULE_NAME
 
+    @ReactMethod
+    fun getPermissionStatus(permission: String, promise: Promise) {
+        try {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+                promise.resolve("granted")
+                return
+            }
+
+            val isGranted = reactApplicationContext.checkSelfPermission(permission) ==
+                PackageManager.PERMISSION_GRANTED
+
+            if (isGranted) {
+                promise.resolve("granted")
+                return
+            }
+
+            val wasRequested = reactApplicationContext
+                .getSharedPreferences(PERMISSION_PREFS_NAME, Context.MODE_PRIVATE)
+                .getBoolean(requestedPreferenceKey(permission), false)
+            val canShowNativePrompt =
+                !wasRequested ||
+                    currentActivity?.shouldShowRequestPermissionRationale(permission) == true
+
+            promise.resolve(if (canShowNativePrompt) "requestable" else "blocked")
+        } catch (error: Exception) {
+            promise.reject("permission_status_failed", error)
+        }
+    }
+
+    @ReactMethod
+    fun markPermissionRequested(permission: String, promise: Promise) {
+        try {
+            reactApplicationContext
+                .getSharedPreferences(PERMISSION_PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean(requestedPreferenceKey(permission), true)
+                .apply()
+            promise.resolve(null)
+        } catch (error: Exception) {
+            promise.reject("permission_mark_failed", error)
+        }
+    }
+
+    @ReactMethod
+    fun setListenerReady(isReady: Boolean, promise: Promise) {
+        try {
+            setJsListenerReady(isReady)
+            promise.resolve(null)
+        } catch (error: Exception) {
+            promise.reject("listener_ready_failed", error)
+        }
+    }
+
     companion object {
         const val MODULE_NAME = "SmsEventModule"
         const val EVENT_NAME = "onSmsReceived"
+        private const val PERMISSION_PREFS_NAME = "sms_permission_state"
 
         private var reactContextRef: ReactApplicationContext? = null
+        @Volatile
+        private var hasJsListener = false
+
+        private fun requestedPreferenceKey(permission: String): String =
+            "requested_$permission"
 
         /**
          * Store a reference to the ReactApplicationContext so the
@@ -69,6 +133,10 @@ class SmsEventModule(reactContext: ReactApplicationContext) :
          */
         fun setReactContext(context: ReactApplicationContext) {
             reactContextRef = context
+        }
+
+        fun setJsListenerReady(isReady: Boolean) {
+            hasJsListener = isReady
         }
 
         /**
@@ -80,6 +148,7 @@ class SmsEventModule(reactContext: ReactApplicationContext) :
         fun emitSmsReceived(sender: String, body: String, timestamp: Double): Boolean {
             val context = reactContextRef ?: return false
             if (!context.hasActiveReactInstance()) return false
+            if (!hasJsListener) return false
 
             return try {
                 val params = Arguments.createMap().apply {
@@ -229,6 +298,7 @@ import android.os.Bundle
 import com.facebook.react.HeadlessJsTaskService
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.jstasks.HeadlessJsTaskConfig
+import com.facebook.react.jstasks.LinearCountingRetryPolicy
 
 /**
  * HeadlessJS Task Service for background SMS processing.
@@ -241,7 +311,9 @@ class SmsHeadlessTaskService : HeadlessJsTaskService() {
 
     companion object {
         private const val TASK_NAME = "SmsDetectionTask"
-        private const val TASK_TIMEOUT_MS = 30000L // 30 seconds
+        private const val TASK_TIMEOUT_MS = 60000L
+        private const val TASK_RETRY_ATTEMPTS = 3
+        private const val TASK_RETRY_DELAY_MS = 10000
     }
 
     override fun getTaskConfig(intent: Intent?): HeadlessJsTaskConfig? {
@@ -261,7 +333,8 @@ class SmsHeadlessTaskService : HeadlessJsTaskService() {
             TASK_NAME,
             data,
             TASK_TIMEOUT_MS,
-            true // allow task to run in foreground too
+            true,
+            LinearCountingRetryPolicy(TASK_RETRY_ATTEMPTS, TASK_RETRY_DELAY_MS)
         )
     }
 }

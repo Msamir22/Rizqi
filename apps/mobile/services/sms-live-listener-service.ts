@@ -17,25 +17,15 @@
  * @module sms-live-listener-service
  */
 
-import {
-  type ParsedSmsTransaction,
-  computeSmsHash,
-  isLikelyFinancialSms,
-  SUPPORTED_CURRENCIES,
-} from "@monyvi/logic";
+import { type ParsedSmsTransaction } from "@monyvi/logic";
 import {
   DeviceEventEmitter,
   type EmitterSubscription,
+  NativeModules,
   Platform,
 } from "react-native";
-import {
-  parseSmsWithAi,
-  type SmsCandidate,
-  type ParseSmsContext,
-} from "./ai-sms-parser-service";
-import { database, type Category } from "@monyvi/db";
-import { Q } from "@nozbe/watermelondb";
-import { getCurrentUserDataScope } from "./user-data-access";
+import { processLiveSmsEvent } from "./sms-live-processor";
+import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -49,6 +39,13 @@ interface NativeSmsEvent {
   readonly sender: string;
   readonly body: string;
   readonly timestamp: number;
+}
+
+interface NativeSmsModules {
+  readonly SmsEventModule?: {
+    readonly getConstants?: () => unknown;
+    readonly setListenerReady?: (isReady: boolean) => Promise<void> | void;
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -77,6 +74,35 @@ const recentHashes = new Set<string>();
 // ---------------------------------------------------------------------------
 
 /**
+ * Touch the native module before subscribing so React Native creates the
+ * SmsEventModule instance and its initialize() stores ReactApplicationContext.
+ */
+function ensureSmsEventModuleInitialized(): void {
+  const { SmsEventModule } = NativeModules as NativeSmsModules;
+
+  if (!SmsEventModule) {
+    logger.warn("smsLiveListener.nativeModuleUnavailable");
+    return;
+  }
+
+  SmsEventModule.getConstants?.();
+}
+
+function setNativeListenerReady(isReady: boolean): void {
+  const { SmsEventModule } = NativeModules as NativeSmsModules;
+  const result = SmsEventModule?.setListenerReady?.(isReady);
+
+  if (result && typeof result.catch === "function") {
+    result.catch((error: unknown) => {
+      logger.warn("smsLiveListener.listenerReadyFlagFailed", {
+        isReady,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
+  }
+}
+
+/**
  * Process an incoming SMS event from native:
  * 1. Keyword filter for financial relevance
  * 2. If financial, compute hash for dedup
@@ -85,71 +111,34 @@ const recentHashes = new Set<string>();
  */
 async function processNativeSmsEvent(event: NativeSmsEvent): Promise<void> {
   try {
-    // Step 1: Fast on-device keyword filter
-    if (!isLikelyFinancialSms(event.body)) {
-      return;
-    }
-
-    // Step 2: Compute hash for deduplication
-    const hash = await computeSmsHash(event.body);
-
-    // Check against recent hashes to avoid duplicate processing
-    if (recentHashes.has(hash)) {
-      console.log("[sms-live-listener] Duplicate SMS detected, skipping");
-      return;
-    }
-
-    // Track this hash
-    recentHashes.add(hash);
-
-    // Prevent unbounded growth
-    if (recentHashes.size > MAX_RECENT_HASHES) {
-      const iterator = recentHashes.values();
-      const firstValue = iterator.next().value;
-      if (firstValue !== undefined) {
-        recentHashes.delete(firstValue);
+    const result = await processLiveSmsEvent(
+      { ...event, deliveryMode: "foreground" },
+      {
+        isRecentlyProcessed: (smsBodyHash) => recentHashes.has(smsBodyHash),
+        markRecentlyProcessed,
       }
-    }
-
-    // Step 3: Send to AI Edge Function for structured parsing
-    const candidate: SmsCandidate = {
-      message: {
-        id: `live-${event.timestamp}`,
-        address: event.sender,
-        body: event.body,
-        date: event.timestamp,
-        read: false,
-      },
-      smsBodyHash: hash,
-    };
-
-    // Load categories from DB for AI context
-    const scope = await getCurrentUserDataScope();
-    const categories = await scope
-      .queryAccessibleCategories(
-        database.get<Category>("categories"),
-        Q.where("deleted", Q.notEq(true))
-      )
-      .fetch();
-
-    const context: ParseSmsContext = {
-      categories,
-      supportedCurrencies: SUPPORTED_CURRENCIES.map((c) => c.code),
-    };
-
-    const aiResult = await parseSmsWithAi([candidate], context);
+    );
 
     // Step 4: Emit parsed transactions to all registered handlers
-    for (const parsed of aiResult.transactions) {
+    for (const parsed of result.transactions) {
       for (const handler of handlers) {
         handler(parsed);
       }
     }
   } catch (err) {
-    console.error(
-      "[sms-live-listener] Failed to process SMS:",
-      err instanceof Error ? err.message : String(err)
-    );
+    logger.error("smsLiveListener.processNativeEventFailed", err);
+  }
+}
+
+function markRecentlyProcessed(smsBodyHash: string): void {
+  recentHashes.add(smsBodyHash);
+
+  if (recentHashes.size > MAX_RECENT_HASHES) {
+    const iterator = recentHashes.values();
+    const firstValue = iterator.next().value;
+    if (firstValue !== undefined) {
+      recentHashes.delete(firstValue);
+    }
   }
 }
 
@@ -167,36 +156,34 @@ async function processNativeSmsEvent(event: NativeSmsEvent): Promise<void> {
  */
 export function startSmsListener(): void {
   if (Platform.OS !== "android") {
-    console.log("[sms-live-listener] SMS listening only available on Android");
+    logger.info("smsLiveListener.androidOnly");
     return;
   }
 
   if (isListening) {
-    console.log("[sms-live-listener] Already listening");
+    logger.info("smsLiveListener.alreadyListening");
     return;
   }
 
   try {
+    ensureSmsEventModuleInitialized();
+
     nativeSubscription = DeviceEventEmitter.addListener(
       NATIVE_SMS_EVENT,
       (event: NativeSmsEvent) => {
         processNativeSmsEvent(event).catch((err: unknown) => {
-          console.error(
-            "[sms-live-listener] Processing error:",
-            err instanceof Error ? err.message : String(err)
-          );
+          logger.error("smsLiveListener.processFailed", err);
         });
       }
     );
 
     isListening = true;
-    console.log("[sms-live-listener] Started listening for native SMS events");
+    setNativeListenerReady(true);
+    logger.info("smsLiveListener.started");
   } catch (err) {
-    console.error(
-      "[sms-live-listener] Failed to start:",
-      err instanceof Error ? err.message : String(err)
-    );
+    logger.error("smsLiveListener.startFailed", err);
     isListening = false;
+    setNativeListenerReady(false);
   }
 }
 
@@ -215,7 +202,8 @@ export function stopSmsListener(): void {
   }
 
   isListening = false;
-  console.log("[sms-live-listener] Stopped listening");
+  setNativeListenerReady(false);
+  logger.info("smsLiveListener.stopped");
 }
 
 /**
