@@ -22,6 +22,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { PermissionsAndroid, Platform } from "react-native";
 import {
   ACTION_CONFIRM,
+  type NotificationParsedSmsTransaction,
   getNotificationPermissionStatus,
   registerNotificationActionHandler,
   showTransactionCreatedNotification,
@@ -61,6 +62,23 @@ const LIVE_SMS_PERMISSIONS = [
 let reviewingActive = false;
 const transactionQueue: ParsedSmsTransaction[] = [];
 const smsSaveLocks = new Map<string, Promise<void>>();
+
+function restoreNotificationTransactionDate(
+  parsed: NotificationParsedSmsTransaction
+): ParsedSmsTransaction {
+  if (parsed.date instanceof Date) {
+    return parsed as ParsedSmsTransaction;
+  }
+
+  if (typeof parsed.date === "string" || typeof parsed.date === "number") {
+    const date = new Date(parsed.date);
+    if (!Number.isNaN(date.getTime())) {
+      return { ...parsed, date };
+    }
+  }
+
+  return { ...parsed, date: new Date() };
+}
 
 async function getUserScopedPreferenceKey(
   keyPrefix: string
@@ -361,7 +379,7 @@ export function initializeDetectionActionHandler(): () => void {
   return registerNotificationActionHandler(async (actionId, payload) => {
     if (actionId === ACTION_CONFIRM && payload.resolvedAccountId) {
       await saveDetectedTransaction(
-        payload.transactionData,
+        restoreNotificationTransactionDate(payload.transactionData),
         payload.resolvedAccountId
       );
     }

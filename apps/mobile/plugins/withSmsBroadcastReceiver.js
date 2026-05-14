@@ -6,13 +6,14 @@
  *
  * Components generated:
  * 1. SmsBroadcastReceiver.kt — catches SMS_RECEIVED intents in all app states
- * 2. SmsHeadlessTaskService.kt — bridges SMS to JS when app is killed
+ * 2. SmsHeadlessTaskService.kt — bridges SMS to JS when app is backgrounded
+ *    or killed
  * 3. SmsEventModule.kt — React Native native module that emits events to JS
- *    via DeviceEventEmitter when app process is alive
+ *    via DeviceEventEmitter when the app is foregrounded
  *
  * Architecture:
- * - App alive (foreground/background): BroadcastReceiver → SmsEventModule → DeviceEventEmitter → JS
- * - App killed: BroadcastReceiver → HeadlessJS → JS
+ * - App foregrounded: BroadcastReceiver → SmsEventModule → DeviceEventEmitter → JS
+ * - App backgrounded/killed: BroadcastReceiver → HeadlessJS → JS
  *
  * This ensures all changes survive `expo prebuild --clean`.
  *
@@ -35,7 +36,7 @@ const path = require("path");
  * SmsEventModule — React Native Native Module
  *
  * Provides a bridge from native BroadcastReceiver → JS via DeviceEventEmitter.
- * When the app process is alive, the BroadcastReceiver calls
+ * When the app is foregrounded, the BroadcastReceiver calls
  * SmsEventModule.emitSmsReceived() which sends the event to JS.
  */
 const SMS_EVENT_MODULE_KT = `package {{PACKAGE_NAME}}
@@ -53,8 +54,8 @@ import android.os.Build
 /**
  * Native module that emits SMS events to JavaScript via DeviceEventEmitter.
  *
- * Used by SmsBroadcastReceiver when the app process is alive (foreground
- * or background) to deliver SMS data to the JS listener without HeadlessJS.
+ * Used by SmsBroadcastReceiver when the app is foregrounded to deliver SMS
+ * data to the JS listener without HeadlessJS.
  */
 class SmsEventModule(reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
@@ -141,7 +142,7 @@ class SmsEventModule(reactContext: ReactApplicationContext) :
 
         /**
          * Emit an SMS event to JavaScript. Called by SmsBroadcastReceiver
-         * when the app process is alive.
+         * when the app is foregrounded.
          *
          * @return true if event was emitted, false if no React context available
          */
@@ -214,11 +215,12 @@ class SmsEventPackage : ReactPackage {
  * SmsBroadcastReceiver — catches SMS_RECEIVED in all app states.
  *
  * Strategy:
- * 1. Try to emit via SmsEventModule (DeviceEventEmitter) → works when app is alive
- * 2. Fall back to HeadlessJS via SmsHeadlessTaskService → works when app is killed
+ * 1. Emit via SmsEventModule (DeviceEventEmitter) when app is foregrounded
+ * 2. Use HeadlessJS via SmsHeadlessTaskService when app is backgrounded/killed
  */
 const BROADCAST_RECEIVER_KT = `package {{PACKAGE_NAME}}
 
+import android.app.ActivityManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -231,8 +233,8 @@ import com.facebook.react.HeadlessJsTaskService
  * Native Android BroadcastReceiver for SMS_RECEIVED intents.
  *
  * Unified handler for all app states:
- * - App alive: emits via SmsEventModule → DeviceEventEmitter → JS
- * - App killed: starts HeadlessJS via SmsHeadlessTaskService
+ * - App foregrounded: emits via SmsEventModule → DeviceEventEmitter → JS
+ * - App backgrounded/killed: starts HeadlessJS via SmsHeadlessTaskService
  */
 class SmsBroadcastReceiver : BroadcastReceiver() {
 
@@ -259,18 +261,37 @@ class SmsBroadcastReceiver : BroadcastReceiver() {
         val body = messages.joinToString("") { it.messageBody ?: "" }
         val timestamp = messages[0].timestampMillis
 
-        Log.d(TAG, "SMS received from: \${"$"}sender")
+        Log.d(TAG, "SMS received")
 
-        // Strategy 1: Try DeviceEventEmitter (app process alive)
-        val emitted = SmsEventModule.emitSmsReceived(sender, body, timestamp.toDouble())
-
-        if (emitted) {
-            Log.d(TAG, "SMS forwarded via DeviceEventEmitter")
-            return
+        if (isAppInForeground(context)) {
+            val emitted = SmsEventModule.emitSmsReceived(sender, body, timestamp.toDouble())
+            if (emitted) {
+                Log.d(TAG, "SMS forwarded via DeviceEventEmitter")
+                return
+            }
         }
 
-        // Strategy 2: Fall back to HeadlessJS (app killed)
-        Log.d(TAG, "App not alive, starting HeadlessJS task")
+        Log.d(TAG, "App not foreground, starting HeadlessJS task")
+        startHeadlessTask(context, sender, body, timestamp)
+    }
+
+    private fun isAppInForeground(context: Context): Boolean {
+        val activityManager =
+            context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+                ?: return false
+
+        return activityManager.runningAppProcesses?.any { processInfo ->
+            processInfo.processName == context.packageName &&
+                processInfo.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND
+        } == true
+    }
+
+    private fun startHeadlessTask(
+        context: Context,
+        sender: String,
+        body: String,
+        timestamp: Long
+    ) {
         val taskData = Bundle().apply {
             putString(TASK_KEY_SENDER, sender)
             putString(TASK_KEY_BODY, body)
@@ -303,8 +324,8 @@ import com.facebook.react.jstasks.LinearCountingRetryPolicy
 /**
  * HeadlessJS Task Service for background SMS processing.
  *
- * Started by SmsBroadcastReceiver when an SMS is received while the
- * app process is dead. Bridges the SMS data to the JavaScript
+ * Started by SmsBroadcastReceiver when an SMS is received while the app is not
+ * foregrounded. Bridges the SMS data to the JavaScript
  * "SmsDetectionTask" registered via AppRegistry.registerHeadlessTask.
  */
 class SmsHeadlessTaskService : HeadlessJsTaskService() {

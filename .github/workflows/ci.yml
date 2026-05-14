@@ -88,3 +88,97 @@ jobs:
           name: monyvi-android-debug
           path: apps/mobile/android/app/build/outputs/apk/debug/*.apk
           retention-days: 7
+
+  android-e2e:
+    name: Android E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    needs: android-build
+    env:
+      CI: "true"
+      SENTRYCLI_SKIP_DOWNLOAD: "1"
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+      EXPO_PUBLIC_SENTRY_DSN: ""
+      MAESTRO_E2E_EMAIL: ${{ secrets.MAESTRO_E2E_EMAIL }}
+      MAESTRO_E2E_PASSWORD: ${{ secrets.MAESTRO_E2E_PASSWORD }}
+      ANDROID_SERIAL: emulator-5554
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: "17"
+
+      - name: Install dependencies
+        run: npm ci
+        timeout-minutes: 30
+
+      - name: Verify E2E secrets
+        run: |
+          test -n "$EXPO_PUBLIC_SUPABASE_URL"
+          test -n "$EXPO_PUBLIC_SUPABASE_ANON_KEY"
+          test -n "$MAESTRO_E2E_EMAIL"
+          test -n "$MAESTRO_E2E_PASSWORD"
+
+      - name: Download Android debug APK
+        uses: actions/download-artifact@v4
+        with:
+          name: monyvi-android-debug
+          path: monyvi-android-debug
+
+      - name: Install Maestro CLI
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Start Metro
+        working-directory: apps/mobile
+        run: |
+          npx expo start --clear --dev-client --port 8081 > ../../metro.log 2>&1 &
+          echo $! > ../../metro.pid
+
+      - name: Run Maestro E2E on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7
+          disable-animations: true
+          script: |
+            adb install -r monyvi-android-debug/app-debug.apk
+            adb reverse tcp:8081 tcp:8081
+            npm run e2e:ci -w @monyvi/mobile
+
+      - name: Stop Metro
+        if: always()
+        run: |
+          if [ -f metro.pid ]; then
+            kill "$(cat metro.pid)" || true
+          fi
+
+      - name: Upload E2E logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-e2e-logs
+          path: |
+            metro.log
+            ~/.maestro/tests
+          retention-days: 7

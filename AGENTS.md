@@ -309,10 +309,39 @@ chore, perf, ci.
 
 ## Testing
 
-- TDD mandatory: Write test first (RED) → Run (FAIL) → Implement (GREEN) →
-  Refactor → Verify coverage (80%+).
-- Unit tests (Jest + React Native Testing Library), integration tests, E2E tests
-  (Detox/Maestro).
+- TDD is mandatory and strict: before writing production code for a task, write
+  the unit tests and E2E tests that describe the expected behavior. Run them and
+  confirm they fail for the right reason, then implement the minimum production
+  logic needed to make them pass. Refactor only after the tests are green.
+- Unit tests (Jest + React Native Testing Library), integration tests, and E2E
+  tests (Detox/Maestro) are the safety net for every feature. Cover every
+  possible flow, journey, scenario, and edge case that belongs to the task,
+  including unhappy paths, denied/blocked permissions, cancellations, retries,
+  duplicate/idempotency behavior, app restart/resume, revoked permissions, and
+  any native/background/headless path touched by the change.
+- E2E tests must validate the complete user-visible path of a feature. They
+  should answer: "Does the feature actually work as expected in every realistic
+  way the user can use it?" E2E tests should not depend on implementation
+  details, private function calls, or internal state unless there is no honest
+  user-level signal available.
+- Pull requests MUST include a complete manual test plan for the changed
+  behavior before final handoff. Treat the manual plan as the source list of
+  scenarios to automate.
+- Convert the manual test plan into automated coverage: unit/integration tests
+  for every deterministic branch and Maestro E2E flows for every complete user
+  journey that can be reliably driven on an emulator. Do not claim E2E coverage
+  for behavior the runner cannot honestly control; document those cases as
+  manual-only or blocked by a missing test harness, with the reason.
+- For high-risk mobile flows, use the available testing specialists and skills
+  during implementation: `tdd-guide` or `source-command-tdd` for unit coverage,
+  `qa-auditor` for test-plan/coverage audits, `source-command-e2e`,
+  `source-command-e2e-runner`, or `source-command-maestro` for Maestro flows,
+  and `test-android-apps:android-emulator-qa` for emulator validation. If none
+  of the available agents or skills fits a recurring testing need, propose a new
+  specialized agent or skill before proceeding.
+- PR descriptions should include a coverage matrix that maps each manual test
+  scenario to its unit/integration test, E2E test, or manual-only validation.
+  Missing automation must be explicit, not implied.
 - For hook tests, use `@testing-library/react-native`'s `renderHook`. Do not add
   new `react-test-renderer` shims; replace deprecated `react-test-renderer`
   usage when touching affected tests.
@@ -401,6 +430,23 @@ For bug fixes and regressions:
   routing correctness, sync semantics, or other existing guarantees.
 - Verify with focused tests or manual checks that would have caught the original
   failure, plus any relevant regression checks for adjacent behavior.
+
+### No Assumption-Based Fixes
+
+- Do not write production code from an unverified assumption. A suspected cause
+  must be confirmed by code reading, a failing test, logs, debugger output,
+  device behavior, or another concrete signal before implementation.
+- Do not hide uncertainty inside state flags, timing delays, retries, broad
+  guards, or extra abstraction. If the code depends on a condition, prove that
+  condition exists and name it in the implementation or test.
+- Do not ship workaround logic that only masks a symptom. The fix must address
+  the failing branch, stale state transition, race, invalid data, or missing
+  lifecycle event that actually causes the bug.
+- Before editing, ask whether the proposed code is a real model of the product
+  behavior or just a patch around the current failure. If it is a workaround,
+  stop and redesign the fix or ask for direction.
+- Regression tests must describe the user-visible failure or invariant being
+  protected, not incidental implementation details.
 
 ## 2. Simplicity First
 

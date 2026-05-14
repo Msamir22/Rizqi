@@ -42,16 +42,23 @@ const ACTION_DISCARD = "DISCARD";
 /** Payload embedded in notification data for handler retrieval */
 export interface TransactionNotificationPayload {
   readonly type: "sms_transaction";
-  readonly transactionData: ParsedSmsTransaction;
+  readonly transactionData: NotificationParsedSmsTransaction;
   readonly resolvedAccountId: string;
   readonly resolvedAccountName: string;
 }
 
 interface TransactionInfoNotificationPayload {
   readonly type: "sms_transaction_created" | "sms_transaction_info";
-  readonly transactionData: ParsedSmsTransaction;
+  readonly transactionData: NotificationParsedSmsTransaction;
   readonly resolvedAccountName: string;
 }
+
+export type NotificationParsedSmsTransaction = Omit<
+  ParsedSmsTransaction,
+  "date"
+> & {
+  readonly date: Date | string | number | null;
+};
 
 /** Callback for handling notification action responses */
 type NotificationActionHandler = (
@@ -73,6 +80,7 @@ let isInitialized = false;
 let actionHandler: NotificationActionHandler | null = null;
 let responseSubscription: Notifications.Subscription | null = null;
 const handledNotificationKeys = new Set<string>();
+let responseRegistrationId = 0;
 
 const MAX_HANDLED_NOTIFICATION_KEYS = 200;
 
@@ -188,14 +196,14 @@ export async function initializeNotifications(): Promise<void> {
       identifier: ACTION_CONFIRM,
       buttonTitle: "✓ Confirm",
       options: {
-        opensAppToForeground: false,
+        opensAppToForeground: true,
       },
     },
     {
       identifier: ACTION_DISCARD,
       buttonTitle: "✗ Discard",
       options: {
-        opensAppToForeground: false,
+        opensAppToForeground: true,
         isDestructive: true,
       },
     },
@@ -219,6 +227,8 @@ export function registerNotificationActionHandler(
   handler: NotificationActionHandler
 ): () => void {
   actionHandler = handler;
+  responseRegistrationId += 1;
+  const registrationId = responseRegistrationId;
 
   // Remove previous subscription if any
   if (responseSubscription) {
@@ -231,7 +241,10 @@ export function registerNotificationActionHandler(
     }
   );
 
+  void replayLastNotificationResponse(registrationId);
+
   return () => {
+    responseRegistrationId += 1;
     if (responseSubscription) {
       responseSubscription.remove();
       responseSubscription = null;
@@ -242,19 +255,19 @@ export function registerNotificationActionHandler(
 
 async function handleNotificationActionResponse(
   response: Notifications.NotificationResponse
-): Promise<void> {
+): Promise<boolean> {
   const actionId = response.actionIdentifier;
   const data = response.notification.request.content
     .data as unknown as TransactionNotificationPayload;
 
   // Only handle our SMS transaction notifications
   if (data?.type !== "sms_transaction") {
-    return;
+    return false;
   }
 
   // Ignore default tap (no action button pressed)
   if (actionId === Notifications.DEFAULT_ACTION_IDENTIFIER || !actionHandler) {
-    return;
+    return true;
   }
 
   const notificationId = response.notification.request.identifier;
@@ -264,7 +277,7 @@ async function handleNotificationActionResponse(
 
   if (!markNotificationKeyHandled(notificationKey)) {
     await dismissDeliveredNotification(notificationId);
-    return;
+    return true;
   }
 
   try {
@@ -277,6 +290,25 @@ async function handleNotificationActionResponse(
       notificationId,
       smsFingerprint: data.transactionData.smsFingerprint,
     });
+  }
+  return true;
+}
+
+async function replayLastNotificationResponse(
+  registrationId: number
+): Promise<void> {
+  try {
+    const response = await Notifications.getLastNotificationResponseAsync();
+    if (responseRegistrationId !== registrationId || !response) {
+      return;
+    }
+
+    const didHandleResponse = await handleNotificationActionResponse(response);
+    if (didHandleResponse) {
+      await Notifications.clearLastNotificationResponseAsync();
+    }
+  } catch (err: unknown) {
+    logger.error("[notification-service] Failed to replay notification", err);
   }
 }
 
@@ -305,6 +337,21 @@ export function clearHandledNotificationKeysForTests(): void {
   handledNotificationKeys.clear();
 }
 
+export function resetNotificationServiceForTests(): void {
+  if (!__DEV__) {
+    return;
+  }
+
+  isInitialized = false;
+  actionHandler = null;
+  responseRegistrationId = 0;
+  handledNotificationKeys.clear();
+  if (responseSubscription) {
+    responseSubscription.remove();
+    responseSubscription = null;
+  }
+}
+
 async function dismissDeliveredNotification(
   notificationId: string
 ): Promise<void> {
@@ -330,6 +377,15 @@ function formatAmount(amount: number, currency: string): string {
     maximumFractionDigits: 2,
   });
   return `${currency} ${formatted}`;
+}
+
+function serializeTransactionData(
+  parsed: ParsedSmsTransaction
+): NotificationParsedSmsTransaction {
+  return {
+    ...parsed,
+    date: parsed.date.toISOString(),
+  };
 }
 
 /**
@@ -371,7 +427,7 @@ export async function showTransactionNotification(
 
   const payload: TransactionNotificationPayload = {
     type: "sms_transaction",
-    transactionData: parsed,
+    transactionData: serializeTransactionData(parsed),
     resolvedAccountId,
     resolvedAccountName,
   };
@@ -453,7 +509,7 @@ async function showInfoOnlySmsTransactionNotification({
     .join("\n");
   const payload: TransactionInfoNotificationPayload = {
     type,
-    transactionData: parsed,
+    transactionData: serializeTransactionData(parsed),
     resolvedAccountName,
   };
 

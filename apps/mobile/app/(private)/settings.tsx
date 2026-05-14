@@ -20,6 +20,7 @@ import { useLocale } from "@/context/LocaleContext";
 
 import { CurrencyPicker } from "@/components/currency/CurrencyPicker";
 import { GradientBackground } from "@/components/ui/GradientBackground";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
@@ -183,6 +184,7 @@ export default function SettingsScreen(): React.JSX.Element {
     requestPermission,
     requestLiveDetectionPermission,
     openSettings,
+    recheckPermission,
   } = useSmsPermission();
   const { hasSynced, lastSyncTimestamp } = useSmsSync();
   const { setScanMode } = useSmsScanContext();
@@ -197,40 +199,72 @@ export default function SettingsScreen(): React.JSX.Element {
 
   // Live detection preferences
   const [liveDetection, setLiveDetection] = useState(false);
+  const [isLiveDetectionPreferenceReady, setIsLiveDetectionPreferenceReady] =
+    useState(!isAndroid);
   const [isLiveDetectionEnabling, setIsLiveDetectionEnabling] = useState(false);
   const [autoConfirmSms, setAutoConfirmSms] = useState(false);
   const [permissionRecovery, setPermissionRecovery] =
     useState<PermissionRecoveryState | null>(null);
   const [hasPendingLiveDetectionEnable, setHasPendingLiveDetectionEnable] =
     useState(false);
+  const [
+    hasReturnedFromLiveDetectionSettings,
+    setHasReturnedFromLiveDetectionSettings,
+  ] = useState(false);
   const [hasPendingNotificationEnable, setHasPendingNotificationEnable] =
     useState(false);
   const [pendingSmsScanMode, setPendingSmsScanMode] = useState<
     "incremental" | "full" | null
   >(null);
+  const liveDetectionSwitchValue = liveDetection || isLiveDetectionEnabling;
   const previousNotificationAppState = useRef<AppStateStatus>(
+    AppState.currentState
+  );
+  const previousSmsSettingsAppState = useRef<AppStateStatus>(
     AppState.currentState
   );
   const previousSettingsAppState = useRef<AppStateStatus>(
     AppState.currentState
   );
+  const hasActiveLiveDetectionEnableFlowRef = useRef(false);
 
   const reconcileStoredLiveDetection = useCallback(async (): Promise<void> => {
     if (!isAndroid) {
+      setIsLiveDetectionPreferenceReady(true);
       return;
     }
 
-    const enabled = await reconcileLiveDetectionPreference();
-    setLiveDetection(enabled);
-
-    if (!enabled) {
-      stopSmsListener();
-      setAutoConfirmSms(false);
+    if (hasActiveLiveDetectionEnableFlowRef.current) {
       return;
     }
 
-    const autoConfirmEnabled = await isAutoConfirmEnabled();
-    setAutoConfirmSms(autoConfirmEnabled);
+    try {
+      const enabled = await reconcileLiveDetectionPreference();
+
+      if (hasActiveLiveDetectionEnableFlowRef.current) {
+        return;
+      }
+
+      setLiveDetection(enabled);
+
+      if (!enabled) {
+        stopSmsListener();
+        setAutoConfirmSms(false);
+        return;
+      }
+
+      const autoConfirmEnabled = await isAutoConfirmEnabled();
+
+      if (hasActiveLiveDetectionEnableFlowRef.current) {
+        return;
+      }
+
+      setAutoConfirmSms(autoConfirmEnabled);
+    } finally {
+      if (!hasActiveLiveDetectionEnableFlowRef.current) {
+        setIsLiveDetectionPreferenceReady(true);
+      }
+    }
   }, [isAndroid]);
 
   useEffect(() => {
@@ -270,12 +304,22 @@ export default function SettingsScreen(): React.JSX.Element {
 
   const persistLiveDetectionEnabled = useCallback(async (): Promise<void> => {
     setLiveDetection(true);
-    await setLiveDetectionEnabled(true);
-    startSmsListener();
+    setIsLiveDetectionPreferenceReady(true);
+
+    try {
+      await setLiveDetectionEnabled(true);
+      startSmsListener();
+      hasActiveLiveDetectionEnableFlowRef.current = false;
+    } catch (error: unknown) {
+      setLiveDetection(false);
+      hasActiveLiveDetectionEnableFlowRef.current = false;
+      throw error;
+    }
   }, []);
 
   const enableLiveDetectionWithGrantedSms =
     useCallback(async (): Promise<void> => {
+      hasActiveLiveDetectionEnableFlowRef.current = true;
       setIsLiveDetectionEnabling(true);
       try {
         const notificationStatus = await getNotificationPermissionStatus();
@@ -290,6 +334,7 @@ export default function SettingsScreen(): React.JSX.Element {
 
         await persistLiveDetectionEnabled();
       } catch {
+        hasActiveLiveDetectionEnableFlowRef.current = false;
         showToast({
           type: "error",
           title: tCommon("error"),
@@ -301,9 +346,21 @@ export default function SettingsScreen(): React.JSX.Element {
 
   useEffect(() => {
     if (!hasPendingLiveDetectionEnable) return;
-    if (liveDetectionStatus !== "granted") return;
+
+    if (liveDetectionStatus !== "granted") {
+      if (!hasReturnedFromLiveDetectionSettings) return;
+
+      setHasPendingLiveDetectionEnable(false);
+      setHasReturnedFromLiveDetectionSettings(false);
+      setPermissionRecovery({
+        kind: "sms-live",
+        mode: getRecoveryModeForPermissionStatus(liveDetectionStatus),
+      });
+      return;
+    }
 
     setHasPendingLiveDetectionEnable(false);
+    setHasReturnedFromLiveDetectionSettings(false);
     setPermissionRecovery(null);
     enableLiveDetectionWithGrantedSms().catch(() => {
       showToast({
@@ -313,6 +370,7 @@ export default function SettingsScreen(): React.JSX.Element {
     });
   }, [
     enableLiveDetectionWithGrantedSms,
+    hasReturnedFromLiveDetectionSettings,
     hasPendingLiveDetectionEnable,
     showToast,
     liveDetectionStatus,
@@ -332,8 +390,10 @@ export default function SettingsScreen(): React.JSX.Element {
   const handleToggleLiveDetection = useCallback(
     async (value: boolean): Promise<void> => {
       if (!value) {
+        hasActiveLiveDetectionEnableFlowRef.current = false;
         setIsLiveDetectionEnabling(false);
         setHasPendingLiveDetectionEnable(false);
+        setHasReturnedFromLiveDetectionSettings(false);
         setHasPendingNotificationEnable(false);
         setPermissionRecovery(null);
         setLiveDetection(false);
@@ -344,11 +404,14 @@ export default function SettingsScreen(): React.JSX.Element {
         return;
       }
 
+      hasActiveLiveDetectionEnableFlowRef.current = true;
+
       if (liveDetectionStatus !== "granted") {
         setPermissionRecovery({
           kind: "sms-live",
           mode: getRecoveryModeForPermissionStatus(liveDetectionStatus),
         });
+        setHasReturnedFromLiveDetectionSettings(false);
         return;
       }
 
@@ -358,8 +421,10 @@ export default function SettingsScreen(): React.JSX.Element {
   );
 
   const handlePermissionModalCancel = useCallback((): void => {
+    hasActiveLiveDetectionEnableFlowRef.current = false;
     setIsLiveDetectionEnabling(false);
     setHasPendingLiveDetectionEnable(false);
+    setHasReturnedFromLiveDetectionSettings(false);
     setHasPendingNotificationEnable(false);
     setPendingSmsScanMode(null);
     setPermissionRecovery(null);
@@ -373,6 +438,7 @@ export default function SettingsScreen(): React.JSX.Element {
 
       if (permissionRecovery.kind === "notification") {
         if (permissionRecovery.mode === "blocked") {
+          hasActiveLiveDetectionEnableFlowRef.current = true;
           setHasPendingNotificationEnable(true);
           setPermissionRecovery(null);
           await openNotificationSettings();
@@ -418,7 +484,9 @@ export default function SettingsScreen(): React.JSX.Element {
       }
 
       if (permissionRecovery.mode === "blocked") {
+        hasActiveLiveDetectionEnableFlowRef.current = true;
         setHasPendingLiveDetectionEnable(true);
+        setHasReturnedFromLiveDetectionSettings(false);
         setPermissionRecovery(null);
         await openSettings();
         return;
@@ -492,6 +560,44 @@ export default function SettingsScreen(): React.JSX.Element {
   }, [
     enableLiveDetectionWithGrantedSms,
     hasPendingNotificationEnable,
+    showToast,
+    tCommon,
+  ]);
+
+  useEffect(() => {
+    if (!hasPendingLiveDetectionEnable) {
+      return;
+    }
+
+    const subscription = AppState.addEventListener(
+      "change",
+      (nextState: AppStateStatus) => {
+        if (
+          previousSmsSettingsAppState.current.match(/inactive|background/) &&
+          nextState === "active"
+        ) {
+          recheckPermission()
+            .catch(() => {
+              showToast({
+                type: "error",
+                title: tCommon("error"),
+              });
+            })
+            .finally(() => {
+              setHasReturnedFromLiveDetectionSettings(true);
+            });
+        }
+
+        previousSmsSettingsAppState.current = nextState;
+      }
+    );
+
+    return () => {
+      subscription.remove();
+    };
+  }, [
+    hasPendingLiveDetectionEnable,
+    recheckPermission,
     showToast,
     tCommon,
   ]);
@@ -765,6 +871,7 @@ export default function SettingsScreen(): React.JSX.Element {
 
             {/* Sync New Messages (incremental) */}
             <TouchableOpacity
+              testID="sms-sync-button"
               onPress={() => {
                 handleIncrementalSync();
               }}
@@ -839,70 +946,108 @@ export default function SettingsScreen(): React.JSX.Element {
               {t("live_detection")}
             </Text>
 
-            {/* Live Detection Toggle */}
-            <View className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800">
-              <View className="flex-row items-center gap-3 flex-1">
-                <View className="w-8 bg-violet-600 dark:bg-violet-500 h-8 rounded-lg justify-center items-center">
-                  <Ionicons name="radio" size={20} color={palette.slate[25]} />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
-                    {t("live_detection")}
-                  </Text>
-                  <Text className="text-xs text-slate-500 dark:text-slate-400">
-                    {t("auto_detect_description")}
-                  </Text>
-                </View>
-              </View>
-              <Switch
-                testID="live-sms-detection-switch"
-                value={liveDetection}
-                onValueChange={handleToggleLiveDetection}
-                disabled={isLiveDetectionEnabling}
-                trackColor={{
-                  false: palette.slate[400],
-                  true: palette.nileGreen[500],
-                }}
-                thumbColor={
-                  liveDetection ? palette.slate[25] : palette.slate[100]
-                }
-              />
-            </View>
-
-            {/* Auto Confirm Toggle */}
-            <View
-              className={`flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800 mt-0.5 ${!liveDetection ? "opacity-50" : ""}`}
-            >
-              <View className="flex-row items-center gap-3 flex-1">
-                <View className="w-8 bg-indigo-600 dark:bg-indigo-500 h-8 rounded-lg justify-center items-center">
-                  <Ionicons
-                    name="checkmark-circle"
-                    size={20}
-                    color={palette.slate[25]}
+            {isLiveDetectionPreferenceReady ? (
+              <>
+                {/* Live Detection Toggle */}
+                <View className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800">
+                  <View className="flex-row items-center gap-3 flex-1">
+                    <View className="w-8 bg-violet-600 dark:bg-violet-500 h-8 rounded-lg justify-center items-center">
+                      <Ionicons
+                        name="radio"
+                        size={20}
+                        color={palette.slate[25]}
+                      />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
+                        {t("live_detection")}
+                      </Text>
+                      <Text className="text-xs text-slate-500 dark:text-slate-400">
+                        {t("auto_detect_description")}
+                      </Text>
+                    </View>
+                  </View>
+                  <Switch
+                    testID="live-sms-detection-switch"
+                    value={liveDetectionSwitchValue}
+                    onValueChange={handleToggleLiveDetection}
+                    disabled={isLiveDetectionEnabling}
+                    trackColor={{
+                      false: palette.slate[400],
+                      true: palette.nileGreen[500],
+                    }}
+                    thumbColor={
+                      liveDetectionSwitchValue
+                        ? palette.slate[25]
+                        : palette.slate[100]
+                    }
                   />
                 </View>
-                <View className="flex-1">
-                  <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
-                    {t("auto_confirm")}
-                  </Text>
-                  <Text className="text-xs text-slate-500 dark:text-slate-400">
-                    {t("auto_confirm_description")}
-                  </Text>
+
+                {/* Auto Confirm Toggle */}
+                <View
+                  className={`flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800 mt-0.5 ${!liveDetection ? "opacity-50" : ""}`}
+                >
+                  <View className="flex-row items-center gap-3 flex-1">
+                    <View className="w-8 bg-indigo-600 dark:bg-indigo-500 h-8 rounded-lg justify-center items-center">
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={20}
+                        color={palette.slate[25]}
+                      />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
+                        {t("auto_confirm")}
+                      </Text>
+                      <Text className="text-xs text-slate-500 dark:text-slate-400">
+                        {t("auto_confirm_description")}
+                      </Text>
+                    </View>
+                  </View>
+                  <Switch
+                    testID="live-sms-auto-confirm-switch"
+                    value={autoConfirmSms}
+                    onValueChange={handleToggleAutoConfirm}
+                    disabled={!liveDetection}
+                    trackColor={{
+                      false: palette.slate[400],
+                      true: palette.nileGreen[500],
+                    }}
+                    thumbColor={
+                      autoConfirmSms ? palette.slate[25] : palette.slate[100]
+                    }
+                  />
+                </View>
+              </>
+            ) : (
+              <View>
+                <View className="p-4 rounded-2xl bg-white dark:bg-slate-800">
+                  <View className="flex-row items-center gap-3">
+                    <Skeleton width={32} height={32} borderRadius={8} />
+                    <View className="flex-1">
+                      <Skeleton width="55%" height={18} borderRadius={4} />
+                      <View className="mt-2">
+                        <Skeleton width="85%" height={12} borderRadius={4} />
+                      </View>
+                    </View>
+                    <Skeleton width={50} height={32} borderRadius={16} />
+                  </View>
+                </View>
+                <View className="p-4 rounded-2xl bg-white dark:bg-slate-800 mt-0.5">
+                  <View className="flex-row items-center gap-3">
+                    <Skeleton width={32} height={32} borderRadius={8} />
+                    <View className="flex-1">
+                      <Skeleton width="45%" height={18} borderRadius={4} />
+                      <View className="mt-2">
+                        <Skeleton width="75%" height={12} borderRadius={4} />
+                      </View>
+                    </View>
+                    <Skeleton width={50} height={32} borderRadius={16} />
+                  </View>
                 </View>
               </View>
-              <Switch
-                value={autoConfirmSms}
-                onValueChange={handleToggleAutoConfirm}
-                disabled={!liveDetection}
-                trackColor={{
-                  false: palette.slate[400],
-                  true: palette.nileGreen[500],
-                }}
-                thumbColor={
-                  autoConfirmSms ? palette.slate[25] : palette.slate[100]
-                }
-              />
-            </View>
+            )}
           </View>
         )}
 
