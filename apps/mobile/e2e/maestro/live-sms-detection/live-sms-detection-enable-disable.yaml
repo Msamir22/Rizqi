@@ -1,0 +1,34 @@
+appId: com.monyvi.app
+---
+# Live detection can be enabled when SMS and notification permissions are granted,
+# then disabled by the user without leaving stale auto-confirm state.
+# Preconditions: app state already contains an authenticated/onboarded user.
+
+- launchApp:
+    appId: com.monyvi.app
+    clearState: false
+    permissions:
+      sms: allow
+      notifications: allow
+
+- runFlow: ../helpers/open-settings.yaml
+
+- scrollUntilVisible:
+    element:
+      id: "live-sms-detection-switch"
+    direction: DOWN
+    centerElement: true
+
+- tapOn:
+    id: "live-sms-detection-switch"
+
+- assertVisible:
+    id: "live-sms-detection-switch"
+    checked: true
+
+- tapOn:
+    id: "live-sms-detection-switch"
+
+- assertVisible:
+    id: "live-sms-detection-switch"
+    checked: false

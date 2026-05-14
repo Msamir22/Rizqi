@@ -1,0 +1,18 @@
+appId: com.monyvi.app
+---
+# Journey 08: User disables live detection. Injecting a new SMS should not
+# reach the live detection log while the feature is off.
+
+- runFlow: ensure-live-sms-enabled.yaml
+- runFlow: ensure-live-sms-disabled.yaml
+- runFlow: open-sms-simulator.yaml
+
+- tapOn:
+    id: "sms-simulator-reset-top"
+- tapOn:
+    id: "sms-simulator-inject-cib_credit_payment"
+
+- waitForAnimationToEnd
+
+- assertVisible: "Live detection log count: 0"
+- assertNotVisible: "Latest detected:"

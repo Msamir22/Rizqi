@@ -1,0 +1,23 @@
+appId: com.monyvi.app
+---
+# Journey 05: If Android will not show the SMS prompt anymore, the user gets
+# the Open Settings recovery path instead of another Allow prompt.
+# Permission state is prepared by scripts/run-live-sms-journeys.js.
+
+- runFlow: ../helpers/open-settings.yaml
+- runFlow: scroll-to-live-sms-switch.yaml
+
+- tapOn:
+    id: "live-sms-detection-switch"
+
+- extendedWaitUntil:
+    visible: "Turn on SMS access"
+    timeout: 30000
+- assertVisible: "Open Settings"
+
+- tapOn:
+    id: "permission-modal-primary"
+
+- extendedWaitUntil:
+    visible: "Monyvi"
+    timeout: 30000

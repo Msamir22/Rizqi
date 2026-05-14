@@ -1,0 +1,20 @@
+appId: com.monyvi.app
+---
+# Helper: disable Live SMS Detection. Leaves it disabled if it already is.
+
+- runFlow: ../helpers/open-settings.yaml
+- runFlow: scroll-to-live-sms-switch.yaml
+
+- runFlow:
+    when:
+      visible:
+        id: "live-sms-detection-switch"
+        checked: true
+    commands:
+      - tapOn:
+          id: "live-sms-detection-switch"
+      - extendedWaitUntil:
+          visible:
+            id: "live-sms-detection-switch"
+            checked: false
+          timeout: 30000

@@ -1,0 +1,37 @@
+appId: com.monyvi.app
+---
+# Journey 04: User grants SMS, denies notifications, then retries the
+# notification recovery path.
+
+- runFlow: ../helpers/open-settings.yaml
+- runFlow: scroll-to-live-sms-switch.yaml
+
+- tapOn:
+    id: "live-sms-detection-switch"
+- extendedWaitUntil:
+    visible: "Allow notifications?"
+    timeout: 30000
+- tapOn:
+    id: "permission-modal-primary"
+- extendedWaitUntil:
+    visible: "Don.*allow"
+    timeout: 10000
+- tapOn: "Don.*allow"
+
+- extendedWaitUntil:
+    visible: "Allow notifications?"
+    timeout: 30000
+- assertVisible: "Allow notifications"
+
+- tapOn:
+    id: "permission-modal-primary"
+- extendedWaitUntil:
+    visible: "Allow"
+    timeout: 10000
+- tapOn: "Allow"
+
+- extendedWaitUntil:
+    visible:
+      id: "live-sms-detection-switch"
+      checked: true
+    timeout: 30000

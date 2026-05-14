@@ -1,0 +1,9 @@
+appId: com.monyvi.app
+---
+# Helper: reveal the Live SMS Detection switch in Settings.
+
+- scrollUntilVisible:
+    element:
+      id: "live-sms-detection-switch"
+    direction: UP
+    centerElement: true

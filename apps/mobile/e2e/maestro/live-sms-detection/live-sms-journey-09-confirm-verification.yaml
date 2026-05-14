@@ -1,0 +1,24 @@
+appId: com.monyvi.app
+---
+# Verifies Journey 09 after the runner taps the Confirm notification action.
+
+- openLink:
+    link: monyvi://transactions
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "filter-period"
+    timeout: 30000
+
+- tapOn:
+    id: "filter-period"
+- tapOn: "All Time"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "search-input"
+- inputText: "CONFIRM ACTION MARKET"
+
+- extendedWaitUntil:
+    visible: "-91.23 EGP"
+    timeout: 30000

@@ -1,0 +1,7 @@
+appId: com.monyvi.app
+---
+# Journey 13 setup: enable Live SMS Detection while permissions are granted.
+# The runner revokes notification permission after this flow and restarts the
+# dev client without using Maestro launchApp permission mutation.
+
+- runFlow: ensure-live-sms-enabled.yaml

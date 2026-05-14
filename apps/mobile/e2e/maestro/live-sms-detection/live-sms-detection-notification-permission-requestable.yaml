@@ -1,0 +1,35 @@
+appId: com.monyvi.app
+---
+# Live detection asks for notification access after live SMS access is granted.
+# Preconditions: app state already contains an authenticated/onboarded user.
+
+- launchApp:
+    appId: com.monyvi.app
+    clearState: false
+    permissions:
+      sms: allow
+      notifications: unset
+
+- runFlow: ../helpers/open-settings.yaml
+
+- scrollUntilVisible:
+    element:
+      id: "live-sms-detection-switch"
+    direction: DOWN
+    centerElement: true
+
+- tapOn:
+    id: "live-sms-detection-switch"
+
+- assertVisible: "Allow notifications?"
+- assertVisible:
+    "Monyvi needs notifications to show you new transactions as they arrive."
+- assertVisible: "Allow notifications"
+- assertVisible: "Not now"
+
+- tapOn: "Not now"
+
+- assertNotVisible: "Allow notifications?"
+- assertVisible:
+    id: "live-sms-detection-switch"
+    checked: false

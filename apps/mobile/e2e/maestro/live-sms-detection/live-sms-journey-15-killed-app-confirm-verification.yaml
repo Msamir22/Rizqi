@@ -1,0 +1,25 @@
+appId: com.monyvi.app
+---
+# Verifies Journey 15 after the runner confirms the killed-app real-SMS
+# notification.
+
+- openLink:
+    link: monyvi://transactions
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "filter-period"
+    timeout: 30000
+
+- tapOn:
+    id: "filter-period"
+- tapOn: "All Time"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "search-input"
+- inputText: "CLOSED CONFIRM MARKET"
+
+- extendedWaitUntil:
+    visible: "-72.56 EGP"
+    timeout: 30000

@@ -1,0 +1,24 @@
+appId: com.monyvi.app
+---
+# Helper: open the dev-only SMS simulator screen.
+# Preconditions: dev build, authenticated/onboarded user.
+
+- openLink:
+    link: monyvi://sms-simulator
+
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "SMS Simulator \\(dev\\)"
+    timeout: 30000
+
+- openLink:
+    link: monyvi://sms-simulator
+
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "SMS Simulator \\(dev\\)"
+    timeout: 30000
+
+- assertVisible: "SMS Simulator \\(dev\\)"

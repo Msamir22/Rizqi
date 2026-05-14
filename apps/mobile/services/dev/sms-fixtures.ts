@@ -64,6 +64,20 @@ export const SMS_FIXTURES: readonly SmsFixture[] = [
     body: "Purchase EGP 75.00 on card **** 1234 at STARBUCKS MAADI on 08/04 09:15. Avail bal EGP 5,200.00",
   },
   {
+    id: "confirm_action_probe",
+    label: "Confirm action probe",
+    description: "Unique merchant used by E2E notification confirm tests",
+    sender: "NBE",
+    body: "Purchase EGP 91.23 on card **** 4321 at CONFIRM ACTION MARKET on 08/04 16:10. Avail bal EGP 12,339.32",
+  },
+  {
+    id: "discard_action_probe",
+    label: "Discard action probe",
+    description: "Unique merchant used by E2E notification discard tests",
+    sender: "NBE",
+    body: "Purchase EGP 82.34 on card **** 4321 at DISCARD ACTION MARKET on 08/04 16:20. Avail bal EGP 12,256.98",
+  },
+  {
     id: "non_financial_spam",
     label: "Non-financial spam (should be filtered)",
     description: "Expected to be dropped by isLikelyFinancialSms",

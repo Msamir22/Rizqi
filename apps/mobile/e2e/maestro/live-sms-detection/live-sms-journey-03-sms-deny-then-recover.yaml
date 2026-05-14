@@ -1,0 +1,34 @@
+appId: com.monyvi.app
+---
+# Journey 03: User denies live SMS permission, then tries again and recovers.
+
+- runFlow: ../helpers/open-settings.yaml
+- runFlow: scroll-to-live-sms-switch.yaml
+
+- tapOn:
+    id: "live-sms-detection-switch"
+- assertVisible: "Allow live SMS detection?"
+- tapOn:
+    id: "permission-modal-primary"
+- extendedWaitUntil:
+    visible: "Don.*allow"
+    timeout: 10000
+- tapOn: "Don.*allow"
+
+- extendedWaitUntil:
+    visible: "Allow live SMS detection?"
+    timeout: 30000
+- assertVisible: "Allow SMS access"
+
+- tapOn:
+    id: "permission-modal-primary"
+- extendedWaitUntil:
+    visible: "Allow"
+    timeout: 10000
+- tapOn: "Allow"
+
+- extendedWaitUntil:
+    visible:
+      id: "live-sms-detection-switch"
+      checked: true
+    timeout: 30000

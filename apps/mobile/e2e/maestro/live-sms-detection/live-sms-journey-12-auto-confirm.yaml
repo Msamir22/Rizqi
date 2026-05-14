@@ -1,0 +1,39 @@
+appId: com.monyvi.app
+---
+# Journey 12: With auto-confirm enabled, a detected SMS is processed and the
+# user still gets an informational notification.
+
+- runFlow: ensure-live-sms-enabled.yaml
+
+- runFlow:
+    when:
+      visible:
+        id: "live-sms-auto-confirm-switch"
+        checked: false
+    commands:
+      - tapOn:
+          id: "live-sms-auto-confirm-switch"
+      - extendedWaitUntil:
+          visible:
+            id: "live-sms-auto-confirm-switch"
+            checked: true
+          timeout: 30000
+
+- runFlow: open-sms-simulator.yaml
+- tapOn:
+    id: "sms-simulator-reset-top"
+- tapOn:
+    id: "sms-simulator-inject-cib_credit_payment"
+
+- extendedWaitUntil:
+    visible: "Live detection log count: 1"
+    timeout: 60000
+
+- swipe:
+    start: 500, 0
+    end: 500, 1100
+    duration: 500
+
+- extendedWaitUntil:
+    visible: "Transaction created"
+    timeout: 30000

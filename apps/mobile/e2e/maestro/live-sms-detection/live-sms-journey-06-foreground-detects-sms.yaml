@@ -1,0 +1,21 @@
+appId: com.monyvi.app
+---
+# Journey 06: Live SMS detection receives an SMS while the app is open.
+# Uses the dev simulator to inject into the same JS event as the native
+# receiver, then verifies the live detection pipeline parsed one transaction.
+
+- runFlow: ensure-live-sms-enabled.yaml
+
+- runFlow: open-sms-simulator.yaml
+
+- tapOn:
+    id: "sms-simulator-reset-top"
+
+- tapOn:
+    id: "sms-simulator-inject-nbe_debit_purchase"
+
+- extendedWaitUntil:
+    visible: "Live detection log count: 1"
+    timeout: 60000
+
+- assertVisible: "Latest detected: 250 EGP from NBE"

@@ -1,0 +1,793 @@
+const { join } = require("node:path");
+const {
+  adb,
+  appId,
+  collapseSystemUi,
+  dumpVisibleText,
+  ensureE2eAppReady,
+  forceStopApp,
+  resolveMaestroBin,
+  run,
+  wait,
+} = require("./e2e-preflight");
+
+const mobileRoot = join(__dirname, "..");
+const flowDir = join("e2e", "maestro", "live-sms-detection");
+
+const smsPermissions = [
+  "android.permission.READ_SMS",
+  "android.permission.RECEIVE_SMS",
+];
+const notificationPermission = "android.permission.POST_NOTIFICATIONS";
+const actionProbeMarkers = [
+  "CONFIRM ACTION MARKET",
+  "DISCARD ACTION MARKET",
+  "BACKGROUND CONFIRM MARKET",
+  "CLOSED CONFIRM MARKET",
+];
+
+function clearPermissionFlags(permission) {
+  adb(
+    [
+      "shell",
+      "pm",
+      "clear-permission-flags",
+      appId,
+      permission,
+      "user-set",
+      "user-fixed",
+    ],
+    { allowFailure: true }
+  );
+}
+
+function setPermissionFlags(permission, flags) {
+  adb(["shell", "pm", "set-permission-flags", appId, permission, ...flags], {
+    allowFailure: true,
+  });
+}
+
+function revokePermission(permission) {
+  adb(["shell", "pm", "revoke", appId, permission], { allowFailure: true });
+}
+
+function grantPermission(permission) {
+  clearPermissionFlags(permission);
+  adb(["shell", "pm", "grant", appId, permission], { allowFailure: true });
+}
+
+function removeSmsRequestedPrefs() {
+  adb(
+    [
+      "shell",
+      "run-as",
+      appId,
+      "rm",
+      "-f",
+      "shared_prefs/sms_permission_state.xml",
+    ],
+    { allowFailure: true }
+  );
+}
+
+function removeExpoPermissionAskedPrefs() {
+  adb(
+    [
+      "shell",
+      "run-as",
+      appId,
+      "rm",
+      "-f",
+      "shared_prefs/expo.modules.permissions.asked.xml",
+    ],
+    { allowFailure: true }
+  );
+}
+
+function writeSmsRequestedPrefs() {
+  const xml = `<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n<map>\n    <boolean name="requested_android.permission.READ_SMS" value="true" />\n    <boolean name="requested_android.permission.RECEIVE_SMS" value="true" />\n</map>\n`;
+  adb(["shell", "run-as", appId, "mkdir", "shared_prefs"], {
+    allowFailure: true,
+  });
+  adb(
+    ["shell", "run-as", appId, "tee", "shared_prefs/sms_permission_state.xml"],
+    {
+      capture: true,
+      input: xml,
+    }
+  );
+}
+
+function resetSmsPermissions() {
+  for (const permission of smsPermissions) {
+    revokePermission(permission);
+    clearPermissionFlags(permission);
+  }
+  removeSmsRequestedPrefs();
+}
+
+function grantSmsPermissions() {
+  for (const permission of smsPermissions) {
+    grantPermission(permission);
+  }
+}
+
+function blockSmsPermissions() {
+  resetSmsPermissions();
+  writeSmsRequestedPrefs();
+  for (const permission of smsPermissions) {
+    setPermissionFlags(permission, ["user-set", "user-fixed"]);
+  }
+}
+
+function resetNotificationPermission() {
+  revokePermission(notificationPermission);
+  clearPermissionFlags(notificationPermission);
+  removeExpoPermissionAskedPrefs();
+}
+
+function grantNotificationPermission() {
+  grantPermission(notificationPermission);
+}
+
+function runFlow(flow) {
+  const maestroBin = resolveMaestroBin();
+  if (!maestroBin) {
+    throw new Error("Maestro was not found. Install it or set MAESTRO_BIN.");
+  }
+
+  run(maestroBin, ["test", join(flowDir, flow)], { cwd: mobileRoot });
+}
+
+function getXmlAttribute(nodeText, attribute) {
+  const pattern = new RegExp(`${attribute}="([^"]*)"`);
+  return nodeText.match(pattern)?.[1] ?? "";
+}
+
+function parseUiNodes(uiXml) {
+  return [...uiXml.matchAll(/<node\b[^>]*>/g)].map(([nodeText]) => ({
+    text: getXmlAttribute(nodeText, "text"),
+    contentDescription: getXmlAttribute(nodeText, "content-desc"),
+    resourceId: getXmlAttribute(nodeText, "resource-id"),
+    bounds: getXmlAttribute(nodeText, "bounds"),
+  }));
+}
+
+function parseBoundsCenter(bounds) {
+  const match = bounds.match(/^\[(\d+),(\d+)\]\[(\d+),(\d+)\]$/);
+  if (!match) {
+    throw new Error(`Unable to parse UI bounds: ${bounds}`);
+  }
+
+  const [, left, top, right, bottom] = match.map(Number);
+  return {
+    x: Math.round((left + right) / 2),
+    y: Math.round((top + bottom) / 2),
+  };
+}
+
+function parseBounds(bounds) {
+  const match = bounds.match(/^\[(\d+),(\d+)\]\[(\d+),(\d+)\]$/);
+  if (!match) {
+    return null;
+  }
+
+  const [, left, top, right, bottom] = match.map(Number);
+  return { left, top, right, bottom };
+}
+
+function getBoundsCenterY(bounds) {
+  return Math.round((bounds.top + bounds.bottom) / 2);
+}
+
+function getNodeVisibleText(node) {
+  return `${node.text} ${node.contentDescription}`;
+}
+
+function normalizeNotificationPatterns(patterns) {
+  return Array.isArray(patterns) ? patterns : [patterns];
+}
+
+function findNotificationMatch(nodes, patterns) {
+  const regexes = normalizeNotificationPatterns(patterns).map(
+    (pattern) => new RegExp(pattern, "i")
+  );
+
+  for (const anchor of nodes) {
+    if (!regexes[0].test(getNodeVisibleText(anchor))) {
+      continue;
+    }
+
+    const anchorBounds = anchor.bounds ? parseBounds(anchor.bounds) : null;
+    if (!anchorBounds) {
+      continue;
+    }
+
+    const anchorCenterY = getBoundsCenterY(anchorBounds);
+    const nearbyNodes = nodes.filter((node) => {
+      const bounds = node.bounds ? parseBounds(node.bounds) : null;
+      return (
+        bounds !== null &&
+        Math.abs(getBoundsCenterY(bounds) - anchorCenterY) <= 260
+      );
+    });
+
+    const hasAllPatterns = regexes.every((regex) =>
+      nearbyNodes.some((node) => regex.test(getNodeVisibleText(node)))
+    );
+
+    if (!hasAllPatterns) {
+      continue;
+    }
+
+    const nearbyBounds = nearbyNodes
+      .map((node) => (node.bounds ? parseBounds(node.bounds) : null))
+      .filter(Boolean);
+
+    return {
+      anchor,
+      top: Math.min(...nearbyBounds.map((bounds) => bounds.top)),
+      bottom: Math.max(...nearbyBounds.map((bounds) => bounds.bottom)),
+    };
+  }
+
+  return null;
+}
+
+function isNodeNearNotification(node, notificationMatch) {
+  const bounds = node.bounds ? parseBounds(node.bounds) : null;
+  if (!bounds) {
+    return false;
+  }
+
+  const centerY = getBoundsCenterY(bounds);
+  return (
+    centerY >= notificationMatch.top - 40 &&
+    centerY <= notificationMatch.bottom + 320
+  );
+}
+
+function findExpandButtonForNotification(nodes, notificationMatch) {
+  const matchingBounds = notificationMatch.anchor.bounds
+    ? parseBounds(notificationMatch.anchor.bounds)
+    : null;
+
+  if (!matchingBounds) {
+    return null;
+  }
+
+  const matchingCenterY = getBoundsCenterY(matchingBounds);
+  return nodes.find((node) => {
+    if (
+      node.contentDescription !== "Expand" ||
+      node.resourceId !== "android:id/expand_button"
+    ) {
+      return false;
+    }
+
+    const bounds = parseBounds(node.bounds);
+    return (
+      bounds !== null &&
+      bounds.top <= matchingCenterY &&
+      bounds.bottom >= matchingCenterY
+    );
+  });
+}
+
+function waitForNotificationText(patterns, timeoutMs = 60000) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    adb(["shell", "cmd", "statusbar", "expand-notifications"], {
+      allowFailure: true,
+    });
+    wait(1000);
+    const uiXml = dumpVisibleText();
+    const nodes = parseUiNodes(uiXml);
+    if (findNotificationMatch(nodes, patterns)) {
+      return;
+    }
+    collapseSystemUi();
+    wait(2000);
+  }
+
+  throw new Error(
+    `Timed out waiting for notification text: ${normalizeNotificationPatterns(
+      patterns
+    ).join(", ")}`
+  );
+}
+
+function tapNotificationAction(notificationTextPatterns, actionText) {
+  const startedAt = Date.now();
+  let hasExpandedNotification = false;
+
+  while (Date.now() - startedAt < 60000) {
+    adb(["shell", "cmd", "statusbar", "expand-notifications"], {
+      allowFailure: true,
+    });
+    wait(1000);
+
+    const uiXml = dumpVisibleText();
+    const nodes = parseUiNodes(uiXml);
+    const notificationMatch = findNotificationMatch(
+      nodes,
+      notificationTextPatterns
+    );
+
+    if (!notificationMatch) {
+      collapseSystemUi();
+      wait(1000);
+      continue;
+    }
+
+    const actionNode = nodes.find(
+      (node) =>
+        (node.text === actionText || node.contentDescription === actionText) &&
+        isNodeNearNotification(node, notificationMatch)
+    );
+
+    if (actionNode?.bounds) {
+      const { x, y } = parseBoundsCenter(actionNode.bounds);
+      adb(["shell", "input", "tap", String(x), String(y)]);
+      waitForNotificationDismissed(notificationTextPatterns);
+      collapseSystemUi();
+      return;
+    }
+
+    if (!hasExpandedNotification) {
+      const expandNode = findExpandButtonForNotification(
+        nodes,
+        notificationMatch
+      );
+      if (expandNode?.bounds) {
+        const { x, y } = parseBoundsCenter(expandNode.bounds);
+        adb(["shell", "input", "tap", String(x), String(y)]);
+        hasExpandedNotification = true;
+        wait(1500);
+        continue;
+      }
+    }
+
+    collapseSystemUi();
+    wait(1000);
+  }
+
+  throw new Error(
+    `Timed out waiting for notification action "${actionText}" on "${normalizeNotificationPatterns(
+      notificationTextPatterns
+    ).join(", ")}"`
+  );
+}
+
+function waitForNotificationDismissed(patterns, timeoutMs = 30000) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    adb(["shell", "cmd", "statusbar", "expand-notifications"], {
+      allowFailure: true,
+    });
+    wait(1000);
+    const uiXml = dumpVisibleText();
+    const nodes = parseUiNodes(uiXml);
+    if (!findNotificationMatch(nodes, patterns)) {
+      return;
+    }
+    wait(1000);
+  }
+
+  throw new Error(
+    `Notification was not dismissed: ${normalizeNotificationPatterns(
+      patterns
+    ).join(", ")}`
+  );
+}
+
+function getAppPid() {
+  return adb(["shell", "pidof", "-s", appId], {
+    allowFailure: true,
+    capture: true,
+  }).trim();
+}
+
+function waitForAppProcessStopped(timeoutMs = 10000) {
+  if (hasAppProcessStoppedWithin(timeoutMs)) {
+    return;
+  }
+
+  throw new Error("Timed out waiting for the Monyvi app process to stop.");
+}
+
+function killCachedAppProcess(timeoutMs = 30000) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    if (getAppPid() === "") {
+      return;
+    }
+
+    adb(["shell", "am", "kill", appId], { allowFailure: true });
+    wait(1500);
+  }
+
+  waitForAppProcessStopped(1);
+}
+
+function hasAppProcessStoppedWithin(timeoutMs) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    if (getAppPid() === "") {
+      return true;
+    }
+    wait(500);
+  }
+
+  return false;
+}
+
+function getMonyviRecentTaskId() {
+  const output = adb(["shell", "dumpsys", "activity", "recents"], {
+    capture: true,
+    allowFailure: true,
+  });
+  const taskLine = output
+    .split(/\r?\n/)
+    .find((line) => line.includes("Task{") && line.includes(appId));
+
+  return taskLine?.match(/Task\{[^}]* #(\d+)/)?.[1] ?? null;
+}
+
+function removeMonyviRecentTask() {
+  const taskId = getMonyviRecentTaskId();
+  if (!taskId) {
+    return;
+  }
+
+  adb(["shell", "am", "stack", "remove", taskId], { allowFailure: true });
+  wait(1000);
+}
+
+function findRecentsAppCard(timeoutMs = 10000) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const uiXml = dumpVisibleText();
+    const nodes = parseUiNodes(uiXml);
+    const snapshotNode = nodes.find(
+      (node) =>
+        node.resourceId === "com.google.android.apps.nexuslauncher:id/snapshot"
+    );
+
+    if (snapshotNode?.bounds) {
+      const bounds = snapshotNode.bounds
+        ? parseBounds(snapshotNode.bounds)
+        : null;
+      if (bounds) {
+        return bounds;
+      }
+    }
+    wait(500);
+  }
+
+  return null;
+}
+
+function waitForRecentsAppCard(timeoutMs = 10000) {
+  const bounds = findRecentsAppCard(timeoutMs);
+  if (bounds) {
+    return bounds;
+  }
+
+  throw new Error("Timed out waiting for the Monyvi card in Android recents.");
+}
+
+function swipeRecentsCardAway(cardBounds) {
+  const centerX = Math.round((cardBounds.left + cardBounds.right) / 2);
+  const cardHeight = cardBounds.bottom - cardBounds.top;
+  const startY = Math.round(cardBounds.top + cardHeight * 0.66);
+  const endY = Math.max(1, Math.round(cardBounds.top - cardHeight * 0.08));
+
+  adb([
+    "shell",
+    "input",
+    "swipe",
+    String(centerX),
+    String(startY),
+    String(centerX),
+    String(endY),
+    "300",
+  ]);
+}
+
+function clearLiveSmsActionProbeRows() {
+  const markerFilters = actionProbeMarkers
+    .map(
+      (marker) => `counterparty like '%${marker}%' or note like '%${marker}%'`
+    )
+    .join(" or ");
+  const sql = [
+    `delete from transactions where ${markerFilters};`,
+    `delete from transfers where ${markerFilters};`,
+  ].join(" ");
+
+  adb(["shell", "run-as", appId, "sqlite3", "watermelon.db"], {
+    allowFailure: true,
+    capture: true,
+    input: sql,
+  });
+}
+
+function sendEmulatorSms(sender, body) {
+  adb(["emu", "sms", "send", sender, body]);
+}
+
+function backgroundApp() {
+  collapseSystemUi();
+  adb(["shell", "input", "keyevent", "HOME"]);
+  wait(1000);
+}
+
+function killBackgroundAppProcess() {
+  backgroundApp();
+  adb(["shell", "input", "keyevent", "KEYCODE_APP_SWITCH"]);
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const cardBounds = findRecentsAppCard(5000);
+    if (!cardBounds) {
+      break;
+    }
+
+    wait(700);
+    swipeRecentsCardAway(cardBounds);
+
+    if (hasAppProcessStoppedWithin(5000)) {
+      collapseSystemUi();
+      return;
+    }
+
+    if (!getMonyviRecentTaskId()) {
+      break;
+    }
+
+    adb(["shell", "input", "keyevent", "KEYCODE_APP_SWITCH"], {
+      allowFailure: true,
+    });
+  }
+
+  removeMonyviRecentTask();
+  killCachedAppProcess();
+  collapseSystemUi();
+}
+
+function sendBackgroundSms() {
+  backgroundApp();
+  sendEmulatorSms(
+    "QNB",
+    "Purchase EGP 63.21 at BACKGROUND LIVE SMS TEST using card ending 1234"
+  );
+  waitForNotificationText([
+    "Expense Detected",
+    "BACKGROUND LIVE SMS TEST",
+    "63\\.21",
+  ]);
+}
+
+function sendBackgroundConfirmSms() {
+  backgroundApp();
+  sendEmulatorSms(
+    "QNB",
+    "Purchase EGP 71.45 at BACKGROUND CONFIRM MARKET using card ending 1234"
+  );
+  const notificationPatterns = [
+    "Expense Detected",
+    "BACKGROUND CONFIRM MARKET",
+    "71\\.45",
+  ];
+  waitForNotificationText(notificationPatterns);
+  tapNotificationAction(notificationPatterns, "✓ Confirm");
+}
+
+function sendKilledAppConfirmSms() {
+  killBackgroundAppProcess();
+  sendEmulatorSms(
+    "QNB",
+    "Purchase EGP 72.56 at CLOSED CONFIRM MARKET using card ending 1234"
+  );
+  const notificationPatterns = [
+    "Expense Detected",
+    "CLOSED CONFIRM MARKET",
+    "72\\.56",
+  ];
+  waitForNotificationText(notificationPatterns);
+  tapNotificationAction(notificationPatterns, "✓ Confirm");
+}
+
+const journeys = {
+  "01": {
+    flow: "live-sms-journey-01-first-time-enable.yaml",
+    prepare: () => {
+      resetSmsPermissions();
+      resetNotificationPermission();
+      collapseSystemUi();
+    },
+  },
+  "02": {
+    flow: "live-sms-journey-02-sms-sync-then-live-detection.yaml",
+    prepare: () => {
+      resetSmsPermissions();
+      resetNotificationPermission();
+      collapseSystemUi();
+    },
+  },
+  "03": {
+    flow: "live-sms-journey-03-sms-deny-then-recover.yaml",
+    prepare: () => {
+      resetSmsPermissions();
+      grantNotificationPermission();
+      collapseSystemUi();
+    },
+  },
+  "04": {
+    flow: "live-sms-journey-04-notification-deny-then-recover.yaml",
+    prepare: () => {
+      grantSmsPermissions();
+      resetNotificationPermission();
+      collapseSystemUi();
+    },
+  },
+  "05": {
+    flow: "live-sms-journey-05-blocked-permission-open-settings.yaml",
+    prepare: () => {
+      blockSmsPermissions();
+      grantNotificationPermission();
+      collapseSystemUi();
+    },
+  },
+  "06": {
+    flow: "live-sms-journey-06-foreground-detects-sms.yaml",
+    prepare: () => {
+      grantSmsPermissions();
+      grantNotificationPermission();
+      collapseSystemUi();
+    },
+  },
+  "07": {
+    flow: "live-sms-journey-07-background-real-sms.yaml",
+    prepare: () => {
+      grantSmsPermissions();
+      grantNotificationPermission();
+      collapseSystemUi();
+    },
+    after: sendBackgroundSms,
+  },
+  "08": {
+    flow: "live-sms-journey-08-disable-stops-processing.yaml",
+    prepare: () => {
+      grantSmsPermissions();
+      grantNotificationPermission();
+      collapseSystemUi();
+    },
+  },
+  "09": {
+    flow: "live-sms-journey-09-confirm-notification-action.yaml",
+    prepare: () => {
+      grantSmsPermissions();
+      grantNotificationPermission();
+      clearLiveSmsActionProbeRows();
+      collapseSystemUi();
+    },
+    after: async () => {
+      tapNotificationAction(
+        ["Expense Detected", "CONFIRM ACTION MARKET", "91\\.23"],
+        "✓ Confirm"
+      );
+      await ensureE2eAppReady();
+      runFlow("live-sms-journey-09-confirm-verification.yaml");
+    },
+  },
+  10: {
+    flow: "live-sms-journey-10-discard-notification-action.yaml",
+    prepare: () => {
+      grantSmsPermissions();
+      grantNotificationPermission();
+      clearLiveSmsActionProbeRows();
+      collapseSystemUi();
+    },
+    after: async () => {
+      tapNotificationAction(
+        ["Expense Detected", "DISCARD ACTION MARKET", "82\\.34"],
+        "✗ Discard"
+      );
+      await ensureE2eAppReady();
+      runFlow("live-sms-journey-10-discard-verification.yaml");
+    },
+  },
+  11: {
+    flow: "live-sms-journey-11-duplicate-sms-protection.yaml",
+    prepare: () => {
+      grantSmsPermissions();
+      grantNotificationPermission();
+      collapseSystemUi();
+    },
+  },
+  12: {
+    flow: "live-sms-journey-12-auto-confirm.yaml",
+    prepare: () => {
+      grantSmsPermissions();
+      grantNotificationPermission();
+      collapseSystemUi();
+    },
+  },
+  13: {
+    flow: "live-sms-journey-13-enable-before-revoke.yaml",
+    prepare: () => {
+      grantSmsPermissions();
+      grantNotificationPermission();
+      collapseSystemUi();
+    },
+    after: async () => {
+      revokePermission(notificationPermission);
+      forceStopApp();
+      await ensureE2eAppReady();
+      runFlow("live-sms-journey-13-revoked-permission-verification.yaml");
+    },
+  },
+  14: {
+    flow: "live-sms-journey-14-background-confirm-real-sms.yaml",
+    prepare: () => {
+      grantSmsPermissions();
+      grantNotificationPermission();
+      clearLiveSmsActionProbeRows();
+      collapseSystemUi();
+    },
+    after: async () => {
+      sendBackgroundConfirmSms();
+      await ensureE2eAppReady();
+      runFlow("live-sms-journey-14-background-confirm-verification.yaml");
+    },
+  },
+  15: {
+    flow: "live-sms-journey-15-killed-app-confirm-real-sms.yaml",
+    prepare: () => {
+      grantSmsPermissions();
+      grantNotificationPermission();
+      clearLiveSmsActionProbeRows();
+      collapseSystemUi();
+    },
+    after: async () => {
+      sendKilledAppConfirmSms();
+      await ensureE2eAppReady();
+      runFlow("live-sms-journey-15-killed-app-confirm-verification.yaml");
+    },
+  },
+};
+
+async function main() {
+  const requested = process.argv.slice(2);
+  const selected =
+    requested.length > 0
+      ? requested.map((id) => id.padStart(2, "0"))
+      : Object.keys(journeys);
+
+  for (const id of selected) {
+    const journey = journeys[id];
+    if (!journey) {
+      throw new Error(`Unknown live SMS journey: ${id}`);
+    }
+
+    console.log(`\n=== Live SMS journey ${id}: ${journey.flow} ===`);
+    journey.prepare();
+    forceStopApp();
+    await ensureE2eAppReady();
+    runFlow(journey.flow);
+    await journey.after?.();
+    collapseSystemUi();
+    console.log(`✓ Live SMS journey ${id} passed`);
+  }
+}
+
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+});

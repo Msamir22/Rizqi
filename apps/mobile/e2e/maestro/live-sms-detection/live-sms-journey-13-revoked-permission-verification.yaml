@@ -1,0 +1,13 @@
+appId: com.monyvi.app
+---
+# Journey 13 verification: returning to Settings after notification permission
+# was revoked reconciles the stored preference and turns Live SMS Detection off.
+
+- runFlow: ../helpers/open-settings.yaml
+- runFlow: scroll-to-live-sms-switch.yaml
+
+- extendedWaitUntil:
+    visible:
+      id: "live-sms-detection-switch"
+      checked: false
+    timeout: 30000
