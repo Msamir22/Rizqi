@@ -192,6 +192,19 @@ Dependency direction: `apps/ → packages/logic → packages/db`. **Never revers
   (for example booleans, enums, or stable English codes), then translate only
   the message that is actually rendered to the user.
 
+## User-Facing Copy & UX Writing
+
+- All messages shown to users in the app MUST be simple, friendly, and easy to
+  understand. Avoid technical terms, platform jargon, implementation details,
+  and blame-focused wording. Assume the user may not know how permissions, sync,
+  background services, or device settings work. Explain what happened in plain
+  language, why it matters only when helpful, and what the user can do next.
+  Prefer short, actionable copy over long explanations.
+- Permission flows MUST use Monyvi custom explanatory/recovery UI before
+  triggering any native permission request. Do not use Android native rationale
+  dialogs or `Alert.alert()` as the app-level explanation. The OS permission
+  sheet is allowed only after the user taps the Monyvi custom modal action.
+
 # Strict Null Semantics for Entity IDs
 
 When managing entity IDs (such as `accountId`, `categoryId`, etc.) across the

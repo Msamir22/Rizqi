@@ -19,24 +19,36 @@
 
 import type { ParsedSmsTransaction } from "@monyvi/logic";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { PermissionsAndroid, Platform } from "react-native";
 import {
   ACTION_CONFIRM,
+  getNotificationPermissionStatus,
   registerNotificationActionHandler,
+  showTransactionCreatedNotification,
+  showTransactionNeedsAccountNotification,
   showTransactionNotification,
 } from "./notification-service";
 import { resolveAccountForSms } from "./sms-account-resolver";
+import { hasExistingSmsFingerprint } from "./sms-dedup-service";
+import { getCurrentUserId } from "./supabase";
 import { createTransaction } from "./transaction-service";
 import { createSmsAtmTransfer } from "./transfer-service";
+import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
 /** AsyncStorage key for the auto-confirm preference */
-const AUTO_CONFIRM_KEY = "@monyvi/sms_auto_confirm";
+const AUTO_CONFIRM_KEY_PREFIX = "@monyvi/sms_auto_confirm";
 
 /** AsyncStorage key for the live detection enabled preference */
-const LIVE_DETECTION_KEY = "@monyvi/sms_live_detection_enabled";
+const LIVE_DETECTION_KEY_PREFIX = "@monyvi/sms_live_detection_enabled";
+
+const LIVE_SMS_PERMISSIONS = [
+  PermissionsAndroid.PERMISSIONS.READ_SMS,
+  PermissionsAndroid.PERMISSIONS.RECEIVE_SMS,
+] as const;
 
 // ---------------------------------------------------------------------------
 // T046: Review page conflict — queue management
@@ -48,6 +60,42 @@ const LIVE_DETECTION_KEY = "@monyvi/sms_live_detection_enabled";
  */
 let reviewingActive = false;
 const transactionQueue: ParsedSmsTransaction[] = [];
+const smsSaveLocks = new Map<string, Promise<void>>();
+
+async function getUserScopedPreferenceKey(
+  keyPrefix: string
+): Promise<string | null> {
+  const userId = (await getCurrentUserId())?.trim();
+  return userId ? `${keyPrefix}:${userId}` : null;
+}
+
+async function withSmsSaveLock(
+  smsFingerprint: string,
+  operation: () => Promise<boolean>
+): Promise<boolean> {
+  const previous = smsSaveLocks.get(smsFingerprint) ?? Promise.resolve();
+  let releaseCurrentLock: () => void = () => {};
+  const current = previous
+    .catch(() => undefined)
+    .then(
+      () =>
+        new Promise<void>((resolve) => {
+          releaseCurrentLock = resolve;
+        })
+    );
+
+  smsSaveLocks.set(smsFingerprint, current);
+  await previous.catch(() => undefined);
+
+  try {
+    return await operation();
+  } finally {
+    releaseCurrentLock();
+    if (smsSaveLocks.get(smsFingerprint) === current) {
+      smsSaveLocks.delete(smsFingerprint);
+    }
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Preference helpers
@@ -58,7 +106,12 @@ const transactionQueue: ParsedSmsTransaction[] = [];
  * Defaults to false (ask me each time).
  */
 export async function isAutoConfirmEnabled(): Promise<boolean> {
-  const value = await AsyncStorage.getItem(AUTO_CONFIRM_KEY);
+  const key = await getUserScopedPreferenceKey(AUTO_CONFIRM_KEY_PREFIX);
+  if (!key) {
+    return false;
+  }
+
+  const value = await AsyncStorage.getItem(key);
   return value === "true";
 }
 
@@ -66,7 +119,12 @@ export async function isAutoConfirmEnabled(): Promise<boolean> {
  * Set the auto-confirm preference.
  */
 export async function setAutoConfirm(enabled: boolean): Promise<void> {
-  await AsyncStorage.setItem(AUTO_CONFIRM_KEY, String(enabled));
+  const key = await getUserScopedPreferenceKey(AUTO_CONFIRM_KEY_PREFIX);
+  if (!key) {
+    return;
+  }
+
+  await AsyncStorage.setItem(key, String(enabled));
 }
 
 /**
@@ -74,7 +132,12 @@ export async function setAutoConfirm(enabled: boolean): Promise<void> {
  * Defaults to false (opt-in).
  */
 export async function isLiveDetectionEnabled(): Promise<boolean> {
-  const value = await AsyncStorage.getItem(LIVE_DETECTION_KEY);
+  const key = await getUserScopedPreferenceKey(LIVE_DETECTION_KEY_PREFIX);
+  if (!key) {
+    return false;
+  }
+
+  const value = await AsyncStorage.getItem(key);
   return value === "true";
 }
 
@@ -82,7 +145,57 @@ export async function isLiveDetectionEnabled(): Promise<boolean> {
  * Set the live detection enabled preference.
  */
 export async function setLiveDetectionEnabled(enabled: boolean): Promise<void> {
-  await AsyncStorage.setItem(LIVE_DETECTION_KEY, String(enabled));
+  const key = await getUserScopedPreferenceKey(LIVE_DETECTION_KEY_PREFIX);
+  if (!key) {
+    return;
+  }
+
+  await AsyncStorage.setItem(key, String(enabled));
+}
+
+/**
+ * Check whether all runtime permissions needed by live detection are present.
+ */
+export async function canLiveDetectionRun(): Promise<boolean> {
+  if (Platform.OS !== "android") {
+    return false;
+  }
+
+  const [hasSmsPermissions, notificationStatus] = await Promise.all([
+    Promise.all(
+      LIVE_SMS_PERMISSIONS.map((permission) =>
+        PermissionsAndroid.check(permission)
+      )
+    ).then((statuses) => statuses.every(Boolean)),
+    getNotificationPermissionStatus(),
+  ]);
+
+  return hasSmsPermissions && notificationStatus === "granted";
+}
+
+/**
+ * Keep the stored live detection preference honest.
+ *
+ * If the user revoked SMS or notification permission outside this screen, the
+ * stored toggle is turned off so startup/resume never leaves a dead listener
+ * state behind.
+ */
+export async function reconcileLiveDetectionPreference(): Promise<boolean> {
+  const enabled = await isLiveDetectionEnabled();
+
+  if (!enabled) {
+    return false;
+  }
+
+  const canRun = await canLiveDetectionRun();
+
+  if (canRun) {
+    return true;
+  }
+
+  await setLiveDetectionEnabled(false);
+  await setAutoConfirm(false);
+  return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -95,7 +208,23 @@ export async function setLiveDetectionEnabled(enabled: boolean): Promise<void> {
 async function saveDetectedTransaction(
   parsed: ParsedSmsTransaction,
   accountId: string
-): Promise<void> {
+): Promise<boolean> {
+  return withSmsSaveLock(parsed.smsFingerprint, () =>
+    saveDetectedTransactionWithoutLock(parsed, accountId)
+  );
+}
+
+async function saveDetectedTransactionWithoutLock(
+  parsed: ParsedSmsTransaction,
+  accountId: string
+): Promise<boolean> {
+  if (await hasExistingSmsFingerprint(parsed.smsFingerprint)) {
+    logger.info("smsDetection.duplicateSkipped", {
+      smsFingerprint: parsed.smsFingerprint,
+    });
+    return false;
+  }
+
   // ATM withdrawals: route as bank → cash transfer
   if (parsed.isAtmWithdrawal) {
     const result = await createSmsAtmTransfer({
@@ -103,7 +232,7 @@ async function saveDetectedTransaction(
       amount: parsed.amount,
       currency: parsed.currency,
       date: parsed.date,
-      smsBodyHash: parsed.smsBodyHash,
+      smsFingerprint: parsed.smsFingerprint,
       senderDisplayName: parsed.senderDisplayName,
     });
 
@@ -113,10 +242,12 @@ async function saveDetectedTransaction(
       );
     }
 
-    console.info(
-      `[sms-detection] Saved ATM transfer: ${parsed.amount} ${parsed.currency}`
-    );
-    return;
+    logger.info("smsDetection.atmTransferSaved", {
+      amount: parsed.amount,
+      currency: parsed.currency,
+      smsFingerprint: parsed.smsFingerprint,
+    });
+    return true;
   }
 
   // Regular transactions
@@ -130,11 +261,16 @@ async function saveDetectedTransaction(
     type: parsed.type,
     date: parsed.date,
     source: "SMS",
+    smsFingerprint: parsed.smsFingerprint,
   });
 
-  console.log(
-    `[sms-detection] Saved transaction: ${parsed.type} ${parsed.amount} ${parsed.currency}`
-  );
+  logger.info("smsDetection.transactionSaved", {
+    amount: parsed.amount,
+    currency: parsed.currency,
+    type: parsed.type,
+    smsFingerprint: parsed.smsFingerprint,
+  });
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -161,9 +297,11 @@ export async function handleDetectedSms(
   // T046: Queue if the user is on the review page
   if (reviewingActive) {
     transactionQueue.push(parsed);
-    console.log(
-      `[sms-detection] Queued transaction (review active): ${parsed.type} ${parsed.amount}`
-    );
+    logger.info("smsDetection.transactionQueued", {
+      amount: parsed.amount,
+      type: parsed.type,
+      smsFingerprint: parsed.smsFingerprint,
+    });
     return;
   }
 
@@ -176,11 +314,13 @@ export async function handleDetectedSms(
     );
 
     if (!resolved) {
-      // No account configured — show notification asking to set up
-      console.warn(
-        "[sms-detection] No account resolved for SMS — prompting user"
-      );
-      await showTransactionNotification(parsed, "", "No Account Configured");
+      // No account configured: show notification asking to set up.
+      logger.warn("smsDetection.accountResolutionMissing", {
+        senderDisplayName: parsed.senderDisplayName,
+        currency: parsed.currency,
+        smsFingerprint: parsed.smsFingerprint,
+      });
+      await showTransactionNeedsAccountNotification(parsed);
       return;
     }
 
@@ -189,7 +329,10 @@ export async function handleDetectedSms(
 
     if (autoConfirm) {
       // Step 3: Auto-confirm — save directly
-      await saveDetectedTransaction(parsed, resolved.accountId);
+      const didSave = await saveDetectedTransaction(parsed, resolved.accountId);
+      if (didSave) {
+        await showTransactionCreatedNotification(parsed, resolved.accountName);
+      }
     } else {
       // Step 4: Ask me — show notification
       await showTransactionNotification(
@@ -199,10 +342,9 @@ export async function handleDetectedSms(
       );
     }
   } catch (err) {
-    console.error(
-      "[sms-detection] Failed to handle detected SMS:",
-      err instanceof Error ? err.message : String(err)
-    );
+    logger.error("smsDetection.handleFailed", err, {
+      smsFingerprint: parsed.smsFingerprint,
+    });
   }
 }
 
@@ -254,7 +396,9 @@ export async function flushQueuedTransactions(): Promise<number> {
   }
 
   const queued = transactionQueue.splice(0);
-  console.log(`[sms-detection] Flushing ${queued.length} queued transactions`);
+  logger.info("smsDetection.flushingQueuedTransactions", {
+    count: queued.length,
+  });
 
   for (const parsed of queued) {
     await handleDetectedSms(parsed);

@@ -25,7 +25,7 @@ import { useSmsScanContext } from "@/context/SmsScanContext";
 import { useSmsScan } from "@/hooks/useSmsScan";
 import { useSmsPermission } from "@/hooks/useSmsPermission";
 import { useSmsSync } from "@/hooks/useSmsSync";
-import { loadExistingSmsHashes } from "@/services/sms-sync-service";
+import { loadExistingSmsFingerprints } from "@/services/sms-sync-service";
 import { palette } from "@/constants/colors";
 import { logger } from "@/utils/logger";
 import type { ParseSmsContext } from "@/services/ai-sms-parser-service";
@@ -209,41 +209,24 @@ export default function SmsScanScreen(): React.JSX.Element {
         ? lastSyncTimestamp
         : undefined;
 
-    let existingHashes: ReadonlySet<string> = new Set();
+    let existingFingerprints: ReadonlySet<string> = new Set();
     try {
-      existingHashes = await loadExistingSmsHashes();
+      existingFingerprints = await loadExistingSmsFingerprints();
     } catch (err: unknown) {
-      console.warn(
-        "[sms-scan] Failed to load existing hashes, continuing with empty set:",
-        err instanceof Error ? err.message : String(err)
-      );
+      logger.warn("smsScan.loadExistingFingerprintsFailed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
 
-    startScan({ minDate, existingHashes, aiContext }).catch(console.error);
+    startScan({ minDate, existingFingerprints, aiContext }).catch(
+      (err: unknown) => {
+        logger.error("smsScan.startFailed", err);
+      }
+    );
   }, [startScan, scanMode, lastSyncTimestamp, aiContext]);
 
   // Track whether scan has been initiated to prevent double-start
   const scanInitiated = useRef(false);
-
-  // Auto-request permission on first mount when status is "undetermined".
-  // This preserves the pre-gate UX where tapping "Enable SMS auto-import"
-  // surfaced the native permission dialog directly, with no extra screen.
-  // The visible gate UI only appears if the user has already denied/blocked.
-  // Skipped on iOS — SMS import is Android-only (see non-Android short-circuit
-  // in the render body below).
-  const autoRequestedRef = useRef(false);
-  useEffect(() => {
-    if (Platform.OS !== "android") return;
-    if (isPermissionLoading) return;
-    if (permissionStatus !== "undetermined") return;
-    if (autoRequestedRef.current) return;
-    autoRequestedRef.current = true;
-    requestPermission().catch((err: unknown) => {
-      logger.warn("Auto-request SMS permission failed on mount", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-    });
-  }, [permissionStatus, isPermissionLoading, requestPermission]);
 
   // Auto-start scan on mount — waits until permission is granted and categories loaded
   useEffect(() => {
@@ -251,7 +234,9 @@ export default function SmsScanScreen(): React.JSX.Element {
     if (!isAiContextReady) return;
     if (!scanInitiated.current) {
       scanInitiated.current = true;
-      initiateScan().catch(console.error);
+      initiateScan().catch((err: unknown) => {
+        logger.error("smsScan.autoStartFailed", err);
+      });
     }
   }, [initiateScan, isAiContextReady, permissionStatus]);
 
@@ -267,7 +252,9 @@ export default function SmsScanScreen(): React.JSX.Element {
   };
 
   const handleRetryPress = (): void => {
-    initiateScan().catch(console.error);
+    initiateScan().catch((err: unknown) => {
+      logger.error("smsScan.retryFailed", err);
+    });
   };
 
   // Compute top unique category system names from parsed transactions

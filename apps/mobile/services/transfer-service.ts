@@ -23,8 +23,8 @@ export interface TransferData {
   date?: Date;
   notes?: string;
   exchangeRate?: number;
-  /** SMS body hash for deduplication (persisted in DB) */
-  smsBodyHash?: string;
+  /** SMS fingerprint for deduplication (persisted in DB) */
+  smsFingerprint?: string;
 }
 
 function accountsCollection(): ReturnType<typeof database.get<Account>> {
@@ -77,8 +77,8 @@ interface SmsAtmTransferInput {
   readonly currency: CurrencyType;
   /** Transaction date */
   readonly date: Date;
-  /** SMS body hash for deduplication */
-  readonly smsBodyHash?: string;
+  /** SMS fingerprint for deduplication */
+  readonly smsFingerprint?: string;
   /** Sender display name for notes */
   readonly senderDisplayName?: string;
 }
@@ -125,7 +125,7 @@ export async function createSmsAtmTransfer(
       currency: input.currency,
       date: input.date,
       notes: `${ATM_WITHDRAWAL_NOTE_PREFIX}${input.senderDisplayName ? ` — ${input.senderDisplayName}` : ""}`,
-      smsBodyHash: input.smsBodyHash,
+      smsFingerprint: input.smsFingerprint,
     });
 
     return { success: true };
@@ -160,7 +160,7 @@ export async function createTransfer(data: TransferData): Promise<void> {
       transfer.currency = data.currency;
       transfer.date = data.date || new Date();
       transfer.notes = data.notes;
-      transfer.smsBodyHash = data.smsBodyHash;
+      transfer.smsFingerprint = data.smsFingerprint;
 
       // Multi-currency fields
       if (data.convertedAmount) {

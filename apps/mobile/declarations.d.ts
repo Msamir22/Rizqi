@@ -21,6 +21,10 @@ declare module "*.css" {
   export default content;
 }
 
+declare module "react-native/Libraries/ReactNative/HeadlessJsTaskError" {
+  export default class HeadlessJsTaskError extends Error {}
+}
+
 /**
  * React Native's FormData runtime accepts { uri, type, name } objects
  * for file uploads, but the DOM typings only allow Blob | string.

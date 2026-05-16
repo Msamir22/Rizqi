@@ -7,7 +7,7 @@
 import { appSchema, tableSchema } from "@nozbe/watermelondb";
 
 export const schema = appSchema({
-  version: 17,
+  version: 18,
   tables: [
     tableSchema({
       name: "accounts",
@@ -309,7 +309,7 @@ export const schema = appSchema({
           isIndexed: true,
         },
         { name: "note", type: "string", isOptional: true },
-        { name: "sms_body_hash", type: "string", isOptional: true },
+        { name: "sms_fingerprint", type: "string", isOptional: true },
         { name: "source", type: "string" },
         { name: "type", type: "string" },
         { name: "updated_at", type: "number" },
@@ -329,7 +329,7 @@ export const schema = appSchema({
         { name: "exchange_rate", type: "number", isOptional: true },
         { name: "from_account_id", type: "string", isIndexed: true },
         { name: "notes", type: "string", isOptional: true },
-        { name: "sms_body_hash", type: "string", isOptional: true },
+        { name: "sms_fingerprint", type: "string", isOptional: true },
         { name: "to_account_id", type: "string", isIndexed: true },
         { name: "updated_at", type: "number" },
         { name: "user_id", type: "string", isIndexed: true },

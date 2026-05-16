@@ -100,7 +100,7 @@ export interface ReviewableTransaction {
   readonly originLabel: string;
   /** Origin source of this transaction */
   readonly source: TransactionSource;
-  /** Optional deduplication key (smsBodyHash for SMS, transcript hash for voice) */
+  /** Optional deduplication key (smsFingerprint for SMS, transcript hash for voice) */
   readonly deduplicationHash?: string;
   /** AI-matched account ID (undefined if no match) */
   readonly accountId?: string;
@@ -114,7 +114,7 @@ export interface ReviewableTransaction {
  */
 export interface ParsedSmsTransaction extends ReviewableTransaction {
   readonly source: "SMS";
-  readonly smsBodyHash: string;
+  readonly smsFingerprint: string;
   readonly senderDisplayName: string;
   readonly rawSmsBody: string;
   /** True if this is an ATM/Bank cash withdrawal (should be saved as transfer) */

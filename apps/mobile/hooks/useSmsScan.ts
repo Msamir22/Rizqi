@@ -19,6 +19,7 @@ import {
 } from "@/services/sms-sync-service";
 import type { ParsedSmsTransaction } from "@monyvi/logic";
 import { useCallback, useRef, useState } from "react";
+import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -46,8 +47,8 @@ export interface UseSmsScanResult {
 interface StartScanOptions {
   /** Only scan messages after this timestamp (incremental sync). */
   readonly minDate?: number;
-  /** Set of existing hashes for dedup. */
-  readonly existingHashes: ReadonlySet<string>;
+  /** Set of existing fingerprints for dedup. */
+  readonly existingFingerprints: ReadonlySet<string>;
   /** Context to pass to AI for better account suggestions. */
   readonly aiContext: ParseSmsContext;
 }
@@ -85,7 +86,7 @@ export function useSmsScan(): UseSmsScanResult {
         const scanResult = await scanAndParseSms(
           {
             minDate: options.minDate,
-            existingHashes: options.existingHashes,
+            existingFingerprints: options.existingFingerprints,
             aiContext: options.aiContext,
           },
           (p) => {
@@ -99,9 +100,7 @@ export function useSmsScan(): UseSmsScanResult {
       } catch (err) {
         // Log raw error for debugging but don't expose English service
         // messages to the UI — the component falls back to t("scan_error_default")
-        if (err instanceof Error) {
-          console.error("[useSmsScan] Scan failed:", err.message);
-        }
+        logger.error("smsScan.failed", err);
         setError(null);
         setStatus("error");
       } finally {

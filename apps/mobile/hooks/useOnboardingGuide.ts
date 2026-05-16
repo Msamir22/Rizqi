@@ -8,7 +8,7 @@
  * Steps (Android — 4 steps):
  * 1. Bank account added
  * 2. Voice transaction recorded (source = "VOICE")
- * 3. Auto-track bank SMS (any transaction with sms_body_hash)
+ * 3. Auto-track bank SMS (any transaction with sms_fingerprint)
  * 4. Spending budget set
  *
  * iOS omits the SMS step (3 steps total).
@@ -297,7 +297,7 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       database.get<Transaction>("transactions"),
       userId,
       Q.where("deleted", false),
-      Q.where("sms_body_hash", Q.notEq(null))
+      Q.where("sms_fingerprint", Q.notEq(null))
     )
       .observeCount()
       .subscribe({

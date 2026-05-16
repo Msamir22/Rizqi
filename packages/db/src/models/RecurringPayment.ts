@@ -1,8 +1,16 @@
-import {
-  calculateDaysUntilDue,
-  getDueText,
-} from "../../../../apps/mobile/utils/dateHelpers";
 import { BaseRecurringPayment } from "./base/base-recurring-payment";
+
+function calculateDaysUntilDue(dueDate: Date): number {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const due = new Date(
+    dueDate.getFullYear(),
+    dueDate.getMonth(),
+    dueDate.getDate()
+  );
+  const diffTime = due.getTime() - today.getTime();
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
 
 export class RecurringPayment extends BaseRecurringPayment {
   get isActive(): boolean {
@@ -39,10 +47,6 @@ export class RecurringPayment extends BaseRecurringPayment {
 
   get isOverdue(): boolean {
     return this.daysUntilDue < 0;
-  }
-
-  get dueText(): string {
-    return getDueText(this.nextDueDate);
   }
 
   get isInThisMonth(): boolean {

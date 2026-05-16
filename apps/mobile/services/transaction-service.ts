@@ -57,6 +57,7 @@ export async function createTransaction(data: {
   date?: Date;
   linkedRecurringId?: string;
   source: TransactionSource;
+  smsFingerprint?: string;
 }): Promise<Transaction> {
   const scope = await getCurrentUserDataScope();
 
@@ -79,6 +80,7 @@ export async function createTransaction(data: {
       tx.date = data.date || new Date();
       tx.source = data.source;
       tx.linkedRecurringId = data.linkedRecurringId || undefined;
+      tx.smsFingerprint = data.smsFingerprint || undefined;
       tx.isDraft = false;
       tx.deleted = false;
     });

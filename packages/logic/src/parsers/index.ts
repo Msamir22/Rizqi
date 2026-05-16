@@ -7,20 +7,11 @@
  * @module parsers/index
  */
 
-export { computeSmsHash, normalizeSmsBody } from "./sms-hash";
-export { mapSmsToCategory } from "./sms-category-mapper";
-export { RegexSmsParser } from "./regex-sms-parser";
+export {
+  computeSmsFingerprint,
+  normalizeSmsBody,
+  type SmsFingerprintInput,
+} from "./sms-hash";
 export { isLikelyFinancialSms } from "./sms-keyword-filter";
 export { isKnownFinancialSender } from "./egyptian-bank-registry";
 export type { BankInfo } from "./egyptian-bank-registry";
-export {
-  FINANCIAL_SENDER_REGISTRY,
-  findSenderConfig,
-  findSenderConfigById,
-  parseAmount,
-} from "./financial-sender-registry";
-export type { SmsParserStrategy } from "./sms-parser-strategy";
-export type {
-  FinancialSenderConfig,
-  SmsTemplate,
-} from "./financial-sender-registry";

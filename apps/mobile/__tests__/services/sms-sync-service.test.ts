@@ -6,14 +6,18 @@
  *
  * Mock Strategy:
  *   - `sms-reader-service` is mocked to return controlled SMS messages
- *   - `@monyvi/logic` is partially mocked (isKnownFinancialSender + computeSmsHash)
+ *   - `@monyvi/logic` is partially mocked (isKnownFinancialSender + computeSmsFingerprint)
  *   - `ai-sms-parser-service` is mocked to return controlled AI parse results
  *   - `@react-native-async-storage/async-storage` is mocked for scan guard
  *   - `InteractionManager` is mocked via react-native
- *   - `@monyvi/db` is mocked to provide loadExistingSmsHashes support
+ *   - `@monyvi/db` is mocked to provide loadExistingSmsFingerprints support
  */
 
-import type { ParsedSmsTransaction, SmsMessage } from "@monyvi/logic";
+import type {
+  ParsedSmsTransaction,
+  SmsFingerprintInput,
+  SmsMessage,
+} from "@monyvi/logic";
 import type {
   AiParseResult,
   ParseSmsContext,
@@ -87,19 +91,24 @@ jest.mock("@/services/sms-reader-service", () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Mock: @monyvi/logic (isKnownFinancialSender + computeSmsHash)
+// Mock: @monyvi/logic (isKnownFinancialSender + computeSmsFingerprint)
 // ---------------------------------------------------------------------------
 
 const mockIsKnownFinancialSender = jest.fn<boolean, [string]>(() => true);
-const mockComputeSmsHash = jest.fn<Promise<string>, [string]>((body: string) =>
-  Promise.resolve(`hash-${body.slice(0, 10)}`)
+const mockComputeSmsFingerprint = jest.fn<
+  Promise<string>,
+  [SmsFingerprintInput]
+>((input: SmsFingerprintInput) =>
+  Promise.resolve(
+    `hash-${input.sender}-${input.receivedAtMs}-${input.body.slice(0, 10)}`
+  )
 );
 
 jest.mock("@monyvi/logic", () => ({
   isKnownFinancialSender: (...args: unknown[]) =>
     mockIsKnownFinancialSender(...(args as [string])),
-  computeSmsHash: (...args: unknown[]) =>
-    mockComputeSmsHash(...(args as [string])),
+  computeSmsFingerprint: (...args: unknown[]) =>
+    mockComputeSmsFingerprint(...(args as [SmsFingerprintInput])),
 }));
 
 // ---------------------------------------------------------------------------
@@ -196,7 +205,7 @@ function createParsedTransaction(
     type: "EXPENSE",
     counterparty: "TestShop",
     date: new Date(),
-    smsBodyHash: "",
+    smsFingerprint: "",
     senderDisplayName: "NBE",
     categoryId: "cat-bank-fees-id",
     categoryDisplayName: "bank_fees",
@@ -231,8 +240,10 @@ describe("sms-sync-service", () => {
     jest.clearAllMocks();
     mockReadSmsInbox.mockResolvedValue([]);
     mockIsKnownFinancialSender.mockReturnValue(true);
-    mockComputeSmsHash.mockImplementation((body: string) =>
-      Promise.resolve(`hash-${body.slice(0, 10)}`)
+    mockComputeSmsFingerprint.mockImplementation((input: SmsFingerprintInput) =>
+      Promise.resolve(
+        `hash-${input.sender}-${input.receivedAtMs}-${input.body.slice(0, 10)}`
+      )
     );
     mockParseSmsWithAi.mockResolvedValue({ transactions: [] });
   });
@@ -266,12 +277,16 @@ describe("sms-sync-service", () => {
         amount: 100,
         counterparty: "Carrefour",
         rawSmsBody: sms1.body,
+        smsFingerprint: "hash-carrefour",
+        deduplicationHash: "hash-carrefour",
       });
       const parsed2 = createParsedTransaction({
         amount: 500,
         type: "EXPENSE",
         senderDisplayName: "VF",
         rawSmsBody: sms2.body,
+        smsFingerprint: "hash-vf",
+        deduplicationHash: "hash-vf",
       });
       mockParseSmsWithAi.mockResolvedValue({
         transactions: [parsed1, parsed2],
@@ -310,23 +325,25 @@ describe("sms-sync-service", () => {
       expect(result.transactions).toHaveLength(1);
     });
 
-    it("should deduplicate against existing hashes", async () => {
+    it("should deduplicate against existing fingerprints", async () => {
       const sms1 = createSmsMessage({ body: "Debit EGP 100" });
       const sms2 = createSmsMessage({ body: "Debit EGP 200" });
       mockReadSmsInbox.mockResolvedValue([sms1, sms2]);
 
-      // hash for sms1 matches an existing hash
-      mockComputeSmsHash
+      // Fingerprint for sms1 matches an existing fingerprint.
+      mockComputeSmsFingerprint
         .mockResolvedValueOnce("existing-hash-1")
         .mockResolvedValueOnce("new-hash-2");
 
-      const existingHashes = new Set(["existing-hash-1"]);
+      const existingFingerprints = new Set(["existing-hash-1"]);
 
       // Only sms2 should reach AI (sms1 was deduped)
       const parsed = createParsedTransaction({ amount: 200 });
       mockParseSmsWithAi.mockResolvedValue({ transactions: [parsed] });
 
-      const result = await scanAndParseSms(defaultOptions({ existingHashes }));
+      const result = await scanAndParseSms(
+        defaultOptions({ existingFingerprints })
+      );
 
       // Only 1 candidate should have been sent to AI
       expect(mockParseSmsWithAi).toHaveBeenCalledTimes(1);
@@ -334,7 +351,98 @@ describe("sms-sync-service", () => {
       expect(result.transactions).toHaveLength(1);
     });
 
-    it("loads current-user hashes when existing hashes are not supplied", async () => {
+    it("includes sender, body, and received timestamp when fingerprinting SMS", async () => {
+      const sms1 = createSmsMessage({
+        id: "sms-1",
+        address: "NBE",
+        body: "Debit EGP 100 at Shop",
+        date: 1778414400000,
+      });
+      const sms2 = createSmsMessage({
+        id: "sms-2",
+        address: "NBE",
+        body: "Debit EGP 100 at Shop",
+        date: 1778418000000,
+      });
+      mockReadSmsInbox.mockResolvedValue([sms1, sms2]);
+
+      await scanAndParseSms(defaultOptions());
+
+      expect(mockComputeSmsFingerprint).toHaveBeenNthCalledWith(1, {
+        sender: "NBE",
+        body: "Debit EGP 100 at Shop",
+        receivedAtMs: 1778414400000,
+      });
+      expect(mockComputeSmsFingerprint).toHaveBeenNthCalledWith(2, {
+        sender: "NBE",
+        body: "Debit EGP 100 at Shop",
+        receivedAtMs: 1778418000000,
+      });
+
+      const candidates = mockParseSmsWithAi.mock.calls[0]?.[0] as
+        | ReadonlyArray<{ readonly smsFingerprint: string }>
+        | undefined;
+
+      expect(candidates).toHaveLength(2);
+      expect(candidates?.map((candidate) => candidate.smsFingerprint)).toEqual([
+        "hash-NBE-1778414400000-Debit EGP ",
+        "hash-NBE-1778418000000-Debit EGP ",
+      ]);
+    });
+
+    it("should deduplicate duplicate fingerprints within the same scan before AI parsing", async () => {
+      const sms1 = createSmsMessage({
+        id: "sms-1",
+        body: "Debit EGP 100 at Shop",
+      });
+      const sms2 = createSmsMessage({
+        id: "sms-2",
+        body: "Debit EGP 100 at Shop",
+      });
+      mockReadSmsInbox.mockResolvedValue([sms1, sms2]);
+      mockComputeSmsFingerprint.mockResolvedValue("same-sms-hash");
+
+      await scanAndParseSms(defaultOptions());
+
+      const candidates = mockParseSmsWithAi.mock.calls[0]?.[0] as
+        | ReadonlyArray<{ readonly smsFingerprint: string }>
+        | undefined;
+
+      expect(candidates).toHaveLength(1);
+      expect(candidates?.[0]?.smsFingerprint).toBe("same-sms-hash");
+    });
+
+    it("should deduplicate duplicate AI results with the same SMS fingerprint before review", async () => {
+      const sms = createSmsMessage({
+        id: "sms-1",
+        body: "Debit EGP 100 at Shop",
+      });
+      mockReadSmsInbox.mockResolvedValue([sms]);
+      mockComputeSmsFingerprint.mockResolvedValue("same-sms-hash");
+
+      const parsed = createParsedTransaction({
+        amount: 100,
+        smsFingerprint: "same-sms-hash",
+        deduplicationHash: "same-sms-hash",
+      });
+      mockParseSmsWithAi.mockResolvedValue({
+        transactions: [
+          parsed,
+          {
+            ...parsed,
+            counterparty: "Duplicate Shop",
+          },
+        ],
+      });
+
+      const result = await scanAndParseSms(defaultOptions());
+
+      expect(result.transactions).toHaveLength(1);
+      expect(result.totalFound).toBe(1);
+      expect(result.transactions[0]?.counterparty).toBe("TestShop");
+    });
+
+    it("loads current-user fingerprints when existing fingerprints are not supplied", async () => {
       const userDataAccessMock = jest.requireMock<{
         getCurrentUserDataScope: jest.Mock;
       }>("@/services/user-data-access");

@@ -17,7 +17,7 @@
 
 import { database, Transaction, Transfer } from "@monyvi/db";
 import {
-  computeSmsHash,
+  computeSmsFingerprint,
   isKnownFinancialSender,
   type ParsedSmsTransaction,
   type SmsMessage,
@@ -76,8 +76,8 @@ interface ScanOptions {
   readonly minDate?: number;
   /** Maximum messages to read from inbox. Defaults to 5000. */
   readonly maxCount?: number;
-  /** Set of existing sms_body_hash values for dedup. */
-  readonly existingHashes?: ReadonlySet<string>;
+  /** Set of existing SMS fingerprints for dedup. */
+  readonly existingFingerprints?: ReadonlySet<string>;
   /** Batch size for keyword filtering — smaller = more frequent progress updates. */
   readonly batchSize?: number;
   /**
@@ -140,57 +140,82 @@ function isNonTransactionalSms(body: string): boolean {
 // ---------------------------------------------------------------------------
 
 /**
- * Extract sms_body_hash strings from raw query rows into a Set.
+ * Extract sms_fingerprint strings from raw query rows into a Set.
  * Shared by both the transactions and transfers queries below.
  */
-function collectHashes(
+function collectFingerprints(
   rows: ReadonlyArray<Record<string, unknown>>,
   target: Set<string>
 ): void {
   for (const row of rows) {
-    const hash = row.sms_body_hash;
-    if (typeof hash === "string") {
-      target.add(hash);
+    const fingerprint = row.sms_fingerprint;
+    if (typeof fingerprint === "string") {
+      target.add(fingerprint);
     }
   }
 }
 
 /**
- * Query all existing SMS body hashes from the transactions AND transfers tables.
- * Used for deduplication — prevents re-parsing SMS messages that
- * have already been saved as either a transaction or a transfer (e.g., ATM withdrawal).
+ * Remove duplicate parsed SMS transactions from the same scan result.
+ * The first transaction for a fingerprint wins, matching the review list order.
+ *
+ * This protects the save path from duplicate AI entries for one SMS.
+ */
+function deduplicateParsedSmsTransactions(
+  transactions: readonly ParsedSmsTransaction[]
+): readonly ParsedSmsTransaction[] {
+  const seenFingerprints = new Set<string>();
+  const deduplicated: ParsedSmsTransaction[] = [];
+
+  for (const transaction of transactions) {
+    if (seenFingerprints.has(transaction.smsFingerprint)) {
+      continue;
+    }
+
+    seenFingerprints.add(transaction.smsFingerprint);
+    deduplicated.push(transaction);
+  }
+
+  return deduplicated;
+}
+
+/**
+ * Query all existing SMS fingerprints from the transactions AND transfers tables.
+ * Used for deduplication before scanning so saved SMS records are skipped.
  *
  * Scoped to the current user so stale local rows from another account do not
  * suppress valid SMS imports for the signed-in user.
  */
-export async function loadExistingSmsHashes(): Promise<ReadonlySet<string>> {
+export async function loadExistingSmsFingerprints(): Promise<
+  ReadonlySet<string>
+> {
   const scope = await getCurrentUserDataScope();
-  const hashes = new Set<string>();
+  const fingerprints = new Set<string>();
 
   // ── Transactions ──────────────────────────────────────────────────────
   const transactionRows = (await scope
     .queryOwned(
       database.get<Transaction>("transactions"),
       Q.where("source", "SMS"),
-      Q.where("sms_body_hash", Q.notEq(null)),
+      Q.where("sms_fingerprint", Q.notEq(null)),
       Q.where("deleted", false)
     )
     .unsafeFetchRaw()) as ReadonlyArray<Record<string, unknown>>;
 
-  collectHashes(transactionRows, hashes);
+  collectFingerprints(transactionRows, fingerprints);
 
   // ── Transfers (ATM withdrawals, etc.) ─────────────────────────────────
   const transferRows = (await scope
     .queryOwned(
       database.get<Transfer>("transfers"),
-      Q.where("sms_body_hash", Q.notEq(null)),
+      Q.where("sms_fingerprint", Q.notEq(null)),
       Q.where("deleted", false)
     )
     .unsafeFetchRaw()) as ReadonlyArray<Record<string, unknown>>;
 
-  collectHashes(transferRows, hashes);
+  collectFingerprints(transferRows, fingerprints);
 
-  return hashes;
+  return fingerprints;
 }
 
 /**
@@ -199,13 +224,13 @@ export async function loadExistingSmsHashes(): Promise<ReadonlySet<string>> {
  * Pipeline:
  * 1. Read SMS inbox via sms-reader-service
  * 2. On-device keyword filter → financial candidates
- * 3. Compute SHA-256 hash for each candidate
- * 4. Dedup against existing hashes in local DB
+ * 3. Compute SHA-256 fingerprint for each candidate
+ * 4. Dedup against existing fingerprints in local DB
  * 5. Send deduplicated candidates to AI Edge Function
  * 6. Return AI-parsed transactions
  *
  * @param onProgress - Callback invoked after each batch with scan progress
- * @param options    - Optional filters (minDate, maxCount, existingHashes)
+ * @param options    - Optional filters (minDate, maxCount, existingFingerprints)
  * @returns Parsed, deduplicated transactions ready for review
  */
 export async function scanAndParseSms(
@@ -250,8 +275,8 @@ async function executeScanPipeline(
   const maxCount = options?.maxCount ?? DEFAULT_MAX_COUNT;
   const batchSize = options?.batchSize ?? DEFAULT_BATCH_SIZE;
   const yieldInterval = options?.yieldInterval ?? DEFAULT_YIELD_INTERVAL;
-  const existingHashes =
-    options?.existingHashes ?? (await loadExistingSmsHashes());
+  const existingFingerprints =
+    options?.existingFingerprints ?? (await loadExistingSmsFingerprints());
   // Default to 3 months ago when no minDate is provided
   const effectiveMinDate = options?.minDate ?? Date.now() - THREE_MONTHS_MS;
 
@@ -265,8 +290,9 @@ async function executeScanPipeline(
   let messagesScanned = 0;
   let batchCount = 0;
 
-  // ─── Step 2: On-device keyword filter + hash + dedup ──────────────────
+  // ─── Step 2: On-device keyword filter + fingerprint + dedup ───────────
   const candidates: SmsCandidate[] = [];
+  const seenFingerprints = new Set(existingFingerprints);
 
   for (let i = 0; i < totalMessages; i += batchSize) {
     const batch = messages.slice(i, i + batchSize);
@@ -284,15 +310,20 @@ async function executeScanPipeline(
         continue;
       }
 
-      // Compute hash for deduplication
-      const hash = await computeSmsHash(sms.body);
+      // Compute fingerprint for deduplication
+      const fingerprint = await computeSmsFingerprint({
+        sender: sms.address,
+        body: sms.body,
+        receivedAtMs: sms.date,
+      });
 
       // Skip if already exists in local DB
-      if (existingHashes.has(hash)) {
+      if (seenFingerprints.has(fingerprint)) {
         continue;
       }
 
-      candidates.push({ message: sms, smsBodyHash: hash });
+      seenFingerprints.add(fingerprint);
+      candidates.push({ message: sms, smsFingerprint: fingerprint });
     }
 
     // Emit progress after each batch
@@ -368,6 +399,9 @@ async function executeScanPipeline(
       });
     }
   );
+  const deduplicatedTransactions = deduplicateParsedSmsTransactions(
+    aiResult.transactions
+  );
 
   // ─── Step 4: Return results ───────────────────────────────────────────
   const durationMs = Date.now() - startTime;
@@ -375,7 +409,7 @@ async function executeScanPipeline(
   onProgress?.({
     totalMessages,
     messagesScanned: totalMessages,
-    transactionsFound: aiResult.transactions.length,
+    transactionsFound: deduplicatedTransactions.length,
     candidatesFound: candidates.length,
     currentPhase: "complete",
     currentSender: "",
@@ -383,15 +417,15 @@ async function executeScanPipeline(
   });
 
   logger.info("smsSync.aiParsing.complete", {
-    transactionCount: aiResult.transactions.length,
+    transactionCount: deduplicatedTransactions.length,
     candidateCount: candidates.length,
     durationMs,
   });
 
   return {
-    transactions: aiResult.transactions,
+    transactions: deduplicatedTransactions,
     totalScanned: messagesScanned,
-    totalFound: aiResult.transactions.length,
+    totalFound: deduplicatedTransactions.length,
     totalFilteredCandidates: candidates.length,
     durationMs,
   };

@@ -223,5 +223,22 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 18,
+      steps: [
+        addColumns({
+          table: "transactions",
+          columns: [
+            { name: "sms_fingerprint", type: "string", isOptional: true },
+          ],
+        }),
+        addColumns({
+          table: "transfers",
+          columns: [
+            { name: "sms_fingerprint", type: "string", isOptional: true },
+          ],
+        }),
+      ],
+    },
   ],
 });

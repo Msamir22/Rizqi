@@ -1,6 +1,7 @@
 import { palette } from "@/constants/colors";
 import { RecentTransactionsSkeleton } from "@/components/dashboard/skeletons/RecentTransactionsSkeleton";
 import { useCategoryLookup } from "@/context/CategoriesContext";
+import { getCategoryIconConfig } from "@/utils/category-icon-config";
 import { formatTransactionDate } from "@/utils/transactions";
 import { Category, Transaction } from "@monyvi/db";
 import { router } from "expo-router";
@@ -29,12 +30,13 @@ function TransactionItem({
   const isExpense = transaction.isExpense;
   const { t } = useTranslation("common");
 
-  // Use category's iconConfig or fallback to default icons
-  const iconConfig = category?.iconConfig ?? {
-    iconName: isExpense ? "cart" : "wallet",
-    iconLibrary: "Ionicons" as const,
-    iconColor: isExpense ? palette.red[500] : palette.nileGreen[500],
-  };
+  const iconConfig = category
+    ? getCategoryIconConfig(category)
+    : {
+        iconName: isExpense ? "cart" : "wallet",
+        iconLibrary: "Ionicons" as const,
+        iconColor: isExpense ? palette.red[500] : palette.nileGreen[500],
+      };
 
   const handlePress = useCallback((): void => {
     router.push(`/edit-transaction?id=${transaction.id}`);

@@ -1,0 +1,195 @@
+import type { ParsedSmsTransaction, SmsFingerprintInput } from "@monyvi/logic";
+import type {
+  AiParseResult,
+  ParseSmsContext,
+  SmsCandidate,
+} from "@/services/ai-sms-parser-service";
+
+const mockReconcileLiveDetectionPreference = jest.fn<Promise<boolean>, []>();
+const mockHasExistingSmsFingerprint = jest.fn<Promise<boolean>, [string]>();
+const mockParseSmsWithAi = jest.fn<
+  Promise<AiParseResult>,
+  [readonly SmsCandidate[], ParseSmsContext]
+>();
+const mockComputeSmsFingerprint = jest.fn<
+  Promise<string>,
+  [SmsFingerprintInput]
+>();
+const mockIsLikelyFinancialSms = jest.fn<boolean, [string]>();
+
+jest.mock("@monyvi/logic", () => ({
+  computeSmsFingerprint: (input: SmsFingerprintInput): Promise<string> =>
+    mockComputeSmsFingerprint(input),
+  isLikelyFinancialSms: (body: string): boolean =>
+    mockIsLikelyFinancialSms(body),
+  SUPPORTED_CURRENCIES: [{ code: "EGP" }],
+}));
+
+jest.mock("@/services/sms-live-detection-handler", () => ({
+  reconcileLiveDetectionPreference: (): Promise<boolean> =>
+    mockReconcileLiveDetectionPreference(),
+}));
+
+jest.mock("@/services/sms-dedup-service", () => ({
+  hasExistingSmsFingerprint: (smsFingerprint: string): Promise<boolean> =>
+    mockHasExistingSmsFingerprint(smsFingerprint),
+}));
+
+jest.mock("@/services/ai-sms-parser-service", () => ({
+  parseSmsWithAi: (
+    ...args: [readonly SmsCandidate[], ParseSmsContext]
+  ): Promise<AiParseResult> => mockParseSmsWithAi(...args),
+}));
+
+jest.mock("@monyvi/db", () => ({
+  database: {
+    get: jest.fn(() => ({})),
+  },
+}));
+
+jest.mock("@nozbe/watermelondb", () => ({
+  Q: {
+    where: jest.fn(),
+    notEq: jest.fn(),
+  },
+}));
+
+jest.mock("@/services/user-data-access", () => ({
+  getCurrentUserDataScope: jest.fn(() =>
+    Promise.resolve({
+      queryAccessibleCategories: () => ({
+        fetch: jest.fn(() => Promise.resolve([])),
+      }),
+    })
+  ),
+}));
+
+import { processLiveSmsEvent } from "@/services/sms-live-processor";
+
+function createParsedTransaction(
+  smsFingerprint = "hash-live"
+): ParsedSmsTransaction {
+  return {
+    amount: 850,
+    currency: "EGP",
+    type: "EXPENSE",
+    counterparty: "Hyper Market",
+    date: new Date("2026-05-10T12:00:00.000Z"),
+    categoryId: "category-1",
+    categoryDisplayName: "Shopping",
+    confidence: 0.94,
+    originLabel: "QNB",
+    source: "SMS",
+    smsFingerprint,
+    senderDisplayName: "QNB",
+    rawSmsBody: "Purchase EGP 850 at Hyper Market using card ending 1234",
+  };
+}
+
+describe("sms-live-processor", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockReconcileLiveDetectionPreference.mockResolvedValue(true);
+    mockHasExistingSmsFingerprint.mockResolvedValue(false);
+    mockComputeSmsFingerprint.mockResolvedValue("hash-live");
+    mockIsLikelyFinancialSms.mockReturnValue(true);
+    mockParseSmsWithAi.mockResolvedValue({
+      transactions: [createParsedTransaction()],
+      hasError: false,
+    });
+  });
+
+  it("uses AI parsing and preserves the computed SMS fingerprint", async () => {
+    const result = await processLiveSmsEvent({
+      sender: "QNB",
+      body: "Purchase EGP 850 at Hyper Market using card ending 1234",
+      timestamp: 1778414400000,
+      deliveryMode: "foreground",
+    });
+
+    expect(result.status).toBe("parsed");
+    expect(result.smsFingerprint).toBe("hash-live");
+    expect(result.transactions).toEqual([
+      expect.objectContaining({ smsFingerprint: "hash-live" }),
+    ]);
+    expect(mockComputeSmsFingerprint).toHaveBeenCalledWith({
+      sender: "QNB",
+      body: "Purchase EGP 850 at Hyper Market using card ending 1234",
+      receivedAtMs: 1778414400000,
+    });
+    const parseCall = mockParseSmsWithAi.mock.calls[0];
+    expect(parseCall).toBeDefined();
+
+    const [candidates, context] = parseCall;
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]).toMatchObject({
+      smsFingerprint: "hash-live",
+      message: {
+        address: "QNB",
+        body: "Purchase EGP 850 at Hyper Market using card ending 1234",
+      },
+    });
+    expect(context.supportedCurrencies).toEqual(["EGP"]);
+  });
+
+  it("skips AI when the SMS fingerprint already exists locally", async () => {
+    mockHasExistingSmsFingerprint.mockResolvedValue(true);
+
+    const result = await processLiveSmsEvent({
+      sender: "QNB",
+      body: "Purchase EGP 850 at Hyper Market using card ending 1234",
+      timestamp: 1778414400000,
+      deliveryMode: "headless",
+    });
+
+    expect(result.status).toBe("duplicate");
+    expect(mockParseSmsWithAi).not.toHaveBeenCalled();
+  });
+
+  it("returns ai_failed when the AI parser reports a recoverable failure", async () => {
+    mockParseSmsWithAi.mockResolvedValue({
+      transactions: [],
+      hasError: true,
+    });
+
+    const result = await processLiveSmsEvent({
+      sender: "QNB",
+      body: "Purchase EGP 850 at Hyper Market using card ending 1234",
+      timestamp: 1778414400000,
+      deliveryMode: "headless",
+    });
+
+    expect(result.status).toBe("ai_failed");
+  });
+
+  it("returns infrastructure_error when local deduplication fails", async () => {
+    mockHasExistingSmsFingerprint.mockRejectedValue(
+      new Error("database failed")
+    );
+
+    const result = await processLiveSmsEvent({
+      sender: "QNB",
+      body: "Purchase EGP 850 at Hyper Market using card ending 1234",
+      timestamp: 1778414400000,
+      deliveryMode: "headless",
+    });
+
+    expect(result.status).toBe("infrastructure_error");
+    expect(mockParseSmsWithAi).not.toHaveBeenCalled();
+  });
+
+  it("does not parse when live detection is no longer enabled", async () => {
+    mockReconcileLiveDetectionPreference.mockResolvedValue(false);
+
+    const result = await processLiveSmsEvent({
+      sender: "QNB",
+      body: "Purchase EGP 850 at Hyper Market using card ending 1234",
+      timestamp: 1778414400000,
+      deliveryMode: "headless",
+    });
+
+    expect(result.status).toBe("disabled");
+    expect(mockComputeSmsFingerprint).not.toHaveBeenCalled();
+    expect(mockParseSmsWithAi).not.toHaveBeenCalled();
+  });
+});

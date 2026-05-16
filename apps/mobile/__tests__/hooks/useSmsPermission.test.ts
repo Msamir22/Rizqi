@@ -15,6 +15,7 @@
  *   - iOS fallback: denied + isAndroid=false
  *   - Android permission check: granted / undetermined
  *   - requestPermission: granted / denied / blocked / error
+ *   - requestLiveDetectionPermission: READ_SMS + RECEIVE_SMS
  *   - openSettings: delegates to Linking
  *   - recheckPermission: resets loading + re-checks
  *   - AppState foreground recheck (T045)
@@ -69,8 +70,26 @@ const mockCheck = jest.fn<Promise<boolean>, [string]>(() =>
   Promise.resolve(false)
 );
 
-const mockRequest = jest.fn<Promise<string>, [string, Record<string, string>]>(
+const mockRequest = jest.fn<Promise<string>, [string, Record<string, string>?]>(
   () => Promise.resolve("granted")
+);
+const mockRequestMultiple = jest.fn<
+  Promise<Record<string, string>>,
+  [string[]]
+>(() =>
+  Promise.resolve({
+    "android.permission.READ_SMS": "granted",
+    "android.permission.RECEIVE_SMS": "granted",
+  })
+);
+const mockGetPermissionStatus = jest.fn<Promise<string>, [string]>(
+  (permission) =>
+    Promise.resolve(
+      permission === "android.permission.READ_SMS" ? "granted" : "requestable"
+    )
+);
+const mockMarkPermissionRequested = jest.fn<Promise<void>, [string]>(() =>
+  Promise.resolve()
 );
 
 const mockOpenSettings = jest.fn(() => Promise.resolve());
@@ -97,7 +116,10 @@ jest.mock("react-native", () => ({
     },
   },
   PermissionsAndroid: {
-    PERMISSIONS: { READ_SMS: "android.permission.READ_SMS" },
+    PERMISSIONS: {
+      READ_SMS: "android.permission.READ_SMS",
+      RECEIVE_SMS: "android.permission.RECEIVE_SMS",
+    },
     RESULTS: {
       GRANTED: "granted",
       DENIED: "denied",
@@ -105,7 +127,9 @@ jest.mock("react-native", () => ({
     },
     check: (...args: unknown[]) => mockCheck(...(args as [string])),
     request: (...args: unknown[]) =>
-      mockRequest(...(args as [string, Record<string, string>])),
+      mockRequest(...(args as [string, Record<string, string>?])),
+    requestMultiple: (...args: unknown[]) =>
+      mockRequestMultiple(...(args as [string[]])),
   },
   Linking: {
     openSettings: () => mockOpenSettings(),
@@ -114,6 +138,14 @@ jest.mock("react-native", () => ({
     currentState: "active",
     addEventListener: (...args: unknown[]) =>
       mockAppStateAddEventListener(...(args as [string, AppStateListener])),
+  },
+  NativeModules: {
+    SmsEventModule: {
+      getPermissionStatus: (...args: unknown[]) =>
+        mockGetPermissionStatus(...(args as [string])),
+      markPermissionRequested: (...args: unknown[]) =>
+        mockMarkPermissionRequested(...(args as [string])),
+    },
   },
 }));
 
@@ -198,12 +230,21 @@ async function flushPromises(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 describe("useSmsPermission", () => {
-  beforeEach(() => {
+  beforeEach((): void => {
     jest.clearAllMocks();
     mockPlatformOS = "android";
     appStateListeners = [];
     mockCheck.mockResolvedValue(false);
+    mockGetPermissionStatus.mockImplementation((permission: string) =>
+      Promise.resolve(
+        permission === "android.permission.READ_SMS" ? "granted" : "requestable"
+      )
+    );
     mockRequest.mockResolvedValue("granted");
+    mockRequestMultiple.mockResolvedValue({
+      "android.permission.READ_SMS": "granted",
+      "android.permission.RECEIVE_SMS": "granted",
+    });
   });
 
   // =========================================================================
@@ -219,7 +260,7 @@ describe("useSmsPermission", () => {
     });
 
     it("should resolve to granted on mount when permission is already granted", async () => {
-      mockCheck.mockResolvedValue(true);
+      mockGetPermissionStatus.mockResolvedValue("granted");
 
       const { result } = renderHook(() => useSmsPermission());
       await flushPromises();
@@ -228,8 +269,40 @@ describe("useSmsPermission", () => {
       expect(unwrap(result).isLoading).toBe(false);
     });
 
+    it("should keep read permission granted when RECEIVE_SMS can still be requested", async () => {
+      mockGetPermissionStatus.mockImplementation((permission: string) =>
+        Promise.resolve(
+          permission === "android.permission.READ_SMS"
+            ? "granted"
+            : "requestable"
+        )
+      );
+
+      const { result } = renderHook(() => useSmsPermission());
+      await flushPromises();
+
+      expect(unwrap(result).status).toBe("granted");
+      expect(unwrap(result).liveDetectionStatus).toBe("undetermined");
+      expect(unwrap(result).isLoading).toBe(false);
+    });
+
+    it("should report live detection blocked when RECEIVE_SMS can no longer be requested", async () => {
+      mockGetPermissionStatus.mockImplementation((permission: string) =>
+        Promise.resolve(
+          permission === "android.permission.READ_SMS" ? "granted" : "blocked"
+        )
+      );
+
+      const { result } = renderHook(() => useSmsPermission());
+      await flushPromises();
+
+      expect(unwrap(result).status).toBe("granted");
+      expect(unwrap(result).liveDetectionStatus).toBe("blocked");
+      expect(unwrap(result).isLoading).toBe(false);
+    });
+
     it("should resolve to undetermined on mount when permission is not yet granted", async () => {
-      mockCheck.mockResolvedValue(false);
+      mockGetPermissionStatus.mockResolvedValue("requestable");
 
       const { result } = renderHook(() => useSmsPermission());
       await flushPromises();
@@ -239,7 +312,9 @@ describe("useSmsPermission", () => {
     });
 
     it("should handle check errors gracefully (fallback to undetermined)", async () => {
-      mockCheck.mockRejectedValue(new Error("Native module error"));
+      mockGetPermissionStatus.mockRejectedValue(
+        new Error("Native module error")
+      );
 
       const { result } = renderHook(() => useSmsPermission());
       await flushPromises();
@@ -262,6 +337,7 @@ describe("useSmsPermission", () => {
       await flushPromises();
 
       expect(unwrap(result).status).toBe("denied");
+      expect(unwrap(result).liveDetectionStatus).toBe("denied");
       expect(unwrap(result).isAndroid).toBe(false);
       expect(unwrap(result).isLoading).toBe(false);
     });
@@ -271,6 +347,7 @@ describe("useSmsPermission", () => {
       await flushPromises();
 
       expect(mockCheck).not.toHaveBeenCalled();
+      expect(mockGetPermissionStatus).not.toHaveBeenCalled();
     });
 
     it("requestPermission should return denied on iOS", async () => {
@@ -284,6 +361,8 @@ describe("useSmsPermission", () => {
 
       expect(permResult).toBe("denied");
       expect(mockRequest).not.toHaveBeenCalled();
+      expect(mockRequestMultiple).not.toHaveBeenCalled();
+      expect(mockMarkPermissionRequested).not.toHaveBeenCalled();
     });
   });
 
@@ -304,6 +383,23 @@ describe("useSmsPermission", () => {
 
       expect(permResult).toBe("granted");
       expect(unwrap(result).status).toBe("granted");
+    });
+
+    it("should request only READ_SMS without a native rationale dialog", async () => {
+      mockRequest.mockResolvedValue("granted");
+
+      const { result } = renderHook(() => useSmsPermission());
+      await flushPromises();
+
+      await actAsync(async () => {
+        await unwrap(result).requestPermission();
+      });
+
+      expect(mockRequest).toHaveBeenCalledWith("android.permission.READ_SMS");
+      expect(mockMarkPermissionRequested).toHaveBeenCalledWith(
+        "android.permission.READ_SMS"
+      );
+      expect(mockRequestMultiple).not.toHaveBeenCalled();
     });
 
     it("should return denied when user declines", async () => {
@@ -353,6 +449,137 @@ describe("useSmsPermission", () => {
   });
 
   // =========================================================================
+  // requestLiveDetectionPermission — Android
+  // =========================================================================
+  describe("requestLiveDetectionPermission", () => {
+    it("should request READ_SMS and RECEIVE_SMS when both are missing", async () => {
+      mockGetPermissionStatus
+        .mockResolvedValueOnce("requestable")
+        .mockResolvedValueOnce("requestable")
+        .mockResolvedValueOnce("requestable")
+        .mockResolvedValueOnce("requestable")
+        .mockResolvedValueOnce("granted")
+        .mockResolvedValueOnce("granted");
+
+      const { result } = renderHook(() => useSmsPermission());
+      await flushPromises();
+
+      let permResult: string | undefined;
+      await actAsync(async () => {
+        permResult = await unwrap(result).requestLiveDetectionPermission();
+      });
+
+      expect(permResult).toBe("granted");
+      expect(mockRequestMultiple).toHaveBeenCalledWith([
+        "android.permission.READ_SMS",
+        "android.permission.RECEIVE_SMS",
+      ]);
+      expect(mockMarkPermissionRequested).toHaveBeenCalledWith(
+        "android.permission.READ_SMS"
+      );
+      expect(mockMarkPermissionRequested).toHaveBeenCalledWith(
+        "android.permission.RECEIVE_SMS"
+      );
+      expect(mockRequest).not.toHaveBeenCalled();
+      expect(unwrap(result).status).toBe("granted");
+      expect(unwrap(result).liveDetectionStatus).toBe("granted");
+    });
+
+    it("should request only RECEIVE_SMS when READ_SMS was already granted", async () => {
+      const { result } = renderHook(() => useSmsPermission());
+      await flushPromises();
+
+      let permResult: string | undefined;
+      await actAsync(async () => {
+        permResult = await unwrap(result).requestLiveDetectionPermission();
+      });
+
+      expect(permResult).toBe("granted");
+      expect(mockRequestMultiple).toHaveBeenCalledWith([
+        "android.permission.RECEIVE_SMS",
+      ]);
+      expect(mockMarkPermissionRequested).not.toHaveBeenCalledWith(
+        "android.permission.READ_SMS"
+      );
+      expect(mockMarkPermissionRequested).toHaveBeenCalledWith(
+        "android.permission.RECEIVE_SMS"
+      );
+      expect(unwrap(result).status).toBe("granted");
+      expect(unwrap(result).liveDetectionStatus).toBe("granted");
+    });
+
+    it("should treat a silently granted RECEIVE_SMS permission as granted after recheck", async () => {
+      mockRequestMultiple.mockResolvedValue({
+        "android.permission.RECEIVE_SMS": "denied",
+      });
+      mockGetPermissionStatus
+        .mockResolvedValueOnce("granted")
+        .mockResolvedValueOnce("requestable")
+        .mockResolvedValueOnce("granted")
+        .mockResolvedValueOnce("requestable")
+        .mockResolvedValueOnce("granted")
+        .mockResolvedValueOnce("granted");
+
+      const { result } = renderHook(() => useSmsPermission());
+      await flushPromises();
+
+      let permResult: string | undefined;
+      await actAsync(async () => {
+        permResult = await unwrap(result).requestLiveDetectionPermission();
+      });
+
+      expect(permResult).toBe("granted");
+      expect(mockRequestMultiple).toHaveBeenCalledWith([
+        "android.permission.RECEIVE_SMS",
+      ]);
+      expect(unwrap(result).status).toBe("granted");
+      expect(unwrap(result).liveDetectionStatus).toBe("granted");
+    });
+
+    it("should keep read permission granted when live detection receive permission is denied", async () => {
+      mockRequestMultiple.mockResolvedValue({
+        "android.permission.RECEIVE_SMS": "denied",
+      });
+
+      const { result } = renderHook(() => useSmsPermission());
+      await flushPromises();
+
+      let permResult: string | undefined;
+      await actAsync(async () => {
+        permResult = await unwrap(result).requestLiveDetectionPermission();
+      });
+
+      expect(permResult).toBe("denied");
+      expect(mockRequestMultiple).toHaveBeenCalledWith([
+        "android.permission.RECEIVE_SMS",
+      ]);
+      expect(unwrap(result).status).toBe("granted");
+      expect(unwrap(result).liveDetectionStatus).toBe("denied");
+    });
+
+    it("should return blocked when live detection receive permission is blocked", async () => {
+      mockRequestMultiple.mockResolvedValue({
+        "android.permission.RECEIVE_SMS": "never_ask_again",
+      });
+
+      const { result } = renderHook(() => useSmsPermission());
+      await flushPromises();
+
+      let permResult: string | undefined;
+      await actAsync(async () => {
+        permResult = await unwrap(result).requestLiveDetectionPermission();
+      });
+
+      expect(permResult).toBe("blocked");
+      expect(mockRequestMultiple).toHaveBeenCalledWith([
+        "android.permission.RECEIVE_SMS",
+      ]);
+      expect(unwrap(result).status).toBe("granted");
+      expect(unwrap(result).liveDetectionStatus).toBe("blocked");
+    });
+  });
+
+  // =========================================================================
   // openSettings
   // =========================================================================
   describe("openSettings", () => {
@@ -373,7 +600,7 @@ describe("useSmsPermission", () => {
   // =========================================================================
   describe("recheckPermission", () => {
     it("should set isLoading=true then re-check", async () => {
-      mockCheck.mockResolvedValue(false);
+      mockGetPermissionStatus.mockResolvedValue("requestable");
 
       const { result } = renderHook(() => useSmsPermission());
       await flushPromises();
@@ -382,7 +609,7 @@ describe("useSmsPermission", () => {
       expect(unwrap(result).status).toBe("undetermined");
 
       // User goes to settings, grants permission
-      mockCheck.mockResolvedValue(true);
+      mockGetPermissionStatus.mockResolvedValue("granted");
 
       await actAsync(async () => {
         await unwrap(result).recheckPermission();
