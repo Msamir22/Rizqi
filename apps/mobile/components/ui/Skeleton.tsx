@@ -53,18 +53,6 @@ interface SkeletonProps {
 
 const ANIMATION_DURATION_MS = 1200;
 
-/** Shimmer base colors per theme */
-const SHIMMER_COLORS = {
-  light: {
-    base: palette.slate[200],
-    highlight: palette.slate[100],
-  },
-  dark: {
-    base: palette.slate[700],
-    highlight: palette.slate[600],
-  },
-} as const;
-
 /** Multiplier for gradient width relative to container width */
 const GRADIENT_WIDTH_MULTIPLIER = 2;
 
@@ -94,11 +82,15 @@ export function Skeleton({
   borderRadius = 8,
   style,
 }: SkeletonProps): React.JSX.Element {
-  const { isDark } = useTheme();
+  const { isDark, theme } = useTheme();
   const shimmerPosition = useSharedValue(-1);
   const [containerWidth, setContainerWidth] = useState(0);
 
-  const colors = isDark ? SHIMMER_COLORS.dark : SHIMMER_COLORS.light;
+  const colors =
+    theme.skeleton ??
+    (isDark
+      ? { base: palette.night[700], highlight: palette.night[600] }
+      : { base: palette.paper[200], highlight: palette.paper[100] });
 
   // Start the shimmer animation
   useEffect(() => {

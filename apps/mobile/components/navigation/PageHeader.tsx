@@ -63,12 +63,12 @@ function ActiveSelection({
           color={isDark ? palette.slate[50] : palette.slate[800]}
         />
       </TouchableOpacity>
-      <Text className="text-xl font-bold text-slate-800 dark:text-white flex-1">
+      <Text className="text-xl font-bold text-text-primary dark:text-text-primary-dark flex-1">
         {selectionMode.count} Selected
       </Text>
       {selectionMode.onSelectAll && (
         <TouchableOpacity onPress={selectionMode.onSelectAll} className="me-4">
-          <Text className="text-sm font-bold text-nileGreen-600 dark:text-nileGreen-400">
+          <Text className="text-sm font-bold text-action dark:text-action-dark">
             {isAllSelected ? "Deselect All" : "Select All"}
           </Text>
         </TouchableOpacity>
@@ -116,7 +116,7 @@ function HamburgerButton({
       <Ionicons
         name="menu-outline"
         size={32}
-        color={isDark ? "white" : palette.slate[800]}
+        color={isDark ? palette.paper[25] : palette.slate[800]}
       />
     </TouchableOpacity>
   );
@@ -136,29 +136,42 @@ function RightAction({
   };
   isDark: boolean;
 }): React.ReactElement {
+  const actionShadow =
+    rightAction.icon && !rightAction.transparent
+      ? {
+          shadowColor: palette.night[950],
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.12,
+          shadowRadius: 4,
+          elevation: 2,
+        }
+      : null;
+  const disabledStyle = rightAction.disabled ? { opacity: 0.5 } : null;
+
   return (
     <TouchableOpacity
       testID={rightAction.label ? "header-save" : "header-right-action"}
       onPress={rightAction.onPress}
       activeOpacity={0.7}
       disabled={rightAction.disabled || rightAction.loading}
+      style={[actionShadow, disabledStyle]}
       className={`flex-row rounded-full items-center justify-center ${
         rightAction.icon
           ? rightAction.transparent
             ? "w-10 h-10 bg-transparent"
-            : "w-14 h-10 bg-white elevation-[2] dark:bg-slate-800 shadow-sm"
+            : "w-14 h-10 bg-card dark:bg-card-dark"
           : "px-4 py-2"
-      } ${rightAction.disabled ? "opacity-50" : ""}`}
+      }`}
     >
       {rightAction.loading ? (
         <>
           <ActivityIndicator
             size="small"
-            color={palette.nileGreen[500]}
+            color={palette.brandGreen[500]}
             style={rightAction.label ? { marginEnd: 6 } : undefined}
           />
           {rightAction.label ? (
-            <Text className="text-base font-bold text-nileGreen-600 dark:text-nileGreen-400">
+            <Text className="text-base font-bold text-action dark:text-action-dark">
               {rightAction.label}
             </Text>
           ) : null}
@@ -167,10 +180,10 @@ function RightAction({
         <Ionicons
           name={rightAction.icon}
           size={24}
-          color={isDark ? palette.slate[50] : palette.slate[800]}
+          color={isDark ? palette.paper[25] : palette.slate[800]}
         />
       ) : (
-        <Text className="text-base font-bold text-nileGreen-600 dark:text-nileGreen-400">
+        <Text className="text-base font-bold text-action dark:text-action-dark">
           {rightAction.label}
         </Text>
       )}
@@ -201,7 +214,7 @@ export function PageHeader({
   return (
     <>
       <View
-        className="px-5 pb-4 mt-2 bg-background dark:bg-background-dark"
+        className="px-5 pb-4 mt-2 bg-app dark:bg-app-dark"
         style={{
           paddingTop: insets.top + 10,
         }}
@@ -216,7 +229,7 @@ export function PageHeader({
               style={{ zIndex: -1 }}
             >
               <Text
-                className="text-2xl font-bold text-slate-800 dark:text-white px-12"
+                className="text-2xl font-bold text-text-primary dark:text-text-primary-dark px-12"
                 numberOfLines={1}
                 accessibilityRole="header"
                 accessibilityLanguage={language}
@@ -242,7 +255,7 @@ export function PageHeader({
                 )}
                 {!centerTitle && (
                   <Text
-                    className="text-2xl font-bold text-slate-800 dark:text-white flex-1"
+                    className="text-2xl font-bold text-text-primary dark:text-text-primary-dark flex-1"
                     numberOfLines={1}
                     accessibilityRole="header"
                     accessibilityLanguage={language}
@@ -282,7 +295,7 @@ export function PageHeader({
             <TouchableOpacity
               testID="header-delete"
               onPress={selectionMode.onDelete}
-              className="w-10 h-10 rounded-full items-center justify-center bg-red-50 dark:bg-red-900/20"
+              className="w-10 h-10 rounded-full items-center justify-center bg-dangerPalette-50 dark:bg-dangerPalette-700"
             >
               <Ionicons
                 name="trash-outline"

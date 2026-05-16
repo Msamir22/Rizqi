@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 .header-text {
-  @apply text-[15px] font-semibold text-slate-700 dark:text-slate-100 opacity-90;
+  @apply text-[15px] font-semibold text-text-primary dark:text-text-primary-dark;
 }
 
 .button {
@@ -15,39 +15,39 @@
 }
 
 .input-label {
-  @apply text-xs font-extrabold text-slate-500 dark:text-slate-400 mb-2 px-1 uppercase tracking-widest;
+  @apply text-xs font-extrabold text-text-secondary dark:text-text-secondary-dark mb-2 px-1 uppercase tracking-widest;
 }
 
 .input-error {
-  @apply mt-1.5 px-2 text-xs font-bold text-red-500;
+  @apply mt-1.5 px-2 text-xs font-bold text-danger dark:text-danger-dark;
 }
 
 /* Subtitle — section headings, card titles */
 .subtitle-text {
-  @apply text-lg font-bold text-slate-800 dark:text-slate-50;
+  @apply text-lg font-bold text-text-primary dark:text-text-primary-dark;
 }
 
 /* Body — standard paragraph text */
 .body-text {
-  @apply text-sm text-slate-700 dark:text-slate-200;
+  @apply text-sm text-text-primary dark:text-text-primary-dark;
 }
 
 /* Body small — secondary info, descriptions */
 .body-small {
-  @apply text-xs text-slate-500 dark:text-slate-400;
+  @apply text-xs text-text-secondary dark:text-text-secondary-dark;
 }
 
 /* Caption — labels, footnotes, timestamps */
 .caption-text {
-  @apply text-[11px] text-slate-400 dark:text-slate-500;
+  @apply text-[11px] text-text-muted dark:text-text-muted-dark;
 }
 
 /* Stat label — small secondary labels (e.g. "Income:", "Expenses:") */
 .stat-label {
-  @apply text-[13px] font-medium text-slate-500 dark:text-slate-400;
+  @apply text-[13px] font-medium text-text-secondary dark:text-text-secondary-dark;
 }
 
 /* Stat value — paired with stat-label for small numeric values */
 .stat-value {
-  @apply text-[13px] font-semibold text-slate-800 dark:text-slate-100;
+  @apply text-[13px] font-semibold text-text-primary dark:text-text-primary-dark;
 }

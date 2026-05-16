@@ -58,9 +58,11 @@ export function TextField({
       <Text className="input-label">{label}</Text>
       <TextInput
         placeholderTextColor={palette.slate[400]}
-        className={`bg-white dark:bg-slate-800 p-4 rounded-2xl border ${
-          error ? "border-red-500" : "border-slate-200 dark:border-slate-700"
-        } text-base font-semibold text-slate-900 dark:text-white ${className || ""}`}
+        className={`bg-card dark:bg-card-dark p-4 rounded-2xl border ${
+          error
+            ? "border-danger dark:border-danger-dark"
+            : "border-border-card dark:border-border-card-dark"
+        } text-base font-semibold text-text-primary dark:text-text-primary-dark ${className || ""}`}
         {...props}
         value={draftValue}
         onChangeText={handleChangeText}

@@ -69,14 +69,14 @@ const TOAST_COLORS: Record<
   { bg: string; icon: string; border: string }
 > = {
   success: {
-    bg: `${palette.nileGreen[800]}E6`,
-    icon: palette.nileGreen[400],
-    border: palette.nileGreen[600],
+    bg: `${palette.brandGreen[800]}E6`,
+    icon: palette.brandGreen[300],
+    border: palette.brandGreen[600],
   },
   error: {
-    bg: `${palette.red[600]}E6`,
-    icon: palette.red[100],
-    border: palette.red[500],
+    bg: `${palette.danger[600]}E6`,
+    icon: palette.danger[100],
+    border: palette.danger[500],
   },
   info: {
     bg: `${palette.blue[600]}E6`,
@@ -114,7 +114,7 @@ function Toast({ config, onHide }: ToastProps): React.JSX.Element {
           backgroundColor: colors.bg,
           borderColor: colors.border,
           // Glassmorphism shadow
-          shadowColor: "#000",
+          shadowColor: palette.night[950],
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.3,
           shadowRadius: 8,

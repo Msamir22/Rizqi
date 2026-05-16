@@ -69,13 +69,24 @@ function DropdownItemRow<T extends string | number>({
   isDark,
   onPress,
 }: DropdownItemRowProps<T>): React.JSX.Element {
+  const selectedStyle = isSelected
+    ? {
+        backgroundColor: isDark
+          ? `${palette.brandGreen[500]}1A`
+          : `${palette.brandGreen[500]}14`,
+      }
+    : null;
+
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.6}
+      style={selectedStyle}
       className={`flex-row items-center p-4 ${
-        !isLast ? "border-b border-slate-50 dark:border-slate-700/50" : ""
-      } ${isSelected ? "bg-nileGreen-50/50 dark:bg-nileGreen-900/10" : ""}`}
+        !isLast
+          ? "border-b border-border-subtle dark:border-border-subtle-dark"
+          : ""
+      }`}
     >
       {item.icon && (
         <View className="me-3 w-8 items-center">
@@ -85,9 +96,9 @@ function DropdownItemRow<T extends string | number>({
               size={20}
               color={
                 isSelected
-                  ? palette.nileGreen[600]
+                  ? palette.brandGreen[600]
                   : isDark
-                    ? palette.slate[400]
+                    ? palette.slate[300]
                     : palette.slate[500]
               }
             />
@@ -100,14 +111,14 @@ function DropdownItemRow<T extends string | number>({
         <Text
           className={`text-base ${
             isSelected
-              ? "font-bold text-nileGreen-700 dark:text-nileGreen-400"
-              : "text-slate-700 dark:text-slate-300"
+              ? "font-bold text-action dark:text-action-dark"
+              : "text-text-primary dark:text-text-primary-dark"
           }`}
         >
           {item.label}
         </Text>
         {item.description && (
-          <Text className="text-xs text-slate-500 dark:text-slate-400">
+          <Text className="text-xs text-text-secondary dark:text-text-secondary-dark">
             {item.description}
           </Text>
         )}
@@ -116,7 +127,7 @@ function DropdownItemRow<T extends string | number>({
         <Ionicons
           name="checkmark-circle"
           size={20}
-          style={{ color: palette.nileGreen[600] }}
+          color={palette.brandGreen[600]}
         />
       )}
     </TouchableOpacity>
@@ -155,18 +166,18 @@ function DropdownModalView<T extends string | number>({
     >
       <TouchableWithoutFeedback onPress={onToggle}>
         <View className="flex-1 bg-black/60 justify-end">
-          <View className="rounded-t-3xl overflow-hidden max-h-[70%] bg-white dark:bg-slate-900">
+          <View className="rounded-t-3xl overflow-hidden max-h-[70%] bg-card dark:bg-card-dark">
             <BlurView
               intensity={40}
               tint={isDark ? "dark" : "light"}
               className="absolute inset-0"
             />
-            <View className="absolute inset-0 bg-white/95 dark:bg-slate-900/95" />
+            <View className="absolute inset-0 bg-glass dark:bg-glass-dark" />
 
             <View>
               {/* Header */}
-              <View className="flex-row justify-between items-center px-6 py-5 border-b border-slate-200 dark:border-slate-800">
-                <Text className="text-xl font-bold text-slate-800 dark:text-slate-100">
+              <View className="flex-row justify-between items-center px-6 py-5 border-b border-border-card dark:border-border-card-dark">
+                <Text className="text-xl font-bold text-text-primary dark:text-text-primary-dark">
                   {label}
                 </Text>
                 <TouchableOpacity onPress={onToggle} className="p-1">
@@ -236,7 +247,7 @@ export function Dropdown<T extends string | number>({
     <View className={`mb-3 ${className} ${disabled ? "opacity-50" : ""}`}>
       <Text className="input-label mb-2">{label}</Text>
 
-      <View className="rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800 overflow-hidden shadow-sm">
+      <View className="rounded-2xl border border-border-card bg-card dark:border-border-card-dark dark:bg-card-dark overflow-hidden">
         <TouchableOpacity
           onPress={onToggle}
           activeOpacity={0.7}
@@ -252,7 +263,9 @@ export function Dropdown<T extends string | number>({
                       name={selectedItem.icon as keyof typeof Ionicons.glyphMap}
                       size={20}
                       color={
-                        isDark ? palette.nileGreen[400] : palette.nileGreen[600]
+                        isDark
+                          ? palette.brandGreen[400]
+                          : palette.brandGreen[600]
                       }
                     />
                   ) : (
@@ -260,7 +273,7 @@ export function Dropdown<T extends string | number>({
                   )}
                 </View>
               )}
-              <Text className="text-base font-medium text-slate-900 dark:text-white">
+              <Text className="text-base font-medium text-text-primary dark:text-text-primary-dark">
                 {selectedItem?.label || placeholder}
               </Text>
             </View>
@@ -274,7 +287,7 @@ export function Dropdown<T extends string | number>({
 
         {/* Inline expansion (non-modal mode) */}
         {!useModal && isOpen && (
-          <View className="border-t border-slate-100 dark:border-slate-700 max-h-60">
+          <View className="border-t border-border-subtle dark:border-border-subtle-dark max-h-60">
             {items.map((item, index) => (
               <DropdownItemRow
                 key={String(item.value)}

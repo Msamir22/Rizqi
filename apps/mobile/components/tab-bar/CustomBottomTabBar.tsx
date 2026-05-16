@@ -5,13 +5,7 @@ import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { memo, useCallback, useEffect } from "react";
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Pressable, Text, TouchableOpacity, View } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -187,7 +181,7 @@ function CustomBottomTabBarComponent({
           tint="light"
           className="flex-1 overflow-hidden rounded-t-3xl dark:hidden"
         >
-          <View className="flex-1 flex-row items-center bg-white/80">
+          <View className="flex-1 flex-row items-center bg-glass">
             {/* Left tabs: Home, Accounts */}
             <View className="flex-1 flex-row">
               {TAB_ORDER.slice(0, 2).map((routeName) =>
@@ -209,7 +203,7 @@ function CustomBottomTabBarComponent({
           tint="dark"
           className="hidden dark:flex flex-1 overflow-hidden rounded-t-3xl"
         >
-          <View className="flex-1 flex-row items-center bg-slate-900/80">
+          <View className="flex-1 flex-row items-center bg-glass-dark">
             {/* Left tabs: Home, Accounts */}
             <View className="flex-1 flex-row">
               {TAB_ORDER.slice(0, 2).map((routeName) =>
@@ -238,7 +232,18 @@ function CustomBottomTabBarComponent({
           }}
         >
           {/* T020: Pulse ring behind mic button */}
-          <Animated.View style={[styles.pulseRing, pulseAnimatedStyle]} />
+          <Animated.View
+            style={[
+              {
+                position: "absolute",
+                width: MIC_BUTTON_SIZE,
+                height: MIC_BUTTON_SIZE,
+                borderRadius: MIC_BUTTON_SIZE / 2,
+                backgroundColor: palette.brandGreen[500],
+              },
+              pulseAnimatedStyle,
+            ]}
+          />
           <Pressable
             onPress={handleMicPress}
             accessibilityLabel={t("voice_recording_label")}
@@ -250,7 +255,7 @@ function CustomBottomTabBarComponent({
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             style={({ pressed }) => ({
               opacity: pressed ? 0.9 : 1,
-              shadowColor: palette.nileGreen[500],
+              shadowColor: palette.brandGreen[500],
               shadowOffset: { width: 0, height: 4 },
               shadowOpacity: 0.3,
               shadowRadius: 8,
@@ -258,7 +263,7 @@ function CustomBottomTabBarComponent({
             })}
           >
             <LinearGradient
-              colors={[palette.nileGreen[500], palette.nileGreen[600]]}
+              colors={[palette.brandGreen[500], palette.brandGreen[600]]}
               className="items-center justify-center"
               style={{
                 width: MIC_BUTTON_SIZE,
@@ -266,14 +271,11 @@ function CustomBottomTabBarComponent({
                 borderRadius: MIC_BUTTON_SIZE / 2,
               }}
             >
-              <Ionicons name="mic" size={28} color={palette.slate[50]} />
+              <Ionicons name="mic" size={28} color={palette.paper[25]} />
             </LinearGradient>
           </Pressable>
           {isRecording && (
-            <Text
-              className="mt-1 text-center text-[10px] font-semibold"
-              style={{ color: palette.nileGreen[500] }}
-            >
+            <Text className="mt-1 text-center text-[10px] font-semibold text-action dark:text-action-dark">
               {t("voice_listening")}
             </Text>
           )}
@@ -284,13 +286,3 @@ function CustomBottomTabBarComponent({
 }
 
 export const CustomBottomTabBar = memo(CustomBottomTabBarComponent);
-
-const styles = StyleSheet.create({
-  pulseRing: {
-    position: "absolute",
-    width: MIC_BUTTON_SIZE,
-    height: MIC_BUTTON_SIZE,
-    borderRadius: MIC_BUTTON_SIZE / 2,
-    backgroundColor: palette.nileGreen[500],
-  },
-});

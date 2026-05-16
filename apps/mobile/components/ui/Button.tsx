@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import {
   ActivityIndicator,
-  StyleSheet,
   Text,
   TouchableOpacity,
   TouchableOpacityProps,
@@ -32,22 +31,23 @@ interface ButtonProps extends TouchableOpacityProps {
 
 // Variant Styles
 const variants = {
-  primary: "bg-nileGreen-600",
-  secondary: "bg-slate-100 dark:bg-slate-800",
-  outline: "bg-transparent border border-slate-200 dark:border-slate-700",
+  primary: "bg-action dark:bg-action-dark",
+  secondary: "bg-card-muted dark:bg-card-muted-dark",
+  outline:
+    "bg-transparent border border-border-card dark:border-border-card-dark",
   ghost: "bg-transparent",
-  danger: "bg-red-500 dark:bg-red-600",
-  dashed: "bg-slate-50 dark:bg-slate-800/40",
+  danger: "bg-danger dark:bg-danger-dark",
+  dashed: "bg-card-muted dark:bg-card-muted-dark",
 };
 
 // Text Color for Variants
 const textColors = {
-  primary: "text-white",
-  secondary: "text-slate-800 dark:text-slate-100",
-  outline: "text-slate-700 dark:text-slate-200",
-  ghost: "text-slate-600 dark:text-slate-400",
+  primary: "text-text-inverse dark:text-text-inverse-dark",
+  secondary: "text-text-primary dark:text-text-primary-dark",
+  outline: "text-text-primary dark:text-text-primary-dark",
+  ghost: "text-text-secondary dark:text-text-secondary-dark",
   danger: "text-white",
-  dashed: "text-slate-500 dark:text-slate-400",
+  dashed: "text-text-secondary dark:text-text-secondary-dark",
 };
 
 // Size Styles
@@ -82,14 +82,25 @@ export function Button({
   const { isDark } = useTheme();
 
   const isDisabled = disabled || isLoading;
+  const buttonShadow =
+    variant === "primary" && !isDisabled
+      ? {
+          shadowColor: palette.brandGreen[700],
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.18,
+          shadowRadius: 6,
+          elevation: 2,
+        }
+      : null;
+  const disabledStyle = isDisabled ? { opacity: 0.5 } : null;
 
   return (
     <TouchableOpacity
       onPress={onPress}
       disabled={isDisabled}
       activeOpacity={0.7}
-      style={[variant === "primary" && !isDisabled && styles.shadow, style]}
-      className={`flex-row items-center justify-center ${variant === "dashed" ? "rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700" : "rounded-full"} ${variants[variant]} ${sizes[size]} ${isDisabled ? "opacity-50" : ""} ${className}`}
+      style={[buttonShadow, disabledStyle, style]}
+      className={`flex-row items-center justify-center ${variant === "dashed" ? "rounded-2xl border-2 border-dashed border-border-card dark:border-border-card-dark" : "rounded-full"} ${variants[variant]} ${sizes[size]} ${className}`}
       {...props}
     >
       {isLoading ? (
@@ -98,9 +109,9 @@ export function Button({
             size="small"
             color={
               variant === "primary" || variant === "danger"
-                ? "#FFFFFF"
+                ? palette.paper[25]
                 : isDark
-                  ? palette.slate[400]
+                  ? palette.paper[300]
                   : palette.slate[500]
             }
             style={title ? { marginEnd: 8 } : undefined}
@@ -121,9 +132,9 @@ export function Button({
               size={size === "sm" ? 16 : 20}
               color={
                 variant === "primary" || variant === "danger"
-                  ? "#FFFFFF"
+                  ? palette.paper[25]
                   : isDark
-                    ? palette.slate[300]
+                    ? palette.paper[300]
                     : palette.slate[700]
               }
               style={{ marginEnd: 8 }}
@@ -146,9 +157,9 @@ export function Button({
               size={size === "sm" ? 16 : 20}
               color={
                 variant === "primary" || variant === "danger"
-                  ? "#FFFFFF"
+                  ? palette.paper[25]
                   : isDark
-                    ? palette.slate[300]
+                    ? palette.paper[300]
                     : palette.slate[700]
               }
               style={{ marginStart: 8 }}
@@ -159,13 +170,3 @@ export function Button({
     </TouchableOpacity>
   );
 }
-
-const styles = StyleSheet.create({
-  shadow: {
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-});

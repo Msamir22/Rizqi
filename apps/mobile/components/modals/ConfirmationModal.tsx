@@ -35,10 +35,10 @@ const VARIANT_CONFIG: Record<
   }
 > = {
   danger: {
-    iconBg: "bg-red-100",
-    darkIconBg: "dark:bg-red-500/20",
-    iconColor: palette.red[500],
-    buttonBg: "bg-red-500",
+    iconBg: "bg-dangerPalette-100",
+    darkIconBg: "dark:bg-dangerPalette-700",
+    iconColor: palette.danger[500],
+    buttonBg: "bg-danger dark:bg-danger-dark",
     defaultIcon: "trash-outline",
   },
   warning: {
@@ -85,7 +85,7 @@ export function ConfirmationModal({
       <TouchableWithoutFeedback onPress={onCancel}>
         <View className="flex-1 bg-black/70 justify-center items-center">
           <TouchableWithoutFeedback>
-            <View className="w-[85%] max-w-[340px] rounded-2xl overflow-hidden border border-transparent dark:border-slate-700/40 bg-white dark:bg-slate-900">
+            <View className="w-[85%] max-w-[340px] rounded-2xl overflow-hidden border border-border-card dark:border-border-card-dark bg-card dark:bg-card-dark">
               <View className="p-6">
                 {/* Icon */}
                 <View
@@ -99,12 +99,12 @@ export function ConfirmationModal({
                 </View>
 
                 {/* Title */}
-                <Text className="text-[22px] font-bold text-slate-800 dark:text-slate-100 text-center mb-2">
+                <Text className="text-[22px] font-bold text-text-primary dark:text-text-primary-dark text-center mb-2">
                   {title}
                 </Text>
 
                 {/* Message */}
-                <Text className="text-[15px] text-slate-500 dark:text-slate-400 text-center leading-[22px] mb-6">
+                <Text className="text-[15px] text-text-secondary dark:text-text-secondary-dark text-center leading-[22px] mb-6">
                   {message}
                 </Text>
 
@@ -112,10 +112,10 @@ export function ConfirmationModal({
                 <View className="flex-row gap-3">
                   <TouchableOpacity
                     testID="modal-cancel"
-                    className="flex-1 py-3.5 rounded-xl items-center justify-center bg-slate-100 dark:bg-slate-800"
+                    className="flex-1 py-3.5 rounded-xl items-center justify-center bg-card-muted dark:bg-card-muted-dark"
                     onPress={onCancel}
                   >
-                    <Text className="text-base font-semibold text-slate-600 dark:text-slate-300">
+                    <Text className="text-base font-semibold text-text-secondary dark:text-text-secondary-dark">
                       {cancelLabel}
                     </Text>
                   </TouchableOpacity>
