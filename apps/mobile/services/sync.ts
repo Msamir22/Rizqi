@@ -611,6 +611,7 @@ function transformToSupabase<T extends WritableSupabaseTablesNames>(
   // _changed tracks which columns have local changes
   delete transformed["_status"];
   delete transformed["_changed"];
+  delete transformed["sms_body_hash"];
 
   // Ensure user_id is set (only for tables with user_id column)
   if (!isChildTable) {

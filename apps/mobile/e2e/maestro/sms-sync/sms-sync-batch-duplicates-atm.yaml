@@ -1,0 +1,40 @@
+appId: com.monyvi.app
+---
+# Batch SMS sync imports two identical fixture inbox messages as distinct rows
+# because their received timestamps produce distinct fingerprints. The same
+# scan also includes an ATM withdrawal and verifies it reaches the review path.
+
+- runFlow: ../helpers/open-settings.yaml
+
+- scrollUntilVisible:
+    element: "Sync New SMS"
+    direction: DOWN
+    centerElement: true
+
+- tapOn: "Sync New SMS"
+
+- extendedWaitUntil:
+    visible: "Scan Complete!"
+    timeout: 90000
+
+- assertVisible: "Transactions Found"
+- assertVisible: "Review 3 Transaction\\(s\\)"
+
+- tapOn: "Review 3 Transaction\\(s\\)"
+
+- extendedWaitUntil:
+    visible: "Review SMS Transactions"
+    timeout: 30000
+
+- assertVisible: "PR622 BATCH DUPLICATE SHOP"
+- assertVisible: "QNB ATM"
+- assertVisible: "Cash Withdrawal"
+- extendedWaitUntil:
+    visible: "E2E NBE Bank"
+    timeout: 30000
+
+- tapOn: "Save 3 Transactions"
+
+- extendedWaitUntil:
+    visible: "Transactions"
+    timeout: 30000

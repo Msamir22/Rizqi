@@ -16,6 +16,8 @@
 
 import { Platform } from "react-native";
 import type { SmsMessage } from "@monyvi/logic";
+import { shouldUseFixtureSmsParser } from "@/config/e2e-test-config";
+import { getFixtureById } from "@/services/dev/sms-fixtures";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -68,6 +70,47 @@ interface NativeSmsModule {
   ): void;
 }
 
+const E2E_SMS_INBOX_FIXTURE_IDS = [
+  "pr622_batch_duplicate_shop",
+  "pr622_batch_duplicate_shop",
+  "qnb_atm_withdrawal",
+] as const;
+
+const E2E_DUPLICATE_SECOND_OFFSET_MS = 60_000;
+
+function readFixtureSmsInbox(
+  options?: SmsReaderOptions
+): readonly SmsMessage[] {
+  const messages = E2E_SMS_INBOX_FIXTURE_IDS.map((fixtureId, index) => {
+    const fixture = getFixtureById(fixtureId);
+    if (!fixture) {
+      throw new Error(`Missing E2E SMS inbox fixture: ${fixtureId}`);
+    }
+
+    const baseDate = fixture.timestamp ?? Date.now();
+    const duplicateOffset =
+      fixtureId === "pr622_batch_duplicate_shop" && index === 1
+        ? E2E_DUPLICATE_SECOND_OFFSET_MS
+        : 0;
+
+    return {
+      id: `e2e-${fixtureId}-${index}`,
+      address: fixture.sender,
+      body: fixture.body,
+      date: baseDate + duplicateOffset,
+      read: true,
+    };
+  });
+
+  const minDate = options?.minDate;
+  const filtered =
+    minDate === undefined
+      ? messages
+      : messages.filter((message) => message.date >= minDate);
+
+  return filtered.slice(0, options?.maxCount ?? 1000);
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -81,6 +124,10 @@ interface NativeSmsModule {
 export async function readSmsInbox(
   options?: SmsReaderOptions
 ): Promise<readonly SmsMessage[]> {
+  if (shouldUseFixtureSmsParser()) {
+    return readFixtureSmsInbox(options);
+  }
+
   if (Platform.OS !== "android") {
     return [];
   }

@@ -3,9 +3,7 @@ appId: com.monyvi.app
 # SMS sync asks for read-SMS access with Monyvi UI before the OS prompt.
 # Preconditions: app state already contains an authenticated/onboarded user.
 
-- launchApp:
-    appId: com.monyvi.app
-    clearState: false
+- setPermissions:
     permissions:
       sms: unset
 

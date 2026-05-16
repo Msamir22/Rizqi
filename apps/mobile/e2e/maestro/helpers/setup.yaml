@@ -2,9 +2,10 @@ appId: com.monyvi.app
 
 ---
 
-# Shared setup flow: Ensure account exists, then navigate to Transactions tab
+# Shared setup flow: Ensure account exists, then navigate to Transactions tab.
+# The app must already be open; preflight owns app launch/recovery.
 
-# Step 1: Seed account if none exists (launches app internally)
+# Step 1: Seed account if none exists.
 - runFlow: seed-account.yaml
 
 # Step 2: Navigate to Transactions tab (by text on tab bar)

@@ -272,16 +272,16 @@ async function fetchAccountsWithDetails(
         ).fetch();
 
   // Build a lookup: accountId → first BankDetails row
-  const bankDetailsByAccountId = new Map<string, BankDetails>();
+  const bankDetailsByAccountId = new Map<string, readonly BankDetails[]>();
   for (const row of allBankDetails) {
-    if (!bankDetailsByAccountId.has(row.accountId)) {
-      bankDetailsByAccountId.set(row.accountId, row);
-    }
+    const existingRows = bankDetailsByAccountId.get(row.accountId) ?? [];
+    bankDetailsByAccountId.set(row.accountId, [...existingRows, row]);
   }
 
-  for (const account of accounts) {
-    const bankDetails = bankDetailsByAccountId.get(account.id);
-
+  function pushAccountWithDetails(
+    account: Account,
+    bankDetails?: BankDetails
+  ): void {
     results.push({
       id: account.id,
       name: account.name,
@@ -293,6 +293,19 @@ async function fetchAccountsWithDetails(
       bankName: bankDetails?.bankName ?? undefined,
       cardLast4: bankDetails?.cardLast4 ?? undefined,
     });
+  }
+
+  for (const account of accounts) {
+    const bankDetailsRows = bankDetailsByAccountId.get(account.id);
+
+    if (!bankDetailsRows || bankDetailsRows.length === 0) {
+      pushAccountWithDetails(account);
+      continue;
+    }
+
+    for (const bankDetails of bankDetailsRows) {
+      pushAccountWithDetails(account, bankDetails);
+    }
   }
 
   // Sort by created_at ASC for deterministic fallback ordering

@@ -1,0 +1,20 @@
+appId: com.monyvi.app
+---
+# Re-running SMS sync after the previous save should not offer the same saved
+# SMS messages for review again.
+
+- runFlow: ../helpers/open-settings.yaml
+
+- scrollUntilVisible:
+    element: "Sync New SMS"
+    direction: DOWN
+    centerElement: true
+
+- tapOn: "Sync New SMS"
+
+- extendedWaitUntil:
+    visible: "No Transactions Found"
+    timeout: 90000
+
+- assertNotVisible: "Review SMS Transactions"
+- assertNotVisible: "PR622 BATCH DUPLICATE SHOP"

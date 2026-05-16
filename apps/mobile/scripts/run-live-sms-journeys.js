@@ -10,6 +10,7 @@ const {
   run,
   wait,
 } = require("./e2e-preflight");
+const { getE2eSeedConfig } = require("./e2e-seed");
 
 const mobileRoot = join(__dirname, "..");
 const flowDir = join("e2e", "maestro", "live-sms-detection");
@@ -137,6 +138,33 @@ function runFlow(flow) {
   }
 
   run(maestroBin, ["test", join(flowDir, flow)], { cwd: mobileRoot });
+}
+
+function applyLocalE2eDefaults() {
+  if (process.env.E2E_SUPABASE_MODE !== "local") return;
+
+  const config = getE2eSeedConfig({
+    ...process.env,
+    E2E_SUPABASE_MODE: "local",
+  });
+
+  process.env.EXPO_PUBLIC_SUPABASE_URL ??= config.appSupabaseUrl;
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ??= config.anonKey;
+  process.env.MAESTRO_E2E_EMAIL ??= config.email;
+  process.env.MAESTRO_E2E_PASSWORD ??= config.password;
+}
+
+async function bootstrapCleanAuthenticatedSession() {
+  if (process.env.E2E_SUPABASE_MODE !== "local") return;
+  if (process.env.E2E_SKIP_AUTH_BOOTSTRAP === "1") return;
+
+  applyLocalE2eDefaults();
+  run(process.execPath, [join(__dirname, "e2e-seed.js"), "seed"], {
+    cwd: mobileRoot,
+  });
+  adb(["shell", "pm", "clear", appId]);
+  await ensureE2eAppReady();
+  runFlow("../helpers/ci-auth-bootstrap.yaml");
 }
 
 function getXmlAttribute(nodeText, attribute) {
@@ -573,6 +601,15 @@ function sendBackgroundSms() {
   ]);
 }
 
+function sendForegroundSms() {
+  sendEmulatorSms(
+    "QNB",
+    "Purchase EGP 64.32 at FOREGROUND LIVE SMS TEST using card ending 5566"
+  );
+  wait(1000);
+  runFlow("live-sms-journey-16-foreground-real-sms-verification.yaml");
+}
+
 function sendBackgroundConfirmSms() {
   backgroundApp();
   sendEmulatorSms(
@@ -761,14 +798,27 @@ const journeys = {
       runFlow("live-sms-journey-15-killed-app-confirm-verification.yaml");
     },
   },
+  16: {
+    flow: "live-sms-journey-16-foreground-real-sms.yaml",
+    prepare: () => {
+      grantSmsPermissions();
+      grantNotificationPermission();
+      collapseSystemUi();
+    },
+    after: sendForegroundSms,
+  },
 };
 
 async function main() {
+  applyLocalE2eDefaults();
+
   const requested = process.argv.slice(2);
   const selected =
     requested.length > 0
       ? requested.map((id) => id.padStart(2, "0"))
       : Object.keys(journeys);
+
+  await bootstrapCleanAuthenticatedSession();
 
   for (const id of selected) {
     const journey = journeys[id];

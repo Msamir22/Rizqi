@@ -34,6 +34,7 @@ const defaultLiveSmsJourneys = [
   "12",
   "13",
   "14",
+  "16",
 ];
 // Journey 15 covers killed-app HeadlessJS. It needs a release/preview APK with
 // embedded JS, so it stays on the release-specific runner until that build path
@@ -129,6 +130,7 @@ function main() {
     ]);
   }
 
+  runNodeScript("scripts/run-sms-sync-journeys.js", []);
   runNodeScript("scripts/run-live-sms-journeys.js", getLiveSmsJourneys());
 }
 

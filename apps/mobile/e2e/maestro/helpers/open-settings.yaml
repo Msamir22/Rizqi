@@ -1,24 +1,23 @@
 appId: com.monyvi.app
 ---
-# Helper: open the Settings screen through Expo Router deep linking.
+# Helper: open the Settings screen from a loaded app shell.
 # Preconditions: app state already contains an authenticated/onboarded user.
 
-- openLink:
-    link: monyvi://settings
+- extendedWaitUntil:
+    visible: "LANGUAGE|SMS SYNC|LIVE SMS DETECTION|Open menu"
+    timeout: 120000
 
-- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "Open menu"
+    commands:
+      - tapOn: "Settings"
+      - extendedWaitUntil:
+          visible: "LANGUAGE|SMS SYNC|LIVE SMS DETECTION"
+          timeout: 120000
 
 - extendedWaitUntil:
-    visible: "Settings"
-    timeout: 30000
+    visible: "LANGUAGE|SMS SYNC|LIVE SMS DETECTION"
+    timeout: 120000
 
-- openLink:
-    link: monyvi://settings
-
-- waitForAnimationToEnd
-
-- extendedWaitUntil:
-    visible: "Settings"
-    timeout: 30000
-
-- assertVisible: "Settings"
+- assertVisible: "LANGUAGE|SMS SYNC|LIVE SMS DETECTION"

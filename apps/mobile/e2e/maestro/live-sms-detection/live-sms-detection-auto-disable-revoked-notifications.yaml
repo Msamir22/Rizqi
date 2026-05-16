@@ -4,9 +4,7 @@ appId: com.monyvi.app
 # the app, then the user returns to Settings.
 # Preconditions: app state already contains an authenticated/onboarded user.
 
-- launchApp:
-    appId: com.monyvi.app
-    clearState: false
+- setPermissions:
     permissions:
       sms: allow
       notifications: allow
@@ -28,15 +26,6 @@ appId: com.monyvi.app
 
 - setPermissions:
     permissions:
-      notifications: deny
-
-- stopApp
-
-- launchApp:
-    appId: com.monyvi.app
-    clearState: false
-    permissions:
-      sms: allow
       notifications: deny
 
 - runFlow: ../helpers/open-settings.yaml

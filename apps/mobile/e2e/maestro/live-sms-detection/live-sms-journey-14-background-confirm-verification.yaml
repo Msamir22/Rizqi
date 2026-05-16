@@ -3,13 +3,7 @@ appId: com.monyvi.app
 # Verifies Journey 14 after the runner confirms the background real-SMS
 # notification.
 
-- openLink:
-    link: monyvi://transactions
-- waitForAnimationToEnd
-- extendedWaitUntil:
-    visible:
-      id: "filter-period"
-    timeout: 30000
+- runFlow: ../helpers/open-transactions.yaml
 
 - tapOn:
     id: "filter-period"

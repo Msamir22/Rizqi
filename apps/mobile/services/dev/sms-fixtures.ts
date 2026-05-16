@@ -43,6 +43,8 @@ const APRIL_8_2026_14_23 = 1775658180000;
 const APRIL_8_2026_15_02 = 1775660520000;
 const APRIL_8_2026_16_10 = 1775664600000;
 const APRIL_8_2026_16_20 = 1775665200000;
+const APRIL_8_2026_17_01 = 1775667660000;
+const APRIL_8_2026_17_12 = 1775668320000;
 
 export const SMS_FIXTURES: readonly SmsFixture[] = [
   {
@@ -106,6 +108,28 @@ export const SMS_FIXTURES: readonly SmsFixture[] = [
         isTrusted: true,
         isAtmWithdrawal: true,
         cardLast4: "5566",
+      },
+    ],
+  },
+  {
+    id: "pr622_batch_duplicate_shop",
+    label: "NBE - PR622 duplicate batch purchase",
+    description:
+      "Fixture inbox SMS used by batch SMS sync duplicate-fingerprint E2E",
+    sender: "NBE",
+    body: "Purchase EGP 33.33 on card **** 4321 at PR622 BATCH DUPLICATE SHOP on 08/04 17:01. Avail bal EGP 12,397.22",
+    timestamp: APRIL_8_2026_17_01,
+    expectedTransactions: [
+      {
+        amount: 33.33,
+        currency: "EGP",
+        type: "EXPENSE",
+        counterparty: "PR622 BATCH DUPLICATE SHOP",
+        categorySystemName: "shopping",
+        date: "2026-04-08T15:01:00.000Z",
+        confidenceScore: 0.97,
+        isTrusted: true,
+        cardLast4: "4321",
       },
     ],
   },
@@ -332,6 +356,27 @@ export const SMS_FIXTURES: readonly SmsFixture[] = [
         confidenceScore: 0.95,
         isTrusted: true,
         cardLast4: "1234",
+      },
+    ],
+  },
+  {
+    id: "foreground_live_sms_test",
+    label: "Foreground live SMS test",
+    description: "Real emulator SMS used by foreground live detection journey",
+    sender: "QNB",
+    body: "Purchase EGP 64.32 at FOREGROUND LIVE SMS TEST using card ending 5566",
+    timestamp: APRIL_8_2026_17_12,
+    expectedTransactions: [
+      {
+        amount: 64.32,
+        currency: "EGP",
+        type: "EXPENSE",
+        counterparty: "FOREGROUND LIVE SMS TEST",
+        categorySystemName: "shopping",
+        date: "2026-04-08T15:12:00.000Z",
+        confidenceScore: 0.95,
+        isTrusted: true,
+        cardLast4: "5566",
       },
     ],
   },

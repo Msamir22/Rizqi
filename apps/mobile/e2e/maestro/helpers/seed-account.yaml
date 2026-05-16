@@ -3,14 +3,7 @@ appId: com.monyvi.app
 # Seed: Create a default "Cash" account if none exists
 # This flow checks the dashboard for accounts and creates one if missing.
 
-# Step 1: Launch app
-- launchApp:
-    appId: com.monyvi.app
-    clearState: false
-
-- waitForAnimationToEnd
-
-# Wait until the private dashboard has finished the account-loading gate.
+# Step 1: Wait until the private dashboard has finished the account-loading gate.
 - assertVisible: "Open menu"
 
 # Step 2: Check if accounts section on dashboard is empty

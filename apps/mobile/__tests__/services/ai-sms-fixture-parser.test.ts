@@ -117,10 +117,12 @@ describe("ai-sms-fixture-parser", () => {
     });
   });
 
-  it("covers real emulator SMS bodies used by background live journeys", async () => {
+  it("covers real emulator SMS bodies used by live and batch SMS E2E journeys", async () => {
     const result = await parseSmsWithFixtureAi(
       [
+        candidateFromFixture("pr622_batch_duplicate_shop"),
         candidateFromFixture("background_live_sms_test"),
+        candidateFromFixture("foreground_live_sms_test"),
         candidateFromFixture("background_confirm_market"),
         candidateFromFixture("closed_confirm_market"),
       ],
@@ -128,12 +130,14 @@ describe("ai-sms-fixture-parser", () => {
     );
 
     expect(result.transactions.map((tx) => tx.counterparty)).toEqual([
+      "PR622 BATCH DUPLICATE SHOP",
       "BACKGROUND LIVE SMS TEST",
+      "FOREGROUND LIVE SMS TEST",
       "BACKGROUND CONFIRM MARKET",
       "CLOSED CONFIRM MARKET",
     ]);
     expect(result.transactions.map((tx) => tx.amount)).toEqual([
-      63.21, 71.45, 72.56,
+      33.33, 63.21, 64.32, 71.45, 72.56,
     ]);
   });
 });
