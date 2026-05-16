@@ -86,7 +86,7 @@ export async function processLiveSmsEvent(
     return createResult("disabled");
   }
 
-  let smsFingerprint: string;
+  let smsFingerprint: string | undefined;
   try {
     smsFingerprint = await computeSmsFingerprint({
       sender: event.sender,
@@ -102,17 +102,27 @@ export async function processLiveSmsEvent(
       return createResult("duplicate", smsFingerprint);
     }
 
+    inFlightSmsFingerprints.add(smsFingerprint);
+
     if (await hasExistingSmsFingerprint(smsFingerprint)) {
+      inFlightSmsFingerprints.delete(smsFingerprint);
       return createResult("duplicate", smsFingerprint);
     }
   } catch (error: unknown) {
+    if (smsFingerprint !== undefined) {
+      inFlightSmsFingerprints.delete(smsFingerprint);
+    }
     logger.error("liveSms.infrastructure.failed", error, {
       deliveryMode: event.deliveryMode,
     });
     return createResult("infrastructure_error", undefined);
   }
 
-  inFlightSmsFingerprints.add(smsFingerprint);
+  const confirmedSmsFingerprint = smsFingerprint;
+  if (confirmedSmsFingerprint === undefined) {
+    return createResult("infrastructure_error", undefined);
+  }
+
   try {
     let context: ParseSmsContext;
     try {
@@ -121,7 +131,7 @@ export async function processLiveSmsEvent(
       logger.error("liveSms.context.failed", error, {
         deliveryMode: event.deliveryMode,
       });
-      return createResult("infrastructure_error", smsFingerprint);
+      return createResult("infrastructure_error", confirmedSmsFingerprint);
     }
 
     const candidate: SmsCandidate = {
@@ -132,7 +142,7 @@ export async function processLiveSmsEvent(
         date: event.timestamp,
         read: false,
       },
-      smsFingerprint,
+      smsFingerprint: confirmedSmsFingerprint,
     };
 
     let aiResult: AiParseResult;
@@ -144,7 +154,7 @@ export async function processLiveSmsEvent(
       });
       return createResult(
         "ai_failed",
-        smsFingerprint,
+        confirmedSmsFingerprint,
         EMPTY_TRANSACTIONS,
         true
       );
@@ -153,20 +163,24 @@ export async function processLiveSmsEvent(
     if (aiResult.hasError === true) {
       return createResult(
         "ai_failed",
-        smsFingerprint,
+        confirmedSmsFingerprint,
         EMPTY_TRANSACTIONS,
         aiResult.isRetryable !== false
       );
     }
 
-    options.markRecentlyProcessed?.(smsFingerprint);
+    options.markRecentlyProcessed?.(confirmedSmsFingerprint);
 
     if (aiResult.transactions.length === 0) {
-      return createResult("ignored", smsFingerprint);
+      return createResult("ignored", confirmedSmsFingerprint);
     }
 
-    return createResult("parsed", smsFingerprint, aiResult.transactions);
+    return createResult(
+      "parsed",
+      confirmedSmsFingerprint,
+      aiResult.transactions
+    );
   } finally {
-    inFlightSmsFingerprints.delete(smsFingerprint);
+    inFlightSmsFingerprints.delete(confirmedSmsFingerprint);
   }
 }

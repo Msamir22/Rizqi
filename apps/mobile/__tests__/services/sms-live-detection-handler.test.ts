@@ -176,6 +176,51 @@ describe("sms-live-detection-handler notification actions", () => {
     );
   });
 
+  it("restores the SMS date when confirming a serialized notification payload", async () => {
+    initializeDetectionActionHandler();
+    const parsed = createParsedSmsTransaction();
+    const serializedPayload = createPayload({
+      ...parsed,
+      date: parsed.date.toISOString(),
+    } as unknown as ParsedSmsTransaction);
+
+    await getRegisteredHandler()("CONFIRM", serializedPayload);
+
+    expect(mockCreateTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        date: new Date("2026-05-03T12:00:00.000Z"),
+      })
+    );
+  });
+
+  it("passes the SMS fingerprint when confirming an ATM withdrawal transfer", async () => {
+    initializeDetectionActionHandler();
+    const atmWithdrawal = {
+      ...createParsedSmsTransaction(),
+      isAtmWithdrawal: true,
+    };
+
+    await getRegisteredHandler()("CONFIRM", createPayload(atmWithdrawal));
+
+    expect(mockCreateSmsAtmTransfer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        smsFingerprint: "hash-1",
+        senderDisplayName: "NBE",
+      })
+    );
+    expect(mockCreateTransaction).not.toHaveBeenCalled();
+  });
+
+  it("does not write financial records when discarding a notification", async () => {
+    initializeDetectionActionHandler();
+
+    await getRegisteredHandler()("DISCARD", createPayload());
+
+    expect(mockCreateTransaction).not.toHaveBeenCalled();
+    expect(mockCreateSmsAtmTransfer).not.toHaveBeenCalled();
+    expect(mockHasExistingSmsFingerprint).not.toHaveBeenCalled();
+  });
+
   it("does not save again when an SMS fingerprint already exists", async () => {
     mockHasExistingSmsFingerprint.mockResolvedValueOnce(true);
     initializeDetectionActionHandler();
@@ -226,6 +271,25 @@ describe("sms-live-detection-handler notification actions", () => {
 
     await expect(isLiveDetectionEnabled()).resolves.toBe(false);
     await expect(isAutoConfirmEnabled()).resolves.toBe(false);
+  });
+
+  it("keeps live detection and auto-confirm preferences scoped to the current user", async () => {
+    mockGetCurrentUserId.mockResolvedValue("user-1");
+    await setLiveDetectionEnabled(true);
+    await setAutoConfirm(true);
+
+    mockGetCurrentUserId.mockResolvedValue("user-2");
+
+    await expect(isLiveDetectionEnabled()).resolves.toBe(false);
+    await expect(isAutoConfirmEnabled()).resolves.toBe(false);
+
+    await setLiveDetectionEnabled(false);
+    await setAutoConfirm(false);
+
+    mockGetCurrentUserId.mockResolvedValue("user-1");
+
+    await expect(isLiveDetectionEnabled()).resolves.toBe(true);
+    await expect(isAutoConfirmEnabled()).resolves.toBe(true);
   });
 
   it("keeps stored live detection enabled when SMS and notification permissions are granted", async () => {

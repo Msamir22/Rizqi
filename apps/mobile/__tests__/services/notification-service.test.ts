@@ -4,11 +4,11 @@ import * as Notifications from "expo-notifications";
 import {
   ACTION_CONFIRM,
   ACTION_DISCARD,
-  clearHandledNotificationKeysForTests,
   getNotificationPermissionStatus,
   hasNotificationPermission,
   openNotificationSettings,
   registerNotificationActionHandler,
+  resetNotificationServiceForTests,
   showTransactionCreatedNotification,
   requestNotificationPermission,
   requestNotificationPermissionStatus,
@@ -26,7 +26,9 @@ jest.mock("expo-notifications", () => ({
   addNotificationResponseReceivedListener: jest.fn(() => ({
     remove: jest.fn(),
   })),
+  clearLastNotificationResponseAsync: jest.fn(() => Promise.resolve()),
   dismissNotificationAsync: jest.fn(() => Promise.resolve()),
+  getLastNotificationResponseAsync: jest.fn(() => Promise.resolve(null)),
   getPermissionsAsync: jest.fn(),
   requestPermissionsAsync: jest.fn(),
   scheduleNotificationAsync: jest.fn(),
@@ -57,6 +59,14 @@ const mockDismissNotificationAsync =
 const mockAddNotificationResponseReceivedListener =
   Notifications.addNotificationResponseReceivedListener as jest.MockedFunction<
     typeof Notifications.addNotificationResponseReceivedListener
+  >;
+const mockGetLastNotificationResponseAsync =
+  Notifications.getLastNotificationResponseAsync as jest.MockedFunction<
+    typeof Notifications.getLastNotificationResponseAsync
+  >;
+const mockClearLastNotificationResponseAsync =
+  Notifications.clearLastNotificationResponseAsync as jest.MockedFunction<
+    typeof Notifications.clearLastNotificationResponseAsync
   >;
 
 function getScheduledNotificationInput(): Parameters<
@@ -143,8 +153,9 @@ function createPermissionStatus({
 
 describe("notification-service", () => {
   beforeEach(() => {
+    resetNotificationServiceForTests();
     jest.clearAllMocks();
-    clearHandledNotificationKeysForTests();
+    mockGetLastNotificationResponseAsync.mockResolvedValue(null);
     Object.defineProperty(Platform, "OS", {
       configurable: true,
       value: originalPlatformOS,
@@ -268,6 +279,32 @@ describe("notification-service", () => {
       );
     });
 
+    it("keeps SMS notification actions foreground-capable for killed-app responses", async () => {
+      mockGetPermissionsAsync.mockResolvedValueOnce(
+        createPermissionStatus({ granted: true })
+      );
+
+      await showTransactionNotification(
+        createParsedSmsTransaction(),
+        "account-1",
+        "MainCIBAccount"
+      );
+
+      expect(Notifications.setNotificationCategoryAsync).toHaveBeenCalledWith(
+        "SMS_TRANSACTION",
+        [
+          expect.objectContaining({
+            identifier: ACTION_CONFIRM,
+            options: expect.objectContaining({ opensAppToForeground: true }),
+          }),
+          expect.objectContaining({
+            identifier: ACTION_DISCARD,
+            options: expect.objectContaining({ opensAppToForeground: true }),
+          }),
+        ]
+      );
+    });
+
     it("schedules an info-only notification for auto-confirmed SMS transactions", async () => {
       mockGetPermissionsAsync.mockResolvedValueOnce(
         createPermissionStatus({ granted: true })
@@ -308,6 +345,28 @@ describe("notification-service", () => {
       })
     );
     expect(mockDismissNotificationAsync).toHaveBeenCalledWith("notification-1");
+  });
+
+  it("handles the last notification response when the app opens from a killed state", async () => {
+    mockGetLastNotificationResponseAsync.mockResolvedValueOnce(
+      createNotificationResponse(ACTION_CONFIRM, "notification-cold", "hash-cold")
+    );
+    const handler = jest.fn(() => Promise.resolve());
+
+    registerNotificationActionHandler(handler);
+    await flushPromises();
+    await flushPromises();
+
+    expect(handler).toHaveBeenCalledWith(
+      ACTION_CONFIRM,
+      expect.objectContaining({
+        resolvedAccountId: "account-1",
+      })
+    );
+    expect(mockDismissNotificationAsync).toHaveBeenCalledWith(
+      "notification-cold"
+    );
+    expect(mockClearLastNotificationResponseAsync).toHaveBeenCalledTimes(1);
   });
 
   it("dismisses a notification when the user discards it", async () => {

@@ -146,6 +146,41 @@ describe("sms-live-processor", () => {
     expect(mockParseSmsWithAi).not.toHaveBeenCalled();
   });
 
+  it("deduplicates concurrent events with the same SMS fingerprint before AI parsing", async () => {
+    let releaseDedupCheck: (() => void) | undefined;
+    mockHasExistingSmsFingerprint.mockImplementation(
+      () =>
+        new Promise<boolean>((resolve) => {
+          releaseDedupCheck = () => resolve(false);
+        })
+    );
+
+    const first = processLiveSmsEvent({
+      sender: "QNB",
+      body: "Purchase EGP 850 at Hyper Market using card ending 1234",
+      timestamp: 1778414400000,
+      deliveryMode: "foreground",
+    });
+    const second = processLiveSmsEvent({
+      sender: "QNB",
+      body: "Purchase EGP 850 at Hyper Market using card ending 1234",
+      timestamp: 1778414400000,
+      deliveryMode: "foreground",
+    });
+
+    await Promise.resolve();
+    await Promise.resolve();
+    releaseDedupCheck?.();
+
+    const results = await Promise.all([first, second]);
+
+    expect(results.map((result) => result.status).sort()).toEqual([
+      "duplicate",
+      "parsed",
+    ]);
+    expect(mockParseSmsWithAi).toHaveBeenCalledTimes(1);
+  });
+
   it("returns ai_failed when the AI parser reports a recoverable failure", async () => {
     mockParseSmsWithAi.mockResolvedValue({
       transactions: [],

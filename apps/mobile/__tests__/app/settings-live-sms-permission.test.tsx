@@ -15,6 +15,7 @@ const mockRequestLiveDetectionPermission = jest.fn<
   []
 >();
 const mockOpenSettings = jest.fn<Promise<void>, []>();
+const mockRecheckPermission = jest.fn<Promise<void>, []>();
 const mockSetLiveDetectionEnabled = jest.fn<Promise<void>, [boolean]>();
 const mockReconcileLiveDetectionPreference = jest.fn<Promise<boolean>, []>();
 const mockStartSmsListener = jest.fn<void, []>();
@@ -32,7 +33,7 @@ const mockRouterPush = jest.fn<void, [string]>();
 
 let mockSmsPermissionStatus: SmsPermissionStatus = "denied";
 let mockLiveDetectionPermissionStatus: SmsPermissionStatus = "denied";
-let appStateChangeHandler: ((status: AppStateStatus) => void) | null = null;
+let appStateChangeHandlers: Array<(status: AppStateStatus) => void> = [];
 
 jest.mock("react-native/Libraries/Modal/Modal", () => {
   function MockModal({
@@ -110,7 +111,7 @@ jest.mock("@/hooks/useSmsPermission", () => ({
     requestPermission: mockRequestPermission,
     requestLiveDetectionPermission: mockRequestLiveDetectionPermission,
     openSettings: mockOpenSettings,
-    recheckPermission: jest.fn(),
+    recheckPermission: mockRecheckPermission,
   }),
 }));
 
@@ -187,6 +188,20 @@ function renderSettings(): ReturnType<typeof render> {
   return render(<SettingsScreen />);
 }
 
+async function renderReadySettings(): Promise<ReturnType<typeof render>> {
+  const screen = renderSettings();
+  await screen.findByTestId("live-sms-detection-switch");
+  return screen;
+}
+
+function emitAppStateChange(status: AppStateStatus): void {
+  act(() => {
+    for (const handler of [...appStateChangeHandlers]) {
+      handler(status);
+    }
+  });
+}
+
 function createDeferred<T>(): {
   readonly promise: Promise<T>;
   readonly resolve: (value: T) => void;
@@ -230,17 +245,18 @@ function getLiveDetectionSwitchDisabled(
 describe("Settings live SMS permission recovery", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    appStateChangeHandler = null;
+    appStateChangeHandlers = [];
     jest
       .spyOn(AppState, "addEventListener")
       .mockImplementation((_event, handler): { remove: () => void } => {
-        appStateChangeHandler = handler as (status: AppStateStatus) => void;
+        appStateChangeHandlers.push(handler as (status: AppStateStatus) => void);
         return { remove: jest.fn() };
       });
     mockSmsPermissionStatus = "denied";
     mockLiveDetectionPermissionStatus = "undetermined";
     mockRequestPermission.mockResolvedValue("granted");
     mockRequestLiveDetectionPermission.mockResolvedValue("granted");
+    mockRecheckPermission.mockResolvedValue();
     mockReconcileLiveDetectionPreference.mockResolvedValue(false);
     mockOpenSettings.mockResolvedValue();
     mockSetLiveDetectionEnabled.mockResolvedValue();
@@ -249,8 +265,26 @@ describe("Settings live SMS permission recovery", () => {
     mockOpenNotificationSettings.mockResolvedValue();
   });
 
-  it("opens the custom SMS permission modal instead of enabling live detection immediately", async () => {
+  it("waits for stored live detection state before rendering the switch", async () => {
+    const initialReconcile = createDeferred<boolean>();
+    mockReconcileLiveDetectionPreference.mockReturnValue(
+      initialReconcile.promise
+    );
+
     const screen = renderSettings();
+
+    expect(screen.queryByTestId("live-sms-detection-switch")).toBeNull();
+    await act(async () => {
+      initialReconcile.resolve(true);
+      await Promise.resolve();
+    });
+
+    await screen.findByTestId("live-sms-detection-switch");
+    expect(getLiveDetectionSwitchValue(screen)).toBe(true);
+  });
+
+  it("opens the custom SMS permission modal instead of enabling live detection immediately", async () => {
+    const screen = await renderReadySettings();
 
     fireEvent(
       screen.getByTestId("live-sms-detection-switch"),
@@ -268,7 +302,7 @@ describe("Settings live SMS permission recovery", () => {
 
   it("keeps the switch off when stored live detection is no longer allowed by permissions", async () => {
     mockReconcileLiveDetectionPreference.mockResolvedValue(false);
-    const screen = renderSettings();
+    const screen = await renderReadySettings();
 
     await waitFor(() => {
       expect(mockReconcileLiveDetectionPreference).toHaveBeenCalledTimes(1);
@@ -280,7 +314,7 @@ describe("Settings live SMS permission recovery", () => {
 
   it("opens the custom SMS sync permission modal before requesting Android permission", async () => {
     mockSmsPermissionStatus = "undetermined";
-    const screen = renderSettings();
+    const screen = await renderReadySettings();
 
     fireEvent.press(screen.getByText("sync_new"));
 
@@ -298,7 +332,7 @@ describe("Settings live SMS permission recovery", () => {
   it("opens SMS scan after allowing SMS sync permission", async () => {
     mockSmsPermissionStatus = "undetermined";
     mockRequestPermission.mockResolvedValue("granted");
-    const screen = renderSettings();
+    const screen = await renderReadySettings();
 
     fireEvent.press(screen.getByText("sync_new"));
     fireEvent.press(await screen.findByTestId("permission-modal-primary"));
@@ -313,7 +347,7 @@ describe("Settings live SMS permission recovery", () => {
   it("keeps SMS sync recovery actionable when SMS permission can still be requested", async () => {
     mockSmsPermissionStatus = "undetermined";
     mockRequestPermission.mockResolvedValue("denied");
-    const screen = renderSettings();
+    const screen = await renderReadySettings();
 
     fireEvent.press(screen.getByText("sync_new"));
     fireEvent.press(await screen.findByTestId("permission-modal-primary"));
@@ -330,7 +364,7 @@ describe("Settings live SMS permission recovery", () => {
 
   it("opens settings from blocked SMS sync recovery", async () => {
     mockSmsPermissionStatus = "blocked";
-    const screen = renderSettings();
+    const screen = await renderReadySettings();
 
     fireEvent.press(screen.getByText("sync_new"));
 
@@ -350,8 +384,27 @@ describe("Settings live SMS permission recovery", () => {
     expect(mockRequestPermission).not.toHaveBeenCalled();
   });
 
+  it("continues the pending SMS sync after returning from settings with SMS permission granted", async () => {
+    mockSmsPermissionStatus = "blocked";
+    const screen = await renderReadySettings();
+
+    fireEvent.press(screen.getByText("sync_new"));
+    fireEvent.press(await screen.findByTestId("permission-modal-primary"));
+
+    await waitFor(() => {
+      expect(mockOpenSettings).toHaveBeenCalledTimes(1);
+    });
+
+    mockSmsPermissionStatus = "granted";
+    screen.rerender(<SettingsScreen />);
+
+    await waitFor(() => {
+      expect(mockRouterPush).toHaveBeenCalledWith("/sms-scan");
+    });
+  });
+
   it("enables live detection after retrying SMS permission successfully", async () => {
-    const screen = renderSettings();
+    const screen = await renderReadySettings();
 
     fireEvent(
       screen.getByTestId("live-sms-detection-switch"),
@@ -374,7 +427,7 @@ describe("Settings live SMS permission recovery", () => {
     mockSmsPermissionStatus = "granted";
     mockLiveDetectionPermissionStatus = "granted";
     mockGetNotificationPermissionStatus.mockResolvedValue("undetermined");
-    const screen = renderSettings();
+    const screen = await renderReadySettings();
 
     fireEvent(
       screen.getByTestId("live-sms-detection-switch"),
@@ -398,7 +451,7 @@ describe("Settings live SMS permission recovery", () => {
     mockSmsPermissionStatus = "granted";
     mockLiveDetectionPermissionStatus = "granted";
     mockGetNotificationPermissionStatus.mockResolvedValue("denied");
-    const screen = renderSettings();
+    const screen = await renderReadySettings();
 
     fireEvent(
       screen.getByTestId("live-sms-detection-switch"),
@@ -418,14 +471,14 @@ describe("Settings live SMS permission recovery", () => {
     expect(mockStartSmsListener).not.toHaveBeenCalled();
   });
 
-  it("keeps the live detection switch off while enable work is pending", async () => {
+  it("keeps the live detection switch on while enable work is pending", async () => {
     mockSmsPermissionStatus = "granted";
     mockLiveDetectionPermissionStatus = "granted";
     const notificationCheck = createDeferred<NotificationPermissionStatus>();
     mockGetNotificationPermissionStatus.mockReturnValue(
       notificationCheck.promise
     );
-    const screen = renderSettings();
+    const screen = await renderReadySettings();
 
     expect(getLiveDetectionSwitchValue(screen)).toBe(false);
 
@@ -435,7 +488,7 @@ describe("Settings live SMS permission recovery", () => {
       true
     );
 
-    expect(getLiveDetectionSwitchValue(screen)).toBe(false);
+    expect(getLiveDetectionSwitchValue(screen)).toBe(true);
     expect(getLiveDetectionSwitchDisabled(screen)).toBe(true);
     expect(mockSetLiveDetectionEnabled).not.toHaveBeenCalledWith(true);
 
@@ -453,7 +506,7 @@ describe("Settings live SMS permission recovery", () => {
     mockLiveDetectionPermissionStatus = "granted";
     mockGetNotificationPermissionStatus.mockResolvedValue("undetermined");
     mockRequestNotificationPermissionStatus.mockResolvedValue("granted");
-    const screen = renderSettings();
+    const screen = await renderReadySettings();
 
     fireEvent(
       screen.getByTestId("live-sms-detection-switch"),
@@ -473,7 +526,7 @@ describe("Settings live SMS permission recovery", () => {
     mockLiveDetectionPermissionStatus = "granted";
     mockGetNotificationPermissionStatus.mockResolvedValue("undetermined");
     mockRequestNotificationPermissionStatus.mockResolvedValue("blocked");
-    const screen = renderSettings();
+    const screen = await renderReadySettings();
 
     fireEvent(
       screen.getByTestId("live-sms-detection-switch"),
@@ -500,7 +553,7 @@ describe("Settings live SMS permission recovery", () => {
     mockLiveDetectionPermissionStatus = "granted";
     mockGetNotificationPermissionStatus.mockResolvedValue("undetermined");
     mockRequestNotificationPermissionStatus.mockResolvedValue("blocked");
-    const screen = renderSettings();
+    const screen = await renderReadySettings();
 
     fireEvent(
       screen.getByTestId("live-sms-detection-switch"),
@@ -521,7 +574,7 @@ describe("Settings live SMS permission recovery", () => {
     mockGetNotificationPermissionStatus
       .mockResolvedValueOnce("blocked")
       .mockResolvedValue("granted");
-    const screen = renderSettings();
+    const screen = await renderReadySettings();
 
     fireEvent(
       screen.getByTestId("live-sms-detection-switch"),
@@ -532,13 +585,11 @@ describe("Settings live SMS permission recovery", () => {
 
     await waitFor(() => {
       expect(mockOpenNotificationSettings).toHaveBeenCalledTimes(1);
-      expect(appStateChangeHandler).not.toBeNull();
+      expect(appStateChangeHandlers.length).toBeGreaterThan(0);
     });
 
-    act(() => {
-      appStateChangeHandler?.("background");
-      appStateChangeHandler?.("active");
-    });
+    emitAppStateChange("background");
+    emitAppStateChange("active");
 
     await waitFor(() => {
       expect(mockSetLiveDetectionEnabled).toHaveBeenCalledWith(true);
@@ -546,9 +597,46 @@ describe("Settings live SMS permission recovery", () => {
     expect(mockStartSmsListener).toHaveBeenCalledTimes(1);
   });
 
+  it("does not let stored-state reconciliation turn the switch off during notification settings recovery", async () => {
+    const staleReconcile = createDeferred<boolean>();
+    mockSmsPermissionStatus = "granted";
+    mockLiveDetectionPermissionStatus = "granted";
+    mockReconcileLiveDetectionPreference
+      .mockResolvedValueOnce(false)
+      .mockReturnValue(staleReconcile.promise);
+    mockGetNotificationPermissionStatus
+      .mockResolvedValueOnce("blocked")
+      .mockResolvedValue("granted");
+    const screen = await renderReadySettings();
+
+    fireEvent(
+      screen.getByTestId("live-sms-detection-switch"),
+      "valueChange",
+      true
+    );
+    fireEvent.press(await screen.findByTestId("permission-modal-primary"));
+
+    await waitFor(() => {
+      expect(mockOpenNotificationSettings).toHaveBeenCalledTimes(1);
+    });
+
+    emitAppStateChange("background");
+    emitAppStateChange("active");
+
+    await waitFor(() => {
+      expect(mockSetLiveDetectionEnabled).toHaveBeenCalledWith(true);
+    });
+
+    staleReconcile.resolve(false);
+
+    await waitFor(() => {
+      expect(getLiveDetectionSwitchValue(screen)).toBe(true);
+    });
+  });
+
   it("keeps SMS recovery actionable when SMS permission is denied but can be requested again", async () => {
     mockRequestLiveDetectionPermission.mockResolvedValue("denied");
-    const screen = renderSettings();
+    const screen = await renderReadySettings();
 
     fireEvent(
       screen.getByTestId("live-sms-detection-switch"),
@@ -571,7 +659,7 @@ describe("Settings live SMS permission recovery", () => {
   it("opens the Allow SMS modal when live SMS permission can still be requested", async () => {
     mockSmsPermissionStatus = "granted";
     mockLiveDetectionPermissionStatus = "undetermined";
-    const screen = renderSettings();
+    const screen = await renderReadySettings();
 
     fireEvent(
       screen.getByTestId("live-sms-detection-switch"),
@@ -592,7 +680,7 @@ describe("Settings live SMS permission recovery", () => {
   it("opens SMS settings recovery when live SMS permission can no longer be requested", async () => {
     mockSmsPermissionStatus = "granted";
     mockLiveDetectionPermissionStatus = "blocked";
-    const screen = renderSettings();
+    const screen = await renderReadySettings();
 
     fireEvent(
       screen.getByTestId("live-sms-detection-switch"),
@@ -612,7 +700,7 @@ describe("Settings live SMS permission recovery", () => {
 
   it("switches to Open Settings recovery when Android blocks the SMS prompt", async () => {
     mockRequestLiveDetectionPermission.mockResolvedValue("blocked");
-    const screen = renderSettings();
+    const screen = await renderReadySettings();
 
     fireEvent(
       screen.getByTestId("live-sms-detection-switch"),
@@ -633,7 +721,7 @@ describe("Settings live SMS permission recovery", () => {
   it("opens device settings from the blocked recovery modal", async () => {
     mockSmsPermissionStatus = "granted";
     mockLiveDetectionPermissionStatus = "blocked";
-    const screen = renderSettings();
+    const screen = await renderReadySettings();
 
     fireEvent(
       screen.getByTestId("live-sms-detection-switch"),
@@ -650,7 +738,11 @@ describe("Settings live SMS permission recovery", () => {
   it("enables live detection after returning from settings with SMS permission granted", async () => {
     mockSmsPermissionStatus = "granted";
     mockLiveDetectionPermissionStatus = "blocked";
-    const screen = renderSettings();
+    mockRecheckPermission.mockImplementation(() => {
+      mockLiveDetectionPermissionStatus = "granted";
+      return Promise.resolve();
+    });
+    const screen = await renderReadySettings();
 
     fireEvent(
       screen.getByTestId("live-sms-detection-switch"),
@@ -663,12 +755,42 @@ describe("Settings live SMS permission recovery", () => {
       expect(mockOpenSettings).toHaveBeenCalledTimes(1);
     });
 
-    mockLiveDetectionPermissionStatus = "granted";
-    screen.rerender(<SettingsScreen />);
+    emitAppStateChange("background");
+    emitAppStateChange("active");
+
+    await waitFor(() => {
+      expect(mockRecheckPermission).toHaveBeenCalledTimes(1);
+    });
 
     await waitFor(() => {
       expect(mockSetLiveDetectionEnabled).toHaveBeenCalledWith(true);
     });
     expect(mockStartSmsListener).toHaveBeenCalledTimes(1);
+  });
+
+  it("reopens SMS settings recovery after returning without granting SMS permission", async () => {
+    mockSmsPermissionStatus = "granted";
+    mockLiveDetectionPermissionStatus = "blocked";
+    const screen = await renderReadySettings();
+
+    fireEvent(
+      screen.getByTestId("live-sms-detection-switch"),
+      "valueChange",
+      true
+    );
+    fireEvent.press(await screen.findByTestId("permission-modal-primary"));
+
+    await waitFor(() => {
+      expect(mockOpenSettings).toHaveBeenCalledTimes(1);
+    });
+
+    emitAppStateChange("background");
+    emitAppStateChange("active");
+
+    expect(
+      await screen.findByText("sms_permission_blocked_title")
+    ).toBeTruthy();
+    expect(mockSetLiveDetectionEnabled).not.toHaveBeenCalledWith(true);
+    expect(mockStartSmsListener).not.toHaveBeenCalled();
   });
 });
