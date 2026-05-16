@@ -1,0 +1,46 @@
+appId: com.monyvi.app
+---
+# Journey 02: User grants SMS for SMS sync, then enables live detection.
+# After READ_SMS is granted by sync, live detection should clearly explain that
+# it also needs permission to receive new SMS messages, then continue to the
+# notification step.
+
+- runFlow: ensure-live-sms-disabled.yaml
+
+- runFlow: ../helpers/open-settings.yaml
+
+- scrollUntilVisible:
+    element:
+      id: "sms-sync-button"
+    direction: UP
+    centerElement: true
+
+- tapOn:
+    id: "sms-sync-button"
+
+- assertVisible: "Allow SMS sync?"
+- tapOn:
+    id: "permission-modal-primary"
+
+- extendedWaitUntil:
+    visible: "Allow"
+    timeout: 10000
+- tapOn: "Allow"
+
+- runFlow: ../helpers/open-settings.yaml
+- runFlow: scroll-to-live-sms-switch.yaml
+
+- tapOn:
+    id: "live-sms-detection-switch"
+
+- extendedWaitUntil:
+    visible: "Allow live SMS detection?"
+    timeout: 30000
+- assertVisible: "Monyvi needs permission to receive new SMS messages."
+- tapOn:
+    id: "permission-modal-primary"
+
+- extendedWaitUntil:
+    visible: "Allow notifications?"
+    timeout: 30000
+- assertVisible: "Allow notifications"

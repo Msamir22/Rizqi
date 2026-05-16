@@ -64,8 +64,9 @@ export function injectBurst(fixtureId: string, count: number = 3): number {
   const fixture = getFixtureById(fixtureId);
   if (!fixture) return 0;
 
+  const timestamp = Date.now();
   for (let i = 0; i < count; i++) {
-    injectFakeSms({ sender: fixture.sender, body: fixture.body });
+    injectFakeSms({ sender: fixture.sender, body: fixture.body, timestamp });
   }
   return count;
 }

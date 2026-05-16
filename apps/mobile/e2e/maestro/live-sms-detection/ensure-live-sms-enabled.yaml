@@ -1,0 +1,21 @@
+appId: com.monyvi.app
+---
+# Helper: enable Live SMS Detection when required permissions are already
+# granted. Leaves it enabled if it already is.
+
+- runFlow: ../helpers/open-settings.yaml
+- runFlow: scroll-to-live-sms-switch.yaml
+
+- runFlow:
+    when:
+      visible:
+        id: "live-sms-detection-switch"
+        checked: false
+    commands:
+      - tapOn:
+          id: "live-sms-detection-switch"
+      - extendedWaitUntil:
+          visible:
+            id: "live-sms-detection-switch"
+            checked: true
+          timeout: 30000

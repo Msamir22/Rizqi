@@ -1,0 +1,24 @@
+appId: com.monyvi.app
+---
+# Helper: open the Settings screen through Expo Router deep linking.
+# Preconditions: app state already contains an authenticated/onboarded user.
+
+- openLink:
+    link: monyvi://settings
+
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Settings"
+    timeout: 30000
+
+- openLink:
+    link: monyvi://settings
+
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Settings"
+    timeout: 30000
+
+- assertVisible: "Settings"

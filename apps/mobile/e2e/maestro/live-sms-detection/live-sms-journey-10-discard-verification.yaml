@@ -1,0 +1,23 @@
+appId: com.monyvi.app
+---
+# Verifies Journey 10 after the runner taps the Discard notification action.
+
+- openLink:
+    link: monyvi://transactions
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "filter-period"
+    timeout: 30000
+
+- tapOn:
+    id: "filter-period"
+- tapOn: "All Time"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "search-input"
+- inputText: "DISCARD ACTION MARKET"
+
+- waitForAnimationToEnd
+- assertNotVisible: "-82.34 EGP"

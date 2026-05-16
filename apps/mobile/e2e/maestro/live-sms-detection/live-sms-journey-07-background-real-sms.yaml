@@ -1,0 +1,8 @@
+appId: com.monyvi.app
+---
+# Journey 07: Prepare live detection for a real emulator SMS while the app is
+# backgrounded. The adb SMS send and notification assertion are performed by
+# scripts/run-live-sms-journeys.js because Maestro YAML cannot send emulator SMS.
+
+- runFlow: ensure-live-sms-enabled.yaml
+- runFlow: ensure-live-sms-auto-confirm-disabled.yaml

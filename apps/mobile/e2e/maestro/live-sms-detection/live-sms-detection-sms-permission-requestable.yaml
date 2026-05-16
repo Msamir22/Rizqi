@@ -1,0 +1,34 @@
+appId: com.monyvi.app
+---
+# Live detection asks for live SMS access with Monyvi UI before the OS prompt.
+# Preconditions: app state already contains an authenticated/onboarded user.
+
+- launchApp:
+    appId: com.monyvi.app
+    clearState: false
+    permissions:
+      sms: unset
+      notifications: deny
+
+- runFlow: ../helpers/open-settings.yaml
+
+- scrollUntilVisible:
+    element:
+      id: "live-sms-detection-switch"
+    direction: DOWN
+    centerElement: true
+
+- tapOn:
+    id: "live-sms-detection-switch"
+
+- assertVisible: "Allow live SMS detection?"
+- assertVisible: "Monyvi needs permission to receive new SMS messages."
+- assertVisible: "Allow SMS access"
+- assertVisible: "Not now"
+
+- tapOn: "Not now"
+
+- assertNotVisible: "Allow live SMS detection?"
+- assertVisible:
+    id: "live-sms-detection-switch"
+    checked: false

@@ -1,0 +1,36 @@
+appId: com.monyvi.app
+---
+# CI helper: sign in with the configured E2E test account, then finish
+# onboarding if this is the account's first local launch.
+
+- launchApp:
+    appId: com.monyvi.app
+    clearState: false
+
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: "Welcome to Monyvi"
+    commands:
+      - tapOn: "Email address"
+      - inputText: ${MAESTRO_E2E_EMAIL}
+      - tapOn: "Password"
+      - inputText: ${MAESTRO_E2E_PASSWORD}
+      - tapOn: "Sign in"
+      - extendedWaitUntil:
+          visible: "Home|Choose your primary currency|Transactions|Settings"
+          timeout: 120000
+
+- runFlow:
+    when:
+      visible: "Choose your primary currency"
+    commands:
+      - tapOn: "Confirm"
+      - extendedWaitUntil:
+          visible: "Home|Transactions|Settings"
+          timeout: 120000
+
+- extendedWaitUntil:
+    visible: "Home|Transactions|Settings"
+    timeout: 120000

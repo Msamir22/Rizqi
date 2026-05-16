@@ -1,0 +1,6 @@
+appId: com.monyvi.app
+---
+# Journey 13: If notification permission is revoked outside the app, returning
+# to Settings reconciles the stored preference and turns live detection off.
+
+- runFlow: live-sms-detection-auto-disable-revoked-notifications.yaml

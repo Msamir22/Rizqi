@@ -6,7 +6,7 @@ appId: com.monyvi.app
 # Precondition: At least one expense transaction exists
 
 # Step 1: Launch app and navigate to Transactions
-- runFlow: setup.yaml
+- runFlow: ../helpers/setup.yaml
 
 # Step 2: Wait for transaction list to load
 - waitForAnimationToEnd

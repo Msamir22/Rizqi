@@ -1,0 +1,8 @@
+appId: com.monyvi.app
+---
+# Journey 15: A real emulator SMS is received after the app process is killed
+# without force-stopping the package. The runner taps Confirm on the Android
+# notification, then verifies the saved transaction after reopening the app.
+
+- runFlow: ensure-live-sms-enabled.yaml
+- runFlow: ensure-live-sms-auto-confirm-disabled.yaml

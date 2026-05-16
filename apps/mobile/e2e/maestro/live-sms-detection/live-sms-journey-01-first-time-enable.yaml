@@ -1,0 +1,39 @@
+appId: com.monyvi.app
+---
+# Journey 01: First-time enable live SMS detection.
+# User sees Monyvi SMS copy, grants SMS, sees Monyvi notification copy, grants
+# notifications, and the switch turns on immediately.
+
+- runFlow: ../helpers/open-settings.yaml
+- runFlow: scroll-to-live-sms-switch.yaml
+
+- tapOn:
+    id: "live-sms-detection-switch"
+
+- assertVisible: "Allow live SMS detection?"
+- assertVisible: "Allow SMS access"
+- tapOn:
+    id: "permission-modal-primary"
+
+- extendedWaitUntil:
+    visible: "Allow"
+    timeout: 10000
+- tapOn: "Allow"
+
+- extendedWaitUntil:
+    visible: "Allow notifications?"
+    timeout: 30000
+- assertVisible: "Allow notifications"
+- tapOn:
+    id: "permission-modal-primary"
+
+- extendedWaitUntil:
+    visible: "Allow"
+    timeout: 10000
+- tapOn: "Allow"
+
+- extendedWaitUntil:
+    visible:
+      id: "live-sms-detection-switch"
+      checked: true
+    timeout: 30000
