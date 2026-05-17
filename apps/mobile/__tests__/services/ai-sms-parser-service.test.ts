@@ -117,6 +117,23 @@ describe("ai-sms-parser-service parser strategy", () => {
     expect(result.transactions[0]?.counterparty).toBe("CARREFOUR CAIRO");
   });
 
+  it("wraps fixture parser failures in the normal parse error result", async () => {
+    process.env.EXPO_PUBLIC_MONYVI_TEST_MODE = "e2e";
+    process.env.EXPO_PUBLIC_AI_SMS_PARSER_MODE = "fixture";
+
+    const result = await parseSmsWithAi([candidate("nbe_debit_purchase")], {
+      categories: [],
+      supportedCurrencies: ["EGP", "USD"],
+    });
+
+    expect(mockInvoke).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      transactions: [],
+      hasError: true,
+      isRetryable: true,
+    });
+  });
+
   it("fails closed when fixture mode is requested outside E2E mode", async () => {
     process.env.EXPO_PUBLIC_AI_SMS_PARSER_MODE = "fixture";
 

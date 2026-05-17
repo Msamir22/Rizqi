@@ -367,14 +367,14 @@ export async function parseSmsWithAi(
   const emptyResult: AiParseResult = { transactions: [], hasError: false };
   if (candidates.length === 0) return emptyResult;
 
-  if (shouldUseFixtureSmsParser()) {
-    return parseSmsWithFixtureAi(candidates, context, onProgress);
-  }
-
-  // Build validation set once for the entire parse session
-  const validCategoryMap = buildCategoryMap(context.categories);
-
   try {
+    if (shouldUseFixtureSmsParser()) {
+      return await parseSmsWithFixtureAi(candidates, context, onProgress);
+    }
+
+    // Build validation set once for the entire parse session
+    const validCategoryMap = buildCategoryMap(context.categories);
+
     // Build the lookup map: messageId → candidate
     const candidateMap = new Map<string, SmsCandidate>();
     const allMessages: readonly MessagePayload[] = candidates.map((c) => {

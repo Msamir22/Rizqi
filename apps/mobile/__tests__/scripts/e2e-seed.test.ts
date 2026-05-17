@@ -1,6 +1,7 @@
 import {
   E2E_TABLE_DELETE_ORDER,
   getE2eSeedConfig,
+  resetE2eData,
   seedE2eData,
 } from "../../scripts/e2e-seed";
 
@@ -98,20 +99,129 @@ describe("e2e-seed script helpers", () => {
 
     expect(operations).toContain("update-user:user-e2e");
   });
+
+  it("resets scoped rows without reseeding fixture data", async () => {
+    const operations: string[] = [];
+    const client = createMockClient(operations);
+
+    await resetE2eData(client, {
+      ...getE2eSeedConfig({
+        E2E_SUPABASE_MODE: "local",
+        E2E_LOCAL_JWT_SECRET: "local-test-jwt-secret-with-enough-length",
+        MAESTRO_E2E_EMAIL: "e2e@monyvi.test",
+        MAESTRO_E2E_PASSWORD: "Password123!",
+      }),
+      userId: "user-e2e",
+    });
+
+    expect(operations).toContain("delete:transactions:user_id:user-e2e");
+    expect(operations).toContain("delete:accounts:user_id:user-e2e");
+    expect(operations).not.toContain("upsert:profiles:user-e2e");
+    expect(operations).not.toContain("upsert:accounts:3");
+    expect(operations).not.toContain("upsert:transactions:2");
+    expect(operations).not.toContain("upsert:transfers:1");
+  });
+
+  it("finds an existing E2E auth user after the first auth page", async () => {
+    const operations: string[] = [];
+    const client = createMockClient(operations, {
+      authPages: [
+        Array.from({ length: 1000 }, (_, index) => ({
+          id: `user-other-${index}`,
+          email: `other-${index}@monyvi.test`,
+        })),
+        [{ id: "user-e2e", email: "e2e@monyvi.test" }],
+      ],
+    });
+
+    await seedE2eData(client, {
+      ...getE2eSeedConfig({
+        E2E_SUPABASE_MODE: "local",
+        E2E_LOCAL_JWT_SECRET: "local-test-jwt-secret-with-enough-length",
+        MAESTRO_E2E_EMAIL: "e2e@monyvi.test",
+        MAESTRO_E2E_PASSWORD: "Password123!",
+      }),
+    });
+
+    expect(operations).toContain("list-users:1");
+    expect(operations).toContain("list-users:2");
+    expect(operations).toContain("update-user:user-e2e");
+    expect(operations).not.toContain("create-user:e2e@monyvi.test");
+  });
+
+  it("derives seeded row ids from the target user", async () => {
+    const firstUserOperations: string[] = [];
+    const secondUserOperations: string[] = [];
+
+    await seedE2eData(createMockClient(firstUserOperations), {
+      ...getE2eSeedConfig({
+        E2E_SUPABASE_MODE: "local",
+        E2E_LOCAL_JWT_SECRET: "local-test-jwt-secret-with-enough-length",
+        MAESTRO_E2E_EMAIL: "e2e@monyvi.test",
+        MAESTRO_E2E_PASSWORD: "Password123!",
+      }),
+      userId: "user-e2e-one",
+    });
+    await seedE2eData(createMockClient(secondUserOperations), {
+      ...getE2eSeedConfig({
+        E2E_SUPABASE_MODE: "local",
+        E2E_LOCAL_JWT_SECRET: "local-test-jwt-secret-with-enough-length",
+        MAESTRO_E2E_EMAIL: "e2e@monyvi.test",
+        MAESTRO_E2E_PASSWORD: "Password123!",
+      }),
+      userId: "user-e2e-two",
+    });
+
+    const firstAccountIds = firstUserOperations.find((operation) =>
+      operation.startsWith("upsert-ids:accounts:")
+    );
+    const secondAccountIds = secondUserOperations.find((operation) =>
+      operation.startsWith("upsert-ids:accounts:")
+    );
+
+    expect(firstAccountIds).toBeDefined();
+    expect(secondAccountIds).toBeDefined();
+    expect(firstAccountIds).not.toBe(secondAccountIds);
+  });
 });
 
-function createMockClient(operations: string[]): unknown {
+interface MockUser {
+  readonly id: string;
+  readonly email: string;
+}
+
+interface MockClientOptions {
+  readonly authPages?: readonly (readonly MockUser[])[];
+}
+
+function createMockClient(
+  operations: string[],
+  options: MockClientOptions = {}
+): unknown {
+  const authPages = options.authPages ?? [
+    [{ id: "user-e2e", email: "e2e@monyvi.test" }],
+  ];
+
   return {
     auth: {
       admin: {
-        listUsers: () =>
-          Promise.resolve({
-            data: { users: [{ id: "user-e2e", email: "e2e@monyvi.test" }] },
+        listUsers: ({ page = 1 }: { readonly page?: number } = {}) => {
+          operations.push(`list-users:${page}`);
+          return Promise.resolve({
+            data: { users: authPages[page - 1] ?? [] },
             error: null,
-          }),
+          });
+        },
         updateUserById: (userId: string) => {
           operations.push(`update-user:${userId}`);
           return Promise.resolve({ error: null });
+        },
+        createUser: ({ email }: { readonly email: string }) => {
+          operations.push(`create-user:${email}`);
+          return Promise.resolve({
+            data: { user: { id: "user-created", email } },
+            error: null,
+          });
         },
       },
     },
@@ -127,6 +237,16 @@ function createMockClient(operations: string[]): unknown {
           ? `${rows.length}`
           : String(rows.user_id ?? "unknown");
         operations.push(`upsert:${table}:${marker}`);
+        if (Array.isArray(rows)) {
+          const ids = rows
+            .map((row) =>
+              typeof row === "object" && row !== null && "id" in row
+                ? String(row.id)
+                : "unknown"
+            )
+            .join(",");
+          operations.push(`upsert-ids:${table}:${ids}`);
+        }
         return {
           select: () => ({
             single: () => Promise.resolve({ data: rows, error: null }),

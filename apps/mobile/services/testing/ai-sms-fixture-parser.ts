@@ -67,12 +67,41 @@ function mapFixtureTransactions(
     });
 }
 
+function getFixtureTransactionKey(transaction: ParsedSmsTransaction): string {
+  return JSON.stringify({
+    smsFingerprint: transaction.smsFingerprint,
+    amount: transaction.amount,
+    currency: transaction.currency,
+    type: transaction.type,
+    counterparty: transaction.counterparty ?? null,
+    date: transaction.date.getTime(),
+    categoryId: transaction.categoryId,
+  });
+}
+
+function pushUniqueTransactions(
+  target: ParsedSmsTransaction[],
+  seenTransactions: Set<string>,
+  transactions: readonly ParsedSmsTransaction[]
+): void {
+  for (const transaction of transactions) {
+    const key = getFixtureTransactionKey(transaction);
+    if (seenTransactions.has(key)) {
+      continue;
+    }
+
+    seenTransactions.add(key);
+    target.push(transaction);
+  }
+}
+
 export function parseSmsWithFixtureAi(
   candidates: readonly SmsCandidate[],
   context: ParseSmsContext,
   onProgress?: (progress: AiParseProgress) => void
 ): Promise<AiParseResult> {
   const transactions: ParsedSmsTransaction[] = [];
+  const seenTransactions = new Set<string>();
 
   for (const candidate of candidates) {
     const fixture = findFixture(candidate);
@@ -86,7 +115,11 @@ export function parseSmsWithFixtureAi(
       });
     }
 
-    transactions.push(...mapFixtureTransactions(candidate, fixture, context));
+    pushUniqueTransactions(
+      transactions,
+      seenTransactions,
+      mapFixtureTransactions(candidate, fixture, context)
+    );
   }
 
   onProgress?.({
