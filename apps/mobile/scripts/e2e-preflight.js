@@ -71,9 +71,7 @@ const authReadyMarkers = [
 
 function appendAndroidPlatform(url) {
   const parsedUrl = new URL(url);
-  if (!parsedUrl.searchParams.has("platform")) {
-    parsedUrl.searchParams.set("platform", "android");
-  }
+  parsedUrl.searchParams.set("platform", "android");
   return parsedUrl.toString();
 }
 
