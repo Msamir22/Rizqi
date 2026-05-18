@@ -26,6 +26,8 @@ const actionProbeMarkers = [
   "BACKGROUND CONFIRM MARKET",
   "CLOSED CONFIRM MARKET",
 ];
+const releaseOnlyJourneyIds = new Set(["15"]);
+const isReleaseRun = process.env.E2E_RELEASE_BUILD === "1";
 
 function clearPermissionFlags(permission) {
   adb(
@@ -547,7 +549,6 @@ function clearLiveSmsActionProbeRows() {
   ].join(" ");
 
   adb(["shell", "run-as", appId, "sqlite3", "watermelon.db"], {
-    allowFailure: true,
     capture: true,
     input: sql,
   });
@@ -816,14 +817,38 @@ const journeys = {
   },
 };
 
+function compareJourneyIds(left, right) {
+  return Number(left) - Number(right);
+}
+
+function getDefaultJourneyIds() {
+  if (isReleaseRun) {
+    return [...releaseOnlyJourneyIds].sort(compareJourneyIds);
+  }
+
+  return Object.keys(journeys)
+    .filter((id) => !releaseOnlyJourneyIds.has(id))
+    .sort(compareJourneyIds);
+}
+
+function normalizeJourneyId(id) {
+  return id.padStart(2, "0");
+}
+
+function logInfo(event, fields) {
+  process.stdout.write(
+    `${JSON.stringify({ level: "info", event, ...fields })}\n`
+  );
+}
+
 async function main() {
   applyLocalE2eDefaults();
 
   const requested = process.argv.slice(2);
   const selected =
     requested.length > 0
-      ? requested.map((id) => id.padStart(2, "0"))
-      : Object.keys(journeys);
+      ? requested.map(normalizeJourneyId)
+      : getDefaultJourneyIds();
 
   await bootstrapCleanAuthenticatedSession();
 
@@ -833,14 +858,14 @@ async function main() {
       throw new Error(`Unknown live SMS journey: ${id}`);
     }
 
-    console.log(`\n=== Live SMS journey ${id}: ${journey.flow} ===`);
+    logInfo("liveSmsJourney.started", { id, flow: journey.flow });
     journey.prepare();
     forceStopApp();
     await ensureE2eAppReady();
     runFlow(journey.flow);
     await journey.after?.();
     collapseSystemUi();
-    console.log(`✓ Live SMS journey ${id} passed`);
+    logInfo("liveSmsJourney.passed", { id, flow: journey.flow });
   }
 }
 

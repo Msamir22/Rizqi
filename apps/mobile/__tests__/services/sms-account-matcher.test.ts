@@ -295,14 +295,13 @@ describe("sms-account-matcher - source-aware transaction matching", () => {
 
   it("matches SMS review rows against every bank detail on the same account", async () => {
     const batches: Array<ReadonlyMap<number, AccountMatch>> = [];
+    const qnbTransaction = {
+      originLabel: "QNB",
+      cardLast4: "5566",
+    };
 
     await matchTransactionsBatched(
-      [
-        tx({
-          originLabel: "QNB",
-          cardLast4: "5566",
-        }),
-      ],
+      [tx(qnbTransaction)],
       "user-1",
       20,
       (batch) => batches.push(batch),

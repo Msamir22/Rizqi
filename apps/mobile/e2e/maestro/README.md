@@ -41,6 +41,13 @@ npm run e2e:sms-sync:local
 npm run e2e:live-sms:local -- 16
 ```
 
+To target a specific connected emulator or device:
+
+```powershell
+$env:DEVICE="emulator-5554"; npm run e2e:device -- e2e/maestro/transactions/create-transaction.yaml
+npm run e2e:device -- --device emulator-5554 e2e/maestro/transactions/create-transaction.yaml
+```
+
 > **First time?** See the full setup in
 > [/.agent/workflows/maestro.md](/.agent/workflows/maestro.md)
 

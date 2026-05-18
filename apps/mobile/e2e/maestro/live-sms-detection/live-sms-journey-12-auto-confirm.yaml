@@ -29,9 +29,10 @@ appId: com.monyvi.app
     visible: "Live detection log count: 1"
     timeout: 60000
 
+# Pull down the notification shade to verify the auto-confirm notification.
 - swipe:
-    start: 500, 0
-    end: 500, 1100
+    start: 50%, 0%
+    end: 50%, 90%
     duration: 500
 
 - extendedWaitUntil:

@@ -40,10 +40,17 @@ describe("sms-reader-service", (): void => {
           1,
           JSON.stringify([
             {
-              _id: "sms-1",
+              _id: "10",
               address: "NBE",
               body: "Purchase EGP 100 at Shop",
               date: "not-a-date",
+              read: 0,
+            },
+            {
+              _id: "11",
+              address: "NBE",
+              body: "Purchase EGP 100 at Shop",
+              date: "also-not-a-date",
               read: 0,
             },
           ])
@@ -54,8 +61,11 @@ describe("sms-reader-service", (): void => {
     const firstRead = await readSmsInbox();
     const secondRead = await readSmsInbox();
 
-    expect(firstRead[0]?.date).toBe(0);
-    expect(secondRead[0]?.date).toBe(0);
+    expect(firstRead[0]?.date).toBeGreaterThan(Date.UTC(2024, 0, 1) - 1);
+    expect(firstRead[1]?.date).toBeGreaterThan(firstRead[0]?.date ?? 0);
+    expect(secondRead.map((message) => message.date)).toEqual(
+      firstRead.map((message) => message.date)
+    );
   });
 
   it("uses deterministic fixture inbox messages in E2E fixture mode", async (): Promise<void> => {

@@ -19,5 +19,5 @@ appId: com.monyvi.app
     id: "permission-modal-primary"
 
 - extendedWaitUntil:
-    visible: "Monyvi"
+    visible: "Permissions"
     timeout: 30000

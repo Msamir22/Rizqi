@@ -32,7 +32,7 @@
     "e2e:live-sms": "node scripts/run-live-sms-journeys.js",
     "e2e:live-sms:local": "cross-env E2E_SUPABASE_MODE=local EXPO_PUBLIC_MONYVI_TEST_MODE=e2e EXPO_PUBLIC_AI_SMS_PARSER_MODE=fixture node scripts/run-live-sms-journeys.js",
     "e2e:live-sms:release": "cross-env E2E_RELEASE_BUILD=1 node scripts/run-live-sms-journeys.js",
-    "e2e:device": "node scripts/run-maestro.js --device emulator-5554 test",
+    "e2e:device": "node scripts/run-maestro.js test",
     "e2e:studio": "node scripts/run-maestro.js studio",
     "test": "jest",
     "test:coverage": "jest --coverage",

@@ -1,4 +1,6 @@
 appId: com.monyvi.app
+env:
+  LIVE_SMS_PERMISSION_TIMEOUT: ${MAESTRO_LIVE_SMS_PERMISSION_TIMEOUT || 10000}
 ---
 # Journey 01: First-time enable live SMS detection.
 # User sees Monyvi SMS copy, grants SMS, sees Monyvi notification copy, grants
@@ -22,7 +24,7 @@ appId: com.monyvi.app
 
 - extendedWaitUntil:
     visible: "Allow notifications?"
-    timeout: 30000
+    timeout: ${LIVE_SMS_PERMISSION_TIMEOUT}
 - assertVisible: "Allow notifications"
 - tapOn:
     id: "permission-modal-primary"
@@ -36,4 +38,4 @@ appId: com.monyvi.app
     visible:
       id: "live-sms-detection-switch"
       checked: true
-    timeout: 30000
+    timeout: ${LIVE_SMS_PERMISSION_TIMEOUT}
