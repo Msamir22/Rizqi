@@ -13,6 +13,8 @@ npx supabase start
 npm run mobile:e2e-fixture
 
 # 3. Seed deterministic E2E data, then run a test through the wrapper
+#    Seeding requires local E2E credentials in the current shell:
+#    E2E_LOCAL_JWT_SECRET, MAESTRO_E2E_EMAIL, MAESTRO_E2E_PASSWORD
 npm run e2e:seed
 npm run e2e:flow:local -- e2e/maestro/transactions/create-transaction.yaml
 ```
@@ -76,6 +78,7 @@ credentials.
 | `EXPO_PUBLIC_AI_SMS_PARSER_MODE` | Set to `fixture` to avoid live AI parsing in E2E   |
 | `MAESTRO_E2E_EMAIL`              | Seeded E2E test account email                      |
 | `MAESTRO_E2E_PASSWORD`           | Seeded E2E test account password                   |
+| `E2E_LOCAL_JWT_SECRET`           | Local Supabase JWT secret for generated local keys |
 | `SUPABASE_SERVICE_ROLE_KEY`      | Seed/reset access; local mode has a safe local key |
 
 By default the CI suite runs live SMS journeys `01` through `14` plus `16`.

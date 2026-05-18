@@ -122,21 +122,34 @@ jobs:
         run: npm ci
         timeout-minutes: 30
 
+      - name: Start local Supabase
+        run: npx supabase start
+        timeout-minutes: 10
+
       - name: Prepare local E2E environment
         run: |
+          npx supabase status -o env | grep -E '^(ANON_KEY|SERVICE_ROLE_KEY)=' > supabase.env
+          . ./supabase.env
+          MAESTRO_E2E_EMAIL="e2e-${GITHUB_RUN_ID}@monyvi.test"
+          MAESTRO_E2E_PASSWORD="$(node -e "console.log(require('node:crypto').randomBytes(24).toString('base64url'))")"
+          EXPO_PUBLIC_SUPABASE_ANON_KEY="$ANON_KEY"
+          SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
+          export MAESTRO_E2E_EMAIL MAESTRO_E2E_PASSWORD EXPO_PUBLIC_SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY
           node - <<'NODE' >> "$GITHUB_ENV"
           const { getE2eSeedConfig } = require("./apps/mobile/scripts/e2e-seed");
-          const config = getE2eSeedConfig({ E2E_SUPABASE_MODE: "local" });
+          const config = getE2eSeedConfig({
+            E2E_SUPABASE_MODE: "local",
+            EXPO_PUBLIC_SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+            SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+            MAESTRO_E2E_EMAIL: process.env.MAESTRO_E2E_EMAIL,
+            MAESTRO_E2E_PASSWORD: process.env.MAESTRO_E2E_PASSWORD,
+          });
           console.log(`EXPO_PUBLIC_SUPABASE_URL=${config.appSupabaseUrl}`);
           console.log(`EXPO_PUBLIC_SUPABASE_ANON_KEY=${config.anonKey}`);
           console.log(`SUPABASE_SERVICE_ROLE_KEY=${config.serviceRoleKey}`);
           console.log(`MAESTRO_E2E_EMAIL=${config.email}`);
           console.log(`MAESTRO_E2E_PASSWORD=${config.password}`);
           NODE
-
-      - name: Start local Supabase
-        run: npx supabase start
-        timeout-minutes: 10
 
       - name: Download Android debug APK
         uses: actions/download-artifact@v4
@@ -169,10 +182,7 @@ jobs:
           arch: x86_64
           profile: pixel_7
           disable-animations: true
-          script: |
-            adb install -r monyvi-android-debug/app-debug.apk
-            adb reverse tcp:8081 tcp:8081
-            npm run e2e:ci -w @monyvi/mobile
+          script: bash apps/mobile/scripts/run-android-e2e-ci.sh
 
       - name: Stop Metro
         if: always()
@@ -188,5 +198,6 @@ jobs:
           name: android-e2e-logs
           path: |
             metro.log
+            android-e2e-logcat.log
             ~/.maestro/tests
           retention-days: 7

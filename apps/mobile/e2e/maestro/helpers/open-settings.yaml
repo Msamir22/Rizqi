@@ -3,21 +3,22 @@ appId: com.monyvi.app
 # Helper: open the Settings screen from a loaded app shell.
 # Preconditions: app state already contains an authenticated/onboarded user.
 
-- extendedWaitUntil:
-    visible: "LANGUAGE|SMS SYNC|LIVE SMS DETECTION|Open menu"
-    timeout: 120000
-
 - runFlow:
     when:
-      visible: "Open menu"
+      notVisible:
+        id: "sms-sync-button"
     commands:
-      - tapOn: "Settings"
+      - openLink:
+          link: monyvi://settings
       - extendedWaitUntil:
-          visible: "LANGUAGE|SMS SYNC|LIVE SMS DETECTION"
+          visible:
+            id: "sms-sync-button"
           timeout: 120000
 
 - extendedWaitUntil:
-    visible: "LANGUAGE|SMS SYNC|LIVE SMS DETECTION"
+    visible:
+      id: "sms-sync-button"
     timeout: 120000
 
-- assertVisible: "LANGUAGE|SMS SYNC|LIVE SMS DETECTION"
+- assertVisible:
+    id: "sms-sync-button"

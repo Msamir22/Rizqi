@@ -16,6 +16,7 @@ import {
   registerVoiceEntry,
   unregisterVoiceEntry,
 } from "@/services/voice-entry-service";
+import { toCategoryTreeSources } from "@/utils/category-tree-source";
 import { buildCategoryTree } from "@monyvi/logic";
 import { Tabs, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo } from "react";
@@ -40,7 +41,7 @@ function TabLayoutInner(): React.ReactElement {
   const micButtonRef = useMicButtonRef();
 
   const categoryTree = useMemo(
-    () => buildCategoryTree(allCategories),
+    () => buildCategoryTree(toCategoryTreeSources(allCategories)),
     [allCategories]
   );
 

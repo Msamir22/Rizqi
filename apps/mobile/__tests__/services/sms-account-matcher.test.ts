@@ -9,6 +9,10 @@ import {
 } from "../../services/sms-account-matcher";
 import type { ReviewableTransaction } from "@monyvi/logic";
 
+type TestTransaction = ReviewableTransaction & {
+  readonly cardLast4?: string;
+};
+
 const mockQueryOwned = jest.fn();
 const mockQueryChildrenOfOwnedParents = jest.fn();
 
@@ -244,9 +248,7 @@ describe("sms-account-matcher - source-aware transaction matching", () => {
     type: "BANK",
   };
 
-  function tx(
-    overrides: Partial<ReviewableTransaction> = {}
-  ): ReviewableTransaction {
+  function tx(overrides: Partial<TestTransaction> = {}): TestTransaction {
     return {
       amount: 100,
       currency: "EGP",

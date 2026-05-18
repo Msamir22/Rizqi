@@ -1,1502 +1,429 @@
-# Monyvi - Finalized Business Decisions
-
-> **Status:** 🟢 Confirmed  
-> **Last Updated:** 2026-03-09  
-> **Purpose:** Single source of truth for all confirmed business decisions
-
----
-
-## 1. User & Authentication
-
-### 1.1 Authentication Methods
-
-| Method              | Status                                    |
-| ------------------- | ----------------------------------------- |
-| Email/Password      | ✅ Enabled                                |
-| Google Social Login | ✅ Enabled                                |
-| Apple Social Login  | 🟡 Deferred (requires Apple certificates) |
-| Facebook Login      | 🟡 Deferred (requires FB Developer setup) |
-| Phone OTP           | ❌ Not planned                            |
-
-### 1.2 Mandatory Authentication (Enforced Sign-Up/Sign-In)
-
-**Decision (2026-03-09):** Anonymous/guest authentication has been **removed**.
-All users must sign up or sign in before accessing any app features.
-
-**Rationale:** As a fintech app handling financial data, allowing anonymous
-access contradicts the security posture. Mandatory authentication ensures data
-is always tied to a recoverable account, preventing data loss on device changes.
-
-**Flow:**
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           USER JOURNEY                                   │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  1. FIRST APP LAUNCH                                                    │
-│     └─→ Auth screen shown — Google OAuth or Email/Password              │
-│     └─→ No "Skip" or "Continue as Guest" option                         │
-│                                                                          │
-│  2. SIGN UP (Email/Password)                                             │
-│     └─→ Email verification required before app access                   │
-│     └─→ "Forgot Password?" link available in Sign In mode               │
-│                                                                          │
-│  3. SIGN UP (Google OAuth)                                               │
-│     └─→ Immediate access after OAuth completes                          │
-│                                                                          │
-│  4. RETURNING USER                                                       │
-│     └─→ Session persists — goes directly to dashboard                   │
-│     └─→ Expired session → Auth screen → sign in again                   │
-│                                                                          │
-│  5. LOGOUT                                                               │
-│     └─→ Session fully cleared (no anonymous fallback)                   │
-│     └─→ Returns to Auth screen                                          │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-**What was removed:**
-
-- `signInAnonymously()` — no anonymous Supabase sessions
-- `isAnonymous` flag — no anonymous user state
-- `resolveUser()` — no anonymous-to-authenticated verification
-- Sign-up prompt system (bottom sheet, banner, usage-based triggers)
-- Identity linking / conflict resolution logic
-- `useOAuthLink` hook (anonymous-to-linked flow)
-- `useSignUpPrompt` hook and `signup-prompt-service`
-
-### 1.3 User Profile Fields
-
-| Field        | Required                | Notes                     |
-| ------------ | ----------------------- | ------------------------- |
-| `id` (UUID)  | ✅                      | Supabase auth.users       |
-| `email`      | ✅ (required at signup) | All users have email      |
-| `name`       | 🟡 TBD                  | Display name for greeting |
-| `avatar_url` | 🟡 TBD                  | From Google profile?      |
-
----
-
-## 2. Database Architecture
-
-### 2.1 Design Pattern
-
-**Supertype/Subtype (Polymorphic) Pattern**
-
-Separates data into two distinct domains:
-
-- **Accounts Domain:** Liquid, spendable money (transactions flow here)
-- **Assets Domain:** Investments, net worth tracking (value calculated from
-  market rates)
-
-### 2.2 Accounts Domain (Spendable Money)
-
-#### Table: `accounts`
-
-Parent table for all liquid money containers.
-
-| Column       | Type        | Required | Description                                  |
-| ------------ | ----------- | -------- | -------------------------------------------- |
-| `id`         | UUID        | ✅       | Primary Key                                  |
-| `user_id`    | UUID        | ✅       | FK → auth.users                              |
-| `name`       | TEXT        | ✅       | User-defined name (e.g., "Main CIB Account") |
-| `type`       | ENUM        | ✅       | `'CASH'`, `'BANK'`, `'DIGITAL_WALLET'`       |
-| `balance`    | DECIMAL     | ✅       | Current available money                      |
-| `currency`   | CHAR(3)     | ✅       | ISO code: `'EGP'`, `'USD'`, `'EUR'`          |
-| `created_at` | TIMESTAMPTZ | ✅       | Auto-generated                               |
-| `updated_at` | TIMESTAMPTZ | ✅       | For WatermelonDB sync                        |
-| `deleted`    | BOOLEAN     | ✅       | Soft delete for sync (default: false)        |
-
-**Business Rules:**
-
-- One account = one currency
-- Same name can exist with different currencies (e.g., "CIB USD", "CIB EGP")
-- Balance updated automatically when transactions are added
-- **Name uniqueness (2026-03-18):** Account names must be unique per user +
-  currency combination (case-insensitive). Two EGP accounts cannot both be named
-  "Cash", but an EGP "Cash" and a USD "Cash" can coexist.
-- **Default account (2026-03-18):** At most one account per user can be marked
-  `is_default = TRUE`. Setting a new default automatically clears the previous
-  one. A `UNIQUE` partial index enforces this at the DB level:
-  `UNIQUE (user_id) WHERE is_default = TRUE AND deleted = FALSE`.
-- **Delete cascade scope (2026-03-18):** Deleting an account cascade-deletes
-  (soft): bank_details, transactions, transfers (both directions), debts, and
-  recurring_payments linked to that account.
-- **Default account on delete (2026-03-18):** When a default account is deleted,
-  the `is_default` flag is cleared — no other account is auto-promoted. The user
-  must set a new default manually.
-- **Balance adjustment tracking (2026-03-18):** When editing an account's
-  balance, the user can choose to either silently update the balance or track
-  the difference as a balance adjustment transaction (under the internal
-  `balance_adj_income` / `balance_adj_expense` categories). These categories are
-  marked `is_internal = TRUE` and hidden from the category picker.
-- **Read-only fields (2026-03-18):** Account type and currency cannot be changed
-  after creation. They are displayed as read-only on the edit screen.
-
-#### Table: `bank_details`
-
-Child table for accounts where `type = 'BANK'`. 1-to-Many (one bank account can
-have multiple cards).
-
-| Column            | Type        | Required | Description                                     |
-| ----------------- | ----------- | -------- | ----------------------------------------------- |
-| `id`              | UUID        | ✅       | Primary Key                                     |
-| `account_id`      | UUID        | ✅       | FK → accounts.id                                |
-| `bank_name`       | TEXT        | ✅       | e.g., "HSBC", "National Bank of Egypt"          |
-| `card_last_4`     | VARCHAR(4)  | ✅       | For SMS auto-detection                          |
-| `sms_sender_name` | TEXT        | ❌       | Optional: e.g., "CIB", "NBE" (for SMS matching) |
-| `account_number`  | TEXT        | ❌       | Optional IBAN                                   |
-| `created_at`      | TIMESTAMPTZ | ✅       | Auto-generated                                  |
-| `updated_at`      | TIMESTAMPTZ | ✅       | For WatermelonDB sync                           |
-| `deleted`         | BOOLEAN     | ✅       | Soft delete for sync (default: false)           |
-
-**SMS Matching Logic:**
-
-1. SMS arrives from sender "CIB" with transaction for card "\*\*\*\*1234"
-2. Look for `bank_details` where:
-   - `card_last_4` = "1234" AND
-   - (`sms_sender_name` = "CIB" OR `bank_name` CONTAINS "CIB")
-3. If match → create transaction for linked account
-
-### 2.3 Assets Domain (Wealth & Investments)
-
-#### Table: `assets`
-
-Parent table for all investment holdings.
-
-| Column           | Type        | Required | Description                                  |
-| ---------------- | ----------- | -------- | -------------------------------------------- |
-| `id`             | UUID        | ✅       | Primary Key                                  |
-| `user_id`        | UUID        | ✅       | FK → auth.users                              |
-| `name`           | TEXT        | ✅       | User-defined name (e.g., "My Wedding Gold")  |
-| `type`           | ENUM        | ✅       | `'METAL'`, `'CRYPTO'`, `'REAL_ESTATE'`       |
-| `is_liquid`      | BOOLEAN     | ✅       | Can be sold instantly? (emergency fund calc) |
-| `purchase_price` | DECIMAL     | ✅       | Cost basis (total paid)                      |
-| `purchase_date`  | DATE        | ✅       | When acquired                                |
-| `currency`       | CHAR(3)     | ✅       | Currency used to purchase                    |
-| `notes`          | TEXT        | ❌       | Optional user notes                          |
-| `created_at`     | TIMESTAMPTZ | ✅       | Auto-generated                               |
-| `updated_at`     | TIMESTAMPTZ | ✅       | For WatermelonDB sync                        |
-| `deleted`        | BOOLEAN     | ✅       | Soft delete for sync                         |
-
-**Note:** `current_value` is NOT stored. It's calculated:
-
-- Metals: `weight_grams * live_market_rate`
-- Crypto: 🟡 TBD (future)
-- Real Estate: 🟡 TBD (future, possibly manual entry)
-
-#### Table: `asset_metals`
-
-Child table for assets where `type = 'METAL'`.
-
-| Column         | Type        | Required | Description                        |
-| -------------- | ----------- | -------- | ---------------------------------- |
-| `id`           | UUID        | ✅       | Primary Key                        |
-| `asset_id`     | UUID        | ✅       | FK → assets.id                     |
-| `metal_type`   | ENUM        | ✅       | `'GOLD'`, `'SILVER'`, `'PLATINUM'` |
-| `weight_grams` | DECIMAL     | ✅       | Physical weight                    |
-| `purity_karat` | SMALLINT    | ✅       | 24 for pure gold, 21, 18, etc.     |
-| `item_form`    | TEXT        | ❌       | "Coin", "Bar", "Jewelry"           |
-| `created_at`   | TIMESTAMPTZ | ✅       | Auto-generated                     |
-
-**Valuation Formula:**
-`current_value = weight_grams * (purity_karat / 24) * live_gold_price_per_gram`
-
-### 2.4 Historical Snapshots
-
-#### Table: `daily_snapshot_balance`
-
-Stores end-of-day account balances for charts and trends.
-
-| Column               | Type        | Description                          |
-| -------------------- | ----------- | ------------------------------------ |
-| `id`                 | UUID        | Primary Key                          |
-| `user_id`            | UUID        | FK → auth.users                      |
-| `snapshot_date`      | DATE        | The date of snapshot                 |
-| `total_accounts_egp` | DECIMAL     | Sum of all accounts converted to EGP |
-| `breakdown`          | JSONB       | Per-account breakdown                |
-| `created_at`         | TIMESTAMPTZ | Auto-generated                       |
-
-**Trigger:** Daily at 11 PM
-
-#### Table: `daily_snapshot_assets`
-
-Stores end-of-day asset valuations.
-
-| Column             | Type        | Description                        |
-| ------------------ | ----------- | ---------------------------------- |
-| `id`               | UUID        | Primary Key                        |
-| `user_id`          | UUID        | FK → auth.users                    |
-| `snapshot_date`    | DATE        | The date of snapshot               |
-| `total_assets_egp` | DECIMAL     | Sum of all assets converted to EGP |
-| `breakdown`        | JSONB       | Per-asset breakdown with values    |
-| `created_at`       | TIMESTAMPTZ | Auto-generated                     |
-
-**Trigger:** Daily at 11 PM
-
-### 2.5 Market Rates
-
-#### Table: `market_rates` (existing)
-
-Current live rates (single row, updated every 30 mins).
-
-#### Table: `market_rates_history` (new)
-
-Historical rates for trend calculation.
-
-| Column                | Type        | Description                |
-| --------------------- | ----------- | -------------------------- |
-| `id`                  | UUID        | Primary Key                |
-| `snapshot_date`       | DATE        | Unique per day             |
-| `gold_egp_per_gram`   | DECIMAL     | Gold price at end of day   |
-| `silver_egp_per_gram` | DECIMAL     | Silver price at end of day |
-| `usd_egp`             | DECIMAL     | USD/EGP rate               |
-| `eur_egp`             | DECIMAL     | EUR/EGP rate               |
-| `created_at`          | TIMESTAMPTZ | Auto-generated             |
-
-**Trigger:** Daily at 11 PM
-
----
-
-## 3. Multi-Currency Handling
-
-| Scenario                        | Behavior                                                 |
-| ------------------------------- | -------------------------------------------------------- |
-| One bank, multiple currencies   | Create separate account per currency (same name allowed) |
-| Transaction in foreign currency | Transaction stored in account's currency                 |
-| Total balance display           | Convert all to EGP using live rates                      |
-| Supported currencies            | EGP, USD, EUR                                            |
-
----
-
-## 4. Sync Strategy
-
-### 4.1 Architecture
-
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Mobile    │ ←───│ WatermelonDB│ ←───│   Supabase  │
-│   (UI)      │     │  (Local)    │     │   (Cloud)   │
-└─────────────┘     └─────────────┘     └─────────────┘
-                          │
-                          │ push_changes() / pull_changes()
-                          ▼
-                    ┌─────────────┐
-                    │  Supabase   │
-                    │    RPC      │
-                    └─────────────┘
-```
-
-### 4.2 Sync Columns (All Tables)
-
-- `created_at` (TIMESTAMPTZ)
-- `updated_at` (TIMESTAMPTZ)
-- `deleted` (BOOLEAN, default false)
-- `user_id` (UUID, set from auth.uid())
-
-### 4.3 RLS Policies
-
-All tables: `user_id = auth.uid()` for SELECT, INSERT, UPDATE, DELETE
-
----
-
-## 5. Transaction Categories
-
-### 5.1 Category Architecture
-
-**Design:** 3-level hierarchical category system with predefined + user-defined
-categories.
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         CATEGORY HIERARCHY                                   │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  Level 1 (Main Category)     Level 2 (Subcategory)    Level 3 (Sub-sub)     │
-│  ────────────────────────    ────────────────────     ─────────────────     │
-│                                                                              │
-│  Food & Drinks           →   Drinks               →   Juice, Soda, etc.     │
-│  [SYSTEM, Required]          [SYSTEM, Required]       [USER, Optional]      │
-│                                                                              │
-│  My Custom Category      →   Custom Sub           →   Custom Detail         │
-│  [USER, Editable]            [USER, Editable]         [USER, Editable]      │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 5.2 Business Rules
-
-| Rule                                 | Description                                                           |
-| ------------------------------------ | --------------------------------------------------------------------- |
-| **L1 & L2 Predefined**               | System categories are read-only (cannot edit name/icon/delete)        |
-| **L3 User-defined Only**             | No predefined L3 categories; all are user-created                     |
-| **User Custom Categories**           | Users can add custom L1, L2, L3 categories                            |
-| **User Categories Editable**         | Only user-created categories can have name/icon changed or be deleted |
-| **System Categories Locked**         | System category names and icons cannot be modified by users           |
-| **Hide Any Level**                   | Users can hide any category (system or custom) from their list        |
-| **Transactions Reference Any Level** | Transactions can link to L1, L2, or L3 (user's choice)                |
-
-### 5.3 Table: `categories`
-
-Self-referential table for all category levels.
-
-| Column         | Type        | Required | Description                                                           |
-| -------------- | ----------- | -------- | --------------------------------------------------------------------- |
-| `id`           | UUID        | ✅       | Primary Key                                                           |
-| `user_id`      | UUID        | ❌       | NULL for system categories, set for user-created                      |
-| `parent_id`    | UUID        | ❌       | FK → categories.id (NULL for L1)                                      |
-| `system_name`  | TEXT        | ✅       | Internal identifier (immutable, lowercase_snake)                      |
-| `display_name` | TEXT        | ✅       | User-visible name (editable only for custom)                          |
-| `icon`         | TEXT        | ✅       | Icon identifier from predefined set                                   |
-| `level`        | SMALLINT    | ✅       | 1, 2, or 3                                                            |
-| `nature`       | ENUM        | ⚠️       | `'WANT'`, `'NEED'`, `'MUST'` (required for system, optional for user) |
-| `type`         | ENUM        | ❌       | `'EXPENSE'`, `'INCOME'` (NULL for container categories)               |
-| `is_system`    | BOOLEAN     | ✅       | true = predefined, false = user-created                               |
-| `is_hidden`    | BOOLEAN     | ✅       | User can hide any category (default: false)                           |
-| `is_internal`  | BOOLEAN     | ✅       | true = hidden from category picker (system-only, default: false)      |
-| `sort_order`   | SMALLINT    | ❌       | Display order within parent                                           |
-| `created_at`   | TIMESTAMPTZ | ✅       | Auto-generated                                                        |
-| `updated_at`   | TIMESTAMPTZ | ✅       | For WatermelonDB sync                                                 |
-| `deleted`      | BOOLEAN     | ✅       | Soft delete for sync (default: false)                                 |
-
-**Constraints:**
-
-- `parent_id` required when `level > 1`
-- `user_id` required when `is_system = false`
-- Unique: `(user_id, parent_id, system_name)` — prevents duplicates per user
-
-### 5.4 Table: `user_category_settings`
-
-Per-user settings for system categories (visibility and nature override).
-
-| Column        | Type        | Required | Description                                   |
-| ------------- | ----------- | -------- | --------------------------------------------- |
-| `id`          | UUID        | ✅       | Primary Key                                   |
-| `user_id`     | UUID        | ✅       | FK → auth.users                               |
-| `category_id` | UUID        | ✅       | FK → categories.id (system category)          |
-| `is_hidden`   | BOOLEAN     | ✅       | Hide this system category (default: false)    |
-| `nature`      | ENUM        | ❌       | User's override: `'WANT'`, `'NEED'`, `'MUST'` |
-| `created_at`  | TIMESTAMPTZ | ✅       | Auto-generated                                |
-| `updated_at`  | TIMESTAMPTZ | ✅       | For WatermelonDB sync                         |
-
-**Note:** This table allows users to hide system categories and override their
-`nature` value. System category names and icons remain locked. User-created
-categories store all settings directly in the `categories` table.
-
-### 5.5 Predefined Categories (Seed Data)
-
-#### Level 1: Main Categories
-
-| system_name       | display_name      | type    | nature | color     | icon |
-| ----------------- | ----------------- | ------- | ------ | --------- | ---- |
-| `food_drinks`     | Food & Drinks     | EXPENSE | NEED   | `#F59E0B` | 🍔   |
-| `transportation`  | Transportation    | EXPENSE | NEED   | `#3B82F6` | 🚌   |
-| `vehicle`         | Vehicle           | EXPENSE | WANT   | `#8B5CF6` | 🚗   |
-| `shopping`        | Shopping          | EXPENSE | WANT   | `#EC4899` | 🛒   |
-| `health_medical`  | Health & Medical  | EXPENSE | MUST   | `#EF4444` | 🏥   |
-| `utilities_bills` | Utilities & Bills | EXPENSE | MUST   | `#6366F1` | 📄   |
-| `entertainment`   | Entertainment     | EXPENSE | WANT   | `#14B8A6` | 🎉   |
-| `charity`         | Charity           | EXPENSE | WANT   | `#F472B6` | ❤️   |
-| `education`       | Education         | EXPENSE | NEED   | `#F97316` | 📚   |
-| `housing`         | Housing           | EXPENSE | MUST   | `#A855F7` | 🏠   |
-| `travel`          | Travel            | EXPENSE | WANT   | `#06B6D4` | ✈️   |
-| `income`          | Salary / Income   | INCOME  | —      | `#10B981` | 💰   |
-| `debt_loans`      | Debt / Loans      | —       | —      | `#6B7280` | 🤝   |
-| `other`           | Other             | EXPENSE | —      | `#9CA3AF` | ❓   |
-
-#### Internal Categories (System-Only)
-
-These categories are hidden from the user's category picker and are only used
-for system-generated transactions.
-
-| system_name      | display_name   | type    | icon | Purpose                          |
-| ---------------- | -------------- | ------- | ---- | -------------------------------- |
-| `asset_purchase` | Asset Purchase | EXPENSE | 📦   | Auto-created when buying assets  |
-| `asset_sale`     | Asset Sale     | INCOME  | 💵   | Auto-created when selling assets |
-
-> **Note:** Add `is_internal: BOOLEAN` flag to the `categories` table to mark
-> these as hidden from user selection.
-
-#### Level 2: Subcategories
-
-<details>
-<summary><b>Food & Drinks</b></summary>
-
-| system_name  | display_name |
-| ------------ | ------------ |
-| `groceries`  | Groceries    |
-| `restaurant` | Restaurant   |
-| `coffee_tea` | Coffee & Tea |
-| `snacks`     | Snacks       |
-| `drinks`     | Drinks       |
-| `food_other` | Other        |
-
-</details>
-
-<details>
-<summary><b>Transportation</b></summary>
-
-| system_name         | display_name      |
-| ------------------- | ----------------- |
-| `public_transport`  | Public Transport  |
-| `private_transport` | Private Transport |
-| `transport_other`   | Other             |
-
-</details>
-
-<details>
-<summary><b>Vehicle</b></summary>
-
-| system_name           | display_name | Notes                        |
-| --------------------- | ------------ | ---------------------------- |
-| `fuel`                | Fuel         |                              |
-| `parking`             | Parking      |                              |
-| `rental`              | Rental       |                              |
-| `license_fees`        | License Fees |                              |
-| `vehicle_tax`         | Tax          |                              |
-| `traffic_fine`        | Traffic Fine |                              |
-| `vehicle_buy`         | Buy          | 🟡 Future: migrate to assets |
-| `vehicle_sell`        | Sell         | 🟡 Future: migrate to assets |
-| `vehicle_maintenance` | Maintenance  |                              |
-| `vehicle_other`       | Other        |                              |
-
-</details>
-
-<details>
-<summary><b>Shopping</b></summary>
-
-| system_name              | display_name             |
-| ------------------------ | ------------------------ |
-| `clothes`                | Clothes                  |
-| `electronics_appliances` | Electronics & Appliances |
-| `accessories`            | Accessories              |
-| `footwear`               | Footwear                 |
-| `bags`                   | Bags                     |
-| `kids_baby`              | Kids & Baby              |
-| `beauty`                 | Beauty                   |
-| `home_garden`            | Home & Garden            |
-| `pets`                   | Pets                     |
-| `sports_fitness`         | Sports & Fitness         |
-| `toys_games`             | Toys & Games             |
-| `wedding`                | Wedding                  |
-| `detergents`             | Detergents               |
-| `decorations`            | Decorations              |
-| `personal_care`          | Personal Care            |
-| `shopping_other`         | Other                    |
-
-</details>
-
-<details>
-<summary><b>Health & Medical</b></summary>
-
-| system_name    | display_name |
-| -------------- | ------------ |
-| `doctor`       | Doctor       |
-| `medicine`     | Medicine     |
-| `surgery`      | Surgery      |
-| `dental`       | Dental       |
-| `health_other` | Other        |
-
-</details>
-
-<details>
-<summary><b>Utilities & Bills</b></summary>
-
-| system_name           | display_name        |
-| --------------------- | ------------------- |
-| `electricity`         | Electricity         |
-| `water`               | Water               |
-| `internet`            | Internet            |
-| `phone`               | Phone               |
-| `gas`                 | Gas                 |
-| `trash`               | Trash               |
-| `online_subscription` | Online Subscription |
-| `streaming`           | Streaming           |
-| `taxes`               | Taxes               |
-| `utilities_other`     | Other               |
-
-</details>
-
-<details>
-<summary><b>Entertainment</b></summary>
-
-| system_name           | display_name     |
-| --------------------- | ---------------- |
-| `trips_holidays`      | Trips & Holidays |
-| `events`              | Events           |
-| `tickets`             | Tickets          |
-| `entertainment_other` | Other            |
-
-</details>
-
-<details>
-<summary><b>Charity</b></summary>
-
-| system_name     | display_name |
-| --------------- | ------------ |
-| `donations`     | Donations    |
-| `fundraising`   | Fundraising  |
-| `charity_gifts` | Gifts        |
-| `charity_other` | Other        |
-
-</details>
-
-<details>
-<summary><b>Education</b></summary>
-
-| system_name       | display_name |
-| ----------------- | ------------ |
-| `books`           | Books        |
-| `tuition`         | Tuition      |
-| `education_fees`  | Fees         |
-| `education_other` | Other        |
-
-</details>
-
-<details>
-<summary><b>Housing</b></summary>
-
-| system_name           | display_name          | Notes                        |
-| --------------------- | --------------------- | ---------------------------- |
-| `rent`                | Rent                  |                              |
-| `housing_maintenance` | Maintenance & Repairs |                              |
-| `housing_tax`         | Tax                   |                              |
-| `housing_buy`         | Buy                   | 🟡 Future: migrate to assets |
-| `housing_sell`        | Sell                  | 🟡 Future: migrate to assets |
-| `housing_other`       | Other                 |                              |
-
-</details>
-
-<details>
-<summary><b>Travel</b></summary>
-
-| system_name       | display_name    |
-| ----------------- | --------------- |
-| `vacation`        | Vacation        |
-| `business_travel` | Business Travel |
-| `holiday`         | Holiday         |
-| `travel_other`    | Other           |
-
-</details>
-
-<details>
-<summary><b>Salary / Income</b></summary>
-
-| system_name       | display_name    |
-| ----------------- | --------------- |
-| `salary`          | Salary          |
-| `bonus`           | Bonus           |
-| `commission`      | Commission      |
-| `refund`          | Refund          |
-| `loan_income`     | Loan            |
-| `gift_income`     | Gift            |
-| `check`           | Check           |
-| `rental_income`   | Rental Income   |
-| `freelance`       | Freelance       |
-| `business_income` | Business Income |
-| `income_other`    | Other           |
-
-</details>
-
-<details>
-<summary><b>Debt / Loans</b></summary>
-
-| system_name               | display_name              | type    |
-| ------------------------- | ------------------------- | ------- |
-| `lent_money`              | Lent Money                | EXPENSE |
-| `borrowed_money`          | Borrowed Money            | INCOME  |
-| `debt_repayment_paid`     | Debt Repayment (Paid)     | EXPENSE |
-| `debt_repayment_received` | Debt Repayment (Received) | INCOME  |
-| `debt_other`              | Other                     | —       |
-
-</details>
-
-<details>
-<summary><b>Other (Fallback)</b></summary>
-
-| system_name     | display_name |
-| --------------- | ------------ |
-| `uncategorized` | Other        |
-
-</details>
-
----
-
-## 6. Debts & Loans
-
-### 6.1 Architecture
-
-Debts track money you **lent to** or **borrowed from** someone. They can
-optionally have **recurring payments** attached (for installments).
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         DEBT ARCHITECTURE                                    │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  ┌──────────────┐                    ┌────────────────────────┐             │
-│  │    DEBTS     │ ──────────────────→│  RECURRING PAYMENTS    │             │
-│  └──────────────┘   can HAVE         └────────────────────────┘             │
-│        │                                       │                            │
-│        │ linked via                            │ linked via                 │
-│        ↓                                       ↓                            │
-│  ┌──────────────┐                    ┌────────────────────────┐             │
-│  │ TRANSACTIONS │                    │     TRANSACTIONS       │             │
-│  └──────────────┘                    └────────────────────────┘             │
-│                                                                              │
-│  A debt CAN have a recurring payment attached (for installments)             │
-│  A recurring payment MAY or MAY NOT be linked to a debt                      │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 6.2 Table: `debts`
-
-| Column               | Type        | Required | Description                                                  |
-| -------------------- | ----------- | -------- | ------------------------------------------------------------ |
-| `id`                 | UUID        | ✅       | Primary Key                                                  |
-| `user_id`            | UUID        | ✅       | FK → auth.users                                              |
-| `type`               | ENUM        | ✅       | `'LENT'`, `'BORROWED'`                                       |
-| `party_name`         | TEXT        | ✅       | Who you lent to / borrowed from                              |
-| `original_amount`    | DECIMAL     | ✅       | Initial debt amount                                          |
-| `outstanding_amount` | DECIMAL     | ✅       | Remaining balance (updated on repayments)                    |
-| `account_id`         | UUID        | ✅       | FK → accounts.id (which account was affected)                |
-| `notes`              | TEXT        | ❌       | Optional notes                                               |
-| `date`               | DATE        | ✅       | When the debt was created                                    |
-| `due_date`           | DATE        | ❌       | When repayment is expected (default: 1 year)                 |
-| `status`             | ENUM        | ✅       | `'ACTIVE'`, `'PARTIALLY_PAID'`, `'SETTLED'`, `'WRITTEN_OFF'` |
-| `created_at`         | TIMESTAMPTZ | ✅       | Auto-generated                                               |
-| `updated_at`         | TIMESTAMPTZ | ✅       | For WatermelonDB sync                                        |
-| `deleted`            | BOOLEAN     | ✅       | Soft delete for sync (default: false)                        |
-
-### 6.3 Transaction Linking
-
-Add to `transactions` table:
-
-| Column           | Type | Required | Description                           |
-| ---------------- | ---- | -------- | ------------------------------------- |
-| `linked_debt_id` | UUID | ❌       | FK → debts.id (for debt transactions) |
-
-### 6.4 Flow: Debt Form
-
-**Option A: Create New Transaction**
-
-1. User opens Debt Form → fills party_name, amount, account, date, due_date
-2. System creates debt record + transaction (EXPENSE for lent, INCOME for
-   borrowed)
-3. Transaction linked via `linked_debt_id`
-
-**Option B: Link Existing Transaction**
-
-1. User opens Debt Form → selects from existing transactions with debt
-   categories
-2. System creates debt record linked to selected transaction
-
-### 6.5 Repayments
-
-When a repayment transaction is created and linked to a debt:
-
-1. `outstanding_amount` decreases by repayment amount
-2. If `outstanding_amount = 0` → `status = 'SETTLED'`
-3. If partial → `status = 'PARTIALLY_PAID'`
-
----
-
-## 7. Recurring Payments
-
-### 7.1 Overview
-
-Recurring payments support scheduled transactions that repeat on a defined
-frequency. Users choose whether to auto-create transactions or receive reminder
-notifications.
-
-### 7.2 Table: `recurring_payments`
-
-| Column            | Type        | Required | Description                                                               |
-| ----------------- | ----------- | -------- | ------------------------------------------------------------------------- |
-| `id`              | UUID        | ✅       | Primary Key                                                               |
-| `user_id`         | UUID        | ✅       | FK → auth.users                                                           |
-| `name`            | TEXT        | ✅       | Name (e.g., "Netflix", "Car Installment")                                 |
-| `amount`          | DECIMAL     | ✅       | Payment amount                                                            |
-| `type`            | ENUM        | ✅       | `'EXPENSE'`, `'INCOME'`                                                   |
-| `category_id`     | UUID        | ✅       | FK → categories.id                                                        |
-| `account_id`      | UUID        | ✅       | Which account to debit/credit                                             |
-| `frequency`       | ENUM        | ✅       | `'DAILY'`, `'WEEKLY'`, `'MONTHLY'`, `'QUARTERLY'`, `'YEARLY'`, `'CUSTOM'` |
-| `frequency_value` | SMALLINT    | ❌       | For CUSTOM: every X days (e.g., 14 = bi-weekly)                           |
-| `start_date`      | DATE        | ✅       | When recurring starts                                                     |
-| `end_date`        | DATE        | ❌       | NULL = no end date (runs indefinitely)                                    |
-| `next_due_date`   | DATE        | ✅       | Next occurrence (auto-calculated)                                         |
-| `action`          | ENUM        | ✅       | `'AUTO_CREATE'`, `'NOTIFY'`                                               |
-| `status`          | ENUM        | ✅       | `'ACTIVE'`, `'PAUSED'`, `'COMPLETED'`                                     |
-| `linked_debt_id`  | UUID        | ❌       | FK → debts.id (for installment debts)                                     |
-| `notes`           | TEXT        | ❌       | Optional notes                                                            |
-| `created_at`      | TIMESTAMPTZ | ✅       | Auto-generated                                                            |
-| `updated_at`      | TIMESTAMPTZ | ✅       | For WatermelonDB sync                                                     |
-| `deleted`         | BOOLEAN     | ✅       | Soft delete (default: false)                                              |
-
-### 7.3 Transaction Linking
-
-Add to `transactions` table:
-
-| Column                | Type | Required | Description                                            |
-| --------------------- | ---- | -------- | ------------------------------------------------------ |
-| `linked_recurring_id` | UUID | ❌       | FK → recurring_payments.id (auto-created transactions) |
-
-### 7.4 Status Flow
-
-```
-ACTIVE ──→ PAUSED ──→ ACTIVE (can resume)
-   │
-   └──→ COMPLETED (when end_date reached or manually completed)
-```
-
-### 7.5 Action Behavior
-
-**AUTO_CREATE:**
-
-1. Background job checks `next_due_date <= today` AND `status = 'ACTIVE'`
-2. Creates transaction with `linked_recurring_id`
-3. Updates `next_due_date` based on frequency
-4. If `linked_debt_id` → updates debt's `outstanding_amount`
-
-**NOTIFY:**
-
-1. Send local notification on due date (timing configurable in user settings)
-2. User clicks → opens transaction form pre-filled
-3. User confirms → creates transaction, updates `next_due_date`
-
-### 7.6 Examples
-
-| Name            | Type    | Frequency | Action      | Linked Debt? |
-| --------------- | ------- | --------- | ----------- | ------------ |
-| Netflix         | EXPENSE | MONTHLY   | AUTO_CREATE | No           |
-| Salary          | INCOME  | MONTHLY   | AUTO_CREATE | No           |
-| Car Installment | EXPENSE | QUARTERLY | AUTO_CREATE | Yes          |
-| Rent            | EXPENSE | MONTHLY   | NOTIFY      | No           |
-
----
-
-## 8. Transfers
-
-### 8.1 Overview
-
-Transfers move money between the user's own accounts. They are stored as a
-single record (not two transactions).
-
-### 8.2 Table: `transfers`
-
-| Column             | Type        | Required | Description                                   |
-| ------------------ | ----------- | -------- | --------------------------------------------- |
-| `id`               | UUID        | ✅       | Primary Key                                   |
-| `user_id`          | UUID        | ✅       | FK → auth.users                               |
-| `from_account_id`  | UUID        | ✅       | FK → accounts.id (source)                     |
-| `to_account_id`    | UUID        | ✅       | FK → accounts.id (destination)                |
-| `amount`           | DECIMAL     | ✅       | Amount transferred (source currency)          |
-| `currency`         | CHAR(3)     | ✅       | Currency of source account                    |
-| `exchange_rate`    | DECIMAL     | ❌       | Rate used if cross-currency (NULL if same)    |
-| `converted_amount` | DECIMAL     | ❌       | Amount in destination currency (if different) |
-| `notes`            | TEXT        | ❌       | Optional notes                                |
-| `date`             | DATE        | ✅       | When the transfer occurred                    |
-| `created_at`       | TIMESTAMPTZ | ✅       | Auto-generated                                |
-| `updated_at`       | TIMESTAMPTZ | ✅       | For WatermelonDB sync                         |
-| `deleted`          | BOOLEAN     | ✅       | Soft delete for sync (default: false)         |
-
-### 8.3 Cross-Currency Transfer Example
-
-```
-Transfer: $100 USD → EGP account
-- amount: 100
-- currency: USD
-- exchange_rate: 50.00
-- converted_amount: 5000
-```
-
-### 8.4 Business Rules
-
-- Transfer only between user's **own accounts**
-- Source account balance **decreases** by `amount`
-- Destination account balance **increases** by `converted_amount` (or `amount`
-  if same currency)
-- Transfers are **NOT transactions** (separate table, not in spending reports)
-
----
-
-## 9. Budgets
-
-### 9.1 Overview
-
-Budgets help users track and limit their spending. Two types supported:
-
-- **Category Budget:** Limit spending on a specific category
-- **Global Budget:** Limit total spending across all categories
-
-### 9.2 Table: `budgets`
-
-| Column            | Type        | Required | Description                                              |
-| ----------------- | ----------- | -------- | -------------------------------------------------------- |
-| `id`              | UUID        | ✅       | Primary Key                                              |
-| `user_id`         | UUID        | ✅       | FK → auth.users                                          |
-| `name`            | TEXT        | ✅       | User-defined name (e.g., "Food Budget", "Monthly Limit") |
-| `type`            | ENUM        | ✅       | `'CATEGORY'`, `'GLOBAL'`                                 |
-| `category_id`     | UUID        | ❌       | FK → categories.id (required if type = CATEGORY)         |
-| `amount`          | DECIMAL     | ✅       | Budget limit                                             |
-| `currency`        | CHAR(3)     | ✅       | Budget currency (default: EGP)                           |
-| `period`          | ENUM        | ✅       | `'WEEKLY'`, `'MONTHLY'`, `'CUSTOM'`                      |
-| `period_start`    | DATE        | ❌       | For CUSTOM: start date                                   |
-| `period_end`      | DATE        | ❌       | For CUSTOM: end date                                     |
-| `alert_threshold` | SMALLINT    | ✅       | Percentage at which to alert (e.g., 80, 90) - Custom     |
-| `status`          | ENUM        | ✅       | `'ACTIVE'`, `'PAUSED'`                                   |
-| `paused_at`       | TIMESTAMPTZ | ❌       | When budget was last paused (NULL when active)           |
-| `pause_intervals` | JSONB       | ✅       | Historical pause windows `[{from, to}]` (default: `[]`)  |
-| `created_at`      | TIMESTAMPTZ | ✅       | Auto-generated                                           |
-| `updated_at`      | TIMESTAMPTZ | ✅       | For WatermelonDB sync                                    |
-| `deleted`         | BOOLEAN     | ✅       | Soft delete for sync (default: false)                    |
-
-### 9.3 Business Rules
-
-- **Category Budget:** Sums expense transactions matching `category_id`
-  (including subcategories)
-- **Global Budget:** Sums all expense transactions in period
-- Alert triggered when `spent / amount >= alert_threshold / 100`
-- Multiple budgets can exist (one global + multiple category budgets)
-- **Paused budgets (Freeze & Exclude):** When a budget is paused, `paused_at`
-  records the pause timestamp. Transactions during the paused window are
-  **permanently excluded** from spending calculations. On resume, the interval
-  `{from: paused_at, to: now}` is appended to `pause_intervals` and `paused_at`
-  is cleared. All filtering is done at query time using the recorded intervals.
-
-### 9.4 Period Calculation
-
-| Period  | Behavior                                                         |
-| ------- | ---------------------------------------------------------------- |
-| WEEKLY  | Sunday to Saturday                                               |
-| MONTHLY | 1st to last day of month                                         |
-| CUSTOM  | User-defined `period_start` to `period_end` (one-time or repeat) |
-
----
-
-## 10. Net Worth & Dashboard
-
-### 10.1 Net Worth Calculation
-
-```
-Net Worth = Total Accounts (EGP) + Total Assets (EGP)
-```
-
-### 10.2 Real-Time Calculation via VIEW
-
-Net Worth is **calculated on-the-fly** using a PostgreSQL VIEW for accuracy.
-
-**View: `v_user_net_worth`**
-
-| Column            | Type        | Description                                 |
-| ----------------- | ----------- | ------------------------------------------- |
-| `user_id`         | UUID        | User ID from auth.users                     |
-| `total_accounts`  | DECIMAL     | Sum of all account balances (converted EGP) |
-| `total_assets`    | DECIMAL     | Sum of all asset valuations (in EGP)        |
-| `total_net_worth` | DECIMAL     | `total_accounts + total_assets`             |
-| `calculated_at`   | TIMESTAMPTZ | Current timestamp (always NOW())            |
-
-**Currency Conversion Logic:**
-
-- Accounts in USD: `balance × usd_egp` from `market_rates`
-- Accounts in EUR: `balance × eur_egp` from `market_rates`
-- Accounts in EGP: `balance` directly
-- Gold assets: `weight_grams × (purity_karat/24) × gold_egp_per_gram`
-- Silver assets: `weight_grams × (purity_karat/24) × silver_egp_per_gram`
-
-### 10.3 Daily Snapshots for Historical Data
-
-**Table: `daily_snapshot_net_worth`** (renamed from `user_net_worth_summary`)
-
-| Column            | Type        | Description                              |
-| ----------------- | ----------- | ---------------------------------------- |
-| `id`              | UUID        | Primary Key                              |
-| `user_id`         | UUID        | FK → auth.users (unique)                 |
-| `total_accounts`  | DECIMAL     | Sum of all account balances (in EGP)     |
-| `total_assets`    | DECIMAL     | Sum of all asset current values (in EGP) |
-| `total_net_worth` | DECIMAL     | `total_accounts + total_assets`          |
-| `updated_at`      | TIMESTAMPTZ | When snapshot was created                |
-
-**Snapshot Trigger:** Daily at 11 PM Cairo time (via pg_cron)
-
-### 10.4 Monthly Percentage Change
-
-**Formula:** Compare current net worth with snapshot from **30 days ago**
-
-```
-percentage_change = ((current - snapshot_30_days_ago) / snapshot_30_days_ago) × 100
-```
-
-Data source: `daily_snapshot_balance` + `daily_snapshot_assets` tables
-
----
-
-## 11. Transaction Schema (Consolidated)
-
-### 11.1 Table: `transactions`
-
-Final consolidated schema based on all business decisions:
-
-| Column                | Type        | Required | Description                                                |
-| --------------------- | ----------- | -------- | ---------------------------------------------------------- |
-| `id`                  | UUID        | ✅       | Primary Key                                                |
-| `user_id`             | UUID        | ✅       | FK → auth.users                                            |
-| `account_id`          | UUID        | ✅       | FK → accounts.id                                           |
-| `amount`              | DECIMAL     | ✅       | Transaction amount (always positive)                       |
-| `currency`            | CHAR(3)     | ✅       | Same as account currency                                   |
-| `type`                | ENUM        | ✅       | `'EXPENSE'`, `'INCOME'`                                    |
-| `category_id`         | UUID        | ✅       | FK → categories.id                                         |
-| `merchant`            | TEXT        | ❌       | Merchant/payee name                                        |
-| `note`                | TEXT        | ❌       | User notes                                                 |
-| `date`                | DATE        | ✅       | Transaction date                                           |
-| `source`              | ENUM        | ✅       | `'MANUAL'`, `'VOICE'`, `'SMS'`, `'RECURRING'`              |
-| `is_draft`            | BOOLEAN     | ✅       | True if pending user confirmation (default: false)         |
-| `linked_debt_id`      | UUID        | ❌       | FK → debts.id (for debt transactions)                      |
-| `linked_asset_id`     | UUID        | ❌       | FK → assets.id (for asset purchase/sale)                   |
-| `linked_recurring_id` | UUID        | ❌       | FK → recurring_payments.id (for auto-created transactions) |
-| `created_at`          | TIMESTAMPTZ | ✅       | Auto-generated                                             |
-| `updated_at`          | TIMESTAMPTZ | ✅       | For WatermelonDB sync                                      |
-| `deleted`             | BOOLEAN     | ✅       | Soft delete for sync (default: false)                      |
-
-### 11.2 Business Rules
-
-- **Transactions only affect `accounts`** (not assets directly)
-- `amount` is always positive; `type` determines direction
-- Account `balance` updated automatically on transaction save
-- `source = 'RECURRING'` when auto-created by recurring payments
-
----
-
-## 12. User Profiles
-
-### 12.1 Overview
-
-The `profiles` table stores user identity and preferences, synced to
-WatermelonDB for offline access.
-
-### 12.2 Table: `profiles`
-
-| Column                  | Type        | Required | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| ----------------------- | ----------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`                    | UUID        | ✅       | Primary Key (same as auth.users.id)                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| `user_id`               | UUID        | ✅       | FK → auth.users (unique)                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| `first_name`            | TEXT        | ❌       | From Google or manual sign-up                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `last_name`             | TEXT        | ❌       | From Google or manual sign-up                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `display_name`          | TEXT        | ❌       | For greeting ("Good Morning, Mohamed")                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `avatar_url`            | TEXT        | ❌       | From Google profile or custom                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `preferred_currency`    | CHAR(3)     | ✅       | Default: 'EGP'                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `preferred_language`    | TEXT        | ❌       | `'en'` or `'ar'`. Overwritten atomically inside `confirmCurrencyAndOnboard` with the user's currently-active runtime language (which already reflects any pre-auth `LanguageSwitcherPill` choice). The device-scoped `@monyvi/intro-locale-override` AsyncStorage key is NOT cleared afterward (FR-030).                                                                                                                                                                                          |
-| `theme`                 | ENUM        | ✅       | `'LIGHT'`, `'DARK'`, `'SYSTEM'` (default: SYSTEM)                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| `sms_detection_enabled` | BOOLEAN     | ✅       | Toggle SMS auto-detection (default: false)                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `onboarding_completed`  | BOOLEAN     | ✅       | **Routing signal** (FR-031). Flipped `true` atomically inside `confirmCurrencyAndOnboard` alongside the cash-account create + currency + language writes. The routing gate in `apps/mobile/app/index.tsx` reads this field to decide Currency-step vs dashboard. `preferred_currency` cannot be used as the routing signal because it's `NOT NULL DEFAULT 'EGP'` — always populated, so it cannot distinguish "never onboarded" from "legitimately chose EGP". (Decision: 2026-04-22, issue #246) |
-| ~~`slides_viewed`~~     | ~~BOOLEAN~~ | ❌       | **DEPRECATED** — moved to AsyncStorage (`intro:seen`, device-scoped). The slides are pre-auth (no profile to write to at the moment of completion), so a per-user profile column was the wrong source of truth. Column to be dropped in a follow-up migration. (Decision: 2026-04-22, issue #246)                                                                                                                                                                                                 |
-| `notification_settings` | JSONB       | ❌       | Per-notification-type toggles                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `setup_guide_completed` | BOOLEAN     | ✅       | Dashboard setup-guide card dismissal flag (default: false)                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `onboarding_flags`      | JSONB       | ✅       | Per-profile first-run tooltip dismissal markers (default: `'{}'`). Keys: `cash_account_tooltip_dismissed`, `voice_tooltip_seen`. Added by feature 026.                                                                                                                                                                                                                                                                                                                                            |
-| `created_at`            | TIMESTAMPTZ | ✅       | Auto-generated                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `updated_at`            | TIMESTAMPTZ | ✅       | For WatermelonDB sync                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| `deleted`               | BOOLEAN     | ✅       | Soft delete for sync (default: false)                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-
-### 12.3 Profile Creation Flow
-
-```text
-1. User opens app → pre-auth Slides shown if AsyncStorage `intro:seen` is false
-2. User taps Sign-up CTA on slides → auth screen → sign-up succeeds
-3. System creates profile with (via the `handle_new_user` trigger + column defaults):
-   - user_id = auth.uid()
-   - preferred_currency = 'EGP' (NOT NULL DEFAULT — overwritten on Currency step)
-   - preferred_language = 'en' (NOT NULL DEFAULT — overwritten on Currency step)
-   - theme = 'SYSTEM'
-   - sms_detection_enabled = false
-   - onboarding_completed = false (flipped true atomically on Currency confirmation — THIS is the routing signal)
-   - onboarding_flags = '{}' (per-profile tooltip dismissal markers)
-
-4. User signs up with Google:
-   - first_name, last_name, display_name, avatar_url populated from Google
-
-5. User signs up with email:
-   - User enters first_name, last_name in sign-up form
-   - display_name = first_name
-```
-
-### 12.4 Onboarding Flow
-
-**Decision (2026-04-22, issue #246):** The onboarding flow has been restructured
-into a **pre-auth pitch** (slides + auto-detected language) and a **single
-required post-auth step** (currency selection). The previous 4-step post-auth
-wizard has been removed in favor of a leaner first-run experience that surfaces
-voice + SMS auto-import as the primary value props from the very first dashboard
-view, with the `OnboardingGuideCard` carrying the "complete your setup" weight
-afterward.
-
-This decision supersedes the earlier 4-step decision (2026-04-18). No production
-users existed at the time of the decision, so no migration considerations apply.
-
-#### Pre-auth (device-scoped via AsyncStorage)
-
-Gated by AsyncStorage flag `intro:seen` (boolean, device-local). Shown on the
-very first launch of the app on a given device, regardless of whether the user
-ever signs in.
-
-1. **Auto-detect language** from the device locale on first launch. Fallback to
-   `en` if device locale isn't an available app language. The selected language
-   is applied immediately to render the slides themselves.
-2. **Slides carousel** with two persistent affordances:
-   - **Language switcher** in the corner (tap to change language; persists to
-     AsyncStorage `intro:locale_override` and applies immediately).
-   - **Skip** affordance (top-right corner, subordinate weight to language
-     switcher).
-3. **Completion of slides**: AsyncStorage `intro:seen` is set to `true` ONLY
-   when the user explicitly taps Skip OR reaches the last slide. Partial views
-   (force-quit mid-carousel) do NOT count — the user gets another chance on next
-   launch.
-4. Final slide CTA: **Get Started** (or equivalent) → auth screen.
-
-Returning users on the same device with `intro:seen = true` go straight to the
-auth screen on subsequent launches — no slides, no language picker.
-
-#### Auth (unchanged scope)
-
-- Renders in `intro:locale_override` if set, else device locale.
-- This issue does not modify the auth screen itself.
-
-#### Post-auth (single required step)
-
-Routing gate at `apps/mobile/app/index.tsx` reads the profile from WatermelonDB
-after the initial pull-sync, then routes based on
-`profiles.onboarding_completed` (per FR-031):
-
-- **`onboarding_completed = false`** → show Currency step.
-  - Currency selection is required (no skip).
-  - On confirmation, `confirmCurrencyAndOnboard` performs a single atomic
-    `database.write()` that:
-    - Creates the default cash account in the chosen currency
-    - Overwrites `profiles.preferred_currency` with the chosen currency
-    - Overwrites `profiles.preferred_language` with the currently-active runtime
-      language (already reflects any `LanguageSwitcherPill` choice)
-    - Flips `profiles.onboarding_completed = true`
-  - The `@monyvi/intro-locale-override` AsyncStorage key is NOT cleared
-    afterward — it persists as a device-level preference (FR-030).
-  - Routes to dashboard.
-- **`onboarding_completed = true`** → routes directly to dashboard.
-
-**Why not `preferred_currency` as the routing signal?** The column is
-`NOT NULL DEFAULT 'EGP'` (migration 042), so it always carries a value on a
-newly-inserted profile and cannot distinguish "never onboarded" from
-"legitimately chose EGP".
-
-Sign-out is reachable from the Currency step. On confirmed sign-out, the user
-returns to pre-auth state (slides if `intro:seen = false`, auth otherwise).
-
-#### Dashboard first-run experience
-
-A new user lands on the dashboard and sees, in order:
-
-1. **SMS permission popup** (existing behavior, unchanged).
-2. **First-run tooltip** anchored to the auto-created cash account: "We set this
-   up for you — delete it if you don't track cash." Dismissible in one tap;
-   never re-appears on the same device.
-3. **`OnboardingGuideCard`** (existing component, restructured) with 4 steps in
-   order: **Add bank account → Try voice transaction → Enable SMS auto-import →
-   Set a budget**. (SMS step is hidden on iOS.) Step completion is data-derived
-   (account/transaction/budget existence), not flag-based. The card is the
-   persistent "complete your setup" surface — it replaces the dashboard Setup
-   cards previously used for the same purpose.
-
-#### Field maintenance
-
-- **`profiles.preferred_currency`** is the single routing gate for "is the user
-  onboarded." Derived state, not a separate flag.
-- **`profiles.onboarding_completed`** is set to `true` on currency confirmation
-  but NOT read by routing logic today. It is maintained for future use (e.g., a
-  future required compliance step). Documented as such to avoid stale-field
-  trap.
-- **`profiles.preferred_language`** is set on first sign-up if NULL; never
-  overwritten on subsequent sign-ins. The pre-auth language is a hint, not an
-  authority — server value wins.
-- **AsyncStorage `intro:seen`** (boolean, device-scoped) — tracks whether the
-  pre-auth slides have been completed on this device.
-- **AsyncStorage `intro:locale_override`** (string, device-scoped, optional) —
-  tracks an explicit user override of the auto-detected pre-auth language.
-- **Accepted UX trade-off**: a brief (~0.2s) language flip on first sign-in for
-  multi-device users where the server's `preferred_language` differs from the
-  pre-auth locale. No mitigation shipped; revisit if user complaints surface.
-
-#### Removed in this restructure
-
-- **`profiles.slides_viewed`** column — deprecated; source of truth moved to
-  AsyncStorage `intro:seen` (correct scope: device-local, since slides are
-  pre-auth and there's no profile to write to). Drop migration tracked as a
-  follow-up.
-- **Language step** — removed; replaced by auto-detect + corner language
-  switcher.
-- **Cash-account confirmation step** — removed; replaced by the first-run
-  dashboard tooltip.
-- **Multi-step post-auth wizard** — removed; reduced to single Currency step.
-- **AsyncStorage step cursor** — not needed (no multi-step flow).
-
-#### Legacy keys retired from the onboarding gate
-
-- `HAS_ONBOARDED_KEY` (AsyncStorage) — previously used by `index.tsx` to gate
-  onboarding. No longer read by the routing gate. The export is retained with a
-  `@deprecated` JSDoc for one release cycle.
-- `LANGUAGE_KEY` (AsyncStorage) — previously used to persist language locally.
-  No longer read for the onboarding flow. Retained with `@deprecated` JSDoc;
-  removal tracked as a follow-up.
-
----
-
-## 13. Notifications
-
-### 13.1 Overview
-
-Local notifications only (no push for MVP). SMS auto-detection triggers
-transaction confirmations.
-
-### 13.2 Notification Types
-
-| Type                    | Trigger                                         | MVP? |
-| ----------------------- | ----------------------------------------------- | ---- |
-| **SMS Transaction**     | Auto-detected transaction from bank/wallet SMS  | ✅   |
-| **Recurring Reminder**  | Due date for `action = 'NOTIFY'` recurring      | ✅   |
-| **Budget Alert**        | Spending hits `alert_threshold` percentage      | ✅   |
-| **Low Balance Warning** | Account balance below user threshold (post-MVP) | ❌   |
-
-### 13.3 SMS Sources for Auto-Detection
-
-- Bank SMS (purchase, ATM withdrawal, branch withdrawal)
-- Digital wallet SMS (Vodafone Cash, Orange Money)
-- InstaPay SMS
-
-### 13.4 User Settings (in `profiles.notification_settings`)
-
-```json
-{
-  "sms_transaction_confirmation": true,
-  "recurring_reminders": true,
-  "budget_alerts": true,
-  "low_balance_warnings": false
-}
-```
-
----
-
-## 14. Digital Wallets
-
-### 14.1 MVP Approach
-
-Digital wallets use the base `accounts` table with `type = 'DIGITAL_WALLET'`. No
-extra fields needed for MVP.
-
-### 14.2 Post-MVP Extension
-
-If needed, create `wallet_details` child table:
-
-| Column         | Type | Description                       |
-| -------------- | ---- | --------------------------------- |
-| `account_id`   | UUID | FK → accounts.id                  |
-| `phone_number` | TEXT | Wallet phone number               |
-| `provider`     | TEXT | e.g., "Vodafone Cash", "InstaPay" |
-
-**Schema is extensible** - follows same pattern as `bank_details`.
-
----
-
-## 15. Data Sync Strategy
-
-### 15.1 Conflict Resolution
-
-**Strategy:** Last Write Wins (LWW)
-
-- Simpler implementation
-- Acceptable trade-off for personal finance app
-- `updated_at` timestamp determines winner
-
-### 15.2 Sync Tables
-
-| Table                      | Syncs? | Direction          |
-| -------------------------- | ------ | ------------------ |
-| `accounts`                 | ✅     | Bidirectional      |
-| `bank_details`             | ✅     | Bidirectional      |
-| `transactions`             | ✅     | Bidirectional      |
-| `assets`                   | ✅     | Bidirectional      |
-| `asset_metals`             | ✅     | Bidirectional      |
-| `categories`               | ✅     | User-created only  |
-| `budgets`                  | ✅     | Bidirectional      |
-| `debts`                    | ✅     | Bidirectional      |
-| `recurring_payments`       | ✅     | Bidirectional      |
-| `transfers`                | ✅     | Bidirectional      |
-| `profiles`                 | ✅     | Bidirectional      |
-| `user_category_settings`   | ✅     | Bidirectional      |
-| `market_rates`             | ❌     | Read-only from API |
-| `daily_snapshot_*`         | ❌     | Server-generated   |
-| `daily_snapshot_net_worth` | ❌     | Server-generated   |
-
-### 15.3 API Layer Architecture
-
-Server-computed data is accessed via the Express API layer, not direct Supabase
-queries from the mobile app.
-
-**API Endpoints:**
-
-| Endpoint            | Method | Auth     | Description                     |
-| ------------------- | ------ | -------- | ------------------------------- |
-| `/api/rates`        | GET    | Optional | Get current market rates        |
-| `/api/rates/update` | POST   | Cron     | Update rates (internal only)    |
-| `/api/net-worth`    | GET    | Required | Get user's calculated net worth |
-
-**Data Access Pattern:**
-
-```mermaid
-flowchart TD
-    subgraph Mobile["Mobile App"]
-        WDB["WatermelonDB"]
-        API["API Client"]
-    end
-
-    subgraph Server["Backend"]
-        Express["Express API"]
-        Edge["Edge Function"]
-        VIEW["v_user_net_worth"]
-        CRON["pg_cron"]
-    end
-
-    subgraph External["External"]
-        Metals["metals.dev"]
-    end
-
-    subgraph Supabase["Supabase"]
-        Auth["Auth"]
-        DB["PostgreSQL"]
-    end
-
-    WDB --> |sync| DB
-    API --> |GET /api/net-worth| Express
-    Express --> |SELECT| VIEW
-    VIEW --> DB
-    CRON --> |every 30min| Edge
-    Edge --> Metals
-    Edge --> |UPDATE| DB
-```
-
-**Why API Layer for Server Data:**
-
-- Mobile uses JWT from Supabase Auth for authentication
-- API validates JWT and queries database with service role
-- Keeps third-party API keys (metals.dev) secure on server
-- Provides consistent interface for computed data
-
-### 15.4 Edge Functions
-
-| Function            | Trigger     | Purpose                      |
-| ------------------- | ----------- | ---------------------------- |
-| `fetch-metal-rates` | pg_cron 30m | Fetch rates from metals.dev  |
-| `parse-transaction` | HTTP (app)  | Parse voice input via OpenAI |
-
-**Cron Schedule (via pg_cron + pg_net):**
-
-- `daily-snapshots`: Daily at 11 PM Cairo (9 PM UTC)
-- `fetch-metal-rates`: Every 30 minutes
-
----
-
-## 16. Metals/Gold
-
-### 16.1 Gold Transaction Flow (MVP)
-
-1. User navigates to Gold/Assets page
-2. Creates new metal asset with:
-   - Name, metal_type, weight_grams, purity_karat
-   - **Optional:** "Deduct from account" checkbox + account selection
-3. If deducting:
-   - System creates transaction: `type=EXPENSE`, `category=asset_purchase`
-   - `linked_asset_id` points to created asset
-   - `asset_purchase` category is internal (hidden from user)
-4. Asset created with `purchase_price`
-
-### 16.2 Gold Valuation Formula
-
-```
-current_value = weight_grams × (purity_karat / 24) × gold_price_per_gram
-```
-
-| Karat | Purity | Example (10g at EGP 4,000/g for 24K) |
-| ----- | ------ | ------------------------------------ |
-| 24K   | 100%   | 10 × 1.00 × 4,000 = 40,000 EGP       |
-| 21K   | 87.5%  | 10 × 0.875 × 4,000 = 35,000 EGP      |
-| 18K   | 75%    | 10 × 0.75 × 4,000 = 30,000 EGP       |
-
-### 16.3 Post-MVP Enhancement
-
-- User-facing "Investment" category
-- Transaction form → Investment category → Prompt to create asset
-
----
-
-## 17. Future Features (Post-MVP)
-
-| Feature                    | Priority | Notes                                  |
-| -------------------------- | -------- | -------------------------------------- |
-| Low Balance Warning        | Medium   | Per-account threshold in profiles      |
-| Emergency Fund Calculation | Medium   | `is_liquid` accounts + assets          |
-| Vehicle/Housing as Assets  | Low      | Migrate buy/sell categories            |
-| Crypto Assets              | Low      | `asset_crypto` child table             |
-| Real Estate Assets         | Low      | `asset_real_estate` child table        |
-| Investment Category        | Medium   | User-facing with asset creation prompt |
-| Digital Wallet Details     | Low      | `wallet_details` child table           |
-
----
-
-## 18. Complete Schema Summary
-
-All tables finalized for implementation:
-
-| Table                      | Section | Status    |
-| -------------------------- | ------- | --------- |
-| `profiles`                 | 12      | ✅ Ready  |
-| `accounts`                 | 2.2     | ✅ Ready  |
-| `bank_details`             | 2.2     | ✅ Ready  |
-| `assets`                   | 2.3     | ✅ Ready  |
-| `asset_metals`             | 2.3     | ✅ Ready  |
-| `categories`               | 5       | ✅ Ready  |
-| `user_category_settings`   | 5.4     | ✅ Ready  |
-| `transactions`             | 11      | ✅ Ready  |
-| `debts`                    | 6       | ✅ Ready  |
-| `recurring_payments`       | 7       | ✅ Ready  |
-| `transfers`                | 8       | ✅ Ready  |
-| `budgets`                  | 9       | ✅ Ready  |
-| `daily_snapshot_net_worth` | 10      | ✅ Ready  |
-| `daily_snapshot_balance`   | 2.4     | ✅ Ready  |
-| `daily_snapshot_assets`    | 2.4     | ✅ Ready  |
-| `market_rates`             | 2.5     | ✅ Exists |
-| `market_rates_history`     | 2.5     | ✅ Ready  |
-| `v_user_net_worth` (VIEW)  | 10      | ✅ Ready  |
-
----
-
-## 19. Transaction Edit Rules
-
-### 19.1 Balance Trigger Removal
-
-Supabase database triggers for balance management (`adjust_balance_on_insert`,
-`adjust_balance_on_update`, `adjust_balance_on_delete`) have been **removed**.
-All balance adjustments are now performed **client-side** within WatermelonDB
-write operations.
-
-**Rationale:** Triggers caused double-counting during sync — WatermelonDB
-already adjusts balances locally, then sync pushes the transaction to Supabase
-where triggers fire again, applying the effect twice.
-
-### 19.2 Cross-Currency Account Swap Policy
-
-When editing a transaction or transfer and changing the account to one with a
-different currency, the **same numeric amount** is used in the new account's
-currency. No automatic currency conversion is performed.
-
-**Example:** A transaction of EGP 500 moved to a USD account becomes USD 500.
-
-### 19.3 Bidirectional Transaction ↔ Transfer Conversion
-
-Transactions can be converted to transfers and vice versa. The conversion is
-**atomic** and follows these steps:
-
-1. **Revert** the original record's balance effects on all affected accounts
-2. **Soft-delete** the original record (`deleted = true`)
-3. **Create** the new record (transaction or transfer)
-4. **Apply** the new record's balance effects
-
-Linked relationships (`linkedRecurringId`, `linkedDebtId`, `linkedAssetId`)
-remain on the soft-deleted record as an **audit trail**. A warning is shown to
-the user before conversion if linked relationships exist.
-
-### 19.4 Discard Confirmation Policy
-
-The discard confirmation dialog is shown **every time** the user navigates back
-with unsaved changes — there is no "don't show again" option. This prevents
-accidental data loss since financial data is sensitive.
-
----
-
-## 20. SMS Transaction Sync
-
-### 20.1 Architecture
-
-SMS transaction detection uses a **unified native tier** via an Expo config
-plugin (`withSmsBroadcastReceiver.js`) that generates Kotlin files at prebuild:
-
-- **SmsBroadcastReceiver.kt** — catches `SMS_RECEIVED` in all app states
-- **SmsEventModule.kt** — emits `DeviceEventEmitter` events when app is alive
-- **SmsHeadlessTaskService.kt** — bridges to HeadlessJS when app is killed
-- **SmsEventPackage.kt** — registers the native module with React Native
-
-### 20.2 Detection Strategy
-
-| App State  | Mechanism                          | JS Entry Point                 |
-| ---------- | ---------------------------------- | ------------------------------ |
-| Foreground | BroadcastReceiver → SmsEventModule | `sms-live-listener-service.ts` |
-| Background | BroadcastReceiver → SmsEventModule | `sms-live-listener-service.ts` |
-| Killed     | BroadcastReceiver → HeadlessJS     | `sms-headless-task.ts`         |
-
-### 20.3 User Preferences
-
-- **Live SMS Detection** (opt-in, off by default): Toggle in Settings to enable
-  real-time detection of incoming financial SMS
-- **Auto-confirm** (opt-in, off by default): If enabled, detected transactions
-  are saved silently. If disabled, a notification with Confirm/Discard actions
-  is shown.
-
-### 20.4 Edge-Case Decisions
-
-- **10K+ inbox**: Batch processing with
-  `InteractionManager.runAfterInteractions` yield every 3 batches to prevent UI
-  freezing
-- **Force-close during scan**: `scanInProgress` flag in AsyncStorage; cleaned up
-  on next launch. No partial DB writes during scan phase.
-- **Permission revocation**: `useSmsPermission` hook rechecks on `AppState`
-  change to `"active"` to detect revocation via Android Settings
-- **Review page conflict**: Live-detected transactions are queued while the
-  review page is active; flushed on dismiss
-
-### 20.5 Account Resolution
-
-Uses a 3-step **Chain of Responsibility** in `sms-account-resolver.ts`:
-
-1. Match sender name + card last 4 digits from `bank_details`
-2. Match sender name only from `bank_details`
-3. Fall back to user's default account
-
----
-
-## 21. Android Auto-Backup
-
-**Decision:** Disabled entirely (`android:allowBackup="false"`) via Expo config
-plugin (`plugins/withDisableBackup.js`).
-
-**Rationale:**
-
-- Monyvi is offline-first with Supabase sync. Re-signing in restores all data —
-  Android backup provides no additional recovery value.
-- The WatermelonDB SQLite database contains sensitive financial data (account
-  balances, bank details with card last-4 digits, transaction history with
-  notes). Backing this to Google Drive exposes it without explicit user consent.
-- SecureStore (auth tokens) should never be backed up to cloud storage.
-- XML exclusion files (`fullBackupContent` / `dataExtractionRules`) are fragile
-  — every new table, SharedPreference, or file added in the future must be
-  manually excluded. A single omission silently re-opens the vulnerability.
-  Disabling backup entirely eliminates this maintenance burden.
-
-**Implementation:**
-
-- `expo-secure-store` plugin configured with
-  `{ "configureAndroidBackup": false }` to prevent it from injecting backup XML
-  references.
-- Custom config plugin (`withDisableBackup.js`) sets `allowBackup="false"` and
-  removes any backup-related attributes from the AndroidManifest.
-
-## 22. Next Steps
-
-1. ✅ Business discovery complete
-2. ⏳ Generate SQL migration file
-3. ⏳ Update WatermelonDB models
-4. ⏳ Proceed to implementation
+# Monyvi Business Decisions
+
+**Status:** Active product source of truth  
+**Last updated:** 2026-05-10  
+**Scope:** Business and product rules confirmed by the current codebase and
+implementation history.
+
+This document defines what Monyvi is trying to achieve and the product rules
+that technical work must preserve. It is intentionally grounded in the current
+implementation. When this file and the code disagree, investigate the code,
+update this file, and call out any product decision that needs owner input.
+
+## 1. Product Definition
+
+Monyvi is an authenticated, offline-first personal finance companion for users
+who want a low-friction way to understand their money across cash, bank
+accounts, digital wallets, transactions, budgets, recurring obligations, and
+physical metal holdings. The product also gives users live gold, silver, and
+currency-rate context plus inflation-rate tracking and guidance.
+
+The app is built especially for Egyptian users, where money often moves across
+cash, banks, InstaPay, telecom wallets, foreign currencies, and gold or other
+precious metals. The product exists because traditional finance apps ask users
+to do boring manual entry, while real users already speak, receive SMS alerts,
+and think in mixed Arabic/English financial language.
+
+### Core Problem
+
+Manual money tracking breaks down because it is slow, repetitive, and easy to
+forget. Egyptian users also need support for:
+
+- Cash plus bank and wallet accounts.
+- SMS-based bank and wallet transaction confirmations.
+- Arabic, English, and code-switched voice input.
+- EGP-centered daily life with foreign currencies and metal holdings.
+- Live gold/silver rates, approximately 35 currency rates, and inflation context
+  for decisions in a changing economy.
+- Offline use when network access is unreliable.
+
+### Target Users
+
+- Individuals in Egypt who track spending, income, cash, bank balances, and
+  wallet balances.
+- Users who receive bank, wallet, or InstaPay SMS alerts and want to convert
+  those messages into records.
+- Users who store savings in USD or precious metals and want net-worth context.
+- Users who prefer Arabic, English, or mixed language entry.
+
+### Primary Value
+
+- Capture financial activity faster through voice and SMS import.
+- Keep data usable offline by writing to the local database first.
+- Give a single view of spendable balances, spending trends, budgets, and net
+  worth.
+- Help users interpret market and inflation movement through live rates and
+  contextual guidance.
+- Preserve user trust through mandatory authentication, user-scoped local data,
+  soft deletes, and background sync.
+
+## 2. Product Principles
+
+### Offline-First Trust
+
+WatermelonDB is the source of truth for user-facing data. Network calls should
+not block normal finance workflows after the authenticated startup decision is
+safe. Supabase sync is background replication, not the interactive data source.
+
+### Automation With Review
+
+Automation should reduce entry effort without silently corrupting financial
+records. Voice and SMS parsing produce reviewable transactions unless the user
+has explicitly opted into an auto-confirm mode.
+
+### Authenticated By Default
+
+Monyvi does not support anonymous or guest finance tracking. Users must sign up
+or sign in before private app features are visible. This keeps financial data
+tied to a recoverable identity and prevents local rows from another account from
+influencing the current account.
+
+### Local Data Is Still User-Scoped
+
+Auth gates are UX boundaries, not data isolation by themselves. Because local
+offline data may remain on device after logout, every current-user read/write
+must be scoped to the authenticated user or to explicitly shared system data.
+
+## 3. Authentication And Onboarding
+
+### Authentication Methods
+
+| Method          | Current status | Notes                                                           |
+| --------------- | -------------- | --------------------------------------------------------------- |
+| Email/password  | Enabled        | Email verification is required before sign-in succeeds.         |
+| Google OAuth    | Enabled        | Uses Supabase OAuth and the `monyvi://auth-callback` redirect.  |
+| Apple OAuth     | Deferred       | Supported in service types but not treated as production-ready. |
+| Facebook OAuth  | Deferred       | Supported in service types but not treated as production-ready. |
+| Phone OTP       | Not planned    | No current implementation.                                      |
+| Anonymous/guest | Removed        | Do not reintroduce.                                             |
+
+### Public And Private Journey
+
+1. First launch reads a device-local intro flag.
+2. If the user is signed out and intro slides were not completed on this device,
+   route to the pitch carousel.
+3. If signed out and intro was completed, route to auth.
+4. If signed in, route into the authenticated startup gate.
+5. The private runtime mounts only after auth has resolved.
+6. Startup waits for enough sync/profile state to make a safe routing decision.
+7. A missing current-user profile after sync failure or timeout shows recovery,
+   not onboarding.
+
+### Onboarding Decision
+
+Post-auth onboarding is a single required currency step.
+
+On confirmation, the app performs one atomic local write:
+
+- Create or find a cash account in the selected currency.
+- Set `profiles.preferred_currency`.
+- Set `profiles.preferred_language` to the current runtime language.
+- Set `profiles.onboarding_completed = true`.
+
+`profiles.onboarding_completed` is the routing signal. Do not use
+`preferred_currency` for routing because it is always populated and cannot
+distinguish a new user from a user who deliberately chose EGP.
+
+### Device-Scoped Intro State
+
+The pitch carousel is pre-auth and device-scoped. It is tracked in AsyncStorage,
+not in the profile row:
+
+- `intro:seen`: completed when the user taps skip or finishes the carousel.
+- `intro:locale_override`: set when the user explicitly changes language before
+  auth.
+
+## 4. Financial Domains
+
+### Accounts
+
+Accounts represent spendable money containers.
+
+| Type             | Purpose                                                                 |
+| ---------------- | ----------------------------------------------------------------------- |
+| `CASH`           | Physical cash balance.                                                  |
+| `BANK`           | Bank account or card-backed account, optionally linked to bank details. |
+| `DIGITAL_WALLET` | Wallet balance such as telecom wallets or similar services.             |
+
+Business rules:
+
+- One account has exactly one currency.
+- Supported account currencies come from the generated `CurrencyType` enum and
+  current market-rate support, not only EGP/USD/EUR.
+- Account names must be unique per user and currency, case-insensitive.
+- The first active account created for a user is marked default.
+- At most one active account per user should be default.
+- Account type and currency are read-only after creation.
+- Editing a balance may be silent or may create an internal balance-adjustment
+  transaction.
+- Deleting an account soft-deletes related local financial records, including
+  bank details, transactions, transfers, debts, and recurring payments.
+- Deleting the default account clears the default flag; another account is not
+  automatically promoted.
+
+### Bank Details
+
+Bank details are child rows owned through an account. They store optional bank
+metadata used by SMS account resolution:
+
+- Bank name.
+- Card last four digits.
+- SMS sender name.
+- Optional account number.
+
+SMS account matching should prefer sender plus card-last-four matches, then
+sender-only matches, then the user's default account.
+
+### Transactions
+
+Transactions represent money in or money out from one account.
+
+Business rules:
+
+- Amounts are stored as positive numbers.
+- `EXPENSE` subtracts from account balance.
+- `INCOME` adds to account balance.
+- Create, update, delete, and conversion operations must adjust balances inside
+  the same WatermelonDB write.
+- Deleting a transaction is a soft delete and reverses its balance effect.
+- Transaction source is one of `MANUAL`, `VOICE`, `SMS`, or `RECURRING`.
+- SMS-created transactions must store `sms_fingerprint`.
+- The app supports converting transactions to transfers and transfers to
+  transactions by reverting the old balance effect, soft-deleting the original
+  row, creating the new row, and applying the new balance effect atomically.
+- Moving a transaction to an account with another currency keeps the same
+  numeric amount in the new account currency. No automatic conversion is
+  currently applied during that edit.
+
+### Transfers
+
+Transfers move money between two accounts.
+
+Business rules:
+
+- Transfers debit `from_account_id` and credit `to_account_id`.
+- Same-currency transfers may use `amount` only.
+- Cross-currency transfers may use `converted_amount` and `exchange_rate`.
+- Transfers do not affect net worth, because money is moving between owned
+  accounts.
+- SMS ATM withdrawals are modeled as bank-to-cash transfers when detected.
+- SMS-created transfers must store `sms_fingerprint`.
+
+### Categories
+
+Categories are hierarchical and may be system-defined or user-defined.
+
+Business rules:
+
+- System categories are shared (`user_id` is null).
+- Custom categories are user-owned.
+- Authenticated UI must query categories through accessible-scope helpers that
+  include system categories plus the current user's categories.
+- Internal categories, such as balance adjustments and asset purchase/sale
+  categories, should not appear in normal user pickers.
+- AI parsers must return known category system names, not invented labels.
+
+### Budgets
+
+Budgets help users control spending.
+
+| Field  | Decision                                                  |
+| ------ | --------------------------------------------------------- |
+| Type   | `GLOBAL` or `CATEGORY`.                                   |
+| Period | `WEEKLY`, `MONTHLY`, or `CUSTOM`.                         |
+| Status | `ACTIVE` or `PAUSED`.                                     |
+| Alerts | Warning/danger levels are tracked by `alert_fired_level`. |
+
+Business rules:
+
+- A global budget is unique per user and period.
+- A category budget is unique per user, category, and period.
+- Category budgets include spending in the selected category and descendants.
+- Custom-period budgets require both start and end dates.
+- Paused budgets track pause intervals and exclude paused time from spending
+  calculations.
+- Custom budgets can auto-pause when their period expires.
+- Alert levels are reset on period rollover.
+
+### Recurring Payments
+
+Recurring payments describe expected future money movement.
+
+Business rules:
+
+- A recurring payment has a type, amount, account, category, currency,
+  frequency, next due date, status, and action.
+- Supported actions are `AUTO_CREATE` and `NOTIFY`, but current production UI is
+  primarily centered on displaying upcoming payments and manual "pay now"
+  handling.
+- When a recurring payment creates a transaction, the created transaction should
+  link back through `linked_recurring_id`.
+- Any future scheduler must preserve local-first writes and idempotency.
+
+### Debts
+
+Debts track money lent or borrowed.
+
+Business rules:
+
+- `LENT` and `BORROWED` debts are user-owned.
+- Debt status may be active, partially paid, settled, or written off.
+- Debt-linked transactions should preserve their link even if later converted or
+  soft-deleted, so the record remains auditable.
+
+### Assets And Metals
+
+Assets represent non-spendable wealth holdings. The implemented subtype is metal
+holdings.
+
+Business rules:
+
+- Parent `assets` rows store owner, name, type, purchase price, purchase date,
+  purchase currency, liquidity flag, notes, and sync columns.
+- `asset_metals` child rows store `metal_type`, `weight_grams`,
+  `purity_fraction`, and optional item form.
+- Supported metal types are `GOLD`, `SILVER`, `PLATINUM`, and `PALLADIUM`.
+- `purity_fraction` is the canonical purity field. Do not document or implement
+  new flows against the old `purity_karat` field.
+- Current value is calculated, not stored:
+  `weight_grams * purity_fraction * metal_usd_per_gram`, converted for display
+  as needed.
+- If a metal purchase is deducted from an account in a future flow, it should
+  create an internal asset-purchase transaction and link it to the asset.
+
+## 5. Market Rates And Net Worth
+
+### Market Rates
+
+Market rates are stored in `market_rates` as append-only-ish rows of USD-based
+rates:
+
+- Currency columns store the USD value of one unit of that currency, for example
+  `egp_usd`.
+- Metal columns store USD per gram, for example `gold_usd_per_gram`.
+- The mobile app syncs recent market-rate rows into WatermelonDB.
+- The current implementation treats rates older than 24 hours as stale.
+- `market_rates_history` is not part of the current WatermelonDB schema and
+  should not be referenced as the active app data source.
+
+### Net Worth
+
+Net worth is calculated locally from WatermelonDB:
+
+- Account balances are converted to USD using local market rates.
+- Asset values are calculated from metal holdings and local market rates.
+- Display values are converted from USD into the user's preferred currency.
+- Transfers do not change net worth.
+- Daily snapshot tables support historical trend display. Current local schema
+  stores USD-based totals for account and asset snapshots.
+
+The old `v_user_net_worth` view/API-first approach is not the current product
+architecture.
+
+## 6. Voice Entry
+
+Voice entry is a primary friction-reduction feature.
+
+Business rules:
+
+- Voice supports Arabic, English, and code-switching.
+- Voice recordings are sent to the `parse-voice` Supabase Edge Function.
+- The edge function uses Gemini 2.5 Flash-Lite with structured JSON output.
+- The mobile client validates the edge-function response with Zod.
+- The AI may return multiple transactions from one recording.
+- The AI should never invent transactions; ambiguous or non-financial speech
+  should return no transactions.
+- The client resolves category IDs, account IDs, dates, currencies, and
+  confidence before review.
+- Users review parsed transactions before saving.
+
+## 7. SMS Import And Live Detection
+
+SMS import has two product modes:
+
+- Batch inbox scan.
+- Live SMS detection on Android.
+
+Business rules:
+
+- Live SMS detection is opt-in and off by default.
+- Auto-confirm is opt-in and off by default.
+- Without auto-confirm, detected transactions show a notification with Confirm
+  and Discard actions.
+- Discard must not write financial records.
+- Confirm must be idempotent.
+- Every SMS-created transaction or transfer must persist `sms_fingerprint`.
+- `sms_fingerprint` is generated from the normalized sender, normalized SMS
+  body, and received timestamp in milliseconds. Do not use the device SMS
+  message ID as the business deduplication key.
+- Deduplication must check both `transactions.sms_fingerprint` and
+  `transfers.sms_fingerprint`.
+- ATM withdrawals should be saved as transfers when an account can be resolved.
+- Live detection has foreground/background JS paths and killed-app HeadlessJS
+  paths on Android.
+- If the SMS review page is active, live-detected messages are queued and
+  flushed after review is dismissed.
+
+## 8. Notifications
+
+Current notification scope:
+
+| Type                         | Status                             | Notes                                          |
+| ---------------------------- | ---------------------------------- | ---------------------------------------------- |
+| SMS transaction confirmation | Implemented                        | Used by live SMS detection.                    |
+| Budget alerts                | Implemented in local alert service | Avoid duplicate alert levels per period.       |
+| Recurring reminders          | Intended                           | Keep local-first and idempotent when expanded. |
+| Low balance warning          | Future                             | Not MVP.                                       |
+
+Local notifications are enough for current product scope. Push notifications are
+not required for MVP.
+
+## 9. Localization And Preferences
+
+Business rules:
+
+- Supported UI languages are English and Arabic.
+- Device locale is used as the first hint.
+- A pre-auth language override is device-scoped.
+- The authenticated profile stores `preferred_language`.
+- Settings can change language after sign-in.
+- Theme preference is `LIGHT`, `DARK`, or `SYSTEM`.
+- Preferred currency affects display conversion and defaults.
+
+## 10. Data Safety And Sync
+
+Business rules:
+
+- All user-owned syncable rows must include `created_at`, `updated_at`,
+  `deleted`, and `user_id`, except child rows whose ownership is inherited from
+  an owned parent.
+- Server-generated pull-only tables may omit `deleted` and may use specialized
+  pull behavior.
+- Sync pull/push failures must fail sync, not silently advance sync metadata.
+- Push must refuse local rows that do not belong to the authenticated user.
+- Supabase RLS is required but is not a substitute for client-side scoping.
+- Logout may preserve local rows, so routing, calculations, and visible UI must
+  never read foreign local data.
+
+## 11. Current Known Product And Documentation Gaps
+
+These are documented so future contributors do not mistake them for approved
+patterns:
+
+- Some older code paths and docs still reference a deprecated
+  `parse-transaction` function. Active AI parsing is `parse-sms` and
+  `parse-voice`.
+- Root package scripts still mention a nonexistent `@monyvi/api` workspace.
+- Some content-loading screens still use `ActivityIndicator`; the intended
+  standard is skeleton loading for content and spinners only for short action
+  progress.
+- Some raw `console.*` calls remain in app code; the intended standard is the
+  structured logger.
+- `usePreferredCurrency` currently writes directly from a hook. Future work
+  should move that write behind a profile/preferences service.
+- `packages/db` currently imports app/logic helpers in model getters, which
+  violates the intended monorepo dependency direction. Do not add new reverse
+  dependencies.
+- The full palette in `colors.ts` is not completely registered in
+  `tailwind.config.js`. Use registered classes first and add missing tokens
+  deliberately when needed.

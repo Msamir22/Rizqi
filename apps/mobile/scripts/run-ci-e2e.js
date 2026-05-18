@@ -47,16 +47,21 @@ function getSupabaseMode() {
 function applyLocalE2eDefaults() {
   if (getSupabaseMode() !== "local") return;
 
+  process.env.E2E_SUPABASE_MODE = "local";
+  process.env.EXPO_PUBLIC_MONYVI_TEST_MODE ??= "e2e";
+  process.env.EXPO_PUBLIC_AI_SMS_PARSER_MODE ??= "fixture";
+  if (process.env.E2E_SKIP_SEED === "1") {
+    process.env.EXPO_PUBLIC_SUPABASE_URL ??= "http://10.0.2.2:54321";
+    return;
+  }
+
   const config = getE2eSeedConfig({
     ...process.env,
     E2E_SUPABASE_MODE: "local",
   });
 
-  process.env.E2E_SUPABASE_MODE = "local";
   process.env.EXPO_PUBLIC_SUPABASE_URL ??= config.appSupabaseUrl;
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ??= config.anonKey;
-  process.env.EXPO_PUBLIC_MONYVI_TEST_MODE ??= "e2e";
-  process.env.EXPO_PUBLIC_AI_SMS_PARSER_MODE ??= "fixture";
   process.env.MAESTRO_E2E_EMAIL ??= config.email;
   process.env.MAESTRO_E2E_PASSWORD ??= config.password;
   process.env.SUPABASE_SERVICE_ROLE_KEY ??= config.serviceRoleKey;
@@ -108,6 +113,24 @@ function maybeSeedE2eData() {
   runNodeScript("scripts/e2e-seed.js", ["seed"]);
 }
 
+function isFixtureE2eMode() {
+  return (
+    process.env.EXPO_PUBLIC_MONYVI_TEST_MODE === "e2e" &&
+    process.env.EXPO_PUBLIC_AI_SMS_PARSER_MODE === "fixture"
+  );
+}
+
+function maybeRunSmsSyncJourneys() {
+  if (!isFixtureE2eMode()) {
+    console.warn(
+      "Skipping fixture SMS sync journeys because E2E fixture parser mode is not enabled."
+    );
+    return;
+  }
+
+  runNodeScript("scripts/run-sms-sync-journeys.js", []);
+}
+
 function getLiveSmsJourneys() {
   const value = process.env.E2E_CI_LIVE_SMS_JOURNEYS;
   if (!value) return defaultLiveSmsJourneys;
@@ -130,7 +153,7 @@ function main() {
     ]);
   }
 
-  runNodeScript("scripts/run-sms-sync-journeys.js", []);
+  maybeRunSmsSyncJourneys();
   runNodeScript("scripts/run-live-sms-journeys.js", getLiveSmsJourneys());
 }
 

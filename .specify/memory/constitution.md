@@ -1,6 +1,6 @@
 <!--
 Sync Impact Report
-- Version change: 0.0.0 → 1.0.0 → 1.1.0 → 1.2.0 → 1.3.0
+- Version change: 0.0.0 → 1.0.0 → 1.1.0 → 1.2.0 → 1.3.0 → 1.4.0
 - Added principles:
   - I. Offline-First Data Architecture (NEW in 1.0.0, AMENDED in 1.2.0)
   - II. Documented Business Logic (NEW in 1.0.0)
@@ -20,6 +20,13 @@ Sync Impact Report
   - Principle IV: Clarified that components must not own raw WatermelonDB access
   - Development Workflow: Added debug-before-fix, scoped tooling guardrails, and
     sensitive logging constraints
+- Amendments in 1.4.0:
+  - Technology Constraints: Reconciled current backend/auth/currency/localization
+    reality with implementation.
+  - Principle VI: Added explicit handling for known existing package-boundary
+    violations so they are not treated as precedent.
+  - Development Workflow: Added documentation freshness and implementation-debt
+    disclosure rules.
 - Added sections:
   - Technology Constraints (NEW)
   - Development Workflow (NEW)
@@ -29,8 +36,10 @@ Sync Impact Report
   - spec-template.md ✅ — User Scenarios and Requirements sections compatible
   - tasks-template.md ✅ — Phase structure and path conventions compatible
 - Follow-up TODOs:
-  - TODO(BUSINESS_DECISIONS_AUDIT): business-decisions.md needs a full audit
-    to reconcile outdated entries with current implementation decisions
+  - TODO(PACKAGE_BOUNDARY_REPAIR): remove existing reverse imports from
+    packages/db into apps/mobile or @monyvi/logic.
+  - TODO(UI_DEBT_AUDIT): replace remaining content-loading ActivityIndicator
+    usage, raw console calls, and unjustified raw hex/style exceptions.
 -->
 
 # Monyvi Constitution
@@ -152,6 +161,11 @@ The Monyvi monorepo uses npm workspaces + Nx with strict dependency direction.
 - Dependency direction: `apps/ → packages/logic → packages/db`. Never reverse.
 - Prefer named exports over default exports for better refactoring tooling.
 - Each package MUST have its own `tsconfig.json` extending the root config.
+- Existing reverse imports from `packages/db` into `apps/mobile` or
+  `@monyvi/logic` are documented architecture debt, not accepted precedent. New
+  work MUST NOT add more reverse dependencies. When touching affected model
+  getters, prefer moving presentation formatting and app-specific helpers out of
+  `packages/db`.
 
 ### VII. Local-First Migrations
 
@@ -221,20 +235,20 @@ account's private data.
 
 ## Technology Constraints
 
-| Concern              | Technology                                | Notes                                       |
-| -------------------- | ----------------------------------------- | ------------------------------------------- |
-| Mobile Framework     | React Native + Expo (managed workflow)    | File-based routing via Expo Router          |
-| Styling              | NativeWind v4 (Tailwind CSS for RN)       | Known shadow bug on interactive components  |
-| Local Database       | WatermelonDB (SQLite-based)               | Offline-first, sync-aware                   |
-| Cloud Database       | Supabase (PostgreSQL + Auth + RLS)        | Anonymous auth for guest mode               |
-| Backend API          | Express.js on Vercel                      | Market rates and external data only         |
-| Monorepo             | npm workspaces + Nx                       | Build caching and task orchestration        |
-| Language             | TypeScript (strict mode)                  | Across all packages and apps                |
-| Animations           | React Native Reanimated + Gesture Handler | Required for premium interactions           |
-| API Caching          | React Query (TanStack Query)              | Prevents duplicate API calls                |
-| Target Market        | Egyptian users                            | EGP primary currency, Arabic support future |
-| Supported Currencies | EGP, USD, EUR + 34 others                 | One account = one currency                  |
-| Precious Metals      | Gold, Silver, Platinum, Palladium         | Unified `purity_fraction` valuation         |
+| Concern              | Technology                                | Notes                                           |
+| -------------------- | ----------------------------------------- | ----------------------------------------------- |
+| Mobile Framework     | React Native + Expo (managed workflow)    | File-based routing via Expo Router              |
+| Styling              | NativeWind v4 (Tailwind CSS for RN)       | Known shadow bug on interactive components      |
+| Local Database       | WatermelonDB (SQLite-based)               | Offline-first, sync-aware                       |
+| Cloud Database       | Supabase (PostgreSQL + Auth + RLS)        | Mandatory authenticated sessions; no guest mode |
+| Backend API          | Supabase Edge Functions                   | AI parsing and market-rate ingestion            |
+| Monorepo             | npm workspaces + Nx                       | Build caching and task orchestration            |
+| Language             | TypeScript (strict mode)                  | Across all packages and apps                    |
+| Animations           | React Native Reanimated + Gesture Handler | Required for premium interactions               |
+| API Caching          | React Query (TanStack Query)              | Prevents duplicate API calls                    |
+| Target Market        | Egyptian users                            | EGP-centered, Arabic and English supported      |
+| Supported Currencies | Generated `CurrencyType` enum + rates     | One account = one currency                      |
+| Precious Metals      | Gold, Silver, Platinum, Palladium         | Unified `purity_fraction` valuation             |
 
 ## Development Workflow
 
@@ -257,6 +271,14 @@ account's private data.
   names. Never scatter unexplained literals through code.
 - **No untracked technical debt**. Do not leave shortcuts or known issues
   without a `// TODO:` comment explaining the debt and the intended resolution.
+- **Implementation-aligned documentation**. When documentation and code
+  disagree, investigate the implementation before changing behavior. Update the
+  relevant docs in the same change when business rules, architecture, theme
+  conventions, setup commands, or public workflows change.
+- **Known debt is not precedent**. If a current file violates this constitution
+  (for example direct hook writes, reverse package imports, content spinners, or
+  raw console calls), document or reduce the violation when touching that area.
+  Do not copy the pattern into new code.
 - **Static-analysis guardrails**: Custom ESLint or static-analysis rules MUST
   push developers toward approved scoped helper APIs and repositories. Wire
   every lint entry point consistently, including package scripts, Nx targets,
@@ -311,4 +333,4 @@ account's private data.
   `/speckit.plan`, `/speckit.tasks`, `/speckit.implement`) MUST reference this
   constitution and verify compliance before producing output.
 
-**Version**: 1.3.0 | **Ratified**: 2026-02-14 | **Last Amended**: 2026-05-08
+**Version**: 1.4.0 | **Ratified**: 2026-02-14 | **Last Amended**: 2026-05-10

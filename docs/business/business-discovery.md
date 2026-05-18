@@ -1,46 +1,25 @@
-# Monyvi - Business Logic & Architecture Discovery
+# Monyvi Business Discovery Archive
 
-> **Status:** ✅ COMPLETE  
-> **Last Updated:** 2026-01-04  
-> **Purpose:** All business decisions finalized
->
-> **📋 Final Document:** [business-decisions.md](./business-decisions.md)
-
----
+**Status:** Archived  
+**Last updated:** 2026-05-10  
+**Purpose:** Historical discovery index. Current product decisions live in
+[business-decisions.md](./business-decisions.md).
 
 ## Summary
 
-All business discovery questions have been answered and documented in
-`business-decisions.md`. The schema is ready for implementation.
+This file is retained as an archive of the original discovery scope. The app has
+since moved beyond the early schema-planning phase. Do not use this document as
+the implementation source of truth.
 
-### Finalized Sections
+Use these current documents instead:
 
-| Section | Topic                   | Status |
-| ------- | ----------------------- | ------ |
-| 1       | User & Authentication   | ✅     |
-| 2       | Database Architecture   | ✅     |
-| 3       | Multi-Currency Handling | ✅     |
-| 4       | Sync Strategy           | ✅     |
-| 5       | Transaction Categories  | ✅     |
-| 6       | Debts & Loans           | ✅     |
-| 7       | Recurring Payments      | ✅     |
-| 8       | Transfers               | ✅     |
-| 9       | Budgets                 | ✅     |
-| 10      | Net Worth & Dashboard   | ✅     |
-| 11      | Transaction Schema      | ✅     |
-| 12      | User Profiles           | ✅     |
-| 13      | Notifications           | ✅     |
-| 14      | Digital Wallets         | ✅     |
-| 15      | Data Sync Strategy      | ✅     |
-| 16      | Metals/Gold             | ✅     |
-| 17      | Future Features         | ✅     |
-| 18      | Complete Schema Summary | ✅     |
+- [Business decisions](./business-decisions.md)
+- [Technical architecture](../architecture/technical-architecture.md)
+- [Design system](../design/design-system.md)
 
----
+## Current Implemented Local Tables
 
-## Tables Ready for Implementation
-
-17 tables finalized:
+WatermelonDB schema version 17 currently includes:
 
 - `profiles`
 - `accounts`
@@ -50,21 +29,17 @@ All business discovery questions have been answered and documented in
 - `categories`
 - `user_category_settings`
 - `transactions`
+- `transfers`
 - `debts`
 - `recurring_payments`
-- `transfers`
 - `budgets`
-- `user_net_worth_summary`
+- `market_rates`
 - `daily_snapshot_balance`
 - `daily_snapshot_assets`
-- `market_rates` (exists)
-- `market_rates_history`
+- `daily_snapshot_net_worth`
 
----
+## Historical Note
 
-## Next Steps
-
-1. ✅ Business discovery complete
-2. ⏳ Generate SQL migration file
-3. ⏳ Update WatermelonDB models
-4. ⏳ Proceed to implementation
+Older references to `user_net_worth_summary`, `market_rates_history`, and an
+API-first net-worth view are stale for the current mobile app. Net worth is now
+computed locally from WatermelonDB data and synced market rates.

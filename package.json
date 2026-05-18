@@ -2,7 +2,7 @@
   "name": "monyvi-monorepo",
   "version": "1.0.0",
   "private": true,
-  "description": "Monyvi - The Invisible Money Tracker for Egypt",
+  "description": "Monyvi - Offline-first money tracking, live rates, and inflation guidance for Egypt",
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -12,6 +12,7 @@
     "api:dev": "npm run dev -w @monyvi/api",
     "api:build": "npm run build -w @monyvi/api",
     "mobile": "npm run start -w @monyvi/mobile",
+    "mobile:local-supabase": "npm run start:local-supabase -w @monyvi/mobile --",
     "mobile:e2e-fixture": "npm run start:e2e-fixture -w @monyvi/mobile",
     "mobile:ios": "npm run ios -w @monyvi/mobile",
     "mobile:android": "npm run android -w @monyvi/mobile",
@@ -75,5 +76,8 @@
     "prettier": "^3.2.5",
     "supabase": "^2.71.1",
     "typescript": "^5.4.0"
+  },
+  "optionalDependencies": {
+    "lightningcss-linux-x64-gnu": "1.27.0"
   }
 }

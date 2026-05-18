@@ -8,7 +8,7 @@ jest.mock("@/services/supabase", () => ({
   },
 }));
 
-import type { Category } from "@monyvi/db";
+import type { CategoryTreeSource } from "@monyvi/logic";
 import {
   parseSmsWithAi,
   type SmsCandidate,
@@ -21,8 +21,15 @@ function category(
   systemName: string,
   displayName: string,
   id = `cat-${systemName}`
-): Category {
-  const value: Category = { id, systemName, displayName };
+): CategoryTreeSource {
+  const value: CategoryTreeSource = {
+    id,
+    systemName,
+    displayName,
+    level: 1,
+    parentId: undefined,
+    type: systemName === "salary" ? "INCOME" : "EXPENSE",
+  };
   return value;
 }
 
@@ -115,6 +122,23 @@ describe("ai-sms-parser-service parser strategy", () => {
 
     expect(mockInvoke).not.toHaveBeenCalled();
     expect(result.transactions[0]?.counterparty).toBe("CARREFOUR CAIRO");
+  });
+
+  it("wraps fixture parser failures in the normal parse error result", async () => {
+    process.env.EXPO_PUBLIC_MONYVI_TEST_MODE = "e2e";
+    process.env.EXPO_PUBLIC_AI_SMS_PARSER_MODE = "fixture";
+
+    const result = await parseSmsWithAi([candidate("nbe_debit_purchase")], {
+      categories: [],
+      supportedCurrencies: ["EGP", "USD"],
+    });
+
+    expect(mockInvoke).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      transactions: [],
+      hasError: true,
+      isRetryable: true,
+    });
   });
 
   it("fails closed when fixture mode is requested outside E2E mode", async () => {

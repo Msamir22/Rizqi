@@ -3,15 +3,13 @@ appId: com.monyvi.app
 # Helper: open Transactions from a loaded app shell.
 # Preconditions: app state already contains an authenticated/onboarded user.
 
-- extendedWaitUntil:
-    visible: "filter-period|Open menu|Transactions"
-    timeout: 120000
-
 - runFlow:
     when:
-      visible: "Open menu"
+      notVisible:
+        id: "filter-period"
     commands:
-      - tapOn: "Transactions"
+      - openLink:
+          link: monyvi://transactions
       - extendedWaitUntil:
           visible:
             id: "filter-period"
@@ -21,4 +19,3 @@ appId: com.monyvi.app
     visible:
       id: "filter-period"
     timeout: 120000
-

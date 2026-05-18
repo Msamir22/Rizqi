@@ -28,6 +28,7 @@ import { useSmsSync } from "@/hooks/useSmsSync";
 import { loadExistingSmsFingerprints } from "@/services/sms-sync-service";
 import { palette } from "@/constants/colors";
 import { logger } from "@/utils/logger";
+import { toCategoryTreeSources } from "@/utils/category-tree-source";
 import type { ParseSmsContext } from "@/services/ai-sms-parser-service";
 
 // ---------------------------------------------------------------------------
@@ -196,7 +197,7 @@ export default function SmsScanScreen(): React.JSX.Element {
   // Build AI context from existing user data
   const aiContext = useMemo(
     (): ParseSmsContext => ({
-      categories: allCategories,
+      categories: toCategoryTreeSources(allCategories),
       supportedCurrencies: SUPPORTED_CURRENCIES.map((c) => c.code),
     }),
     [allCategories]

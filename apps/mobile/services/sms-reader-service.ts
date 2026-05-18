@@ -80,37 +80,71 @@ const E2E_DUPLICATE_SECOND_OFFSET_MS = 60_000;
 const INVALID_SMS_DATE_FALLBACK_BASE_MS = Date.UTC(2024, 0, 1);
 const INVALID_SMS_DATE_FALLBACK_STEP_MS = 1000;
 
+interface FixtureInboxMessage {
+  readonly id: string;
+  readonly address: string;
+  readonly body: string;
+  readonly date: number;
+  readonly read: true;
+}
+
+function resolveFixtureTimestamp(
+  fixtureId: string,
+  index: number,
+  timestamp: number | undefined
+): number {
+  if (timestamp === undefined) {
+    throw new Error(
+      `Fixture ${fixtureId} at index ${index} must define timestamp in E2E fixture mode`
+    );
+  }
+
+  return timestamp;
+}
+
 function readFixtureSmsInbox(
   options?: SmsReaderOptions
 ): readonly SmsMessage[] {
-  const messages = E2E_SMS_INBOX_FIXTURE_IDS.map((fixtureId, index) => {
+  const fixtureMessages = E2E_SMS_INBOX_FIXTURE_IDS.map((fixtureId, index) => {
     const fixture = getFixtureById(fixtureId);
     if (!fixture) {
       throw new Error(`Missing E2E SMS inbox fixture: ${fixtureId}`);
     }
 
-    const baseDate = fixture.timestamp ?? Date.now();
+    const baseDate = resolveFixtureTimestamp(
+      fixtureId,
+      index,
+      fixture.timestamp
+    );
     const duplicateOffset =
       fixtureId === "pr622_batch_duplicate_shop" && index === 1
         ? E2E_DUPLICATE_SECOND_OFFSET_MS
         : 0;
 
-    return {
+    const message: FixtureInboxMessage = {
       id: `e2e-${fixtureId}-${index}`,
       address: fixture.sender,
       body: fixture.body,
       date: baseDate + duplicateOffset,
       read: true,
     };
+    return message;
   });
 
   const minDate = options?.minDate;
+  const filteredByAddress =
+    options?.address === undefined
+      ? fixtureMessages
+      : fixtureMessages.filter(
+          (message) => message.address === options.address
+        );
   const filtered =
     minDate === undefined
-      ? messages
-      : messages.filter((message) => message.date >= minDate);
+      ? filteredByAddress
+      : filteredByAddress.filter((message) => message.date >= minDate);
+  const newestFirst = [...filtered].sort((a, b) => b.date - a.date);
 
-  return filtered.slice(0, options?.maxCount ?? 1000);
+  return newestFirst.slice(0, options?.maxCount ?? 1000);
 }
 
 // ---------------------------------------------------------------------------
@@ -126,12 +160,12 @@ function readFixtureSmsInbox(
 export async function readSmsInbox(
   options?: SmsReaderOptions
 ): Promise<readonly SmsMessage[]> {
-  if (shouldUseFixtureSmsParser()) {
-    return readFixtureSmsInbox(options);
-  }
-
   if (Platform.OS !== "android") {
     return [];
+  }
+
+  if (shouldUseFixtureSmsParser()) {
+    return readFixtureSmsInbox(options);
   }
 
   try {

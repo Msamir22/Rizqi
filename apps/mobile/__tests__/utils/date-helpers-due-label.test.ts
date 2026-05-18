@@ -2,7 +2,7 @@ jest.mock("../../i18n", () => ({
   __esModule: true,
   default: {
     language: "en",
-    t: (key: string, values?: { readonly count?: number }) => {
+    t: (key: string, values?: { readonly count?: number }): string => {
       if (key === "common:due_today") return "Due today";
       if (key === "common:due_tomorrow") return "Due tomorrow";
       if (key === "common:due_in_days") return `Due in ${values?.count} days`;
@@ -16,23 +16,21 @@ jest.mock("../../i18n", () => ({
 
 import { getDueText } from "../../utils/dateHelpers";
 
-describe("getDueText", () => {
-  beforeEach(() => {
+describe("getDueText", (): void => {
+  beforeEach((): void => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date("2026-05-15T18:30:00.000Z"));
   });
 
-  afterEach(() => {
+  afterEach((): void => {
     jest.useRealTimers();
   });
 
-  it("labels a payment due today using calendar days, not the current time", () => {
-    expect(getDueText(new Date("2026-05-15T02:00:00.000Z"))).toBe(
-      "Due today"
-    );
+  it("labels a payment due today using calendar days, not the current time", (): void => {
+    expect(getDueText(new Date("2026-05-15T02:00:00.000Z"))).toBe("Due today");
   });
 
-  it("labels tomorrow, future, and overdue payments correctly", () => {
+  it("labels tomorrow, future, and overdue payments correctly", (): void => {
     expect(getDueText(new Date("2026-05-16T01:00:00.000Z"))).toBe(
       "Due tomorrow"
     );

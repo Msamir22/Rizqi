@@ -19,7 +19,8 @@
  * @module build-category-tree
  */
 
-import { Category } from "@monyvi/db";
+import type { Category } from "@monyvi/db";
+import type { CategoryMapSource } from "./ai-parser-utils";
 
 // ---------------------------------------------------------------------------
 // Types (minimal shape required — decoupled from WatermelonDB model)
@@ -28,6 +29,12 @@ import { Category } from "@monyvi/db";
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
+
+export interface CategoryTreeSource extends CategoryMapSource {
+  readonly level: Category["level"];
+  readonly parentId?: Category["parentId"];
+  readonly type: Category["type"];
+}
 
 /**
  * Builds an AI-friendly category tree string from a flat category list.
@@ -38,12 +45,14 @@ import { Category } from "@monyvi/db";
  * @param categories - Flat array of all non-deleted categories (any order).
  * @returns Formatted category tree string ready for the AI system prompt.
  */
-export function buildCategoryTree(categories: readonly Category[]): string {
+export function buildCategoryTree(
+  categories: readonly CategoryTreeSource[]
+): string {
   const l1Categories = categories.filter((c) => c.level === 1);
   const l2Categories = categories.filter((c) => c.level === 2);
 
   // Index L2s by parentId for O(1) child lookups
-  const childrenByParentId = new Map<string, Category[]>();
+  const childrenByParentId = new Map<string, CategoryTreeSource[]>();
   for (const child of l2Categories) {
     if (child.parentId) {
       const siblings = childrenByParentId.get(child.parentId) ?? [];

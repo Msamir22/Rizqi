@@ -1,48 +1,47 @@
 # Monyvi Project
 
-A friction-less mobile money tracker for the Egyptian market.
+Monyvi is an offline-first personal finance companion for the Egyptian market.
+It tracks cash, bank accounts, digital wallets, transactions, budgets, recurring
+payments, metal holdings, live gold/silver and currency rates, and inflation
+rate guidance, with low-friction entry through voice and SMS.
 
 ## Current Status
 
-**Phase 1: API Server** ✅ (In Progress)
+The active product is the Expo mobile app in `apps/mobile`.
 
-- Express.js API for metals.dev caching
-- Supabase integration for rate storage
-- Mock API for development
-
-**Phase 2: Mobile App** 🔜 (Coming Next)
-
-- React Native with Expo
-- WatermelonDB for offline storage
-- Voice input & notification parsing
+- Expo Router mobile app with mandatory Supabase authentication.
+- WatermelonDB local database as the user-facing source of truth.
+- Supabase sync, RLS, and Edge Functions.
+- Gemini-powered `parse-voice` and `parse-sms` functions.
+- metals.dev-backed live rates for gold, silver, and roughly 35 currencies.
+- Inflation rate tracking and guidance for contextual money decisions.
 
 ## Project Structure
 
-```
+```text
 /monyvi
-  /apps/mobile - Expo App
+  /apps/mobile - Expo app
   /packages
-    /logic - Parsers and utilities (ready)
-    /db - WatermelonDB schema (ready)
-    /ui - Design system (ready)
+    /logic - Shared calculations, parsers, and utilities
+    /db - WatermelonDB schema, models, migrations, and Supabase types
+  /supabase
+    /functions - Supabase Edge Functions
+    /migrations - Local SQL migrations
+  /docs - Business, architecture, design, process, and audit docs
+  /specs - Feature specs, plans, contracts, and mockups
 ```
 
 ## Prerequisites
 
 - **Node.js 20+** and npm
-- **Supabase CLI** (installed globally — required for `db:*` and `fn:deploy:*`
-  scripts). We install it globally rather than via npm to avoid a flaky ~90MB
-  postinstall binary download that has stalled CI for hours.
-  - **macOS**: `brew install supabase/tap/supabase`
-  - **Windows (scoop)**:
-    `scoop bucket add supabase https://github.com/supabase/scoop-bucket.git && scoop install supabase`
-  - **Windows (manual)**: download
-    [supabase_windows_amd64.zip](https://github.com/supabase/cli/releases/latest),
-    extract `supabase.exe` to a folder, and add that folder to your user `PATH`.
-  - **Linux**: see
-    [Supabase CLI install docs](https://supabase.com/docs/guides/local-development/cli/getting-started).
+- **Supabase CLI** installed globally. It is required for `db:*` and
+  `fn:deploy:*` scripts.
 
-  Verify with `supabase --version`.
+Verify Supabase CLI with:
+
+```bash
+supabase --version
+```
 
 ## Quick Start
 
@@ -50,47 +49,70 @@ A friction-less mobile money tracker for the Egyptian market.
 # Install dependencies
 npm install
 
-# Run API server (port 3001)
-npm run dev
+# Start Expo dev server
+npm run mobile
 
-# Build for production
-npm run build
-npm start
+# Run mobile tests
+npm test -w @monyvi/mobile
+
+# Run lint
+npm run lint
 ```
 
-## Tech Stack (Current)
+## Local Supabase Mobile App
 
-- **Database**: Supabase (PostgreSQL)
-- **Dev Tools**: tsx (hot reload), TypeScript 5.4
+For normal local development against the local Supabase stack:
 
-## Tech Stack (Future - Mobile)
+```bash
+# 1. Start Supabase from the repo root
+npx supabase start
 
-- **Mobile**: React Native (Expo)
-- **Local DB**: WatermelonDB
-- **Styling**: NativeWind
-- **Voice**: @react-native-voice/voice
+# 2. Start the Expo dev client in normal app mode
+npm run mobile:local-supabase
+```
 
-## Shared Packages (Ready for Mobile)
+`mobile:local-supabase` reads the local anon key from
+`npx supabase status -o env`, points Android emulators at
+`http://10.0.2.2:54321`, and keeps test-only fixture behavior off. Use
+`mobile:e2e-fixture` only when you want the deterministic E2E fixture parser and
+seeded test flow.
 
-### @monyvi/logic
+## Tech Stack
 
-- Voice parser (Egyptian Arabic + English)
-- Notification parser (InstaPay, debit cards)
-- Category detection
-- Currency conversion
+- **Mobile:** React Native + Expo
+- **Navigation:** Expo Router
+- **Local database:** WatermelonDB
+- **Cloud:** Supabase Auth, PostgreSQL, RLS, Edge Functions
+- **Styling:** NativeWind
+- **Voice:** expo-speech-recognition + Gemini Edge Function parsing
+- **SMS:** Android SMS reader/listener + Gemini Edge Function parsing
+- **Observability:** Sentry
+- **Monorepo:** npm workspaces + Nx
 
-### @monyvi/db
+## Key Documentation
+
+- [Business decisions](docs/business/business-decisions.md)
+- [Technical architecture](docs/architecture/technical-architecture.md)
+- [Design system](docs/design/design-system.md)
+- [Constitution](.specify/memory/constitution.md)
+
+## Shared Packages
+
+### `@monyvi/logic`
+
+- Currency and amount helpers
+- Metal and net-worth calculations
+- Budget utilities
+- Analytics helpers
+- SMS parser/filter/hash utilities
+- AI parser mapping utilities
+
+### `@monyvi/db`
 
 - WatermelonDB schema
-- Account & Transaction models
-
-### @monyvi/ui
-
-- Egyptian color palette:
-  - Nile Green #065F46
-  - Monyvi Mint #10B981
-  - Expense Red #EF4444
-  - Pharaonic Gold #D97706
+- WatermelonDB models
+- Local migrations
+- Generated Supabase types
 
 ## License
 

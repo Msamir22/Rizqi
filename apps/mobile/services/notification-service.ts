@@ -16,7 +16,7 @@
  * @module notification-service
  */
 
-import * as Notifications from "expo-notifications";
+import type * as ExpoNotifications from "expo-notifications";
 import { Linking, Platform } from "react-native";
 import type { ParsedSmsTransaction } from "@monyvi/logic";
 import { logger } from "@/utils/logger";
@@ -66,6 +66,10 @@ type NotificationActionHandler = (
   payload: TransactionNotificationPayload
 ) => Promise<void>;
 
+type NotificationsModule = typeof ExpoNotifications;
+type NotificationResponse = ExpoNotifications.NotificationResponse;
+type NotificationSubscription = ExpoNotifications.Subscription;
+
 export type NotificationPermissionStatus =
   | "undetermined"
   | "granted"
@@ -78,7 +82,8 @@ export type NotificationPermissionStatus =
 
 let isInitialized = false;
 let actionHandler: NotificationActionHandler | null = null;
-let responseSubscription: Notifications.Subscription | null = null;
+let notificationsModule: NotificationsModule | null = null;
+let responseSubscription: NotificationSubscription | null = null;
 const handledNotificationKeys = new Set<string>();
 let responseRegistrationId = 0;
 
@@ -88,11 +93,23 @@ const MAX_HANDLED_NOTIFICATION_KEYS = 200;
 // Initialization
 // ---------------------------------------------------------------------------
 
+function getNotifications(): NotificationsModule {
+  if (notificationsModule) {
+    return notificationsModule;
+  }
+
+  // Lazy-load expo-notifications so app startup can render before this native
+  // module's event emitter is touched by the JS runtime.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  notificationsModule = require("expo-notifications") as NotificationsModule;
+  return notificationsModule;
+}
+
 /**
  * Check whether the app can show local notifications.
  */
 export async function hasNotificationPermission(): Promise<boolean> {
-  const permissions = await Notifications.getPermissionsAsync();
+  const permissions = await getNotifications().getPermissionsAsync();
   return permissions.granted;
 }
 
@@ -100,6 +117,7 @@ export async function hasNotificationPermission(): Promise<boolean> {
  * Check notification permission without showing the native permission prompt.
  */
 export async function getNotificationPermissionStatus(): Promise<NotificationPermissionStatus> {
+  const Notifications = getNotifications();
   const permissions = await Notifications.getPermissionsAsync();
 
   if (permissions.granted) {
@@ -128,6 +146,7 @@ export async function requestNotificationPermission(): Promise<boolean> {
  * through the native prompt or must open app settings.
  */
 export async function requestNotificationPermissionStatus(): Promise<NotificationPermissionStatus> {
+  const Notifications = getNotifications();
   const existing = await Notifications.getPermissionsAsync();
 
   if (existing.granted) {
@@ -165,6 +184,8 @@ export async function initializeNotifications(): Promise<void> {
   if (isInitialized) {
     return;
   }
+
+  const Notifications = getNotifications();
 
   // Configure foreground notification behavior
   Notifications.setNotificationHandler({
@@ -229,6 +250,7 @@ export function registerNotificationActionHandler(
   actionHandler = handler;
   responseRegistrationId += 1;
   const registrationId = responseRegistrationId;
+  const Notifications = getNotifications();
 
   // Remove previous subscription if any
   if (responseSubscription) {
@@ -254,8 +276,9 @@ export function registerNotificationActionHandler(
 }
 
 async function handleNotificationActionResponse(
-  response: Notifications.NotificationResponse
+  response: NotificationResponse
 ): Promise<boolean> {
+  const Notifications = getNotifications();
   const actionId = response.actionIdentifier;
   const data = response.notification.request.content
     .data as unknown as TransactionNotificationPayload;
@@ -299,6 +322,7 @@ async function replayLastNotificationResponse(
   registrationId: number
 ): Promise<void> {
   try {
+    const Notifications = getNotifications();
     const response = await Notifications.getLastNotificationResponseAsync();
     if (responseRegistrationId !== registrationId || !response) {
       return;
@@ -345,6 +369,7 @@ export function resetNotificationServiceForTests(): void {
 
   isInitialized = false;
   actionHandler = null;
+  notificationsModule = null;
   responseRegistrationId = 0;
   handledNotificationKeys.clear();
   if (responseSubscription) {
@@ -357,7 +382,7 @@ async function dismissDeliveredNotification(
   notificationId: string
 ): Promise<void> {
   try {
-    await Notifications.dismissNotificationAsync(notificationId);
+    await getNotifications().dismissNotificationAsync(notificationId);
   } catch (err: unknown) {
     logger.error("[notification-service] Failed to dismiss notification", err, {
       notificationId,
@@ -433,7 +458,7 @@ export async function showTransactionNotification(
     resolvedAccountName,
   };
 
-  await Notifications.scheduleNotificationAsync({
+  await getNotifications().scheduleNotificationAsync({
     identifier: `sms-transaction-${parsed.smsFingerprint}`,
     content: {
       title,
@@ -514,7 +539,7 @@ async function showInfoOnlySmsTransactionNotification({
     resolvedAccountName,
   };
 
-  await Notifications.scheduleNotificationAsync({
+  await getNotifications().scheduleNotificationAsync({
     identifier: `${identifierPrefix}-${parsed.smsFingerprint}`,
     content: {
       title,

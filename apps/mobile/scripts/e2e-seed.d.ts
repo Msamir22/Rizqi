@@ -19,3 +19,8 @@ export function seedE2eData(
   client: unknown,
   config: E2eSeedConfig
 ): Promise<{ readonly userId: string }>;
+
+export function resetE2eData(
+  client: unknown,
+  config: E2eSeedConfig
+): Promise<{ readonly userId: string }>;

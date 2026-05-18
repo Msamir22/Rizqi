@@ -9,7 +9,7 @@ appId: com.monyvi.app
     when:
       visible: "This is the developer menu"
     commands:
-      - pressKey: Back
+      - tapOn: "Continue"
       - waitForAnimationToEnd
 
 - runFlow:
@@ -18,6 +18,10 @@ appId: com.monyvi.app
     commands:
       - pressKey: Back
       - waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Skip|Welcome to Monyvi|Email address|Transactions|Accounts|Open menu|Good Morning|Good Afternoon|Good Evening"
+    timeout: 120000
 
 - runFlow:
     when:

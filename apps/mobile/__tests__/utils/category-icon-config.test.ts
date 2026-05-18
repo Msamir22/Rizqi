@@ -18,8 +18,8 @@ function makeCategory(
   return category;
 }
 
-describe("getCategoryIconConfig", () => {
-  it("preserves a supported icon library and custom category color", () => {
+describe("getCategoryIconConfig", (): void => {
+  it("preserves a supported icon library and custom category color", (): void => {
     const category = makeCategory({
       icon: "cart-outline",
       iconLibrary: "MaterialCommunityIcons",
@@ -34,7 +34,7 @@ describe("getCategoryIconConfig", () => {
     });
   });
 
-  it("falls back to Ionicons and expense color when the stored library is invalid", () => {
+  it("falls back to Ionicons and expense color when the stored library is invalid", (): void => {
     const category = makeCategory({
       icon: "receipt-outline",
       iconLibrary: "UnknownIcons",
@@ -48,7 +48,7 @@ describe("getCategoryIconConfig", () => {
     });
   });
 
-  it("uses the income fallback color for income categories without a custom color", () => {
+  it("uses the income fallback color for income categories without a custom color", (): void => {
     const category = makeCategory({
       icon: "cash-outline",
       iconLibrary: "Ionicons",

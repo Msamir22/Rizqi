@@ -12,6 +12,7 @@ describe("e2e-test-config", () => {
     process.env = { ...originalEnv };
     delete process.env.EXPO_PUBLIC_MONYVI_TEST_MODE;
     delete process.env.EXPO_PUBLIC_AI_SMS_PARSER_MODE;
+    process.env = { ...process.env, NODE_ENV: "test" };
   });
 
   afterEach(() => {
@@ -38,6 +39,17 @@ describe("e2e-test-config", () => {
   it("fails closed when fixture parser is requested outside E2E mode", () => {
     process.env.EXPO_PUBLIC_MONYVI_TEST_MODE = "off";
     process.env.EXPO_PUBLIC_AI_SMS_PARSER_MODE = "fixture";
+
+    expect(shouldUseFixtureSmsParser()).toBe(false);
+  });
+
+  it("fails closed in production even when fixture mode is requested", () => {
+    process.env = {
+      ...process.env,
+      NODE_ENV: "production",
+      EXPO_PUBLIC_MONYVI_TEST_MODE: "e2e",
+      EXPO_PUBLIC_AI_SMS_PARSER_MODE: "fixture",
+    };
 
     expect(shouldUseFixtureSmsParser()).toBe(false);
   });

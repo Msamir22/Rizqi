@@ -145,12 +145,19 @@ function runFlow(flow) {
 function applyLocalE2eDefaults() {
   if (process.env.E2E_SUPABASE_MODE !== "local") return;
 
+  process.env.E2E_SUPABASE_MODE = "local";
+  process.env.EXPO_PUBLIC_MONYVI_TEST_MODE ??= "e2e";
+  process.env.EXPO_PUBLIC_AI_SMS_PARSER_MODE ??= "fixture";
+  process.env.EXPO_PUBLIC_SUPABASE_URL ??= "http://10.0.2.2:54321";
+
+  if (process.env.E2E_SKIP_AUTH_BOOTSTRAP === "1") return;
+
   const config = getE2eSeedConfig({
     ...process.env,
     E2E_SUPABASE_MODE: "local",
   });
 
-  process.env.EXPO_PUBLIC_SUPABASE_URL ??= config.appSupabaseUrl;
+  process.env.EXPO_PUBLIC_SUPABASE_URL = config.appSupabaseUrl;
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ??= config.anonKey;
   process.env.MAESTRO_E2E_EMAIL ??= config.email;
   process.env.MAESTRO_E2E_PASSWORD ??= config.password;
