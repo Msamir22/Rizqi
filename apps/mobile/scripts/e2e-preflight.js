@@ -502,21 +502,49 @@ function waitForProductUi(timeoutMs = 240000) {
 }
 
 function currentFocusShowsWrongShell(currentFocus) {
+  const currentWindowState = withoutLastAnrSection(currentFocus);
   return (
-    currentFocus.includes("host.exp.exponent") ||
-    currentFocus.includes("DevLauncherActivity")
+    currentWindowState.includes("host.exp.exponent") ||
+    currentWindowState.includes("DevLauncherActivity")
   );
 }
 
 function currentFocusShowsDevMenu(currentFocus) {
+  const currentWindowState = withoutLastAnrSection(currentFocus);
   return /(?:mCurrentFocus|currentFocus)=Window\{[^}]*\s(?:u\d+\s)?com\.monyvi\.app\/expo\.modules\.devmenu\.DevMenuActivity/.test(
-    currentFocus
+    currentWindowState
   );
 }
 
 function currentFocusShowsLauncher(currentFocus) {
+  const currentWindowState = withoutLastAnrSection(currentFocus);
   return /(?:mCurrentFocus|currentFocus)=Window\{[^}]*com\.google\.android\.apps\.nexuslauncher|(?:mFocusedApp|focusedApp)=ActivityRecord\{[^}]*com\.google\.android\.apps\.nexuslauncher/.test(
-    currentFocus
+    currentWindowState
+  );
+}
+
+function withoutLastAnrSection(currentFocus) {
+  const lastAnrIndex = currentFocus.indexOf("WINDOW MANAGER LAST ANR");
+  if (lastAnrIndex === -1) {
+    return currentFocus;
+  }
+
+  const followingSectionMarkers = [
+    "WINDOW MANAGER POLICY STATE",
+    "WINDOW MANAGER WINDOWS",
+    "WINDOW MANAGER ANIMATOR STATE",
+  ]
+    .map((marker) => currentFocus.indexOf(marker, lastAnrIndex + 1))
+    .filter((index) => index > lastAnrIndex);
+
+  const nextSectionIndex =
+    followingSectionMarkers.length > 0
+      ? Math.min(...followingSectionMarkers)
+      : currentFocus.length;
+
+  return (
+    currentFocus.slice(0, lastAnrIndex) +
+    currentFocus.slice(nextSectionIndex)
   );
 }
 

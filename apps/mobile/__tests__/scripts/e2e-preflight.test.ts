@@ -65,8 +65,31 @@ describe("e2e-preflight", () => {
   it("detects launcher ANR focus from dumpsys", () => {
     expect(
       preflight.currentFocusShowsLauncher(`
+        WINDOW MANAGER WINDOWS (dumpsys window windows)
         mCurrentFocus=Window{c343781 u0 Application Not Responding: com.google.android.apps.nexuslauncher}
         mFocusedApp=ActivityRecord{e4594ea u0 com.monyvi.app/expo.modules.devmenu.DevMenuActivity t10}
+      `)
+    ).toBe(true);
+  });
+
+  it("ignores stale launcher focus from the last ANR section", () => {
+    expect(
+      preflight.currentFocusShowsLauncher(`
+        WINDOW MANAGER LAST ANR (dumpsys window lastanr)
+        Display #0 currentFocus=Window{e5ceca1 u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
+        WINDOW MANAGER WINDOWS (dumpsys window windows)
+        mCurrentFocus=Window{31b944f u0 com.monyvi.app/com.monyvi.MainActivity}
+      `)
+    ).toBe(false);
+  });
+
+  it("detects current launcher focus after a stale last ANR section", () => {
+    expect(
+      preflight.currentFocusShowsLauncher(`
+        WINDOW MANAGER LAST ANR (dumpsys window lastanr)
+        Display #0 currentFocus=Window{31b944f u0 com.monyvi.app/com.monyvi.MainActivity}
+        WINDOW MANAGER WINDOWS (dumpsys window windows)
+        mCurrentFocus=Window{e5ceca1 u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
       `)
     ).toBe(true);
   });
