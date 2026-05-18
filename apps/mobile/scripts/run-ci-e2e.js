@@ -3,6 +3,7 @@ const { spawnSync } = require("node:child_process");
 const { getE2eSeedConfig } = require("./e2e-seed");
 
 const mobileRoot = join(__dirname, "..");
+const maxScriptOutputBuffer = 50 * 1024 * 1024;
 
 const shouldBootstrapAuth = process.env.E2E_SKIP_AUTH_BOOTSTRAP !== "1";
 
@@ -94,15 +95,66 @@ function assertRequiredEnv() {
   );
 }
 
-function runNodeScript(script, args) {
-  const result = spawnSync(process.execPath, [script, ...args], {
+function isDeviceOfflineFailure(output) {
+  return /device offline|StatusRuntimeException: UNAVAILABLE|host:transport:.*device offline/i.test(
+    output
+  );
+}
+
+function runAdb(args, options = {}) {
+  return spawnSync("adb", args, {
     cwd: mobileRoot,
     env: process.env,
     shell: false,
     stdio: "inherit",
+    ...options,
+  });
+}
+
+function reconnectAdb() {
+  console.warn("ADB device went offline. Reconnecting before one retry.");
+  runAdb(["kill-server"], { timeout: 30_000 });
+  runAdb(["start-server"], { timeout: 30_000 });
+  const waitResult = runAdb(["wait-for-device"], { timeout: 60_000 });
+
+  if (waitResult.status !== 0) {
+    throw new Error("ADB device did not come back online after reconnect.");
+  }
+
+  runAdb(["reverse", "tcp:8081", "tcp:8081"], { timeout: 30_000 });
+}
+
+function runNodeScriptOnce(script, args) {
+  const result = spawnSync(process.execPath, [script, ...args], {
+    cwd: mobileRoot,
+    env: process.env,
+    shell: false,
+    encoding: "utf8",
+    maxBuffer: maxScriptOutputBuffer,
   });
 
-  if (result.status !== 0) {
+  process.stdout.write(result.stdout ?? "");
+  process.stderr.write(result.stderr ?? "");
+
+  return {
+    output: `${result.stdout ?? ""}${result.stderr ?? ""}`,
+    status: result.status ?? 1,
+  };
+}
+
+function runNodeScript(script, args) {
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    const result = runNodeScriptOnce(script, args);
+
+    if (result.status === 0) {
+      return;
+    }
+
+    if (attempt === 1 && isDeviceOfflineFailure(result.output)) {
+      reconnectAdb();
+      continue;
+    }
+
     throw new Error(`${script} ${args.join(" ")} failed`);
   }
 }
@@ -157,9 +209,15 @@ function main() {
   runNodeScript("scripts/run-live-sms-journeys.js", getLiveSmsJourneys());
 }
 
-try {
-  main();
-} catch (error) {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exit(1);
+if (require.main === module) {
+  try {
+    main();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
 }
+
+module.exports = {
+  isDeviceOfflineFailure,
+};
