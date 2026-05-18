@@ -13,6 +13,25 @@ function shouldRunPreflight(args) {
   return args.includes("test");
 }
 
+function normalizeDeviceArgs(args) {
+  const deviceFlagIndex = args.indexOf("--device");
+  if (deviceFlagIndex >= 0) {
+    const deviceValue = args[deviceFlagIndex + 1];
+    if (!deviceValue) {
+      return args;
+    }
+
+    const argsWithoutDevice = args.filter(
+      (_arg, index) =>
+        index !== deviceFlagIndex && index !== deviceFlagIndex + 1
+    );
+    return ["--device", deviceValue, ...argsWithoutDevice];
+  }
+
+  const device = process.env.DEVICE || process.env.ANDROID_SERIAL;
+  return device ? ["--device", device, ...args] : args;
+}
+
 function applyLocalE2eDefaults() {
   if (process.env.E2E_SUPABASE_MODE !== "local") return;
 
@@ -56,7 +75,8 @@ async function main() {
     await ensureE2eAppReady();
   }
 
-  const result = spawnSync(maestroBin, args, {
+  const maestroArgs = normalizeDeviceArgs(args);
+  const result = spawnSync(maestroBin, maestroArgs, {
     stdio: "inherit",
     shell: process.platform === "win32",
   });

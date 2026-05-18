@@ -44,3 +44,16 @@ appId: com.monyvi.app
     visible: "Allow notifications?"
     timeout: 30000
 - assertVisible: "Allow notifications"
+- tapOn:
+    id: "permission-modal-primary"
+
+- extendedWaitUntil:
+    visible: "Allow"
+    timeout: 10000
+- tapOn: "Allow"
+
+- extendedWaitUntil:
+    visible:
+      id: "live-sms-detection-switch"
+      checked: true
+    timeout: 30000

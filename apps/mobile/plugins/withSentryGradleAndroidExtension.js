@@ -25,6 +25,14 @@ function withSentryGradleAndroidExtension(config) {
       contents.includes(ANDROID_EXTENSION_BINDING) ||
       !contents.includes(SENTRY_APPLY_LINE)
     ) {
+      if (
+        !contents.includes(ANDROID_EXTENSION_BINDING) &&
+        !contents.includes(SENTRY_APPLY_LINE)
+      ) {
+        console.warn(
+          "[withSentryGradleAndroidExtension] Sentry Gradle apply line not found; Android extension binding was not injected."
+        );
+      }
       return config;
     }
 

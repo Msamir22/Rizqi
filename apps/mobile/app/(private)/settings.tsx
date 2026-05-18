@@ -227,12 +227,18 @@ export default function SettingsScreen(): React.JSX.Element {
     AppState.currentState
   );
   const hasActiveLiveDetectionEnableFlowRef = useRef(false);
+  const liveDetectionPreferenceGenerationRef = useRef(0);
 
   const reconcileStoredLiveDetection = useCallback(async (): Promise<void> => {
     if (!isAndroid) {
       setIsLiveDetectionPreferenceReady(true);
       return;
     }
+
+    const reconcileGeneration = liveDetectionPreferenceGenerationRef.current;
+    const hasStaleReconcile = (): boolean =>
+      hasActiveLiveDetectionEnableFlowRef.current ||
+      reconcileGeneration !== liveDetectionPreferenceGenerationRef.current;
 
     if (hasActiveLiveDetectionEnableFlowRef.current) {
       return;
@@ -241,7 +247,7 @@ export default function SettingsScreen(): React.JSX.Element {
     try {
       const enabled = await reconcileLiveDetectionPreference();
 
-      if (hasActiveLiveDetectionEnableFlowRef.current) {
+      if (hasStaleReconcile()) {
         return;
       }
 
@@ -255,13 +261,13 @@ export default function SettingsScreen(): React.JSX.Element {
 
       const autoConfirmEnabled = await isAutoConfirmEnabled();
 
-      if (hasActiveLiveDetectionEnableFlowRef.current) {
+      if (hasStaleReconcile()) {
         return;
       }
 
       setAutoConfirmSms(autoConfirmEnabled);
     } finally {
-      if (!hasActiveLiveDetectionEnableFlowRef.current) {
+      if (!hasStaleReconcile()) {
         setIsLiveDetectionPreferenceReady(true);
       }
     }
@@ -388,6 +394,8 @@ export default function SettingsScreen(): React.JSX.Element {
 
   const handleToggleLiveDetection = useCallback(
     async (value: boolean): Promise<void> => {
+      liveDetectionPreferenceGenerationRef.current += 1;
+
       if (!value) {
         hasActiveLiveDetectionEnableFlowRef.current = false;
         setIsLiveDetectionEnabling(false);
@@ -576,14 +584,14 @@ export default function SettingsScreen(): React.JSX.Element {
           nextState === "active"
         ) {
           recheckPermission()
+            .then(() => {
+              setHasReturnedFromLiveDetectionSettings(true);
+            })
             .catch(() => {
               showToast({
                 type: "error",
                 title: tCommon("error"),
               });
-            })
-            .finally(() => {
-              setHasReturnedFromLiveDetectionSettings(true);
             });
         }
 

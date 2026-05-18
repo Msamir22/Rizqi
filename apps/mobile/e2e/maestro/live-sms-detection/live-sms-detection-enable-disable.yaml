@@ -9,6 +9,8 @@ appId: com.monyvi.app
       sms: allow
       notifications: allow
 
+- runFlow: ensure-live-sms-disabled.yaml
+
 - runFlow: ../helpers/open-settings.yaml
 
 - scrollUntilVisible:

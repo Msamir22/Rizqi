@@ -77,6 +77,8 @@ const E2E_SMS_INBOX_FIXTURE_IDS = [
 ] as const;
 
 const E2E_DUPLICATE_SECOND_OFFSET_MS = 60_000;
+const INVALID_SMS_DATE_FALLBACK_BASE_MS = Date.UTC(2024, 0, 1);
+const INVALID_SMS_DATE_FALLBACK_STEP_MS = 1000;
 
 interface FixtureInboxMessage {
   readonly id: string;
@@ -251,12 +253,35 @@ function mapNativeSms(raw: RawNativeSms): SmsMessage {
     id: String(raw._id),
     address: raw.address,
     body: raw.body,
-    date: parseNativeSmsDate(raw.date),
+    date: parseNativeSmsDate(raw.date, raw._id),
     read: raw.read === 1,
   };
 }
 
-function parseNativeSmsDate(date: string): number {
+function parseNativeSmsDate(date: string, id: string): number {
   const parsedDate = Number.parseInt(date, 10);
-  return Number.isFinite(parsedDate) ? parsedDate : 0;
+  if (Number.isFinite(parsedDate)) {
+    return parsedDate;
+  }
+
+  return getInvalidSmsDateFallback(id);
+}
+
+function getInvalidSmsDateFallback(id: string): number {
+  const parsedId = Number.parseInt(id, 10);
+  if (Number.isFinite(parsedId) && parsedId >= 0) {
+    return (
+      INVALID_SMS_DATE_FALLBACK_BASE_MS +
+      parsedId * INVALID_SMS_DATE_FALLBACK_STEP_MS
+    );
+  }
+
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 31 + id.charCodeAt(i)) % 1_000_000_000;
+  }
+
+  return (
+    INVALID_SMS_DATE_FALLBACK_BASE_MS + hash * INVALID_SMS_DATE_FALLBACK_STEP_MS
+  );
 }
