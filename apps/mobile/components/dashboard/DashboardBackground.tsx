@@ -16,6 +16,7 @@ interface DashboardBackgroundProps {
 }
 
 const INITIAL_TOP_INSET = initialWindowMetrics?.insets.top ?? 0;
+const SKYLINE_HEIGHT = 320;
 
 if (__DEV__ && !initialWindowMetrics) {
   logger.warn(
@@ -58,7 +59,7 @@ export function DashboardBackground({
           source={imageSource}
           resizeMode="stretch"
           style={{
-            height: 250,
+            height: SKYLINE_HEIGHT,
             left: 0,
             opacity: isDark ? 1 : 0.64,
             position: "absolute",

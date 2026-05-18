@@ -31,17 +31,19 @@ export function DashboardSmsInlineBanner({
   }, [onDismiss, onPermissionGranted, requestPermission]);
 
   return (
-    <View className="mb-3 flex-row items-center rounded-[18px] border border-border-card bg-glass px-3.5 py-3 dark:border-border-glass-dark dark:bg-glass-dark">
-      <View className="h-10 w-10 items-center justify-center rounded-xl bg-action dark:bg-action-dark">
+    <View className="mb-3 flex-row items-center rounded-2xl border border-border-card bg-glass px-3 py-3 dark:border-border-card-dark dark:bg-glass-dark">
+      <View className="h-9 w-9 items-center justify-center rounded-xl bg-action dark:bg-action-dark">
         <Ionicons
           name="chatbubble-ellipses"
-          size={22}
+          size={20}
           color={palette.paper[25]}
         />
       </View>
       <Text
         numberOfLines={1}
-        className="ms-3 flex-1 text-[14px] text-text-primary dark:text-text-primary-dark"
+        adjustsFontSizeToFit
+        minimumFontScale={0.72}
+        className="ms-3 flex-1 text-[13px] text-text-primary dark:text-text-primary-dark"
       >
         {message}
       </Text>
@@ -49,9 +51,9 @@ export function DashboardSmsInlineBanner({
         testID="dashboard-sms-enable"
         onPress={handleEnable}
         activeOpacity={0.75}
-        className="px-2 py-1"
+        className="px-1.5 py-1"
       >
-        <Text className="text-[14px] font-semibold text-action dark:text-action-dark">
+        <Text className="text-[13px] font-semibold text-action dark:text-action-dark">
           {actionLabel}
         </Text>
       </TouchableOpacity>
@@ -59,10 +61,10 @@ export function DashboardSmsInlineBanner({
         testID="dashboard-sms-dismiss"
         onPress={onDismiss}
         activeOpacity={0.75}
-        className="ms-1 p-1"
+        className="ms-0.5 p-1"
         accessibilityRole="button"
       >
-        <Ionicons name="close" size={22} color={palette.slate[500]} />
+        <Ionicons name="close" size={20} color={palette.slate[500]} />
       </TouchableOpacity>
     </View>
   );

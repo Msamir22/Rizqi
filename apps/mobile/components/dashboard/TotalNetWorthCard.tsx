@@ -43,7 +43,7 @@ function TotalNetWorthCardComponent({
     : "bg-danger dark:bg-danger-dark";
 
   return (
-    <View className="mb-4 rounded-2xl border border-action bg-surface px-5 py-4 dark:border-border-glass-dark dark:bg-surface-dark">
+    <View className="mb-4 rounded-2xl border border-action bg-nileGreen-50 px-5 py-4 dark:border-border-glass-dark dark:bg-surface-dark">
       <View className="flex-row items-start">
         <View className="flex-1">
           <View className="flex-row items-center">
