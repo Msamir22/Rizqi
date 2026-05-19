@@ -6,6 +6,7 @@ const { getE2eSeedConfig, seedE2eData } = require("./e2e-seed");
 const mobileRoot = join(__dirname, "..");
 const maxCapturedOutputLength = 256 * 1024;
 const defaultChildTimeoutMs = 20 * 60 * 1000;
+const defaultLiveSmsTimeoutMs = 45 * 60 * 1000;
 
 const shouldBootstrapAuth = process.env.E2E_SKIP_AUTH_BOOTSTRAP !== "1";
 const allCiSuites = ["transactions", "sms-sync", "live-sms"];
@@ -122,6 +123,13 @@ function getChildTimeoutMs(env = process.env) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultChildTimeoutMs;
 }
 
+function getLiveSmsTimeoutMs(env = process.env) {
+  const parsed = Number(env.E2E_LIVE_SMS_TIMEOUT_MS);
+  return Number.isFinite(parsed) && parsed > 0
+    ? parsed
+    : defaultLiveSmsTimeoutMs;
+}
+
 function getRequestedCiSuites(env = process.env) {
   const value = env.E2E_CI_SUITES;
   if (!value || value === "full") {
@@ -168,7 +176,7 @@ function reconnectAdb() {
   runAdb(["reverse", "tcp:8081", "tcp:8081"], { timeout: 30_000 });
 }
 
-function runNodeScriptOnce(script, args) {
+function runNodeScriptOnce(script, args, options = {}) {
   return new Promise((resolve) => {
     const child = spawn(process.execPath, [script, ...args], {
       cwd: mobileRoot,
@@ -178,7 +186,7 @@ function runNodeScriptOnce(script, args) {
     });
     let output = "";
     let didTimeout = false;
-    const timeoutMs = getChildTimeoutMs();
+    const timeoutMs = options.timeoutMs ?? getChildTimeoutMs();
     const timeout = setTimeout(() => {
       didTimeout = true;
       const label = `${script} ${args.join(" ")}`.trim();
@@ -215,9 +223,9 @@ function runNodeScriptOnce(script, args) {
   });
 }
 
-async function runNodeScript(script, args) {
+async function runNodeScript(script, args, options = {}) {
   for (let attempt = 1; attempt <= 2; attempt += 1) {
-    const result = await runNodeScriptOnce(script, args);
+    const result = await runNodeScriptOnce(script, args, options);
 
     if (result.status === 0) {
       return;
@@ -330,7 +338,8 @@ async function main() {
   if (selectedSuites.has("live-sms")) {
     await runNodeScript(
       "scripts/run-live-sms-journeys.js",
-      getLiveSmsJourneys()
+      getLiveSmsJourneys(),
+      { timeoutMs: getLiveSmsTimeoutMs() }
     );
   }
 }
@@ -345,6 +354,7 @@ if (require.main === module) {
 module.exports = {
   appendOutputTail,
   getChildTimeoutMs,
+  getLiveSmsTimeoutMs,
   getRequestedCiSuites,
   isDeviceOfflineFailure,
   shouldBootstrapBeforeLiveSms,

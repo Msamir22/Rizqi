@@ -8,6 +8,9 @@ interface RunCiE2eModule {
     env?: Readonly<Record<string, string | undefined>>
   ): ReadonlySet<"transactions" | "sms-sync" | "live-sms">;
   getChildTimeoutMs(env?: Readonly<Record<string, string | undefined>>): number;
+  getLiveSmsTimeoutMs(
+    env?: Readonly<Record<string, string | undefined>>
+  ): number;
   isDeviceOfflineFailure(output: string): boolean;
   shouldBootstrapBeforeLiveSms(
     selectedSuites: ReadonlySet<string>,
@@ -49,6 +52,13 @@ describe("run-ci-e2e helpers", () => {
     expect(runCiE2e.getChildTimeoutMs({ E2E_CHILD_TIMEOUT_MS: "1000" })).toBe(
       1000
     );
+  });
+
+  it("uses a longer bounded timeout for the aggregate live-SMS suite", () => {
+    expect(runCiE2e.getLiveSmsTimeoutMs({})).toBe(45 * 60 * 1000);
+    expect(
+      runCiE2e.getLiveSmsTimeoutMs({ E2E_LIVE_SMS_TIMEOUT_MS: "1000" })
+    ).toBe(1000);
   });
 
   it("detects ADB device-offline failures for infrastructure-only retry", () => {
