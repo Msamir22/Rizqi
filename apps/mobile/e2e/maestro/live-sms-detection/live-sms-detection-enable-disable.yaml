@@ -4,12 +4,12 @@ appId: com.monyvi.app
 # then disabled by the user without leaving stale auto-confirm state.
 # Preconditions: app state already contains an authenticated/onboarded user.
 
-- launchApp:
-    appId: com.monyvi.app
-    clearState: false
+- setPermissions:
     permissions:
       sms: allow
       notifications: allow
+
+- runFlow: ensure-live-sms-disabled.yaml
 
 - runFlow: ../helpers/open-settings.yaml
 

@@ -410,8 +410,7 @@ Business rules:
 These are documented so future contributors do not mistake them for approved
 patterns:
 
-- Some older code paths and docs still reference a deprecated
-  `parse-transaction` function. Active AI parsing is `parse-sms` and
+- `parse-transaction` was removed. Active AI parsing is `parse-sms` and
   `parse-voice`.
 - Root package scripts still mention a nonexistent `@monyvi/api` workspace.
 - Some content-loading screens still use `ActivityIndicator`; the intended

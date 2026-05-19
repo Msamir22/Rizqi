@@ -16,6 +16,7 @@ import { reconcileLiveDetectionPreference } from "./sms-live-detection-handler";
 import { hasExistingSmsFingerprint } from "./sms-dedup-service";
 import { getCurrentUserDataScope } from "./user-data-access";
 import { logger } from "@/utils/logger";
+import { toCategoryTreeSources } from "@/utils/category-tree-source";
 
 type LiveSmsDeliveryMode = "foreground" | "headless";
 
@@ -68,7 +69,7 @@ async function loadAiContext(): Promise<ParseSmsContext> {
     .fetch();
 
   return {
-    categories,
+    categories: toCategoryTreeSources(categories),
     supportedCurrencies: SUPPORTED_CURRENCIES.map((currency) => currency.code),
   };
 }

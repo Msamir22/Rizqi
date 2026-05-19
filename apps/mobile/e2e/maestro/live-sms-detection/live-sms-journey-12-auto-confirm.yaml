@@ -22,16 +22,30 @@ appId: com.monyvi.app
 - runFlow: open-sms-simulator.yaml
 - tapOn:
     id: "sms-simulator-reset-top"
+
+- scrollUntilVisible:
+    element:
+      id: "sms-simulator-inject-card_last4_match"
+    direction: DOWN
+    timeout: 30000
+
 - tapOn:
-    id: "sms-simulator-inject-cib_credit_payment"
+    id: "sms-simulator-inject-card_last4_match"
+
+- scrollUntilVisible:
+    element:
+      id: "sms-simulator-latest-summary"
+    direction: UP
+    timeout: 30000
 
 - extendedWaitUntil:
-    visible: "Live detection log count: 1"
+    visible: "Latest detected: 75 EGP from NBE"
     timeout: 60000
 
+# Pull down the notification shade to verify the auto-confirm notification.
 - swipe:
-    start: 500, 0
-    end: 500, 1100
+    start: 50%, 0%
+    end: 50%, 90%
     duration: 500
 
 - extendedWaitUntil:

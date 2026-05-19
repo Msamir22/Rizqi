@@ -12,6 +12,7 @@ import {
   createTable,
   addColumns,
   schemaMigrations,
+  unsafeExecuteSql,
 } from "@nozbe/watermelondb/Schema/migrations";
 
 export const migrations = schemaMigrations({
@@ -238,6 +239,17 @@ export const migrations = schemaMigrations({
             { name: "sms_fingerprint", type: "string", isOptional: true },
           ],
         }),
+      ],
+    },
+    {
+      toVersion: 19,
+      steps: [
+        unsafeExecuteSql(
+          'create index if not exists "transactions_sms_fingerprint" on "transactions" ("sms_fingerprint");'
+        ),
+        unsafeExecuteSql(
+          'create index if not exists "transfers_sms_fingerprint" on "transfers" ("sms_fingerprint");'
+        ),
       ],
     },
   ],

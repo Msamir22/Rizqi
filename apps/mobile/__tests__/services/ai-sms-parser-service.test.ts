@@ -8,7 +8,7 @@ jest.mock("@/services/supabase", () => ({
   },
 }));
 
-import type { Category } from "@monyvi/db";
+import type { CategoryTreeSource } from "@monyvi/logic";
 import {
   parseSmsWithAi,
   type SmsCandidate,
@@ -21,8 +21,15 @@ function category(
   systemName: string,
   displayName: string,
   id = `cat-${systemName}`
-): Category {
-  const value = { id, systemName, displayName } as unknown as Category;
+): CategoryTreeSource {
+  const value: CategoryTreeSource = {
+    id,
+    systemName,
+    displayName,
+    level: 1,
+    parentId: undefined,
+    type: systemName === "salary" ? "INCOME" : "EXPENSE",
+  };
   return value;
 }
 

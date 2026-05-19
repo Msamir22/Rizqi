@@ -5,14 +5,14 @@
  * Strategy: "Last Write Wins" - most recent updated_at timestamp wins conflicts
  */
 
-import { schema, SupabaseDatabase } from "@monyvi/db";
+import { schema, type SupabaseDatabase } from "@monyvi/db";
 import { Q, type Database, type Model } from "@nozbe/watermelondb";
 import {
-  SyncDatabaseChangeSet,
   synchronize,
-  SyncPullResult,
-  SyncPushArgs,
-  SyncPushResult,
+  type SyncDatabaseChangeSet,
+  type SyncPullResult,
+  type SyncPushArgs,
+  type SyncPushResult,
 } from "@nozbe/watermelondb/sync";
 import { getCurrentUserId, supabase } from "./supabase";
 import { logger } from "@/utils/logger";
@@ -34,6 +34,9 @@ const TIMESTAMP_COLUMNS = ["created_at", "updated_at"] as const;
 
 // Combined for transformFromSupabase (all date-like columns)
 const ALL_DATE_COLUMNS = [...DATE_ONLY_COLUMNS, ...TIMESTAMP_COLUMNS] as const;
+
+const PROFILE_NOTIFICATION_SETTINGS_COLUMN = "notification_settings";
+const PROFILE_ONBOARDING_FLAGS_COLUMN = "onboarding_flags";
 
 export const EXCLUDED_TABLES = ["__InternalSupabase"] as const;
 
@@ -73,6 +76,24 @@ type WritableSupabaseTablesNames = Exclude<
   SupabaseTablesNames,
   ReadOnlyTableName
 >;
+
+function isSnapshotTable(
+  table: SupabaseTablesNames
+): table is SnapshotTableName {
+  return (SNAPSHOT_TABLES as readonly SupabaseTablesNames[]).includes(table);
+}
+
+function isReadOnlyTable(
+  table: SupabaseTablesNames
+): table is ReadOnlyTableName {
+  return table === "market_rates" || isSnapshotTable(table);
+}
+
+function isWritableTable(
+  table: SupabaseTablesNames
+): table is WritableSupabaseTablesNames {
+  return !isReadOnlyTable(table);
+}
 
 // Tables that should be synced to Supabase
 const SYNCABLE_TABLES = Object.keys(schema.tables).filter(
@@ -140,7 +161,9 @@ async function pullMarketRates(
     }
 
     // Transform records
-    const activeRecords = data.map((record) => transformFromSupabase(record));
+    const activeRecords = data.map((record) =>
+      transformFromSupabase("market_rates", record)
+    );
 
     return {
       created: [],
@@ -192,7 +215,9 @@ async function pullSnapshotTable(
     }
 
     // Transform records — snapshot tables have no `deleted` column
-    const activeRecords = data.map((record) => transformFromSupabase(record));
+    const activeRecords = data.map((record) =>
+      transformFromSupabase(table, record)
+    );
 
     return {
       created: [],
@@ -235,7 +260,7 @@ async function pullUserTable(
 
   const activeRecords = data
     .filter((record) => record.deleted !== true)
-    .map((record) => transformFromSupabase(record));
+    .map((record) => transformFromSupabase(table, record));
 
   return {
     created: [],
@@ -297,7 +322,7 @@ async function pullChildTable(
 
   const activeRecords = data
     .filter((record) => record.deleted !== true)
-    .map((record) => transformFromSupabase(record));
+    .map((record) => transformFromSupabase(table, record));
 
   return {
     created: [],
@@ -338,7 +363,7 @@ async function pullCategories(
 
   const activeRecords = data
     .filter((record) => record.deleted !== true)
-    .map((record) => transformFromSupabase(record));
+    .map((record) => transformFromSupabase("categories", record));
 
   return {
     created: [],
@@ -367,19 +392,12 @@ async function pullChanges(
 
   for (const table of SYNCABLE_TABLES) {
     const childConfig = CHILD_TABLES_MAP[table];
-    const isSnapshotTable = SNAPSHOT_TABLES.includes(
-      table as SnapshotTableName
-    );
 
     // Route to appropriate specialized pull function.
     if (table === "market_rates") {
       changes[table] = await pullMarketRates();
-    } else if (isSnapshotTable) {
-      changes[table] = await pullSnapshotTable(
-        table as SnapshotTableName,
-        userId,
-        lastSyncDate
-      );
+    } else if (isSnapshotTable(table)) {
+      changes[table] = await pullSnapshotTable(table, userId, lastSyncDate);
     } else if (table === "categories") {
       changes[table] = await pullCategories(userId, lastSyncDate);
     } else if (childConfig) {
@@ -425,10 +443,7 @@ async function pushChanges(
     }
 
     // Skip read-only tables (pull only, never push)
-    if (
-      table === "market_rates" ||
-      SNAPSHOT_TABLES.includes(table as SnapshotTableName)
-    ) {
+    if (!isWritableTable(table)) {
       continue;
     }
 
@@ -467,7 +482,7 @@ async function pushChanges(
             childConfig,
             activeParentIds
           );
-          return transformToSupabase(record, userId, isChildTable);
+          return transformToSupabase(table, record, userId, isChildTable);
         });
 
         const { error } = await supabase.from(table).insert(records);
@@ -486,7 +501,12 @@ async function pushChanges(
             childConfig,
             activeParentIds
           );
-          const transformed = transformToSupabase(record, userId, isChildTable);
+          const transformed = transformToSupabase(
+            table,
+            record,
+            userId,
+            isChildTable
+          );
 
           const { error } = await supabase
             .from(table)
@@ -574,10 +594,83 @@ function assertPushRecordBelongsToCurrentUser(
 /**
  * Transform Supabase record to WatermelonDB format
  */
-function transformFromSupabase(
+function stringifyJsonForWatermelon(value: unknown): string | null | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null) {
+    return null;
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  return JSON.stringify(value);
+}
+
+function parseJsonForSupabase(
+  value: unknown,
+  fallback: Record<string, never> | null,
+  columnName: string
+): unknown {
+  if (value === undefined || value === null) {
+    return fallback;
+  }
+
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  try {
+    return JSON.parse(value) as unknown;
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Invalid serialized JSON in profile column ${columnName}: ${reason}`
+    );
+  }
+}
+
+function normalizeProfileFromSupabase(
   record: Record<string, unknown>
 ): Record<string, unknown> {
-  const transformed: Record<string, unknown> = { ...record };
+  return {
+    ...record,
+    [PROFILE_NOTIFICATION_SETTINGS_COLUMN]: stringifyJsonForWatermelon(
+      record[PROFILE_NOTIFICATION_SETTINGS_COLUMN]
+    ),
+    [PROFILE_ONBOARDING_FLAGS_COLUMN]:
+      stringifyJsonForWatermelon(record[PROFILE_ONBOARDING_FLAGS_COLUMN]) ??
+      "{}",
+  };
+}
+
+function normalizeProfileToSupabase(
+  record: Record<string, unknown>
+): Record<string, unknown> {
+  return {
+    ...record,
+    [PROFILE_NOTIFICATION_SETTINGS_COLUMN]: parseJsonForSupabase(
+      record[PROFILE_NOTIFICATION_SETTINGS_COLUMN],
+      null,
+      PROFILE_NOTIFICATION_SETTINGS_COLUMN
+    ),
+    [PROFILE_ONBOARDING_FLAGS_COLUMN]: parseJsonForSupabase(
+      record[PROFILE_ONBOARDING_FLAGS_COLUMN],
+      {},
+      PROFILE_ONBOARDING_FLAGS_COLUMN
+    ),
+  };
+}
+
+function transformFromSupabase(
+  table: SupabaseTablesNames,
+  record: Record<string, unknown>
+): Record<string, unknown> {
+  const transformed: Record<string, unknown> =
+    table === "profiles" ? normalizeProfileFromSupabase(record) : { ...record };
 
   for (const col of ALL_DATE_COLUMNS) {
     if (typeof record[col] === "string") {
@@ -599,18 +692,23 @@ type SupabaseInsert<T extends WritableSupabaseTablesNames> =
  * Transform WatermelonDB record to Supabase format
  */
 function transformToSupabase<T extends WritableSupabaseTablesNames>(
+  table: T,
   record: unknown,
   userId: string,
   isChildTable: boolean = false
 ): SupabaseInsert<T> {
   const wmRecord = record as Record<string, unknown>;
-  const transformed: Record<string, unknown> = { ...wmRecord };
+  const transformed: Record<string, unknown> =
+    table === "profiles"
+      ? normalizeProfileToSupabase(wmRecord)
+      : { ...wmRecord };
 
   // Remove WatermelonDB internal fields - these don't exist in Supabase schema
   // _status tracks sync state (synced, created, updated, deleted)
   // _changed tracks which columns have local changes
   delete transformed["_status"];
   delete transformed["_changed"];
+  delete transformed["sms_body_hash"];
 
   // Ensure user_id is set (only for tables with user_id column)
   if (!isChildTable) {

@@ -1,4 +1,5 @@
 import {
+  fetchAccountsWithDetails,
   matchAccountCore,
   matchTransaction,
   matchTransactionsBatched,
@@ -7,6 +8,13 @@ import {
   type MatchInput,
 } from "../../services/sms-account-matcher";
 import type { ReviewableTransaction } from "@monyvi/logic";
+
+type TestTransaction = ReviewableTransaction & {
+  readonly cardLast4?: string;
+};
+
+const mockQueryOwned = jest.fn();
+const mockQueryChildrenOfOwnedParents = jest.fn();
 
 jest.mock("@monyvi/db", () => ({
   database: {
@@ -21,6 +29,16 @@ jest.mock("@monyvi/db", () => ({
 jest.mock("../../services/supabase", () => ({
   getCurrentUserId: (): Promise<string> => Promise.resolve("user-1"),
 }));
+
+jest.mock("../../services/user-data-access", () => ({
+  queryOwned: (...args: readonly unknown[]): unknown => mockQueryOwned(...args),
+  queryChildrenOfOwnedParents: (...args: readonly unknown[]): unknown =>
+    mockQueryChildrenOfOwnedParents(...args),
+}));
+
+beforeEach(() => {
+  jest.clearAllMocks();
+});
 
 describe("sms-account-matcher - matchAccountCore", () => {
   const baseDate = new Date("2026-01-01T00:00:00Z");
@@ -70,14 +88,14 @@ describe("sms-account-matcher - matchAccountCore", () => {
     expect(result.matchReason).toBe("card_last4");
   });
 
-  it("Step 1b: Matches based on card last 4 alone if sender doesn't match", () => {
+  it("Step 1b: Does not trust card last 4 when sender doesn't match", () => {
     const input: MatchInput = {
       senderDisplayName: "UNKNOWN SENDER xyz",
-      cardLast4: "1234", // Matches accBank1
+      cardLast4: "1234",
     };
     const result = matchAccountCore(input, accounts);
-    expect(result.accountId).toBe("acc_bank1");
-    expect(result.matchReason).toBe("card_last4");
+    expect(result.accountId).toBe("acc_bank2");
+    expect(result.matchReason).toBe("default");
   });
 
   it("Step 2: Matches based on sender alone (bank_details / account name)", () => {
@@ -147,6 +165,59 @@ describe("sms-account-matcher - matchAccountCore", () => {
   });
 });
 
+describe("sms-account-matcher - fetchAccountsWithDetails", () => {
+  it("keeps every bank detail matchable when one account has multiple SMS senders/cards", async () => {
+    const createdAt = new Date("2026-01-01T00:00:00Z");
+    const account = {
+      id: "acc_bank",
+      name: "E2E NBE Bank",
+      currency: "EGP",
+      isDefault: false,
+      createdAt,
+      type: "BANK",
+    };
+    const nbeDetails = {
+      accountId: "acc_bank",
+      bankName: "NBE",
+      smsSenderName: "NBE",
+      cardLast4: "4321",
+    };
+    const qnbDetails = {
+      accountId: "acc_bank",
+      bankName: "QNB",
+      smsSenderName: "QNB",
+      cardLast4: "5566",
+    };
+
+    mockQueryOwned.mockReturnValueOnce({
+      fetch: jest.fn<Promise<ReadonlyArray<typeof account>>, []>(() =>
+        Promise.resolve([account])
+      ),
+    });
+    mockQueryChildrenOfOwnedParents.mockReturnValueOnce({
+      fetch: jest.fn<
+        Promise<ReadonlyArray<typeof nbeDetails | typeof qnbDetails>>,
+        []
+      >(() => Promise.resolve([nbeDetails, qnbDetails])),
+    });
+
+    const accounts = await fetchAccountsWithDetails("user-1", "BANK");
+
+    expect(accounts).toHaveLength(2);
+    expect(accounts.map((entry) => entry.cardLast4)).toEqual(["4321", "5566"]);
+    expect(
+      matchAccountCore(
+        { senderDisplayName: "QNB", cardLast4: "5566", currency: "EGP" },
+        accounts
+      )
+    ).toMatchObject({
+      accountId: "acc_bank",
+      accountName: "E2E NBE Bank",
+      matchReason: "card_last4",
+    });
+  });
+});
+
 describe("sms-account-matcher - source-aware transaction matching", () => {
   const baseDate = new Date("2026-01-01T00:00:00Z");
 
@@ -177,9 +248,7 @@ describe("sms-account-matcher - source-aware transaction matching", () => {
     type: "BANK",
   };
 
-  function tx(
-    overrides: Partial<ReviewableTransaction> = {}
-  ): ReviewableTransaction {
+  function tx(overrides: Partial<TestTransaction> = {}): TestTransaction {
     return {
       amount: 100,
       currency: "EGP",
@@ -222,6 +291,53 @@ describe("sms-account-matcher - source-aware transaction matching", () => {
     expect(batches).toHaveLength(1);
     expect(batches[0].get(0)?.accountId).toBe(null);
     expect(batches[0].get(0)?.matchReason).toBe("none");
+  });
+
+  it("matches SMS review rows against every bank detail on the same account", async () => {
+    const batches: Array<ReadonlyMap<number, AccountMatch>> = [];
+    const qnbTransaction = {
+      originLabel: "QNB",
+      cardLast4: "5566",
+    };
+
+    await matchTransactionsBatched(
+      [tx(qnbTransaction)],
+      "user-1",
+      20,
+      (batch) => batches.push(batch),
+      [
+        cashDefault,
+        {
+          id: "acc_bank_shared",
+          name: "E2E NBE Bank",
+          currency: "EGP",
+          isDefault: false,
+          createdAt: baseDate,
+          type: "BANK",
+          smsSenderName: "NBE",
+          bankName: "NBE",
+          cardLast4: "4321",
+        },
+        {
+          id: "acc_bank_shared",
+          name: "E2E NBE Bank",
+          currency: "EGP",
+          isDefault: false,
+          createdAt: baseDate,
+          type: "BANK",
+          smsSenderName: "QNB",
+          bankName: "QNB",
+          cardLast4: "5566",
+        },
+      ]
+    );
+
+    expect(batches).toHaveLength(1);
+    expect(batches[0].get(0)).toMatchObject({
+      accountId: "acc_bank_shared",
+      accountName: "E2E NBE Bank",
+      matchReason: "card_last4",
+    });
   });
 
   it("uses a valid AI account id for voice transactions", () => {

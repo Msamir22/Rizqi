@@ -42,6 +42,31 @@ const DEL_FASTEST_DELAY = 50;
 const DEL_SPEED_UP_THRESHOLD = 5; // deletions before first speed-up
 const DEL_FASTEST_THRESHOLD = 15; // deletions before reaching max speed
 
+function getCalculatorKeyTestId(value: CalculatorKey): string {
+  const keyNames: Record<CalculatorKey, string> = {
+    ".": "dot",
+    "0": "0",
+    "1": "1",
+    "2": "2",
+    "3": "3",
+    "4": "4",
+    "5": "5",
+    "6": "6",
+    "7": "7",
+    "8": "8",
+    "9": "9",
+    "+": "plus",
+    "-": "minus",
+    "*": "multiply",
+    "/": "divide",
+    "=": "equals",
+    DEL: "del",
+    DONE: "done",
+  };
+
+  return `calculator-key-${keyNames[value]}`;
+}
+
 const Key = ({
   label,
   value,
@@ -58,6 +83,7 @@ const Key = ({
   className?: string;
 }): React.JSX.Element => (
   <TouchableOpacity
+    testID={getCalculatorKeyTestId(value)}
     className={`items-center justify-center rounded-2xl mx-1 active:opacity-70 flex-1 bg-slate-100 dark:bg-slate-800/50 ${className}`}
     style={{ height: KEY_HEIGHT }}
     onPress={() => {
@@ -90,6 +116,7 @@ const OperationKey = ({
   onPress: (value: CalculatorKey) => void;
 }): React.JSX.Element => (
   <TouchableOpacity
+    testID={getCalculatorKeyTestId(value)}
     className="items-center justify-center rounded-2xl mx-1 active:opacity-70 flex-1 bg-nileGreen-500/10 dark:bg-nileGreen-500/10"
     style={{ height: KEY_HEIGHT }}
     onPress={() => {
@@ -213,6 +240,7 @@ export function CalculatorKeypad({
       {/* Bottom Row: = and Action Button (side by side) */}
       <View className="flex-row mt-1 px-3">
         <TouchableOpacity
+          testID={getCalculatorKeyTestId("DONE")}
           className="flex-1 items-center justify-center rounded-2xl mx-1 bg-nileGreen-500 active:opacity-80 shadow-md"
           style={{ height: KEY_HEIGHT + 4 }}
           onPress={() => {
@@ -228,6 +256,7 @@ export function CalculatorKeypad({
         </TouchableOpacity>
 
         <TouchableOpacity
+          testID={getCalculatorKeyTestId("=")}
           className="flex-1 items-center justify-center rounded-2xl mx-1 active:opacity-70 bg-nileGreen-500/15 dark:bg-nileGreen-500/15"
           style={{ height: KEY_HEIGHT + 4 }}
           onPress={() => onKeyPress("=")}

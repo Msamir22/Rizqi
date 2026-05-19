@@ -3,9 +3,7 @@ appId: com.monyvi.app
 # Live detection asks for notification access after live SMS access is granted.
 # Preconditions: app state already contains an authenticated/onboarded user.
 
-- launchApp:
-    appId: com.monyvi.app
-    clearState: false
+- setPermissions:
     permissions:
       sms: allow
       notifications: unset

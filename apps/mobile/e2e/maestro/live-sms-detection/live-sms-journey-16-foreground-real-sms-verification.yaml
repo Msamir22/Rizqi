@@ -1,0 +1,9 @@
+appId: com.monyvi.app
+---
+# Verifies Journey 16 after the runner sends the foreground real emulator SMS.
+
+- extendedWaitUntil:
+    visible: "Live detection log count: 1"
+    timeout: 60000
+
+- assertVisible: "Latest detected: 64.32 EGP from QNB"

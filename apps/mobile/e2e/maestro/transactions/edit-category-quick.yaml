@@ -1,7 +1,5 @@
 appId: com.monyvi.app
-
 ---
-
 # T033: Quick-edit category via tapping the category icon on a card
 # Precondition: At least one transaction exists
 
@@ -11,23 +9,30 @@ appId: com.monyvi.app
 # Step 2: Wait for transaction list to load
 - waitForAnimationToEnd
 
-# Step 3: Tap the category icon on the first transaction card
+# Step 3: Show expenses only so the quick-edit modal has alternate categories.
+- tapOn:
+    id: "filter-type"
+
+- waitForAnimationToEnd
+- tapOn: "Income"
+- tapOn: "Done"
+- waitForAnimationToEnd
+
+# Step 4: Tap the category icon on the first expense transaction card
 - tapOn:
     id: "card-category-.*"
     index: 0
 
 - waitForAnimationToEnd
 
-# Step 4: Verify category picker modal opens
-# The modal should show category options
-- assertVisible: "Select Category"
+# Step 5: Verify quick edit modal opens
+- assertVisible: "Edit Category"
 
-# Step 5: Tap a different category from the list
-# Tap on any visible category name (e.g., first one in the list)
+# Step 6: Tap a different category chip from the quick edit modal
 - tapOn:
-    index: 0
-    text: ".*"
-    optional: true
+    id: "category-chip-.*"
+    index: 1
 
-# Step 6: Wait for modal to close and card to update
+# Step 7: Wait for modal to close and card to update
 - waitForAnimationToEnd
+- assertVisible: "Transactions"

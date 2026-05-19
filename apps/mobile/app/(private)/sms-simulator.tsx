@@ -272,7 +272,7 @@ export default function SmsSimulatorScreen(): React.JSX.Element | null {
         </Text>
         <Text
           testID="sms-simulator-log-count"
-          className="h-0 text-[0px] text-transparent"
+          className="h-px overflow-hidden text-xs text-transparent"
         >{`sms-simulator-log-count-${log.length}`}</Text>
         {log.length === 0 ? (
           <Text className="text-sm text-slate-500 dark:text-slate-400">

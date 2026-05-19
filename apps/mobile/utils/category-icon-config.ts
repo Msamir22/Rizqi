@@ -1,6 +1,12 @@
-import type { Category } from "@monyvi/db";
 import { palette } from "@/constants/colors";
 import type { IconLibrary } from "@/components/common/CategoryIcon";
+
+export interface CategoryIconSource {
+  readonly icon: string;
+  readonly iconLibrary: string;
+  readonly color?: string | null;
+  readonly isExpense: boolean;
+}
 
 export interface CategoryIconConfig {
   readonly iconName: string;
@@ -20,7 +26,9 @@ function toIconLibrary(iconLibrary: string): IconLibrary {
   }
 }
 
-export function getCategoryIconConfig(category: Category): CategoryIconConfig {
+export function getCategoryIconConfig(
+  category: CategoryIconSource
+): CategoryIconConfig {
   return {
     iconName: category.icon,
     iconLibrary: toIconLibrary(category.iconLibrary),

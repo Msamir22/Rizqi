@@ -17,14 +17,22 @@ function main() {
     EXPO_PUBLIC_SUPABASE_ANON_KEY:
       process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "",
     EXPO_PUBLIC_SENTRY_DSN: process.env.EXPO_PUBLIC_SENTRY_DSN ?? "",
+    EXPO_NO_METRO_WORKSPACE_ROOT:
+      process.env.EXPO_NO_METRO_WORKSPACE_ROOT ?? "1",
     EXPO_NO_TELEMETRY: "1",
     CI: process.env.CI ?? "1",
   };
 
+  const shouldClearCache = process.env.E2E_METRO_CLEAR_CACHE === "1";
+  const defaultArgs = ["expo", "start", "--dev-client", "--port", "8081"];
+  if (shouldClearCache) {
+    defaultArgs.splice(2, 0, "--clear");
+  }
+
   const args =
     process.argv.length > 2
       ? ["expo", "start", ...process.argv.slice(2)]
-      : ["expo", "start", "--clear", "--dev-client", "--port", "8081"];
+      : defaultArgs;
 
   const result = spawnSync(resolveNpxCommand(), args, {
     env,

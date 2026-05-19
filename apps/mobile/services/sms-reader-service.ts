@@ -16,6 +16,8 @@
 
 import { Platform } from "react-native";
 import type { SmsMessage } from "@monyvi/logic";
+import { shouldUseFixtureSmsParser } from "@/config/e2e-test-config";
+import { getFixtureById } from "@/services/dev/sms-fixtures";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -68,6 +70,83 @@ interface NativeSmsModule {
   ): void;
 }
 
+const E2E_SMS_INBOX_FIXTURE_IDS = [
+  "pr622_batch_duplicate_shop",
+  "pr622_batch_duplicate_shop",
+  "qnb_atm_withdrawal",
+] as const;
+
+const E2E_DUPLICATE_SECOND_OFFSET_MS = 60_000;
+const INVALID_SMS_DATE_FALLBACK_BASE_MS = Date.UTC(2024, 0, 1);
+const INVALID_SMS_DATE_FALLBACK_STEP_MS = 1000;
+
+interface FixtureInboxMessage {
+  readonly id: string;
+  readonly address: string;
+  readonly body: string;
+  readonly date: number;
+  readonly read: true;
+}
+
+function resolveFixtureTimestamp(
+  fixtureId: string,
+  index: number,
+  timestamp: number | undefined
+): number {
+  if (timestamp === undefined) {
+    throw new Error(
+      `Fixture ${fixtureId} at index ${index} must define timestamp in E2E fixture mode`
+    );
+  }
+
+  return timestamp;
+}
+
+function readFixtureSmsInbox(
+  options?: SmsReaderOptions
+): readonly SmsMessage[] {
+  const fixtureMessages = E2E_SMS_INBOX_FIXTURE_IDS.map((fixtureId, index) => {
+    const fixture = getFixtureById(fixtureId);
+    if (!fixture) {
+      throw new Error(`Missing E2E SMS inbox fixture: ${fixtureId}`);
+    }
+
+    const baseDate = resolveFixtureTimestamp(
+      fixtureId,
+      index,
+      fixture.timestamp
+    );
+    const duplicateOffset =
+      fixtureId === "pr622_batch_duplicate_shop" && index === 1
+        ? E2E_DUPLICATE_SECOND_OFFSET_MS
+        : 0;
+
+    const message: FixtureInboxMessage = {
+      id: `e2e-${fixtureId}-${index}`,
+      address: fixture.sender,
+      body: fixture.body,
+      date: baseDate + duplicateOffset,
+      read: true,
+    };
+    return message;
+  });
+
+  const minDate = options?.minDate;
+  const filteredByAddress =
+    options?.address === undefined
+      ? fixtureMessages
+      : fixtureMessages.filter(
+          (message) => message.address === options.address
+        );
+  const filtered =
+    minDate === undefined
+      ? filteredByAddress
+      : filteredByAddress.filter((message) => message.date >= minDate);
+  const newestFirst = [...filtered].sort((a, b) => b.date - a.date);
+
+  return newestFirst.slice(0, options?.maxCount ?? 1000);
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -83,6 +162,10 @@ export async function readSmsInbox(
 ): Promise<readonly SmsMessage[]> {
   if (Platform.OS !== "android") {
     return [];
+  }
+
+  if (shouldUseFixtureSmsParser()) {
+    return readFixtureSmsInbox(options);
   }
 
   try {
@@ -170,12 +253,35 @@ function mapNativeSms(raw: RawNativeSms): SmsMessage {
     id: String(raw._id),
     address: raw.address,
     body: raw.body,
-    date: parseNativeSmsDate(raw.date),
+    date: parseNativeSmsDate(raw.date, raw._id),
     read: raw.read === 1,
   };
 }
 
-function parseNativeSmsDate(date: string): number {
+function parseNativeSmsDate(date: string, id: string): number {
   const parsedDate = Number.parseInt(date, 10);
-  return Number.isFinite(parsedDate) ? parsedDate : 0;
+  if (Number.isFinite(parsedDate)) {
+    return parsedDate;
+  }
+
+  return getInvalidSmsDateFallback(id);
+}
+
+function getInvalidSmsDateFallback(id: string): number {
+  const parsedId = Number.parseInt(id, 10);
+  if (Number.isFinite(parsedId) && parsedId >= 0) {
+    return (
+      INVALID_SMS_DATE_FALLBACK_BASE_MS +
+      parsedId * INVALID_SMS_DATE_FALLBACK_STEP_MS
+    );
+  }
+
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 31 + id.charCodeAt(i)) % 1_000_000_000;
+  }
+
+  return (
+    INVALID_SMS_DATE_FALLBACK_BASE_MS + hash * INVALID_SMS_DATE_FALLBACK_STEP_MS
+  );
 }

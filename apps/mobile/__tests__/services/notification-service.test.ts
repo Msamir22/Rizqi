@@ -85,6 +85,19 @@ function getScheduledNotificationInput(): Parameters<
   return scheduledNotification;
 }
 
+function getNotificationCategoryActions(): Parameters<
+  typeof Notifications.setNotificationCategoryAsync
+>[1] {
+  const categoryCall = mockSetNotificationCategoryAsync.mock.calls[0] as
+    | Parameters<typeof Notifications.setNotificationCategoryAsync>
+    | undefined;
+  if (!categoryCall) {
+    throw new Error("Expected notification category to be configured");
+  }
+
+  return categoryCall[1];
+}
+
 function createParsedSmsTransaction(): ParsedSmsTransaction {
   return {
     amount: 413,
@@ -294,7 +307,7 @@ describe("notification-service", () => {
         "MainCIBAccount"
       );
 
-      const actions = mockSetNotificationCategoryAsync.mock.calls[0]?.[1];
+      const actions = getNotificationCategoryActions();
       const confirmAction = actions?.find(
         (action) => action.identifier === ACTION_CONFIRM
       );
@@ -376,6 +389,32 @@ describe("notification-service", () => {
       "notification-cold"
     );
     expect(mockClearLastNotificationResponseAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserves the last notification response when cold-start handling fails", async () => {
+    mockGetLastNotificationResponseAsync.mockResolvedValueOnce(
+      createNotificationResponse(
+        ACTION_CONFIRM,
+        "notification-failed",
+        "hash-failed"
+      )
+    );
+    const handler = jest.fn(() => Promise.reject(new Error("save failed")));
+
+    registerNotificationActionHandler(handler);
+    await flushPromises();
+    await flushPromises();
+
+    expect(handler).toHaveBeenCalledWith(
+      ACTION_CONFIRM,
+      expect.objectContaining({
+        resolvedAccountId: "account-1",
+      })
+    );
+    expect(mockDismissNotificationAsync).not.toHaveBeenCalledWith(
+      "notification-failed"
+    );
+    expect(mockClearLastNotificationResponseAsync).not.toHaveBeenCalled();
   });
 
   it("dismisses a notification when the user discards it", async () => {

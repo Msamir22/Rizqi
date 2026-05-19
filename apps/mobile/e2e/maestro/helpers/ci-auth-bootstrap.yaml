@@ -3,11 +3,39 @@ appId: com.monyvi.app
 # CI helper: sign in with the configured E2E test account, then finish
 # onboarding if this is the account's first local launch.
 
-- launchApp:
-    appId: com.monyvi.app
-    clearState: false
-
 - waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: "This is the developer menu"
+    commands:
+      - tapOn: "Continue"
+      - waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: "Connected to:"
+    commands:
+      - pressKey: Back
+      - waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      "Skip|Welcome to Monyvi|Email address|Auto-Track
+      Transactions|Transactions|Accounts|Open menu|Good Morning|Good
+      Afternoon|Good Evening"
+    timeout: 120000
+
+- runFlow:
+    when:
+      visible: "Skip"
+    commands:
+      - tapOn: "Skip"
+      - extendedWaitUntil:
+          visible:
+            "Welcome to Monyvi|Email address|Transactions|Accounts|Open
+            menu|Good Morning|Good Afternoon|Good Evening"
+          timeout: 120000
 
 - runFlow:
     when:
@@ -18,8 +46,20 @@ appId: com.monyvi.app
       - tapOn: "Password"
       - inputText: ${MAESTRO_E2E_PASSWORD}
       - tapOn: "Sign in"
+      - runFlow:
+          when:
+            visible: "Save password to Google?"
+          commands:
+            - tapOn: "Not now|Never"
+      - runFlow:
+          when:
+            visible: "Auto-Track Transactions"
+          commands:
+            - tapOn: "Not Now"
       - extendedWaitUntil:
-          visible: "Home|Choose your primary currency|Transactions|Settings"
+          visible:
+            "Choose your primary currency|Transactions|Accounts|Open menu|Good
+            Morning|Good Afternoon|Good Evening"
           timeout: 120000
 
 - runFlow:
@@ -28,9 +68,23 @@ appId: com.monyvi.app
     commands:
       - tapOn: "Confirm"
       - extendedWaitUntil:
-          visible: "Home|Transactions|Settings"
+          visible:
+            "Transactions|Accounts|Open menu|Good Morning|Good Afternoon|Good
+            Evening"
+          timeout: 120000
+
+- runFlow:
+    when:
+      visible: "Auto-Track Transactions"
+    commands:
+      - tapOn: "Not Now"
+      - extendedWaitUntil:
+          visible:
+            "Transactions|Accounts|Open menu|Good Morning|Good Afternoon|Good
+            Evening"
           timeout: 120000
 
 - extendedWaitUntil:
-    visible: "Home|Transactions|Settings"
+    visible:
+      "Transactions|Accounts|Open menu|Good Morning|Good Afternoon|Good Evening"
     timeout: 120000

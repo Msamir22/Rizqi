@@ -563,6 +563,7 @@ export default function EditTransaction(): React.ReactNode {
                     {t("transfer_from").toUpperCase()}
                   </Text>
                   <TouchableOpacity
+                    testID="edit-transaction-from-account-selector"
                     onPress={() => {
                       setFormErrors((prev) => ({
                         ...prev,
@@ -619,6 +620,7 @@ export default function EditTransaction(): React.ReactNode {
                     {t("transfer_to").toUpperCase()}
                   </Text>
                   <TouchableOpacity
+                    testID="edit-transaction-to-account-selector"
                     onPress={() => {
                       setFormErrors((prev) => ({
                         ...prev,
@@ -668,6 +670,7 @@ export default function EditTransaction(): React.ReactNode {
                     {t("account").toUpperCase()}
                   </Text>
                   <TouchableOpacity
+                    testID="edit-transaction-account-selector"
                     onPress={() => {
                       setFormErrors((prev) => ({
                         ...prev,

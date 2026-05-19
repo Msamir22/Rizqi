@@ -1,12 +1,10 @@
 /**
- * Dev-only SMS fixtures for the Live SMS Detection simulator.
+ * Deterministic SMS fixtures for development tools and E2E fixture mode.
  *
- * Each fixture is a realistic financial (or non-financial) SMS body used
- * to drive the same `onSmsReceived` pipeline the native Android
- * SmsBroadcastReceiver drives in production.
- *
- * Used exclusively by `apps/mobile/app/sms-simulator.tsx` and is guarded
- * by `__DEV__` at the call sites so it is tree-shaken in release builds.
+ * Each fixture is a realistic financial (or non-financial) SMS body used by
+ * the SMS simulator and by the guarded E2E fixture parser/reader. Production
+ * behavior must stay on the real SMS reader and Edge parser unless explicit
+ * E2E mode is enabled.
  *
  * @module services/dev/sms-fixtures
  */
@@ -43,6 +41,8 @@ const APRIL_8_2026_14_23 = 1775658180000;
 const APRIL_8_2026_15_02 = 1775660520000;
 const APRIL_8_2026_16_10 = 1775664600000;
 const APRIL_8_2026_16_20 = 1775665200000;
+const APRIL_8_2026_17_01 = 1775667660000;
+const APRIL_8_2026_17_12 = 1775668320000;
 
 export const SMS_FIXTURES: readonly SmsFixture[] = [
   {
@@ -106,6 +106,28 @@ export const SMS_FIXTURES: readonly SmsFixture[] = [
         isTrusted: true,
         isAtmWithdrawal: true,
         cardLast4: "5566",
+      },
+    ],
+  },
+  {
+    id: "pr622_batch_duplicate_shop",
+    label: "NBE - PR622 duplicate batch purchase",
+    description:
+      "Fixture inbox SMS used by batch SMS sync duplicate-fingerprint E2E",
+    sender: "NBE",
+    body: "Purchase EGP 33.33 on card **** 4321 at PR622 BATCH DUPLICATE SHOP on 08/04 17:01. Avail bal EGP 12,397.22",
+    timestamp: APRIL_8_2026_17_01,
+    expectedTransactions: [
+      {
+        amount: 33.33,
+        currency: "EGP",
+        type: "EXPENSE",
+        counterparty: "PR622 BATCH DUPLICATE SHOP",
+        categorySystemName: "shopping",
+        date: "2026-04-08T15:01:00.000Z",
+        confidenceScore: 0.97,
+        isTrusted: true,
+        cardLast4: "4321",
       },
     ],
   },
@@ -332,6 +354,27 @@ export const SMS_FIXTURES: readonly SmsFixture[] = [
         confidenceScore: 0.95,
         isTrusted: true,
         cardLast4: "1234",
+      },
+    ],
+  },
+  {
+    id: "foreground_live_sms_test",
+    label: "Foreground live SMS test",
+    description: "Real emulator SMS used by foreground live detection journey",
+    sender: "QNB",
+    body: "Purchase EGP 64.32 at FOREGROUND LIVE SMS TEST using card ending 5566",
+    timestamp: APRIL_8_2026_17_12,
+    expectedTransactions: [
+      {
+        amount: 64.32,
+        currency: "EGP",
+        type: "EXPENSE",
+        counterparty: "FOREGROUND LIVE SMS TEST",
+        categorySystemName: "shopping",
+        date: "2026-04-08T15:12:00.000Z",
+        confidenceScore: 0.95,
+        isTrusted: true,
+        cardLast4: "5566",
       },
     ],
   },

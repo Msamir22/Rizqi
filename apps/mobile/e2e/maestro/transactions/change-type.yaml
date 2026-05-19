@@ -1,7 +1,5 @@
 appId: com.monyvi.app
-
 ---
-
 # T036: Edit transaction — change type from Expense to Income
 # Precondition: At least one expense transaction exists
 
@@ -11,27 +9,40 @@ appId: com.monyvi.app
 # Step 2: Wait for transaction list to load
 - waitForAnimationToEnd
 
-# Step 3: Tap on the first transaction card to open edit screen
+# Step 3: Search for the seeded expense transaction.
+- tapOn:
+    id: "search-input"
+
+- inputText: "E2E Grocery"
+- pressKey: Back
+- extendedWaitUntil:
+    visible: "E2E Grocery"
+    timeout: 30000
+
+# Step 4: Tap on the seeded expense transaction card to open edit screen
 - tapOn:
     id: "transaction-card-.*"
     index: 0
 
 - waitForAnimationToEnd
 
-# Step 4: Verify edit screen opens
+# Step 5: Verify edit screen opens
 - assertVisible: "Edit Transaction"
 
-# Step 5: Tap INCOME type tab to change transaction type
+# Step 6: Tap INCOME type tab to change transaction type
 - tapOn:
     id: "type-tab-INCOME"
 
 - waitForAnimationToEnd
 
-# Step 6: Tap Save
+# Step 7: Tap Save
 - tapOn:
     id: "header-save"
 
 - waitForAnimationToEnd
 
-# Step 7: Verify navigation back to transactions list
-- assertVisible: "Transactions"
+# Step 8: Verify navigation back to transactions list
+- extendedWaitUntil:
+    visible:
+      id: "filter-period"
+    timeout: 30000

@@ -46,6 +46,7 @@ function CategoryChip({
 }): React.JSX.Element {
   return (
     <TouchableOpacity
+      testID={`category-chip-${category.id}`}
       onPress={onPress}
       className={`flex-row items-center py-1.5 px-3 rounded-full border ${
         isSelected

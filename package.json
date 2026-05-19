@@ -12,6 +12,9 @@
     "api:dev": "npm run dev -w @monyvi/api",
     "api:build": "npm run build -w @monyvi/api",
     "mobile": "npm run start -w @monyvi/mobile",
+    "supabase:start:local": "node scripts/start-local-supabase.js",
+    "mobile:local-supabase": "npm run start:local-supabase -w @monyvi/mobile --",
+    "mobile:local-supabase:google": "npm run start:local-supabase:google -w @monyvi/mobile --",
     "mobile:e2e-fixture": "npm run start:e2e-fixture -w @monyvi/mobile",
     "mobile:ios": "npm run ios -w @monyvi/mobile",
     "mobile:android": "npm run android -w @monyvi/mobile",
@@ -36,6 +39,8 @@
     "db:push": "npx supabase db push",
     "db:reset": "npx supabase db reset",
     "db:migrations": "npx supabase migration list",
+    "supabase:runtime:setup-local": "node scripts/setup-local-supabase-runtime.js",
+    "supabase:market-rates:import-local": "node scripts/import-market-rates-to-local.js",
     "fn:deploy:rates": "npx supabase functions deploy fetch-metal-rates --project-ref yulbcndyssdjicbpmlrk",
     "fn:deploy:parse-sms": "npx supabase functions deploy parse-sms --project-ref yulbcndyssdjicbpmlrk",
     "fn:deploy:parse-voice": "npx supabase functions deploy parse-voice --project-ref yulbcndyssdjicbpmlrk",
@@ -45,7 +50,12 @@
     "e2e:reset": "npm run e2e:reset -w @monyvi/mobile",
     "e2e:local": "npm run e2e:local -w @monyvi/mobile",
     "e2e:flow": "npm run e2e:flow -w @monyvi/mobile --",
+    "e2e:flow:local": "npm run e2e:flow:local -w @monyvi/mobile --",
+    "e2e:auth:local": "npm run e2e:auth:local -w @monyvi/mobile",
+    "e2e:sms-sync": "npm run e2e:sms-sync -w @monyvi/mobile --",
+    "e2e:sms-sync:local": "npm run e2e:sms-sync:local -w @monyvi/mobile --",
     "e2e:live-sms": "npm run e2e:live-sms -w @monyvi/mobile --",
+    "e2e:live-sms:local": "npm run e2e:live-sms:local -w @monyvi/mobile --",
     "e2e:device": "npm run e2e:device -w @monyvi/mobile --",
     "e2e:studio": "npm run e2e:studio -w @monyvi/mobile",
     "test": "npm test -w @monyvi/mobile",
@@ -70,5 +80,8 @@
     "prettier": "^3.2.5",
     "supabase": "^2.71.1",
     "typescript": "^5.4.0"
+  },
+  "optionalDependencies": {
+    "lightningcss-linux-x64-gnu": "1.27.0"
   }
 }

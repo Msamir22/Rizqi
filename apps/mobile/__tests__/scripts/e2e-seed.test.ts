@@ -5,6 +5,8 @@ import {
   seedE2eData,
 } from "../../scripts/e2e-seed";
 
+const EXPECTED_E2E_MARKET_RATE_ID = "00000000-0000-0000-0006-000000000001";
+
 describe("e2e-seed script helpers", () => {
   it("uses safe local defaults only for local Supabase mode", () => {
     const config = getE2eSeedConfig({
@@ -82,6 +84,76 @@ describe("e2e-seed script helpers", () => {
     expect(operations).toContain("upsert:accounts:3");
     expect(operations).toContain("upsert:transactions:2");
     expect(operations).toContain("upsert:transfers:1");
+    expect(operations).toContain(
+      `upsert:market_rates:${EXPECTED_E2E_MARKET_RATE_ID}`
+    );
+  });
+
+  it("seeds a recent market rate so synced E2E transaction lists can render", async () => {
+    const operations: string[] = [];
+    const marketRateRows: unknown[] = [];
+    const transactionRows: unknown[] = [];
+    const transferRows: unknown[] = [];
+    const client = createMockClient(operations, {
+      marketRateRows,
+      transactionRows,
+      transferRows,
+    });
+
+    await seedE2eData(client, {
+      ...getE2eSeedConfig({
+        E2E_SUPABASE_MODE: "local",
+        E2E_LOCAL_JWT_SECRET: "local-test-jwt-secret-with-enough-length",
+        MAESTRO_E2E_EMAIL: "e2e@monyvi.test",
+        MAESTRO_E2E_PASSWORD: "Password123!",
+      }),
+      userId: "user-e2e",
+    });
+
+    expect(marketRateRows).toHaveLength(1);
+    expect(marketRateRows[0]).toMatchObject({
+      id: EXPECTED_E2E_MARKET_RATE_ID,
+      egp_usd: 0.02,
+      gold_usd_per_gram: 75,
+    });
+    const createdAt = (marketRateRows[0] as { created_at?: string }).created_at;
+    expect(createdAt).toBeDefined();
+    expect(Date.now() - Date.parse(createdAt ?? "")).toBeLessThan(
+      7 * 24 * 60 * 60 * 1000
+    );
+    expect(transactionRows).toHaveLength(2);
+    expect(transferRows).toHaveLength(1);
+    const today = new Date().toISOString().slice(0, 10);
+    expect(transactionRows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ date: today }),
+        expect.objectContaining({ date: today }),
+      ])
+    );
+    expect(transferRows[0]).toMatchObject({ date: today });
+  });
+
+  it("does not seed fake global market rates in remote mode", async () => {
+    const operations: string[] = [];
+    const marketRateRows: unknown[] = [];
+    const client = createMockClient(operations, { marketRateRows });
+
+    await seedE2eData(client, {
+      ...getE2eSeedConfig({
+        E2E_SUPABASE_MODE: "remote",
+        EXPO_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
+        EXPO_PUBLIC_SUPABASE_ANON_KEY: "anon-key",
+        SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
+        MAESTRO_E2E_EMAIL: "e2e@monyvi.test",
+        MAESTRO_E2E_PASSWORD: "Password123!",
+      }),
+      userId: "user-e2e",
+    });
+
+    expect(operations).not.toContain(
+      `upsert:market_rates:${EXPECTED_E2E_MARKET_RATE_ID}`
+    );
+    expect(marketRateRows).toHaveLength(0);
   });
 
   it("syncs credentials when the E2E auth user already exists", async () => {
@@ -192,6 +264,9 @@ interface MockUser {
 
 interface MockClientOptions {
   readonly authPages?: readonly (readonly MockUser[])[];
+  readonly marketRateRows?: unknown[];
+  readonly transactionRows?: unknown[];
+  readonly transferRows?: unknown[];
 }
 
 function createMockClient(
@@ -232,11 +307,28 @@ function createMockClient(
           return Promise.resolve({ error: null });
         },
       }),
-      upsert: (rows: unknown[] | { user_id?: string }, options?: unknown) => {
+      upsert: (
+        rows: unknown[] | { id?: string; user_id?: string },
+        upsertOptions?: unknown
+      ) => {
         const marker = Array.isArray(rows)
           ? `${rows.length}`
-          : String(rows.user_id ?? "unknown");
+          : String(
+              rows.user_id ??
+                ("id" in rows && typeof rows.id === "string"
+                  ? rows.id
+                  : "unknown")
+            );
         operations.push(`upsert:${table}:${marker}`);
+        if (table === "market_rates") {
+          options.marketRateRows?.push(rows);
+        }
+        if (table === "transactions" && Array.isArray(rows)) {
+          options.transactionRows?.push(...rows);
+        }
+        if (table === "transfers" && Array.isArray(rows)) {
+          options.transferRows?.push(...rows);
+        }
         if (Array.isArray(rows)) {
           const ids = rows
             .map((row) =>
@@ -251,7 +343,7 @@ function createMockClient(
           select: () => ({
             single: () => Promise.resolve({ data: rows, error: null }),
           }),
-          options,
+          options: upsertOptions,
         };
       },
     }),

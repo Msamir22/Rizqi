@@ -22,14 +22,37 @@ appId: com.monyvi.app
 # The modal should show an input for the new amount
 - assertVisible: "Edit Amount"
 
-# Step 5: Clear and enter a new amount
-- inputText: "250"
+# Step 5: Clear the keypad amount and enter a new amount
+- tapOn:
+    id: "calculator-key-del"
+- tapOn:
+    id: "calculator-key-del"
+- tapOn:
+    id: "calculator-key-del"
+- tapOn:
+    id: "calculator-key-del"
+- tapOn:
+    id: "calculator-key-del"
+- tapOn:
+    id: "calculator-key-del"
+- tapOn:
+    id: "calculator-key-del"
+- tapOn:
+    id: "calculator-key-del"
+- tapOn:
+    id: "calculator-key-2"
+- tapOn:
+    id: "calculator-key-5"
+- tapOn:
+    id: "calculator-key-0"
 
-# Step 6: Confirm the change
-- tapOn: "Confirm"
+# Step 6: Save the change
+- tapOn:
+    id: "calculator-key-done"
 
 # Step 7: Wait for update
 - waitForAnimationToEnd
 
 # Step 8: Verify we're still on the transactions list
 - assertVisible: "Transactions"
+- assertVisible: ".*250 EGP"

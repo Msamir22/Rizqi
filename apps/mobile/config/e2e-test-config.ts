@@ -1,33 +1,31 @@
 export type MonyviTestMode = "off" | "e2e";
 export type AiSmsParserMode = "edge" | "fixture";
 
-type PublicEnvName =
-  | "EXPO_PUBLIC_MONYVI_TEST_MODE"
-  | "EXPO_PUBLIC_AI_SMS_PARSER_MODE";
+const publicMonyviTestModeEnv = process.env
+  .EXPO_PUBLIC_MONYVI_TEST_MODE as string | undefined;
+const publicAiSmsParserModeEnv = process.env
+  .EXPO_PUBLIC_AI_SMS_PARSER_MODE as string | undefined;
 
-interface TestProcessEnv {
-  readonly NODE_ENV?: string;
-  readonly EXPO_PUBLIC_MONYVI_TEST_MODE?: string;
-  readonly EXPO_PUBLIC_AI_SMS_PARSER_MODE?: string;
-}
-
-interface TestGlobal {
-  readonly process?: {
-    readonly env: TestProcessEnv;
-  };
-}
-
-function getTestEnvValue(name: PublicEnvName): string | undefined {
-  const testGlobal = globalThis as typeof globalThis & TestGlobal;
-  return testGlobal.process?.env[name];
+function getTestProcessEnv(): Record<string, string | undefined> | undefined {
+  return globalThis.process?.env as
+    | Record<string, string | undefined>
+    | undefined;
 }
 
 function getPublicMonyviTestModeEnv(): string | undefined {
-  return getTestEnvValue("EXPO_PUBLIC_MONYVI_TEST_MODE");
+  if (process.env.NODE_ENV === "test") {
+    return getTestProcessEnv()?.EXPO_PUBLIC_MONYVI_TEST_MODE;
+  }
+
+  return publicMonyviTestModeEnv;
 }
 
 function getPublicAiSmsParserModeEnv(): string | undefined {
-  return getTestEnvValue("EXPO_PUBLIC_AI_SMS_PARSER_MODE");
+  if (process.env.NODE_ENV === "test") {
+    return getTestProcessEnv()?.EXPO_PUBLIC_AI_SMS_PARSER_MODE;
+  }
+
+  return publicAiSmsParserModeEnv;
 }
 
 export function getMonyviTestMode(): MonyviTestMode {

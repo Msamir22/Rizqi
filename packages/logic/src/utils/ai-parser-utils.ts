@@ -40,6 +40,12 @@ export type CategoryMap = Map<
   { readonly name: Category["displayName"]; readonly id: Category["id"] }
 >;
 
+export interface CategoryMapSource {
+  readonly id: Category["id"];
+  readonly systemName: Category["systemName"];
+  readonly displayName: Category["displayName"];
+}
+
 /**
  * Result of resolving an AI-returned category against the user's CategoryMap.
  */
@@ -217,7 +223,9 @@ export function parseCategory(
  * @param categories - User's categories from the database
  * @returns CategoryMap for O(1) category lookups
  */
-export function buildCategoryMap(categories: readonly Category[]): CategoryMap {
+export function buildCategoryMap(
+  categories: readonly CategoryMapSource[]
+): CategoryMap {
   const map: CategoryMap = new Map();
   for (const cat of categories) {
     map.set(cat.systemName, { name: cat.displayName, id: cat.id });

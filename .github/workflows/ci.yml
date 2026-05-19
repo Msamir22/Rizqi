@@ -105,6 +105,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -112,21 +114,31 @@ jobs:
           node-version: "20"
           cache: "npm"
 
+      - name: Resolve Android E2E scope
+        id: e2e-scope
+        env:
+          E2E_PUSH_BEFORE_SHA: ${{ github.event.before }}
+        run: node apps/mobile/scripts/resolve-ci-e2e-scope.js
+
       - name: Setup Java
+        if: steps.e2e-scope.outputs.should_run == 'true'
         uses: actions/setup-java@v4
         with:
           distribution: "zulu"
           java-version: "17"
 
       - name: Install dependencies
+        if: steps.e2e-scope.outputs.should_run == 'true'
         run: npm ci
         timeout-minutes: 30
 
       - name: Start local Supabase
-        run: npx supabase start
+        if: steps.e2e-scope.outputs.should_run == 'true'
+        run: npm run supabase:start:local
         timeout-minutes: 10
 
       - name: Prepare local E2E environment
+        if: steps.e2e-scope.outputs.should_run == 'true'
         run: |
           npx supabase status -o env | grep -E '^(ANON_KEY|SERVICE_ROLE_KEY)=' > supabase.env
           . ./supabase.env
@@ -152,29 +164,34 @@ jobs:
           NODE
 
       - name: Download Android debug APK
+        if: steps.e2e-scope.outputs.should_run == 'true'
         uses: actions/download-artifact@v4
         with:
           name: monyvi-android-debug
           path: monyvi-android-debug
 
       - name: Install Maestro CLI
+        if: steps.e2e-scope.outputs.should_run == 'true'
         run: |
           curl -fsSL "https://get.maestro.mobile.dev" | bash
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
 
       - name: Enable KVM
+        if: steps.e2e-scope.outputs.should_run == 'true'
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
       - name: Start Metro
+        if: steps.e2e-scope.outputs.should_run == 'true'
         working-directory: apps/mobile
         run: |
           npx expo start --clear --dev-client --port 8081 > ../../metro.log 2>&1 &
           echo $! > ../../metro.pid
 
       - name: Run Maestro E2E on Android emulator
+        if: steps.e2e-scope.outputs.should_run == 'true'
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -182,24 +199,22 @@ jobs:
           arch: x86_64
           profile: pixel_7
           disable-animations: true
-          script: |
-            adb install -r monyvi-android-debug/app-debug.apk
-            adb reverse tcp:8081 tcp:8081
-            npm run e2e:ci -w @monyvi/mobile
+          script: bash apps/mobile/scripts/run-android-e2e-ci.sh
 
       - name: Stop Metro
-        if: always()
+        if: always() && steps.e2e-scope.outputs.should_run == 'true'
         run: |
           if [ -f metro.pid ]; then
             kill "$(cat metro.pid)" || true
           fi
 
       - name: Upload E2E logs
-        if: always()
+        if: always() && steps.e2e-scope.outputs.should_run == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: android-e2e-logs
           path: |
             metro.log
+            android-e2e-logcat.log
             ~/.maestro/tests
           retention-days: 7

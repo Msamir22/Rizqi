@@ -1,15 +1,11 @@
 appId: com.monyvi.app
+env:
+  CLOSED_CONFIRM_MARKET: ${MAESTRO_CLOSED_CONFIRM_MARKET || "CLOSED CONFIRM MARKET"}
 ---
 # Verifies Journey 15 after the runner confirms the killed-app real-SMS
 # notification.
 
-- openLink:
-    link: monyvi://transactions
-- waitForAnimationToEnd
-- extendedWaitUntil:
-    visible:
-      id: "filter-period"
-    timeout: 30000
+- runFlow: ../helpers/open-transactions.yaml
 
 - tapOn:
     id: "filter-period"
@@ -18,7 +14,7 @@ appId: com.monyvi.app
 
 - tapOn:
     id: "search-input"
-- inputText: "CLOSED CONFIRM MARKET"
+- inputText: ${CLOSED_CONFIRM_MARKET}
 
 - extendedWaitUntil:
     visible: "-72.56 EGP"

@@ -302,6 +302,34 @@ All schema changes MUST go through local SQL migration files in
 Commit format: `<type>: <description>` — Types: feat, fix, refactor, docs, test,
 chore, perf, ci.
 
+## Pull Request Review Comments
+
+- Before addressing a PR review comment, verify it against the current branch
+  and current code. Treat outdated, already-resolved, duplicated, or no-longer
+  applicable comments as non-actionable, and state why instead of changing code.
+- Classify each still-valid comment before fixing it. Technical correctness,
+  type-safety, test stability, CI reliability, and code-style comments may be
+  fixed directly when the change is minimal and clearly within the PR scope.
+- Do not implement review comments that require a product/business decision
+  without first returning to Mohamed for direction. This includes changes to how
+  a feature should behave, what the user experience should be, how financial
+  data should be interpreted, or which user journey is preferred.
+- Do not implement review comments that request database schema changes,
+  migrations, data backfills, sync-contract changes, or mutations to existing
+  business data without first returning to Mohamed for approval.
+- If a comment mixes a valid technical issue with a product or schema decision,
+  fix only the clearly technical part if it can be separated safely; otherwise
+  stop and ask for the decision explicitly.
+- If a still-valid review finding is deferred, create a GitHub issue for it
+  before final handoff. The issue must describe the deferred work, why it was
+  deferred, the source PR/review context, and clear acceptance criteria. Apply
+  suitable existing labels such as `tech-debt`, `refactor`, `code-quality`,
+  `testing`, `performance`, `database`, or the relevant `area:*` label so the
+  work can be found and prioritized later.
+- Keep PR-review fixes surgical. Do not bundle unrelated cleanup, do not use
+  review comments as permission to redesign the feature, and validate every fix
+  with the smallest reliable check that would catch the reviewed issue.
+
 ## Security
 
 - No hardcoded secrets. Use environment variables or secret manager.

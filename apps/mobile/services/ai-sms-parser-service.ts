@@ -16,7 +16,6 @@ import { logger } from "@/utils/logger";
 import { shouldUseFixtureSmsParser } from "@/config/e2e-test-config";
 import { parseSmsWithFixtureAi } from "./testing/ai-sms-fixture-parser";
 
-import type { Category } from "@monyvi/db";
 import {
   buildCategoryMap,
   buildCategoryTree,
@@ -25,6 +24,7 @@ import {
   normalizeType,
   parseCategory,
   type CategoryMap,
+  type CategoryTreeSource,
   type ParsedSmsTransaction,
   type SmsMessage,
 } from "@monyvi/logic";
@@ -59,7 +59,7 @@ export interface AiParseResult {
 /** Context sent alongside SMS messages to the Edge Function. */
 export interface ParseSmsContext {
   /** Raw category entries from DB — used to build both the AI tree string and the validation set. */
-  readonly categories: readonly Category[];
+  readonly categories: readonly CategoryTreeSource[];
   readonly supportedCurrencies: readonly string[];
 }
 

@@ -41,6 +41,8 @@ jest.mock("@monyvi/db", () => ({
     tables: {
       asset_metals: {},
       profiles: {},
+      transactions: {},
+      transfers: {},
     },
   },
 }));
@@ -194,6 +196,131 @@ describe("syncDatabase", () => {
     );
 
     await expect(syncDatabase(mockDatabase)).rejects.toThrow("upsert failed");
+  });
+
+  it("pushes profile onboarding flags as JSON instead of null", async () => {
+    mockUpsert.mockResolvedValue({ error: null });
+    mockSynchronize.mockImplementation(
+      async (args: {
+        pushChanges: (input: {
+          changes: Record<string, unknown>;
+          lastPulledAt: number | null;
+        }) => Promise<unknown>;
+      }) => {
+        await args.pushChanges({
+          changes: {
+            profiles: {
+              created: [],
+              updated: [
+                {
+                  id: "profile-1",
+                  user_id: "current-user",
+                  onboarding_flags: null,
+                  notification_settings:
+                    '{"sms_transaction_confirmation":true}',
+                },
+              ],
+              deleted: [],
+            },
+          },
+          lastPulledAt: null,
+        });
+      }
+    );
+
+    await expect(syncDatabase(mockDatabase)).resolves.toBeUndefined();
+
+    expect(mockUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "profile-1",
+        user_id: "current-user",
+        onboarding_flags: {},
+        notification_settings: {
+          sms_transaction_confirmation: true,
+        },
+      }),
+      { onConflict: "id" }
+    );
+  });
+
+  it("rejects invalid serialized profile JSON during push", async () => {
+    mockSynchronize.mockImplementation(
+      async (args: {
+        pushChanges: (input: {
+          changes: Record<string, unknown>;
+          lastPulledAt: number | null;
+        }) => Promise<unknown>;
+      }) => {
+        await args.pushChanges({
+          changes: {
+            profiles: {
+              created: [],
+              updated: [
+                {
+                  id: "profile-1",
+                  user_id: "current-user",
+                  onboarding_flags: "{invalid-json",
+                },
+              ],
+              deleted: [],
+            },
+          },
+          lastPulledAt: null,
+        });
+      }
+    );
+
+    await expect(syncDatabase(mockDatabase)).rejects.toThrow(
+      "Invalid serialized JSON in profile column onboarding_flags"
+    );
+    expect(mockUpsert).not.toHaveBeenCalled();
+  });
+
+  it("pulls profile JSON fields as WatermelonDB string fields", async () => {
+    selectResult = {
+      data: [
+        {
+          id: "profile-1",
+          user_id: "current-user",
+          deleted: false,
+          created_at: "2026-05-18T08:00:00.000Z",
+          updated_at: "2026-05-18T08:00:00.000Z",
+          onboarding_flags: { cash_account_tooltip_dismissed: true },
+          notification_settings: {
+            sms_transaction_confirmation: true,
+          },
+        },
+      ],
+      error: null,
+    };
+
+    let pulledChanges: Record<string, unknown> | undefined;
+    mockSynchronize.mockImplementation(
+      async (args: {
+        pullChanges: (input: {
+          lastPulledAt: number | null;
+        }) => Promise<{ changes: Record<string, unknown> }>;
+      }) => {
+        const result = await args.pullChanges({ lastPulledAt: null });
+        pulledChanges = result.changes;
+      }
+    );
+
+    await expect(syncDatabase(mockDatabase, true)).resolves.toBeUndefined();
+
+    const changes = pulledChanges as {
+      readonly profiles: {
+        readonly updated: ReadonlyArray<Record<string, unknown>>;
+      };
+    };
+    expect(changes.profiles.updated[0]).toEqual(
+      expect.objectContaining({
+        onboarding_flags: '{"cash_account_tooltip_dismissed":true}',
+        notification_settings: '{"sms_transaction_confirmation":true}',
+        created_at: Date.UTC(2026, 4, 18, 8),
+        updated_at: Date.UTC(2026, 4, 18, 8),
+      })
+    );
   });
 
   it("rejects push soft-delete errors so WatermelonDB keeps the delete dirty", async () => {
@@ -369,5 +496,118 @@ describe("syncDatabase", () => {
       "parent lookup failed"
     );
     expect(mockUpsert).not.toHaveBeenCalled();
+  });
+
+  it("pushes SMS-created transactions with sms_fingerprint and without the old sms_body_hash field", async () => {
+    mockInsert.mockResolvedValue({ error: null });
+    mockSynchronize.mockImplementation(
+      async (args: {
+        pushChanges: (input: {
+          changes: Record<string, unknown>;
+          lastPulledAt: number | null;
+        }) => Promise<unknown>;
+      }) => {
+        await args.pushChanges({
+          changes: {
+            transactions: {
+              created: [
+                {
+                  id: "transaction-1",
+                  user_id: "current-user",
+                  amount: 850,
+                  type: "EXPENSE",
+                  date: Date.UTC(2026, 0, 15),
+                  created_at: Date.UTC(2026, 0, 15, 10),
+                  updated_at: Date.UTC(2026, 0, 15, 10),
+                  sms_fingerprint: "sms-fingerprint-transaction-1",
+                  sms_body_hash: "legacy-hash-should-not-sync",
+                },
+              ],
+              updated: [],
+              deleted: [],
+            },
+          },
+          lastPulledAt: null,
+        });
+      }
+    );
+
+    await expect(syncDatabase(mockDatabase)).resolves.toBeUndefined();
+
+    expect(mockFrom).toHaveBeenCalledWith("transactions");
+    expect(mockInsert).toHaveBeenCalledWith([
+      expect.objectContaining({
+        id: "transaction-1",
+        user_id: "current-user",
+        sms_fingerprint: "sms-fingerprint-transaction-1",
+        date: "2026-01-15",
+        created_at: "2026-01-15T10:00:00.000Z",
+        updated_at: "2026-01-15T10:00:00.000Z",
+      }),
+    ]);
+
+    const insertCalls: ReadonlyArray<
+      readonly [ReadonlyArray<Record<string, unknown>>]
+    > = mockInsert.mock.calls;
+    const [insertedRows] = insertCalls[0];
+    const [insertedRow] = insertedRows;
+    expect(insertedRow).not.toHaveProperty("sms_body_hash");
+  });
+
+  it("pushes SMS-created transfers with sms_fingerprint and without the old sms_body_hash field", async () => {
+    mockInsert.mockResolvedValue({ error: null });
+    mockSynchronize.mockImplementation(
+      async (args: {
+        pushChanges: (input: {
+          changes: Record<string, unknown>;
+          lastPulledAt: number | null;
+        }) => Promise<unknown>;
+      }) => {
+        await args.pushChanges({
+          changes: {
+            transfers: {
+              created: [
+                {
+                  id: "transfer-1",
+                  user_id: "current-user",
+                  from_account_id: "cash-account",
+                  to_account_id: "bank-account",
+                  amount: 1000,
+                  date: Date.UTC(2026, 0, 16),
+                  created_at: Date.UTC(2026, 0, 16, 12),
+                  updated_at: Date.UTC(2026, 0, 16, 12),
+                  sms_fingerprint: "sms-fingerprint-transfer-1",
+                  sms_body_hash: "legacy-transfer-hash-should-not-sync",
+                },
+              ],
+              updated: [],
+              deleted: [],
+            },
+          },
+          lastPulledAt: null,
+        });
+      }
+    );
+
+    await expect(syncDatabase(mockDatabase)).resolves.toBeUndefined();
+
+    expect(mockFrom).toHaveBeenCalledWith("transfers");
+    expect(mockInsert).toHaveBeenCalledWith([
+      expect.objectContaining({
+        id: "transfer-1",
+        user_id: "current-user",
+        sms_fingerprint: "sms-fingerprint-transfer-1",
+        date: "2026-01-16",
+        created_at: "2026-01-16T12:00:00.000Z",
+        updated_at: "2026-01-16T12:00:00.000Z",
+      }),
+    ]);
+
+    const insertCalls: ReadonlyArray<
+      readonly [ReadonlyArray<Record<string, unknown>>]
+    > = mockInsert.mock.calls;
+    const [insertedRows] = insertCalls[0];
+    const [insertedRow] = insertedRows;
+    expect(insertedRow).not.toHaveProperty("sms_body_hash");
   });
 });

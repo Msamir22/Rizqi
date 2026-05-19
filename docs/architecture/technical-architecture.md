@@ -247,8 +247,8 @@ Active Edge Functions:
 
 Deprecated or legacy:
 
-- `parse-transaction` is an older OpenAI transaction parser and should not be
-  used for new mobile flows.
+- `parse-transaction` was an older OpenAI transaction parser and has been
+  removed.
 - Express/Vercel API endpoints are not part of the current active app
   architecture.
 

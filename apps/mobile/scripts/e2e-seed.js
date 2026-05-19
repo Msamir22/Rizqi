@@ -6,6 +6,7 @@ const LOCAL_ANDROID_SUPABASE_URL = "http://10.0.2.2:54321";
 
 const E2E_USER_FULL_NAME = "Monyvi E2E";
 const FIXED_NOW = "2026-04-08T12:00:00.000Z";
+const E2E_MARKET_RATE_ID = "00000000-0000-0000-0006-000000000001";
 
 const CATEGORY_IDS = {
   shopping: "00000000-0000-0000-0001-000000000004",
@@ -237,8 +238,56 @@ async function upsertRows(client, table, rows, options) {
 
 function buildSeedRows(userId) {
   const seedIds = buildSeedIds(userId);
+  const currentTimestamp = new Date().toISOString();
+  const currentDate = currentTimestamp.slice(0, 10);
 
   return {
+    marketRate: {
+      id: E2E_MARKET_RATE_ID,
+      aed_usd: 0.2723,
+      aud_usd: 0.66,
+      bhd_usd: 2.65,
+      btc_usd: 65000,
+      cad_usd: 0.74,
+      chf_usd: 1.1,
+      cny_usd: 0.14,
+      dkk_usd: 0.146,
+      dzd_usd: 0.0074,
+      egp_usd: 0.02,
+      eur_usd: 1.09,
+      gbp_usd: 1.27,
+      gold_usd_per_gram: 75,
+      hkd_usd: 0.128,
+      inr_usd: 0.012,
+      iqd_usd: 0.00076,
+      isk_usd: 0.0072,
+      jod_usd: 1.41,
+      jpy_usd: 0.0065,
+      kpw_usd: 0.0011,
+      krw_usd: 0.00073,
+      kwd_usd: 3.25,
+      lyd_usd: 0.21,
+      mad_usd: 0.1,
+      myr_usd: 0.21,
+      nok_usd: 0.094,
+      nzd_usd: 0.61,
+      omr_usd: 2.6,
+      palladium_usd_per_gram: 32,
+      platinum_usd_per_gram: 31,
+      qar_usd: 0.2747,
+      rub_usd: 0.011,
+      sar_usd: 0.2667,
+      sek_usd: 0.096,
+      sgd_usd: 0.74,
+      silver_usd_per_gram: 0.95,
+      timestamp_currency: currentTimestamp,
+      timestamp_metal: currentTimestamp,
+      tnd_usd: 0.32,
+      try_usd: 0.031,
+      updated_at: currentTimestamp,
+      zar_usd: 0.054,
+      created_at: currentTimestamp,
+    },
     profile: {
       user_id: userId,
       display_name: E2E_USER_FULL_NAME,
@@ -332,7 +381,7 @@ function buildSeedRows(userId) {
         category_id: CATEGORY_IDS.shopping,
         counterparty: "E2E Grocery",
         note: "Seeded expense",
-        date: "2026-04-07",
+        date: currentDate,
         source: "MANUAL",
         is_draft: false,
         deleted: false,
@@ -349,7 +398,7 @@ function buildSeedRows(userId) {
         category_id: CATEGORY_IDS.income,
         counterparty: "E2E Payroll",
         note: "Seeded income",
-        date: "2026-04-06",
+        date: currentDate,
         source: "MANUAL",
         is_draft: false,
         deleted: false,
@@ -368,7 +417,7 @@ function buildSeedRows(userId) {
         exchange_rate: null,
         converted_amount: null,
         notes: "Seeded cash withdrawal",
-        date: "2026-04-05",
+        date: currentDate,
         deleted: false,
         created_at: FIXED_NOW,
         updated_at: FIXED_NOW,
@@ -397,6 +446,12 @@ async function seedE2eData(client, config) {
     onConflict: "id",
   });
   await upsertRows(client, "transfers", rows.transfers, { onConflict: "id" });
+
+  if (config.mode === "local") {
+    await upsertRows(client, "market_rates", rows.marketRate, {
+      onConflict: "id",
+    });
+  }
 
   return { userId };
 }
@@ -446,6 +501,8 @@ if (require.main === module) {
 
 module.exports = {
   E2E_TABLE_DELETE_ORDER,
+  E2E_MARKET_RATE_ID,
+  createLocalSupabaseJwt,
   getE2eSeedConfig,
   resetE2eData,
   seedE2eData,

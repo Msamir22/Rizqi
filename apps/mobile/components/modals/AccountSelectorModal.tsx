@@ -102,6 +102,7 @@ export function AccountSelectorModal({
                     return (
                       <TouchableOpacity
                         key={account.id}
+                        testID={`account-selector-option-${account.id}`}
                         className={`flex-row items-center p-4 rounded-2xl border ${
                           isSelected
                             ? "bg-nileGreen-50 dark:bg-nileGreen-900/20 border-nileGreen-500 dark:border-nileGreen-600"

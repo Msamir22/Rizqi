@@ -7,15 +7,14 @@ repository root unless noted otherwise.
 
 ## Running The App
 
+For full setup instructions, local Supabase, Google auth, E2E, database, and
+runtime scripts, use the root [README](../../README.md). For day-to-day local
+backend development, start from this root flow:
+
 ```bash
-# Start Expo dev server
-npm run mobile
-
-# Run on iOS
-npm run mobile:ios
-
-# Run on Android
-npm run mobile:android
+npm run supabase:start:local
+npm run supabase:runtime:setup-local
+npm run mobile:local-supabase
 ```
 
 For Android SMS testing, use a development build rather than Expo Go because the

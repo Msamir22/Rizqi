@@ -1,0 +1,14 @@
+appId: com.monyvi.app
+---
+# Journey 16 setup: Live SMS detection is enabled and the app stays foregrounded
+# on the dev simulator log page. The Node runner sends a real emulator SMS after
+# this setup flow completes.
+
+- runFlow: ensure-live-sms-enabled.yaml
+
+- runFlow: open-sms-simulator.yaml
+
+- tapOn:
+    id: "sms-simulator-reset-top"
+
+- assertVisible: "Live detection log count: 0"

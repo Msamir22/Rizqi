@@ -22,14 +22,14 @@ appId: com.monyvi.app
 - assertVisible: "Edit Transaction"
 
 # Step 5: Tap the account selector to change account
-- tapOn: "Account"
+- tapOn:
+    id: "edit-transaction-account-selector"
 
 - waitForAnimationToEnd
+- assertVisible: "Select Account"
 
-# Step 6: Select a different account from the list (second option)
-- tapOn:
-    index: 1
-    text: ".*"
+# Step 6: Select a seeded wallet account that is not used by seeded transactions
+- tapOn: "E2E Wallet"
 
 # Step 7: Tap Save
 - tapOn:
@@ -38,4 +38,7 @@ appId: com.monyvi.app
 - waitForAnimationToEnd
 
 # Step 8: Verify navigation back to transactions list
-- assertVisible: "Transactions"
+- extendedWaitUntil:
+    visible:
+      id: "filter-period"
+    timeout: 30000
