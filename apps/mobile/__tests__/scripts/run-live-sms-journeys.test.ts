@@ -4,6 +4,10 @@ interface RunLiveSmsJourneysModule {
     env?: Readonly<Record<string, string | undefined>>
   ): boolean;
   createKilledAppConfirmMarker(env?: Readonly<Record<string, string | undefined>>): string;
+  getMaestroFlowTimeoutMs(
+    env?: Readonly<Record<string, string | undefined>>
+  ): number;
+  isRetryableMaestroTransportFailure(output: string): boolean;
 }
 
 const liveSmsJourneys = jest.requireActual(
@@ -48,5 +52,35 @@ describe("run-live-sms-journeys helpers", () => {
         E2E_PROBE_RUN_ID: "run-123",
       })
     ).toBe("CLOSED CONFIRM MARKET run-123");
+  });
+
+  it("uses a bounded Maestro flow timeout with env override", () => {
+    expect(liveSmsJourneys.getMaestroFlowTimeoutMs({})).toBe(10 * 60 * 1000);
+    expect(
+      liveSmsJourneys.getMaestroFlowTimeoutMs({
+        E2E_MAESTRO_FLOW_TIMEOUT_MS: "1000",
+      })
+    ).toBe(1000);
+  });
+
+  it("detects retryable Maestro Android transport disconnects", () => {
+    expect(
+      liveSmsJourneys.isRetryableMaestroTransportFailure(
+        "io.grpc.StatusRuntimeException: UNAVAILABLE: End of stream or IOException"
+      )
+    ).toBe(true);
+    expect(
+      liveSmsJourneys.isRetryableMaestroTransportFailure(
+        "Caused by: java.io.IOException: Command failed (host:transport:emulator-5554): device offline"
+      )
+    ).toBe(true);
+  });
+
+  it("does not retry normal Maestro assertion failures", () => {
+    expect(
+      liveSmsJourneys.isRetryableMaestroTransportFailure(
+        'Assertion is false: "Transactions" is visible'
+      )
+    ).toBe(false);
   });
 });

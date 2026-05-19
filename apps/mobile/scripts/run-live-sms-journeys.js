@@ -1,4 +1,5 @@
 const { join } = require("node:path");
+const { spawnSync } = require("node:child_process");
 const { createClient } = require("@supabase/supabase-js");
 const {
   adb,
@@ -15,6 +16,7 @@ const { getE2eSeedConfig, seedE2eData } = require("./e2e-seed");
 
 const mobileRoot = join(__dirname, "..");
 const flowDir = join("e2e", "maestro", "live-sms-detection");
+const defaultMaestroFlowTimeoutMs = 10 * 60 * 1000;
 
 const smsPermissions = [
   "android.permission.READ_SMS",
@@ -153,13 +155,83 @@ function grantNotificationPermission() {
   grantPermission(notificationPermission);
 }
 
+function isRetryableMaestroTransportFailure(output) {
+  return /StatusRuntimeException:\s*UNAVAILABLE(?::\s*End of stream or IOException)?|host:transport:.*device offline|device offline/i.test(
+    output
+  );
+}
+
+function getMaestroFlowTimeoutMs(env = process.env) {
+  const parsed = Number(env.E2E_MAESTRO_FLOW_TIMEOUT_MS);
+  return Number.isFinite(parsed) && parsed > 0
+    ? parsed
+    : defaultMaestroFlowTimeoutMs;
+}
+
+function reconnectMaestroTransport() {
+  run("adb", ["kill-server"], { allowFailure: true, timeout: 30000 });
+  run("adb", ["start-server"], { timeout: 30000 });
+  run("adb", ["wait-for-device"], { timeout: 60000 });
+
+  if (!isReleaseRun) {
+    adb(["reverse", "tcp:8081", "tcp:8081"], { allowFailure: true });
+  }
+}
+
+function runMaestroFlowOnce(maestroBin, flow) {
+  const result = spawnSync(maestroBin, ["test", join(flowDir, flow)], {
+    encoding: "utf8",
+    cwd: mobileRoot,
+    maxBuffer: 16 * 1024 * 1024,
+    shell: process.platform === "win32" && maestroBin.endsWith(".bat"),
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: getMaestroFlowTimeoutMs(),
+  });
+  const stdout = result.stdout || "";
+  const stderr = result.stderr || "";
+  const errorMessage = result.error?.message ?? "";
+
+  if (stdout) {
+    process.stdout.write(stdout);
+  }
+  if (stderr) {
+    process.stderr.write(stderr);
+  }
+
+  return {
+    didTimeout:
+      result.error?.code === "ETIMEDOUT" || result.signal === "SIGTERM",
+    output: `${stdout}${stderr}${errorMessage}`,
+    status: result.error ? 1 : (result.status ?? 1),
+  };
+}
+
 function runFlow(flow) {
   const maestroBin = resolveMaestroBin();
   if (!maestroBin) {
     throw new Error("Maestro was not found. Install it or set MAESTRO_BIN.");
   }
 
-  run(maestroBin, ["test", join(flowDir, flow)], { cwd: mobileRoot });
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    const result = runMaestroFlowOnce(maestroBin, flow);
+    if (result.status === 0) {
+      return;
+    }
+
+    if (
+      attempt === 1 &&
+      (result.didTimeout || isRetryableMaestroTransportFailure(result.output))
+    ) {
+      logInfo("liveSmsJourney.maestroTransportRetry", {
+        flow,
+        reason: result.didTimeout ? "timeout" : "transport-unavailable",
+      });
+      reconnectMaestroTransport();
+      continue;
+    }
+
+    throw new Error(`${maestroBin} test ${join(flowDir, flow)} failed`);
+  }
 }
 
 function applyLocalE2eDefaults() {
@@ -926,6 +998,8 @@ if (require.main === module) {
 module.exports = {
   buildLiveSmsActionProbeCleanupSql,
   createKilledAppConfirmMarker,
+  getMaestroFlowTimeoutMs,
   getActiveUserFilter,
+  isRetryableMaestroTransportFailure,
   shouldSkipRunAsProbeCleanup,
 };
