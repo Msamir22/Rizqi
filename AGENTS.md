@@ -320,6 +320,12 @@ chore, perf, ci.
 - If a comment mixes a valid technical issue with a product or schema decision,
   fix only the clearly technical part if it can be separated safely; otherwise
   stop and ask for the decision explicitly.
+- If a still-valid review finding is deferred, create a GitHub issue for it
+  before final handoff. The issue must describe the deferred work, why it was
+  deferred, the source PR/review context, and clear acceptance criteria. Apply
+  suitable existing labels such as `tech-debt`, `refactor`, `code-quality`,
+  `testing`, `performance`, `database`, or the relevant `area:*` label so the
+  work can be found and prioritized later.
 - Keep PR-review fixes surgical. Do not bundle unrelated cleanup, do not use
   review comments as permission to redesign the feature, and validate every fix
   with the smallest reliable check that would catch the reviewed issue.
